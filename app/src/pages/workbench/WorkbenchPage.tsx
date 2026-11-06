@@ -44,11 +44,13 @@ import {
 import type { ColorMode, ThemeMode } from "../../lib/theme";
 
 interface Props {
+  /** 从行情列表点行进入时携带的标的代码；S-01.01-03 返回态依赖它 */
+  initialCode?: string | null;
   themeMode: ThemeMode;
   onThemeMode: (mode: ThemeMode) => void;
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
-  onNavigate: (key: "workbench" | "catalog") => void;
+  onNavigate: (key: "workbench" | "market" | "catalog") => void;
 }
 
 const RANGES = [
@@ -62,6 +64,7 @@ const RANGES = [
 const REQUEST_DEBOUNCE_MS = 120;
 
 export function WorkbenchPage({
+  initialCode,
   themeMode,
   onThemeMode,
   colorMode,
@@ -78,7 +81,7 @@ export function WorkbenchPage({
       ) as Record<string, string>,
     [manifest],
   );
-  const [activeCode, setActiveCode] = useState("300750.SZ");
+  const [activeCode, setActiveCode] = useState(initialCode ?? "300750.SZ");
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">("qfq");
   const [timeframe, setTimeframe] = useState<TimeframeCode>("D");
   const [range, setRange] = useState(120);
@@ -165,6 +168,25 @@ export function WorkbenchPage({
       alive = false;
     };
   }, []);
+
+  /** S-01.01-03：从行情点行进来时，代码以路由为准；Esc / 面包屑返回行情页。 */
+  useEffect(() => {
+    if (initialCode) setActiveCode(initialCode);
+  }, [initialCode]);
+
+  useEffect(() => {
+    if (!initialCode) return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName ?? "";
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onNavigate("market");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [initialCode, onNavigate]);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -350,7 +372,18 @@ export function WorkbenchPage({
       <div className="workbench">
         <header className="wb-header">
           <div className="sec-identity">
-            <h1>{security?.name ?? "未选择标的"}</h1>
+            {initialCode && (
+              <button
+                type="button"
+                className="crumb"
+                data-wb-back="1"
+                title="返回行情（Esc）"
+                onClick={() => onNavigate("market")}
+              >
+                行情 /
+              </button>
+            )}
+            <h1 data-wb-name>{security?.name ?? "未选择标的"}</h1>
             <span className="sec-code">{activeCode}</span>
             <span className="pill">{security?.board ?? "—"}</span>
             <SimBadge />

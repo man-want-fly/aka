@@ -5,7 +5,7 @@ import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { AppError, ManifestResponse, RegistryResponse } from "../../lib/types";
 
 interface Props {
-  onNavigate: (key: "workbench" | "catalog") => void;
+  onNavigate: (key: "workbench" | "market" | "catalog") => void;
 }
 
 const FORMULAS = { ...B1_FORMULAS, ...B2_FORMULAS, ...B3_FORMULAS };
