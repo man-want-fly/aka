@@ -803,6 +803,20 @@ def main():
     write("edge_b2_insufficient.json",
           suite_ohlc("edge_b2_insufficient", 7, short_b2, insufficient_b2))
 
+    # 输入长度 < 最小窗口：固化 T16/T23/V09/V10 在只有 1 根时的行为
+    below_min_b2 = [
+        case("T16", {"step": 0.02, "increment": 0.02, "max": 0.2},
+             ["psar"], {"psar": [NAN]}),
+        case("T23", {}, ["pivot", "r1", "s1"],
+             {"pivot": [NAN], "r1": [NAN], "s1": [NAN]}),
+        case("V09", {}, ["amplitude"], {"amplitude": [1.0]}),
+        case("V10", {}, ["tr"], {"tr": [NAN]}),
+    ]
+    one_bar = {"open": [10.2], "high": [10.5], "low": [9.5], "close": [10.0],
+               "volume": [0.0], "amount": [0.0]}
+    write("edge_b2_below_min_window.json",
+          suite_ohlc("edge_b2_below_min_window", 0, one_bar, below_min_b2))
+
 
 if __name__ == "__main__":
     main()
