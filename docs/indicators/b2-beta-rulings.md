@@ -1,13 +1,13 @@
-# B2 beta 口径裁定（R-01 ~ R-06）
+# B2 beta 口径裁定（R-01 ~ R-07）
 
 | 项 | 内容 |
 |---|---|
-| 文档编号 | AKA-IND-B2-RULING-0.1 |
-| 版本 / 日期 | v0.1 / 2026-11-06 |
+| 文档编号 | AKA-IND-B2-RULING-0.2 |
+| 版本 / 日期 | v0.2 / 2026-11-07 |
 | 角色 | BA（业务分析） |
-| 裁定对象 | `docs/qa/aka-b2-ac-evidence-v0.1.md` §4：T13 / T15 / T16 / T23 / T24 / V08 |
-| 口径基线 | `docs/indicators/b2-channel-volatility.md`；Story 卡 `S-03.05-01 ~ 08`；`app/manifest/indicators.json` |
-| 结论 | **5 条转 normal（R-01 / R-02 / R-04 / R-05 / R-06）；R-03（T16）保留 beta** |
+| 裁定对象 | `docs/qa/aka-b2-ac-evidence-v0.1.md` §4：T13 / T15 / T16 / T23 / T24 / V08；增补 V05 |
+| 口径基线 | `docs/indicators/b2-channel-volatility.md`；Story 卡 `S-03.05-01 ~ 08`；`app/manifest/indicators.json`；黄金夹具 `base_b2_channel_seed42_520.json` |
+| 结论 | **5 条转 normal（R-01 / R-02 / R-04 / R-05 / R-06）；R-03（T16）保留 beta；R-07（V05 零带宽）为口径补充，不改 status** |
 | 边界 | 只冻结口径，不判定进 UI、不判定 Story 卡结项；卡状态以 `docs/qa/aka-story-completion-ledger-v0.1.md` 为准（B2 八卡 2026-11-06 已进 UI，但渲染差异条款未测，台账仍判 `数值层已具备`） |
 
 > 使用方式：开发按 §3 改 manifest；QA 按 §2 的可测断言复核。口径页各条的「beta 原因」已回写为「口径裁定」。
@@ -19,11 +19,12 @@
 | 编号 | 指标 | 歧义点 | 推荐值（裁定） | 一句理由 | 参考来源 | 处置 |
 |---|---|---|---|---|---|---|
 | **R-01** | T13 ATR 移动止损 | 收盘穿越还是最低价触及；翻空后是否重置 | ①`close < long_stop_prev` 才翻空（**收盘穿越**，不看最低价）；②翻空当根旧多头值**冻结一根**，空头止损**重置**为 `close + k×ATR` | 日线止损用收盘确认可过滤盘中假突破；不重置会让空头沿用旧多头值，失去波动锚定 | 通达信/同花顺 ATR 止损类均以收盘判定转向（无公开源码，按行业通用）；Wilder 原始 ATR 止损亦用收盘 | 转 normal |
-| **R-02** | T15 一目均衡表 | 位移后尾部 D 根是否留白 | 先行带 A/B 右移 D 根，**末尾 D 根留白（NaN）**；迟行线取 `close[i−D]`，前 D 根留白；不向未来外推 | 先行带是未来投影，没有对应 K 线就不能画；回填会制造未来函数 | 一目均衡表标准画法（9/26/52，位移 26）；A 股软件默认同 | 转 normal |
+| **R-02** | T15 一目均衡表 | 位移后哪一端留白 | 先行带 A/B 右移 D 根，`base[i]→i+D`，**图内最后一根保留、不向图外延伸**；迟行线取 `close[j+D]`，**末尾 D 根留白（NaN）** | 先行带是未来投影，只能截在图内；迟行线是当前收盘回画到 D 根前，尾部自然无值 | 一目均衡表标准画法（9/26/52，位移 26）；黄金夹具与 `gen_reference.py` 同 | 转 normal（v0.2 更正方向） |
 | **R-03** | T16 抛物线转向 | 初始方向是否固定多头；AF 起止值 | ①**不固定多头**：`close[1] ≥ close[0]` 为多，否则为空；②首根 SAR 多头取 `low[0]`、空头取 `high[0]`；③AF `0.02` 起、步长 `0.02`、上限 `0.2`，反转重置 `0.02` | 固定多头会在下跌段先产生一段错误多头信号；AF 0.02/0.02/0.2 是 Wilder 原始值 | Wilder (1978)；TA-Lib `SAR` 默认 0.02/0.2 | **保留 beta**（见 §3.2） |
 | **R-04** | T23 轴心点 | 是否用前一日；周周期归属；是否补 R2/R3/S2/S3 | ①只用 `i−1` 根 `H/L/C`；②周期由图表决定：D→上一日、W→上一周、M→上一月，不设 `basis` 参数；③**只输出 P/R1/S1**，其余四档留 P1 | 轴心点是「用已收盘的前一周期」预测当前周期，用当根即未来函数；MVP 三线足够 | 通达信/同花顺轴心点默认前一日、默认三线；五档属扩展 | 转 normal |
 | **R-05** | T24 最高最低 | 是否需要中轨/带宽；窗口是否含当前根 | ①只 `UP=max(H[i−N+1..=i])`、`DN=min(L[...])`，**不补中轨/带宽**；②窗口**含当前根**；首值下标 `N−1` | HHV/LLV 的语义就是窗口极值，带宽属 T09/T10；不含当前根会滞后一根 | 通达信/同花顺的最高最低均为含当前根的 N 周期极值 | 转 normal |
 | **R-06** | V08 GAPO 跳空 | 分母 ATR 还是前收；是否只留同向 | ①分母 `ATR(period)`，**默认 14**（与 PRD 数据表和卡一致）；②**保留正负号、不筛同向**；③首值第 15 根 | ATR 归一化让跨标的跳空可比；正负号本身是方向信号，筛掉会丢失反向跳空 | PRD `aka-prd-v0.1.md` L788 写 `ATR14`、首值 15；ATR14 是 A 股软件通用默认 | 转 normal |
+| **R-07** | V05 %B | 零带宽时取值与「数据内没有」是否豁免 | `BW=UP−DN=0`（`σ=0`）时 `%B=NaN` 并记 `DIVIDE_BY_ZERO`，不得输出 0/1；只认精确 0、不设 eps；必须常数序列单测 | 分母退化必须显式定义；数据里没出现不等于条款不适用 | PRD L793；Story 卡 `S-03.05-07` AC-03.05-30 | 口径补充（不改 status） |
 
 ---
 
@@ -56,19 +57,21 @@
 
 - 参数 `tenkan=9`、`kijun=26`、`senkou=52`、`displacement=26`。
 - `tenkan/kijun/senkouB_base = (HHV+LLV)/2`，窗口含当前根。
-- `senkouA[i] = (tenkan+kijun)/2[i−D]`、`senkouB[i] = senkouB_base[i−D]`；末尾 D 根 NaN。
-- 迟行线 `chikou[i] = close[i−D]`；前 D 根 NaN，不得出现负下标。
-- 五线同值首根下标 `senkou−1+displacement = 77`（0 基）。
+- `senkouA[i] = (tenkan+kijun)/2[i−D]`、`senkouB[i] = senkouB_base[i−D]`（`i−D` 有效时写入）；不做图外投影，**图内最后一根保留，不向图外延伸**。
+- 迟行线 `chikou[j] = close[j+D]`（`j+D<N`）；**末尾 D 根 NaN**，头部有值；不得出现越界下标。
+- 五线同值首根下标 `senkou−1+displacement = 77`（0 基）；单线首个有效下标：tenkan 8、kijun 25、senkouA 51、senkouB 77、chikou 0。
+- **v0.2 更正**：v0.1 把先行带的留白写在末尾、把迟行线写成 `close[i−D]`，与黄金夹具 `base_b2_channel_seed42_520.json` 及 `gen_reference.py` 相反；本版按夹具更正，**代码与夹具不动**。
 
 **可测断言**
 
 | 编号 | 断言 | 取证方式 |
 |---|---|---|
-| R-02-A | 520 根输入下，先行带 A/B 最后一个有效值下标 = `519−D`，末尾 D 个为 NaN | 数值单测 / 夹具 |
-| R-02-B | 迟行线第 `i` 值 = `close[i−26]`（`i≥26`）；`i<26` 为 NaN | 数值单测 |
-| R-02-C | 把最后一根收盘改为极大值，已发布段不出现未来值（只影响末端留白区） | 数值单测 |
+| R-02-A | 520 根输入下，先行带 A/B 最后一个有效值下标 = `519`（最后一根），不向图外延伸；无「末尾 D 根 NaN」 | 数值单测 / 夹具 |
+| R-02-B | 迟行线 `chikou[j] = close[j+26]`（`j+26<N`）；`j+26≥N` 即末尾 26 根为 NaN，头部有值 | 数值单测 |
+| R-02-C | 修改 `close[k]`：`senkouA/B` 全列不变；`chikou` 仅 `j=k−D`（界内时）随动，其余不变——先行带无未来函数、迟行线不回填 | 数值单测 |
+| R-02-D | 520 根下首个有效下标 tenkan 8、kijun 25、senkouA 51、senkouB 77、chikou 0；下标 77 起五线同时有值 | 数值单测 / 夹具 |
 
-**开发动作**：manifest `T15.status=normal`、`specStatus=manualComplete`，`notes` 含「末尾 D 根留白；裁定 R-02」（现状已满足，核对即可）。
+**开发动作**：manifest `T15.status=normal`、`specStatus=manualComplete`，`notes` 改为「先行带右移不延伸；迟行线末尾 D 根留白；裁定 R-02（v0.2）」（当前 notes 仍写「前 D 根留白」，需同步）。
 
 ### 2.3 R-03 · T16 抛物线转向（保留 beta）
 
@@ -159,6 +162,31 @@
 
 **开发动作**：manifest `V08.status=normal`、`specStatus=manualComplete`，`params.period.default` `20 → 14`，`notes` 写「ATR(14)；保留正负号、不筛同向；首值第 15 根；裁定 R-06」。
 
+### 2.7 R-07 · V05 %B（零带宽）
+
+**正式定义**
+
+- `MID = SMA(C,N)`；`SD = 样本标准差(ddof=1)`；`UP = MID + k·SD`；`DN = MID − k·SD`；`BW = UP − DN = 2k·SD`。
+- **零带宽**：`BW == 0`（等价 `SD == 0`，窗口内收盘恒定）。**只认精确 0，不引入 eps**；非零但极小的带宽仍是合法分母，`%B` 照常计算。
+- 零带宽时 `%B = NaN`，同时记 `DIVIDE_BY_ZERO`；**不得输出 0、1、0.5、空串、前值，也不得 clamp**。
+- `MID == 0` 但 `BW > 0` 时，`%B` 仍按公式计算（分母不是 `MID`）；只有 `BW == 0` 才走零带宽分支。
+- 窗口内输入 NaN 或不足 `N`：`%B = NaN`，归「数据不足」，**不记** `DIVIDE_BY_ZERO`。
+- 显示层：`NaN` 显示 `—`，不显示 `0.00`；UI、口径页、导出三处同源。
+
+**可测断言（必须有单测，不得以数据未出现豁免）**
+
+| 编号 | 断言 | 取证方式 |
+|---|---|---|
+| R-07-A | 30 根常数序列（`C=10`、`N=20`、`k=2`，下标 19 起有效）：`σ=0`、`BW=0`，下标 19–29 共 11 个 `%B` 全为 NaN，`DIVIDE_BY_ZERO` 计数 11，且无 0/1 | 合成常数夹具单测 |
+| R-07-B | 前 10 根波动、后 20 根恒定的序列：仅恒定窗口对应根为 NaN，其余根有限；证明逐根判定，不是整列退化 | 单测 |
+| R-07-C | 近常数序列（交替 `±1e-12`）：`σ>0`、`BW>0`，`%B` 有限，不得误判为零带宽（验证无 eps） | 单测 |
+| R-07-D | 全 0 收盘：`MID=0`、`SD=0`、`BW=0` → `%B` NaN + `DIVIDE_BY_ZERO`，不得因 `MID=0` 走别的分支 | 单测 |
+| R-07-E | 不足 `N` 根：`%B` NaN，但错误码不是 `DIVIDE_BY_ZERO` | 单测 |
+
+**为什么不能豁免**：模拟数据集 520 根内零带宽根数恰好为 0，只说明**样本未覆盖**，不说明分支正确；除零分支必须由合成常数序列覆盖，属「必须有单测」的强制条款。
+
+**开发动作**：manifest `V05.notes` 增「零带宽 → NaN + DIVIDE_BY_ZERO；常数序列单测；R-07」；Story 卡 `S-03.05-07` 的 AC-03.05-30 已补「必须由常数序列单测覆盖」。
+
 ---
 
 ## 3. manifest 处置
@@ -168,12 +196,14 @@
 | 指标 | 目标 `status` / `specStatus` | notes 应含 |
 |---|---|---|
 | T13 | `normal` / `manualComplete` | 收盘穿越；翻空重置；R-01 |
-| T15 | `normal` / `manualComplete` | 末尾 D 根留白；R-02 |
+| T15 | `normal` / `manualComplete` | 先行带右移不延伸；迟行线末尾 D 根留白；R-02（v0.2） |
 | T23 | `normal` / `manualComplete` | 上一周期 HLC；仅 P/R1/S1；R-04 |
 | T24 | `normal` / `manualComplete` | 仅 HHV/LLV；含当前根；R-05 |
 | V08 | `normal` / `manualComplete` | ATR(14)；保留正负号；首值 15；R-06 |
 
 > 转 normal 只表示口径冻结，**不代表进 UI、不代表卡可结项**。
+>
+> **V05 %B 不在转 normal 之列**：按 R-07 只补 manifest `notes` 与「常数序列 + 单测」要求；status 不变。
 
 ### 3.2 保留 beta（1 条）
 
@@ -208,3 +238,4 @@ cargo test --workspace --exclude aka-desktop
 | 版本 | 日期 | 变更 |
 |---|---|---|
 | v0.1 | 2026-11-06 | 首次裁定 R-01 ~ R-06：5 条转 normal、T16 保留 beta；补可测断言、manifest 动作与 V08 口径冲突修正 |
+| v0.2 | 2026-11-07 | 更正 R-02：迟行线 `close[j+D]`、末尾 D 根 NaN（原 v0.1 写成 `close[i−D]`、前 D 根 NaN，与黄金夹具/参考实现相反）；先行带明确「图内最后一根保留、不向图外延伸」；新增 R-07 V05 零带宽定义（NaN + `DIVIDE_BY_ZERO`，必须常数序列单测）；同步卡、PRD、口径文档 |
