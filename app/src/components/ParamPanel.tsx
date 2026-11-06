@@ -156,8 +156,8 @@ export function ParamPanel({
 
       <div className="side-note">
         <div className="kv">
-          <span>规划指标</span>
-          <b>{registry?.plannedCount ?? "—"}</b>
+          <span>目录指标</span>
+          <b>{registry?.catalogTotal ?? "—"}</b>
         </div>
         <div className="kv">
           <span>已实现</span>

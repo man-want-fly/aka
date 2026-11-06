@@ -543,7 +543,7 @@ impl AppCore {
             .collect::<Vec<_>>();
 
         RegistryResponse {
-            planned_count: PLANNED_INDICATOR_COUNT,
+            catalog_total: PLANNED_INDICATOR_COUNT,
             implemented_count: implemented_count(),
             indicators,
         }

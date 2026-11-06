@@ -178,14 +178,15 @@ pub struct IndicatorMetaDto {
     /// 口径说明（公式要点、首个有效值、边界）
     pub notes: &'static str,
     pub warmup: usize,
-    /// 骨架期注册表里只有已实现指标；目录里 105 条规划数由 `plannedCount` 给出。
+    /// 骨架期注册表里只有已实现指标；目录规划总量（含已实现）由 `catalogTotal` 给出。
     pub implemented: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistryResponse {
-    pub planned_count: usize,
+    /// 目录规划总量（含已实现），不是 status=planned 的条数
+    pub catalog_total: usize,
     pub implemented_count: usize,
     pub indicators: Vec<IndicatorMetaDto>,
 }

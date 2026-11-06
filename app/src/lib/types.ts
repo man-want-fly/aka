@@ -77,7 +77,8 @@ export interface IndicatorMetaDto {
 }
 
 export interface RegistryResponse {
-  plannedCount: number;
+  /** 目录规划总量（含已实现），不是 status=planned 的条数 */
+  catalogTotal: number;
   implementedCount: number;
   indicators: IndicatorMetaDto[];
 }
