@@ -583,10 +583,8 @@ impl Indicator for PercentB {
         for i in 0..view.len() {
             if middle[i].is_finite() && std[i].is_finite() {
                 let width = 2.0 * mult * std[i];
-                // 零带宽判定必须带相对容差：常数序列的浮点标准差会残留 ~1e-14，
-                // 严格 `!= 0.0` 会把它当成有效带宽而输出 0.5，违反口径（零带宽 → NaN）。
-                let scale = middle[i].abs().max(1.0);
-                if width > 1e-12 * scale {
+                // 零带宽按精确 0 判定（口径 R-07）：不引入 eps，近常数但 BW>0 的序列仍按公式计算。
+                if width != 0.0 {
                     out[0][i] = (view.close[i] - (middle[i] - mult * std[i])) / width;
                 }
             }
@@ -741,28 +739,86 @@ mod tests {
         assert!(out[0][1].is_finite());
     }
 
-    #[test]
-    fn v05_zero_bandwidth_outputs_nan() {
-        // 常数收盘 → σ=0 → 上轨=下轨，%B 必须为 NaN（PRD/口径页零带宽退化条款）
-        let len = 40;
-        let close = vec![10.0; len];
-        let high = vec![10.0; len];
-        let low = vec![10.0; len];
-        let open = vec![10.0; len];
+    fn run_v05(closes: &[f64]) -> Vec<f64> {
+        let len = closes.len();
+        let open = closes.to_vec();
+        let high = closes.to_vec();
+        let low = closes.to_vec();
         let volume = vec![1.0; len];
         let amount = vec![1.0; len];
-        let view = OhlcvView::new(&open, &high, &low, &close, &volume, &amount);
+        let view = OhlcvView::new(&open, &high, &low, closes, &volume, &amount);
         let indicator = lookup(V05_ID).unwrap();
         let params = merge_defaults(indicator.meta().params, &Params::new());
         let mut out = vec![vec![0.0; len]; indicator.meta().outputs.len()];
         indicator.calc(&view, &params, &mut out).unwrap();
-        for i in 0..len {
+        out.remove(0)
+    }
+
+    #[test]
+    fn r07a_zero_bandwidth_constant_series_is_nan_for_each_bar() {
+        // R-07-A：30 根常数 C=10、N=20、k=2 → 下标 19–29 共 11 根 NaN（零带宽 → 无值，不得 clamp）
+        let out = run_v05(&[10.0; 30]);
+        for i in 0..19 {
+            assert!(out[i].is_nan(), "预热段第 {i} 根应为 NaN");
+        }
+        let zero_band_bars = (19..30).filter(|&i| out[i].is_nan()).count();
+        assert_eq!(zero_band_bars, 11, "零带宽根数应为 11，实得 {zero_band_bars}");
+        assert!(out.iter().all(|value| value.is_nan()), "常数序列不得输出 0/1/0.5/前值");
+    }
+
+    #[test]
+    fn r07b_zero_bandwidth_is_judged_per_window() {
+        // R-07-B：前 10 根波动、后 20 根恒定 → 只有窗口全恒定的 i=29 为 NaN，证明逐根判定而非整段退化
+        let mut closes = vec![10.0; 30];
+        for (i, value) in closes.iter_mut().take(10).enumerate() {
+            *value = 10.0 + (i as f64) * 0.3;
+        }
+        let out = run_v05(&closes);
+        for i in 19..=28 {
             assert!(
-                out[0][i].is_nan(),
-                "第 {i} 根零带宽 %B 应为 NaN，实得 {}",
-                out[0][i]
+                out[i].is_finite(),
+                "窗口含波动样本的第 {i} 根应为有限值，实得 {}",
+                out[i]
             );
         }
+        assert!(out[29].is_nan(), "窗口全恒定的第 29 根应为 NaN，实得 {}", out[29]);
+    }
+
+    #[test]
+    fn r07c_near_constant_series_keeps_finite_percent_b() {
+        // R-07-C：交替 ±1e-12 的近常数序列 BW>0，%B 必须按公式算出有限值（不得被 eps 误判为零带宽）
+        let closes: Vec<f64> = (0..30)
+            .map(|i| if i % 2 == 0 { 10.0 + 1e-12 } else { 10.0 - 1e-12 })
+            .collect();
+        let std = rolling_std(&closes, 20);
+        assert!(std[29] > 0.0, "近常数序列的 σ 应严格大于 0，实得 {}", std[29]);
+        let out = run_v05(&closes);
+        for i in 19..30 {
+            assert!(
+                out[i].is_finite(),
+                "BW>0 的第 {i} 根应有限，实得 {}",
+                out[i]
+            );
+            assert!(
+                (-0.01..=1.01).contains(&out[i]),
+                "近常数带宽 %B 应贴近 0.5，第 {i} 根实得 {}",
+                out[i]
+            );
+        }
+    }
+
+    #[test]
+    fn r07d_zero_price_series_is_nan() {
+        // R-07-D：全 0 收盘 → MID=0 / SD=0 / BW=0 → NaN
+        let out = run_v05(&[0.0; 30]);
+        assert!(out.iter().all(|value| value.is_nan()));
+    }
+
+    #[test]
+    fn r07e_insufficient_bars_is_nan_without_zero_bandwidth_reason() {
+        // R-07-E：不足 N 根 → 全部 NaN，且 calc 不报错（当前实现无逐根诊断通道，见汇报中的口径缺口）
+        let out = run_v05(&[10.0; 19]);
+        assert!(out.iter().all(|value| value.is_nan()));
     }
 
     #[test]

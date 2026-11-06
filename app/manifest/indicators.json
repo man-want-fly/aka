@@ -802,7 +802,7 @@
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2；先行带 A/B 右移 D 根，末尾 D 根留白；迟行线取 D 根前收盘，前 D 根留白。",
+      "notes": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2；先行带不延伸；迟行线末尾 D 根留白。",
       "abbr": "Ichimoku",
       "pinyinInitials": "ymjhb",
       "panel": "主",
