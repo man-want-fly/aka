@@ -22,6 +22,8 @@ pub struct BarBatch {
     pub provider: ProviderId,
     pub dataset_id: String,
     pub data_version: String,
+    /// 数据集重建代数：每次重建 +1，前端据此丢弃旧缓存（TD-S0-08）。
+    pub dataset_generation: u64,
     pub simulated: bool,
     pub rows: Vec<BarRow>,
     pub generated_at: i64,

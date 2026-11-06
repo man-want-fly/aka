@@ -5,8 +5,13 @@
 pub mod core;
 pub mod dto;
 pub mod error;
+pub mod telemetry;
 
 pub use core::AppCore;
 pub use dto::*;
 pub use error::{AppError, ErrorCode};
+pub use telemetry::{
+    ParamDebouncer, Telemetry, TelemetryEvent, TelemetrySummary, DEFAULT_DEBOUNCE_QUIET_MS,
+    TYPICAL_INPUT_GAP_MS,
+};
 pub use indicator_core::{Manifest, ManifestIndicator, ManifestInputs, ManifestParam, ManifestOutput};

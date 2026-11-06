@@ -3,7 +3,7 @@ mod state;
 
 use tauri::Manager;
 
-use app_core::AppCore;
+use app_core::{AppCore, Telemetry};
 use data_store::state_db::StateDb;
 
 use crate::state::AppState;
@@ -14,6 +14,14 @@ fn state_db_path(app: &tauri::App) -> Option<std::path::PathBuf> {
         .home_dir()
         .ok()
         .map(|home| home.join("Library/Application Support/aka/state.db"))
+}
+
+/// 埋点日志：`~/Library/Application Support/aka/logs/telemetry.jsonl`（JSONL，可机读）。
+fn telemetry_path(app: &tauri::App) -> Option<std::path::PathBuf> {
+    app.path()
+        .home_dir()
+        .ok()
+        .map(|home| home.join("Library/Application Support/aka/logs/telemetry.jsonl"))
 }
 
 pub fn run() {
@@ -38,6 +46,10 @@ pub fn run() {
                     core
                 }
             };
+            let core = match telemetry_path(app) {
+                Some(path) => core.with_telemetry(Telemetry::with_log_path(path)),
+                None => core,
+            };
             app.manage(AppState::new(core));
             Ok(())
         })
@@ -47,6 +59,7 @@ pub fn run() {
             commands::indicator_registry,
             commands::indicator_manifest,
             commands::calc_indicators,
+            commands::telemetry_dump,
         ])
         .run(tauri::generate_context!())
         .expect("AKA 启动失败");

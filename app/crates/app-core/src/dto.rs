@@ -73,6 +73,8 @@ pub struct ProvenanceDto {
     pub provider: String,
     pub dataset_id: String,
     pub data_version: String,
+    /// 数据集重建代数（TD-S0-08）：每次重建 +1
+    pub dataset_generation: u64,
     pub simulated: bool,
     pub generated_at: i64,
 }
@@ -242,6 +244,8 @@ pub struct SeriesDto {
 pub struct CalcResponse {
     pub generation: u64,
     pub dataset_id: String,
+    /// 数据集重建代数；与请求 `generation` 独立，前端不得混用
+    pub dataset_generation: u64,
     pub engine_version: &'static str,
     pub computed_ms: f64,
     pub cache_hit: bool,

@@ -172,7 +172,7 @@
       "outputs": [
         { "key": "r2", "labelZh": "R²", "kind": "line", "color": "#34d399" }
       ],
-      "formulaRef": "docs/indicators/b1-trend-kernels.md#t21-linreg-r2",
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t21-r2",
       "version": 1,
       "specStatus": "partial",
       "status": "beta",
@@ -234,9 +234,9 @@
       "category": "momentum",
       "inputs": { "close": true },
       "params": [
-        { "kind": "int", "key": "fast", "label": "快线 EMA", "min": 2, "max": 100, "default": 12, "step": 1 },
+        { "kind": "int", "key": "fast", "label": "快线 EMA", "min": 2, "max": 200, "default": 12, "step": 1 },
         { "kind": "int", "key": "slow", "label": "慢线 EMA", "min": 2, "max": 200, "default": 26, "step": 1 },
-        { "kind": "int", "key": "signal", "label": "信号线", "min": 2, "max": 100, "default": 9, "step": 1 }
+        { "kind": "int", "key": "signal", "label": "信号线", "min": 2, "max": 200, "default": 9, "step": 1 }
       ],
       "outputs": [
         { "key": "dif", "labelZh": "DIF", "kind": "line", "color": "var(--accent)" },

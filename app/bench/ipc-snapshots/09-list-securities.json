@@ -1,0 +1,969 @@
+{
+  "command": "list_securities",
+  "request": {
+    "limit": null,
+    "market": null
+  },
+  "response": [
+    {
+      "basePrice": 219.0,
+      "board": "创业板",
+      "code": "300750.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "宁德时代"
+    },
+    {
+      "basePrice": 1628.0,
+      "board": "沪主板",
+      "code": "600519.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "贵州茅台"
+    },
+    {
+      "basePrice": 268.0,
+      "board": "深主板",
+      "code": "002594.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "比亚迪"
+    },
+    {
+      "basePrice": 51.0,
+      "board": "沪主板",
+      "code": "601318.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "中国平安"
+    },
+    {
+      "basePrice": 37.0,
+      "board": "沪主板",
+      "code": "600036.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "招商银行"
+    },
+    {
+      "basePrice": 138.0,
+      "board": "深主板",
+      "code": "000858.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "五粮液"
+    },
+    {
+      "basePrice": 93.0,
+      "board": "科创板",
+      "code": "688981.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "中芯国际"
+    },
+    {
+      "basePrice": 16.0,
+      "board": "创业板",
+      "code": "300059.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "东方财富"
+    },
+    {
+      "basePrice": 17.0,
+      "board": "沪主板",
+      "code": "601899.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "紫金矿业"
+    },
+    {
+      "basePrice": 31.0,
+      "board": "深主板",
+      "code": "002415.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "海康威视"
+    },
+    {
+      "basePrice": 28.0,
+      "board": "沪主板",
+      "code": "600030.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "中信证券"
+    },
+    {
+      "basePrice": 19.0,
+      "board": "沪主板",
+      "code": "601012.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "隆基绿能"
+    },
+    {
+      "basePrice": 43.0,
+      "board": "深主板",
+      "code": "000651.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "格力电器"
+    },
+    {
+      "basePrice": 28.0,
+      "board": "沪主板",
+      "code": "600900.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "长江电力"
+    },
+    {
+      "basePrice": 3200.0,
+      "board": "指数",
+      "code": "000001.SH",
+      "isIndex": true,
+      "market": "SH",
+      "name": "上证指数"
+    },
+    {
+      "basePrice": 10800.0,
+      "board": "指数",
+      "code": "399001.SZ",
+      "isIndex": true,
+      "market": "SZ",
+      "name": "深证成指"
+    },
+    {
+      "basePrice": 2150.0,
+      "board": "指数",
+      "code": "399006.SZ",
+      "isIndex": true,
+      "market": "SZ",
+      "name": "创业板指"
+    },
+    {
+      "basePrice": 85.0,
+      "board": "沪主板",
+      "code": "601000.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 001"
+    },
+    {
+      "basePrice": 176.0,
+      "board": "沪主板",
+      "code": "601001.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 002"
+    },
+    {
+      "basePrice": 173.0,
+      "board": "沪主板",
+      "code": "601002.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 003"
+    },
+    {
+      "basePrice": 143.0,
+      "board": "沪主板",
+      "code": "601003.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 004"
+    },
+    {
+      "basePrice": 165.0,
+      "board": "沪主板",
+      "code": "601004.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 005"
+    },
+    {
+      "basePrice": 52.0,
+      "board": "沪主板",
+      "code": "601005.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 006"
+    },
+    {
+      "basePrice": 100.0,
+      "board": "沪主板",
+      "code": "601006.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 007"
+    },
+    {
+      "basePrice": 161.0,
+      "board": "沪主板",
+      "code": "601007.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 008"
+    },
+    {
+      "basePrice": 116.0,
+      "board": "沪主板",
+      "code": "601008.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 009"
+    },
+    {
+      "basePrice": 182.0,
+      "board": "沪主板",
+      "code": "601009.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 010"
+    },
+    {
+      "basePrice": 150.0,
+      "board": "沪主板",
+      "code": "601010.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 011"
+    },
+    {
+      "basePrice": 160.0,
+      "board": "沪主板",
+      "code": "601011.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 012"
+    },
+    {
+      "basePrice": 56.0,
+      "board": "沪主板",
+      "code": "601012.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 013"
+    },
+    {
+      "basePrice": 165.0,
+      "board": "沪主板",
+      "code": "601013.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 014"
+    },
+    {
+      "basePrice": 191.0,
+      "board": "沪主板",
+      "code": "601014.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 015"
+    },
+    {
+      "basePrice": 84.0,
+      "board": "沪主板",
+      "code": "601015.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 016"
+    },
+    {
+      "basePrice": 25.0,
+      "board": "沪主板",
+      "code": "601016.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 017"
+    },
+    {
+      "basePrice": 191.0,
+      "board": "沪主板",
+      "code": "601017.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 018"
+    },
+    {
+      "basePrice": 202.0,
+      "board": "沪主板",
+      "code": "601018.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 019"
+    },
+    {
+      "basePrice": 143.0,
+      "board": "沪主板",
+      "code": "601019.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 020"
+    },
+    {
+      "basePrice": 93.0,
+      "board": "沪主板",
+      "code": "601020.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 021"
+    },
+    {
+      "basePrice": 170.0,
+      "board": "沪主板",
+      "code": "601021.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 022"
+    },
+    {
+      "basePrice": 92.0,
+      "board": "沪主板",
+      "code": "601022.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 023"
+    },
+    {
+      "basePrice": 94.0,
+      "board": "沪主板",
+      "code": "601023.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 024"
+    },
+    {
+      "basePrice": 106.0,
+      "board": "沪主板",
+      "code": "601024.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 025"
+    },
+    {
+      "basePrice": 120.0,
+      "board": "沪主板",
+      "code": "601025.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 026"
+    },
+    {
+      "basePrice": 27.0,
+      "board": "沪主板",
+      "code": "601026.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 027"
+    },
+    {
+      "basePrice": 164.0,
+      "board": "沪主板",
+      "code": "601027.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 028"
+    },
+    {
+      "basePrice": 126.0,
+      "board": "沪主板",
+      "code": "601028.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 029"
+    },
+    {
+      "basePrice": 195.0,
+      "board": "沪主板",
+      "code": "601029.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 030"
+    },
+    {
+      "basePrice": 156.0,
+      "board": "沪主板",
+      "code": "601030.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 031"
+    },
+    {
+      "basePrice": 45.0,
+      "board": "沪主板",
+      "code": "601031.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 032"
+    },
+    {
+      "basePrice": 37.0,
+      "board": "沪主板",
+      "code": "601032.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 033"
+    },
+    {
+      "basePrice": 133.0,
+      "board": "沪主板",
+      "code": "601033.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 034"
+    },
+    {
+      "basePrice": 42.0,
+      "board": "沪主板",
+      "code": "601034.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 035"
+    },
+    {
+      "basePrice": 71.0,
+      "board": "沪主板",
+      "code": "601035.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 036"
+    },
+    {
+      "basePrice": 107.0,
+      "board": "沪主板",
+      "code": "601036.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 037"
+    },
+    {
+      "basePrice": 173.0,
+      "board": "沪主板",
+      "code": "601037.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 038"
+    },
+    {
+      "basePrice": 123.0,
+      "board": "沪主板",
+      "code": "601038.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 039"
+    },
+    {
+      "basePrice": 73.0,
+      "board": "沪主板",
+      "code": "601039.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 040"
+    },
+    {
+      "basePrice": 131.0,
+      "board": "深主板",
+      "code": "002100.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 041"
+    },
+    {
+      "basePrice": 114.0,
+      "board": "深主板",
+      "code": "002101.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 042"
+    },
+    {
+      "basePrice": 52.0,
+      "board": "深主板",
+      "code": "002102.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 043"
+    },
+    {
+      "basePrice": 21.0,
+      "board": "深主板",
+      "code": "002103.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 044"
+    },
+    {
+      "basePrice": 112.0,
+      "board": "深主板",
+      "code": "002104.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 045"
+    },
+    {
+      "basePrice": 56.0,
+      "board": "深主板",
+      "code": "002105.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 046"
+    },
+    {
+      "basePrice": 8.0,
+      "board": "深主板",
+      "code": "002106.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 047"
+    },
+    {
+      "basePrice": 170.0,
+      "board": "深主板",
+      "code": "002107.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 048"
+    },
+    {
+      "basePrice": 53.0,
+      "board": "深主板",
+      "code": "002108.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 049"
+    },
+    {
+      "basePrice": 158.0,
+      "board": "深主板",
+      "code": "002109.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 050"
+    },
+    {
+      "basePrice": 112.0,
+      "board": "深主板",
+      "code": "002110.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 051"
+    },
+    {
+      "basePrice": 146.0,
+      "board": "深主板",
+      "code": "002111.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 052"
+    },
+    {
+      "basePrice": 54.0,
+      "board": "深主板",
+      "code": "002112.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 053"
+    },
+    {
+      "basePrice": 151.0,
+      "board": "深主板",
+      "code": "002113.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 054"
+    },
+    {
+      "basePrice": 34.0,
+      "board": "深主板",
+      "code": "002114.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 055"
+    },
+    {
+      "basePrice": 140.0,
+      "board": "深主板",
+      "code": "002115.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 056"
+    },
+    {
+      "basePrice": 198.0,
+      "board": "深主板",
+      "code": "002116.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 057"
+    },
+    {
+      "basePrice": 9.0,
+      "board": "深主板",
+      "code": "002117.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 058"
+    },
+    {
+      "basePrice": 36.0,
+      "board": "深主板",
+      "code": "002118.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 059"
+    },
+    {
+      "basePrice": 29.0,
+      "board": "深主板",
+      "code": "002119.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 060"
+    },
+    {
+      "basePrice": 26.0,
+      "board": "深主板",
+      "code": "002120.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 061"
+    },
+    {
+      "basePrice": 83.0,
+      "board": "深主板",
+      "code": "002121.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 062"
+    },
+    {
+      "basePrice": 61.0,
+      "board": "深主板",
+      "code": "002122.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 063"
+    },
+    {
+      "basePrice": 34.0,
+      "board": "深主板",
+      "code": "002123.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 064"
+    },
+    {
+      "basePrice": 109.0,
+      "board": "深主板",
+      "code": "002124.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 065"
+    },
+    {
+      "basePrice": 77.0,
+      "board": "深主板",
+      "code": "002125.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 066"
+    },
+    {
+      "basePrice": 146.0,
+      "board": "深主板",
+      "code": "002126.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 067"
+    },
+    {
+      "basePrice": 58.0,
+      "board": "深主板",
+      "code": "002127.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 068"
+    },
+    {
+      "basePrice": 184.0,
+      "board": "深主板",
+      "code": "002128.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 069"
+    },
+    {
+      "basePrice": 109.0,
+      "board": "深主板",
+      "code": "002129.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 070"
+    },
+    {
+      "basePrice": 130.0,
+      "board": "深主板",
+      "code": "002130.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 071"
+    },
+    {
+      "basePrice": 79.0,
+      "board": "深主板",
+      "code": "002131.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 072"
+    },
+    {
+      "basePrice": 125.0,
+      "board": "深主板",
+      "code": "002132.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 073"
+    },
+    {
+      "basePrice": 54.0,
+      "board": "深主板",
+      "code": "002133.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 074"
+    },
+    {
+      "basePrice": 5.0,
+      "board": "深主板",
+      "code": "002134.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 075"
+    },
+    {
+      "basePrice": 45.0,
+      "board": "深主板",
+      "code": "002135.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 076"
+    },
+    {
+      "basePrice": 94.0,
+      "board": "深主板",
+      "code": "002136.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 077"
+    },
+    {
+      "basePrice": 8.0,
+      "board": "深主板",
+      "code": "002137.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 078"
+    },
+    {
+      "basePrice": 162.0,
+      "board": "深主板",
+      "code": "002138.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 079"
+    },
+    {
+      "basePrice": 23.0,
+      "board": "深主板",
+      "code": "002139.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 080"
+    },
+    {
+      "basePrice": 179.0,
+      "board": "创业板",
+      "code": "300100.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 081"
+    },
+    {
+      "basePrice": 94.0,
+      "board": "创业板",
+      "code": "300101.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 082"
+    },
+    {
+      "basePrice": 97.0,
+      "board": "创业板",
+      "code": "300102.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 083"
+    },
+    {
+      "basePrice": 105.0,
+      "board": "创业板",
+      "code": "300103.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 084"
+    },
+    {
+      "basePrice": 46.0,
+      "board": "创业板",
+      "code": "300104.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 085"
+    },
+    {
+      "basePrice": 122.0,
+      "board": "创业板",
+      "code": "300105.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 086"
+    },
+    {
+      "basePrice": 162.0,
+      "board": "创业板",
+      "code": "300106.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 087"
+    },
+    {
+      "basePrice": 23.0,
+      "board": "创业板",
+      "code": "300107.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 088"
+    },
+    {
+      "basePrice": 94.0,
+      "board": "创业板",
+      "code": "300108.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 089"
+    },
+    {
+      "basePrice": 8.0,
+      "board": "创业板",
+      "code": "300109.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 090"
+    },
+    {
+      "basePrice": 85.0,
+      "board": "创业板",
+      "code": "300110.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 091"
+    },
+    {
+      "basePrice": 40.0,
+      "board": "创业板",
+      "code": "300111.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 092"
+    },
+    {
+      "basePrice": 184.0,
+      "board": "创业板",
+      "code": "300112.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 093"
+    },
+    {
+      "basePrice": 109.0,
+      "board": "创业板",
+      "code": "300113.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 094"
+    },
+    {
+      "basePrice": 25.0,
+      "board": "创业板",
+      "code": "300114.SZ",
+      "isIndex": false,
+      "market": "SZ",
+      "name": "示例标的 095"
+    },
+    {
+      "basePrice": 91.0,
+      "board": "科创板",
+      "code": "688100.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 096"
+    },
+    {
+      "basePrice": 43.0,
+      "board": "科创板",
+      "code": "688101.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 097"
+    },
+    {
+      "basePrice": 96.0,
+      "board": "科创板",
+      "code": "688102.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 098"
+    },
+    {
+      "basePrice": 149.0,
+      "board": "科创板",
+      "code": "688103.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 099"
+    },
+    {
+      "basePrice": 177.0,
+      "board": "科创板",
+      "code": "688104.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 100"
+    },
+    {
+      "basePrice": 123.0,
+      "board": "科创板",
+      "code": "688105.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 101"
+    },
+    {
+      "basePrice": 84.0,
+      "board": "科创板",
+      "code": "688106.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 102"
+    },
+    {
+      "basePrice": 156.0,
+      "board": "科创板",
+      "code": "688107.SH",
+      "isIndex": false,
+      "market": "SH",
+      "name": "示例标的 103"
+    }
+  ]
+}

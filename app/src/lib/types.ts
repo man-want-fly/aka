@@ -151,6 +151,8 @@ export interface ProvenanceDto {
   provider: string;
   datasetId: string;
   dataVersion: string;
+  /** 数据集代次：data_version v<N> → N，用于前端识别数据代次切换 */
+  datasetGeneration: number;
   simulated: boolean;
   generatedAt: number;
 }
@@ -223,6 +225,8 @@ export interface SeriesDto {
 export interface CalcResponse {
   generation: number;
   datasetId: string;
+  /** 数据集代次，与 provenance.datasetGeneration 同源 */
+  datasetGeneration: number;
   engineVersion: string;
   computedMs: number;
   cacheHit: boolean;

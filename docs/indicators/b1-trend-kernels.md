@@ -11,7 +11,7 @@
 | --- | --- |
 | 窗口 | `period=N`，前 `N-1` 根输出 `NaN` |
 | 预热 | `Meta.warmup` 返回「前置根数」，应用层要求 `bars >= warmup+1` |
-| 浮点容差 | 价格类 `relative 1e-6`；R²/斜率 `absolute 1e-6`；BIAS `absolute 1e-4` |
+| 浮点容差 | 价格/斜率类（元、元/根、元/日）：`relative 1e-6`（分母 `max(\|expected\|,1.0)`）；R²（无量纲）：`absolute 1e-6`；BIAS（%）与 MACD 副图：`absolute 1e-4`。逐 case 容差写在夹具里，默认按指标类别取；手算样例可单 case 收紧（如 `edge_manual_nonlinear` 用 `absolute 1e-9`），`tolerance_rules_are_frozen` 锁定默认映射。 |
 | 数据不足 | 全部输出 `NaN`，不报错（错误由 app-core 的 warmup 门禁统一给出） |
 | 常数序列 | 均线/回归退化为常数；BIAS 均值为 0 时输出 `NaN` |
 | 首根 K 线 | 窗口未满，输出 `NaN` |
@@ -63,7 +63,7 @@
 - 同上 OLS，输出 `intercept`，即窗口首根（`x=0`）的拟合值。
 - 首个有效值：`t=N-1`；`warmup=N-1`。
 
-## T21 LinReg R²
+## <a id="t21-r2"></a>T21 LinReg R²
 
 - `Sxx = N(N²-1)/12`，`Sxy = Σ(x−x̄)(y−ȳ)`，`Syy = Σ(y−ȳ)²`
 - `R² = Sxy²/(Sxx·Syy)`，裁剪到 `[0,1]`

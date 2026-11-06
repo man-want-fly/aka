@@ -3,7 +3,10 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
 use data_provider::mock::MockProvider;
-use data_provider::{Adjust, BarRequest, DataProvider, Date, Security, Timeframe};
+use data_provider::{
+    aggregate_bars, Adjust, AggregatePeriod, BarBatch, BarRequest, DataProvider, Date,
+    Security, Timeframe,
+};
 use data_store::state_db::StateDb;
 use data_store::{CacheStats, Candle, CandleSeries, CandleStore, SeriesKey};
 use indicator_core::{
@@ -17,6 +20,10 @@ use crate::dto::{
     RegistryResponse, SecurityDto, SeriesDto,
 };
 use crate::error::{AppError, ErrorCode};
+use crate::telemetry::{
+    Telemetry, EVENT_CACHE_HIT, EVENT_CACHE_MISS, EVENT_COMPUTE_COUNT, EVENT_COMPUTE_SKIP,
+    EVENT_INDICATOR_COMPUTE,
+};
 
 /// 编排层：唯一知道「provider + store + 指标 + 缓存」如何协作的地方。
 /// 命令层不得绕过它直接访问任一子系统。
@@ -24,8 +31,11 @@ pub struct AppCore {
     provider: Box<dyn DataProvider>,
     securities: Vec<Security>,
     store: Mutex<CandleStore>,
+    /// 日线原始批次（按「标的|复权」缓存）：日/周/月都从同一份日线派生，避免重复取数。
+    daily_batches: Mutex<HashMap<String, Arc<BarBatch>>>,
     calc_cache: Mutex<HashMap<String, Arc<Vec<Vec<f64>>>>>,
     calc_stats: Mutex<CacheStats>,
+    telemetry: Telemetry,
     /// rusqlite `Connection` 是 `Send` 但不是 `Sync`，因此包一层 Mutex 才能随 `AppCore`
     /// 被 Tauri 的 `State` 共享。
     state: Option<Mutex<StateDb>>,
@@ -41,10 +51,22 @@ impl AppCore {
             provider,
             securities: master.securities,
             store: Mutex::new(CandleStore::new()),
+            daily_batches: Mutex::new(HashMap::new()),
             calc_cache: Mutex::new(HashMap::new()),
             calc_stats: Mutex::new(CacheStats::default()),
+            telemetry: Telemetry::in_memory(),
             state: None,
         })
+    }
+
+    /// 注入埋点 sink（路径由 aka-desktop 决定）；不注入时只保留内存环形队列。
+    pub fn with_telemetry(mut self, telemetry: Telemetry) -> Self {
+        self.telemetry = telemetry;
+        self
+    }
+
+    pub fn telemetry(&self) -> &Telemetry {
+        &self.telemetry
     }
 
     /// 注入 `state.db`（路径由 aka-desktop 决定）；不注入时应用照常可跑。
@@ -177,6 +199,7 @@ impl AppCore {
                 provider: series.provider.clone(),
                 dataset_id: series.dataset_id.clone(),
                 data_version: series.data_version.clone(),
+                dataset_generation: series.dataset_generation,
                 simulated: series.simulated,
                 generated_at: series.generated_at,
             },
@@ -196,6 +219,10 @@ impl AppCore {
 
         let mut computed_ms = 0.0;
         let mut cache_hit = true;
+        let mut computed = 0u64;
+        let mut skipped = 0u64;
+        // 同请求内同键去重：5 个实例引用同一指标参数时只算一次，其余实例复用结果。
+        let mut request_cache: HashMap<String, Arc<Vec<Vec<f64>>>> = HashMap::new();
         let mut output = Vec::with_capacity(req.instances.len());
 
         for instance in &req.instances {
@@ -226,31 +253,75 @@ impl AppCore {
             }
 
             let key = calc_key(&series, meta, &params, &window.range);
-            let cached = self
-                .calc_cache
-                .lock()
-                .map_err(|_| AppError::internal("计算缓存锁中毒"))?
-                .get(&key)
-                .cloned();
+            let params_hash = params_hash(&params);
+            let context = telemetry_context(
+                meta.id,
+                &params_hash,
+                &key,
+                &series,
+                window.end - window.start,
+            );
 
-            let raw = match cached {
-                Some(values) => values,
-                None => {
-                    cache_hit = false;
-                    let started = Instant::now();
-                    let mut values = vec![vec![f64::NAN; total]; meta.outputs.len()];
-                    indicator
-                        .calc(&view, &params, &mut values)
-                        .map_err(|err| calc_error(meta.id, err))?;
-                    computed_ms += started.elapsed().as_secs_f64() * 1000.0;
-                    let values = Arc::new(values);
-                    self.calc_cache
-                        .lock()
-                        .map_err(|_| AppError::internal("计算缓存锁中毒"))?
-                        .insert(key, values.clone());
-                    values
+            let raw = if let Some(values) = request_cache.get(&key) {
+                skipped += 1;
+                self.telemetry.emit(
+                    EVENT_COMPUTE_SKIP,
+                    vec![
+                        ("indicatorId", serde_json::json!(meta.id)),
+                        ("instanceId", serde_json::json!(instance.instance_id)),
+                        ("reason", serde_json::json!("duplicateKey")),
+                        ("cacheKey", serde_json::json!(key.clone())),
+                    ],
+                );
+                values.clone()
+            } else {
+                let cached = self
+                    .calc_cache
+                    .lock()
+                    .map_err(|_| AppError::internal("计算缓存锁中毒"))?
+                    .get(&key)
+                    .cloned();
+
+                match cached {
+                    Some(values) => {
+                        self.telemetry.emit(EVENT_CACHE_HIT, context.clone());
+                        values
+                    }
+                    None => {
+                        cache_hit = false;
+                        self.telemetry.emit(EVENT_CACHE_MISS, context.clone());
+                        let started = Instant::now();
+                        let mut values = vec![vec![f64::NAN; total]; meta.outputs.len()];
+                        indicator
+                            .calc(&view, &params, &mut values)
+                            .map_err(|err| calc_error(meta.id, err))?;
+                        let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+                        computed_ms += elapsed_ms;
+                        computed += 1;
+
+                        let mut compute_fields = context.clone();
+                        compute_fields.push(("computeMs", serde_json::json!(elapsed_ms)));
+                        self.telemetry.emit(EVENT_INDICATOR_COMPUTE, compute_fields);
+                        self.telemetry.record_cold_ms(
+                            elapsed_ms,
+                            vec![
+                                ("indicatorId", serde_json::json!(meta.id)),
+                                ("cacheKey", serde_json::json!(key.clone())),
+                                ("barCount", serde_json::json!(window.end - window.start)),
+                            ],
+                        );
+
+                        let values = Arc::new(values);
+                        self.calc_cache
+                            .lock()
+                            .map_err(|_| AppError::internal("计算缓存锁中毒"))?
+                            .insert(key.clone(), values.clone());
+                        values
+                    }
                 }
             };
+
+            request_cache.insert(key, raw.clone());
 
             let outputs = meta
                 .outputs
@@ -286,10 +357,22 @@ impl AppCore {
         } else {
             stats.misses += 1;
         }
+        drop(stats);
+
+        self.telemetry.emit(
+            EVENT_COMPUTE_COUNT,
+            vec![
+                ("count", serde_json::json!(computed)),
+                ("skip", serde_json::json!(skipped)),
+                ("instances", serde_json::json!(req.instances.len())),
+                ("cacheHit", serde_json::json!(cache_hit)),
+            ],
+        );
 
         Ok(CalcResponse {
             generation: req.generation,
             dataset_id: series.dataset_id.clone(),
+            dataset_generation: series.dataset_generation,
             engine_version: ENGINE_VERSION,
             computed_ms: (computed_ms * 100.0).round() / 100.0,
             cache_hit,
@@ -308,13 +391,6 @@ impl AppCore {
         let Some(found) = self.securities.iter().find(|s| s.code == security) else {
             return Err(AppError::unknown_security(security));
         };
-        if !matches!(timeframe, Timeframe::Day) {
-            return Err(AppError::new(
-                ErrorCode::DatasetMissing,
-                "骨架期仅支持日线（D）；周/月线由后续 Sprint 聚合生成",
-            )
-            .with_details(serde_json::json!({ "timeframe": timeframe.as_str() })));
-        }
 
         let key = SeriesKey {
             security: found.code.clone(),
@@ -326,21 +402,16 @@ impl AppCore {
             return Ok(cached);
         }
 
-        let batch = self
-            .provider
-            .daily_bars(BarRequest {
-                security: found.code.clone(),
-                timeframe,
-                adj,
-                from: None,
-                to: None,
-            })
-            .await
-            .map_err(AppError::from)?;
+        // 日/周/月都从同一份日线批次派生：周/月聚合只在 app-core 做一次口径转换。
+        let batch = self.daily_batch(&found.code, adj).await?;
+        let rows = match timeframe {
+            Timeframe::Day => batch.rows.clone(),
+            Timeframe::Week => aggregate_bars(&batch.rows, AggregatePeriod::Week),
+            Timeframe::Month => aggregate_bars(&batch.rows, AggregatePeriod::Month),
+        };
 
         let provider = batch.provider.as_str().to_string();
-        let candles = batch
-            .rows
+        let candles = rows
             .iter()
             .map(|row| Candle {
                 ts: row.date.epoch_secs(),
@@ -357,13 +428,29 @@ impl AppCore {
             })
             .collect::<Vec<_>>();
 
+        if candles.is_empty() {
+            return Err(AppError::new(
+                ErrorCode::DatasetMissing,
+                format!(
+                    "{} 在 {} 周期内没有可用 K 线（可能整段停牌）",
+                    found.code,
+                    timeframe.as_str()
+                ),
+            )
+            .with_details(serde_json::json!({
+                "security": found.code,
+                "timeframe": timeframe.as_str(),
+            })));
+        }
+
         let series = Arc::new(CandleSeries {
             security: found.code.clone(),
             timeframe: timeframe.as_str().to_string(),
             adj: adj.as_str().to_string(),
             provider,
-            dataset_id: batch.dataset_id,
-            data_version: batch.data_version,
+            dataset_id: batch.dataset_id.clone(),
+            data_version: batch.data_version.clone(),
+            dataset_generation: batch.dataset_generation,
             simulated: batch.simulated,
             generated_at: batch.generated_at,
             candles,
@@ -371,6 +458,38 @@ impl AppCore {
 
         self.store_lock()?.put(key, series.clone());
         Ok(series)
+    }
+
+    /// 日线原始批次缓存：同一标的/复权只取一次，换算周/月时不重复打 provider。
+    async fn daily_batch(&self, code: &str, adj: Adjust) -> Result<Arc<BarBatch>, AppError> {
+        let key = format!("{}|{}", code, adj.as_str());
+        if let Some(cached) = self
+            .daily_batches
+            .lock()
+            .map_err(|_| AppError::internal("日线批次锁中毒"))?
+            .get(&key)
+            .cloned()
+        {
+            return Ok(cached);
+        }
+
+        let batch = self
+            .provider
+            .daily_bars(BarRequest {
+                security: code.to_string(),
+                timeframe: Timeframe::Day,
+                adj,
+                from: None,
+                to: None,
+            })
+            .await
+            .map_err(AppError::from)?;
+        let batch = Arc::new(batch);
+        self.daily_batches
+            .lock()
+            .map_err(|_| AppError::internal("日线批次锁中毒"))?
+            .insert(key, batch.clone());
+        Ok(batch)
     }
 
     fn store_lock(&self) -> Result<MutexGuard<'_, CandleStore>, AppError> {
@@ -586,6 +705,37 @@ impl SeriesColumns {
     }
 }
 
+/// 参数指纹：FNV-1a(JSON 序列化后的 Params)，用于埋点与缓存键排查，不参与缓存键本体。
+fn params_hash(params: &Params) -> String {
+    let text = serde_json::to_string(params).unwrap_or_default();
+    let mut hash = 0xCBF2_9CE4_8422_2325u64;
+    for byte in text.as_bytes() {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01B3);
+    }
+    format!("{hash:016x}")
+}
+
+fn telemetry_context(
+    indicator_id: &'static str,
+    params_hash: &str,
+    cache_key: &str,
+    series: &CandleSeries,
+    bar_count: usize,
+) -> Vec<(&'static str, serde_json::Value)> {
+    vec![
+        ("indicatorId", serde_json::json!(indicator_id)),
+        ("paramsHash", serde_json::json!(params_hash)),
+        ("cacheKey", serde_json::json!(cache_key)),
+        ("security", serde_json::json!(series.security)),
+        ("timeframe", serde_json::json!(series.timeframe)),
+        ("adj", serde_json::json!(series.adj)),
+        ("datasetId", serde_json::json!(series.dataset_id)),
+        ("datasetGeneration", serde_json::json!(series.dataset_generation)),
+        ("barCount", serde_json::json!(bar_count)),
+    ]
+}
+
 /// 缓存键 = 6 个原有维度（数据集版本、标的、周期、复权、指标 id、参数）+ DateRange，
 /// 共 7 维；DateRange 用规范化后的实际起止日参与哈希（未指定时记 `*`）。
 /// 不再保留旧六元组键：日期区间变化必须视为新的计算结果。
@@ -681,6 +831,7 @@ mod tests {
             provider: "mock".into(),
             dataset_id: "ds".into(),
             data_version: "v0".into(),
+            dataset_generation: 1,
             simulated: true,
             generated_at: 0,
             candles,
@@ -771,5 +922,132 @@ mod tests {
         assert_ne!(key_a, key_b, "区间变化必须产生不同缓存键");
         assert!(key_a.contains("2024-12-24~2024-12-24") || key_a.contains("2024-12-20~2024-12-24"));
         assert_eq!(key_a.matches('|').count(), 8, "v2 + 7 个维度 + 1 段 range");
+    }
+
+    fn bars_req(timeframe: &str, from: Option<&str>, to: Option<&str>) -> GetBarsRequest {
+        GetBarsRequest {
+            security: "600519.SH".into(),
+            timeframe: timeframe.into(),
+            adj: "qfq".into(),
+            from: from.map(str::to_string),
+            to: to.map(str::to_string),
+        }
+    }
+
+    /// QA-S0-015：周/月线由日线聚合，根数 = ISO 周数 / 自然月数，首末 OHLC 与日线可核对。
+    #[tokio::test]
+    async fn weekly_and_monthly_aggregate_from_daily_batch() {
+        let core = AppCore::new_mock().await.unwrap();
+        let daily = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+        let weekly = core.get_bars(&bars_req("W", None, None)).await.unwrap();
+        let monthly = core.get_bars(&bars_req("M", None, None)).await.unwrap();
+
+        let mut weeks = Vec::new();
+        let mut months = Vec::new();
+        for bar in &daily.bars {
+            let date = Date::parse(&bar.date).unwrap();
+            let week = data_provider::iso_week(date);
+            if weeks.last() != Some(&week) {
+                weeks.push(week);
+            }
+            let month = data_provider::month_key(date);
+            if months.last() != Some(&month) {
+                months.push(month);
+            }
+        }
+        assert_eq!(weekly.bars.len(), weeks.len(), "周线根数必须等于 ISO 周数");
+        assert_eq!(monthly.bars.len(), months.len(), "月线根数必须等于自然月数");
+
+        // 手算第一周：open 取首日、high/low 取极值、close 取末日、volume/amount 求和。
+        let first_week: Vec<&BarDto> = daily
+            .bars
+            .iter()
+            .take_while(|bar| {
+                data_provider::iso_week(Date::parse(&bar.date).unwrap()) == weeks[0]
+            })
+            .collect();
+        let week = &weekly.bars[0];
+        assert_eq!(week.open, first_week[0].open);
+        assert_eq!(week.close, first_week.last().unwrap().close);
+        let high = first_week.iter().fold(f64::MIN, |acc, bar| acc.max(bar.high));
+        let low = first_week.iter().fold(f64::MAX, |acc, bar| acc.min(bar.low));
+        assert!((week.high - high).abs() < 1e-9);
+        assert!((week.low - low).abs() < 1e-9);
+        let volume: f64 = first_week.iter().map(|bar| bar.volume).sum();
+        assert!((week.volume - volume).abs() < 1e-6);
+        assert_eq!(week.date, first_week.last().unwrap().date);
+
+        assert_eq!(weekly.bars.last().unwrap().close, daily.bars.last().unwrap().close);
+        assert_eq!(monthly.bars.first().unwrap().open, daily.bars.first().unwrap().open);
+        assert_eq!(monthly.bars.last().unwrap().close, daily.bars.last().unwrap().close);
+        assert_eq!(weekly.provenance.dataset_generation, 1);
+        assert_eq!(monthly.provenance.dataset_generation, 1);
+        assert_eq!(monthly.bars.last().unwrap().date, daily.bars.last().unwrap().date);
+    }
+
+    /// QA-S0-022 / 028 / 029：同请求去重、缓存命中、冷耗时都有结构化事件。
+    #[tokio::test]
+    async fn calc_telemetry_records_dedup_cache_and_cold_ms() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = |generation: u64| CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+            from: None,
+            to: None,
+            generation,
+            instances: vec![
+                crate::dto::InstanceRequest {
+                    instance_id: "a".into(),
+                    indicator_id: "T01".into(),
+                    params: std::collections::BTreeMap::from([(
+                        "period".to_string(),
+                        indicator_core::ParamValue::Int(20),
+                    )]),
+                },
+                crate::dto::InstanceRequest {
+                    instance_id: "b".into(),
+                    indicator_id: "T01".into(),
+                    params: std::collections::BTreeMap::from([(
+                        "period".to_string(),
+                        indicator_core::ParamValue::Int(20),
+                    )]),
+                },
+                crate::dto::InstanceRequest {
+                    instance_id: "c".into(),
+                    indicator_id: "T01".into(),
+                    params: std::collections::BTreeMap::from([(
+                        "period".to_string(),
+                        indicator_core::ParamValue::Int(30),
+                    )]),
+                },
+            ],
+        };
+
+        let first = core.calc_indicators(&request(1)).await.unwrap();
+        assert!(!first.cache_hit);
+        assert_eq!(first.dataset_generation, 1);
+        assert_eq!(first.series.len(), 3);
+
+        let events = core.telemetry().events();
+        let name = |event: &crate::telemetry::TelemetryEvent| event.name.clone();
+        let counts = core.telemetry().summary(0).counts;
+        assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&2));
+        assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_MISS), Some(&2));
+        assert_eq!(counts.get(crate::telemetry::EVENT_COMPUTE_SKIP), Some(&1));
+        let count_event = events
+            .iter()
+            .find(|event| name(event) == crate::telemetry::EVENT_COMPUTE_COUNT)
+            .expect("必须有 compute.count");
+        assert_eq!(count_event.fields["count"], 2);
+        assert_eq!(count_event.fields["skip"], 1);
+        assert!(core.telemetry().cold_p95_ms().is_some());
+
+        // 同请求再算一次：全部命中缓存，不再执行计算。
+        let second = core.calc_indicators(&request(2)).await.unwrap();
+        assert!(second.cache_hit);
+        let counts = core.telemetry().summary(0).counts;
+        assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_HIT), Some(&2));
+        assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&2));
     }
 }

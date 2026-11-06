@@ -1,0 +1,57 @@
+{
+  "count": 10,
+  "formatVersion": 1,
+  "messages": [
+    {
+      "command": "get_bars",
+      "file": "01-get-bars-d.json",
+      "hasError": false
+    },
+    {
+      "command": "get_bars",
+      "file": "02-get-bars-w.json",
+      "hasError": false
+    },
+    {
+      "command": "get_bars",
+      "file": "03-get-bars-m.json",
+      "hasError": false
+    },
+    {
+      "command": "get_bars",
+      "file": "04-get-bars-d-range.json",
+      "hasError": false
+    },
+    {
+      "command": "get_bars",
+      "file": "05-get-bars-w-range.json",
+      "hasError": false
+    },
+    {
+      "command": "calc_indicators",
+      "file": "06-calc-t01-m06.json",
+      "hasError": false
+    },
+    {
+      "command": "calc_indicators",
+      "file": "07-calc-alias-ma.json",
+      "hasError": false
+    },
+    {
+      "command": "indicator_registry",
+      "file": "08-indicator-registry.json",
+      "hasError": false
+    },
+    {
+      "command": "list_securities",
+      "file": "09-list-securities.json",
+      "hasError": false
+    },
+    {
+      "command": "get_bars",
+      "file": "10-error-unknown-security.json",
+      "hasError": true
+    }
+  ],
+  "provider": "mock(seed=42)"
+}

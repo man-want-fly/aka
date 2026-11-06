@@ -1,0 +1,2164 @@
+{
+  "command": "get_bars",
+  "request": {
+    "adj": "qfq",
+    "from": "2023-06-01",
+    "security": "300750.SZ",
+    "timeframe": "D",
+    "to": "2023-12-29"
+  },
+  "response": {
+    "adj": "qfq",
+    "bars": [
+      {
+        "amount": 6695289495.47,
+        "close": 135.35,
+        "date": "2023-06-01",
+        "high": 135.71,
+        "low": 132.46,
+        "open": 132.53,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1685577600,
+        "volume": 49776238.0
+      },
+      {
+        "amount": 6132798956.39,
+        "close": 134.84,
+        "date": "2023-06-02",
+        "high": 135.38,
+        "low": 133.99,
+        "open": 134.64,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1685664000,
+        "volume": 45517161.0
+      },
+      {
+        "amount": 3577565679.71,
+        "close": 132.07,
+        "date": "2023-06-05",
+        "high": 135.12,
+        "low": 131.77,
+        "open": 134.51,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1685923200,
+        "volume": 26901392.0
+      },
+      {
+        "amount": 4314225511.45,
+        "close": 131.97,
+        "date": "2023-06-06",
+        "high": 132.92,
+        "low": 131.13,
+        "open": 131.46,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686009600,
+        "volume": 32682000.0
+      },
+      {
+        "amount": 1988664694.79,
+        "close": 130.56,
+        "date": "2023-06-07",
+        "high": 132.39,
+        "low": 130.18,
+        "open": 131.81,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686096000,
+        "volume": 15175552.0
+      },
+      {
+        "amount": 2198121434.46,
+        "close": 131.02,
+        "date": "2023-06-08",
+        "high": 131.86,
+        "low": 128.96,
+        "open": 129.76,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686182400,
+        "volume": 16828990.0
+      },
+      {
+        "amount": 6648923817.75,
+        "close": 128.68,
+        "date": "2023-06-09",
+        "high": 131.76,
+        "low": 128.63,
+        "open": 130.91,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686268800,
+        "volume": 51268377.0
+      },
+      {
+        "amount": 4800792651.42,
+        "close": 122.78,
+        "date": "2023-06-12",
+        "high": 129.09,
+        "low": 122.27,
+        "open": 128.27,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686528000,
+        "volume": 38494575.0
+      },
+      {
+        "amount": 5076467011.31,
+        "close": 123.38,
+        "date": "2023-06-13",
+        "high": 123.68,
+        "low": 121.38,
+        "open": 122.07,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686614400,
+        "volume": 41335084.0
+      },
+      {
+        "amount": 5623361673.5,
+        "close": 120.06,
+        "date": "2023-06-14",
+        "high": 125.17,
+        "low": 119.16,
+        "open": 124.34,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686700800,
+        "volume": 46295941.0
+      },
+      {
+        "amount": 5331678523.46,
+        "close": 123.12,
+        "date": "2023-06-15",
+        "high": 123.5,
+        "low": 118.18,
+        "open": 119.12,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686787200,
+        "volume": 43846469.0
+      },
+      {
+        "amount": 4454311380.7,
+        "close": 123.14,
+        "date": "2023-06-16",
+        "high": 123.76,
+        "low": 122.73,
+        "open": 123.15,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1686873600,
+        "volume": 36152042.0
+      },
+      {
+        "amount": 5496685672.49,
+        "close": 125.49,
+        "date": "2023-06-19",
+        "high": 125.55,
+        "low": 123.36,
+        "open": 123.48,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687132800,
+        "volume": 44044132.0
+      },
+      {
+        "amount": 3781105136.16,
+        "close": 125.57,
+        "date": "2023-06-20",
+        "high": 126.43,
+        "low": 124.73,
+        "open": 125.98,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687219200,
+        "volume": 30109808.0
+      },
+      {
+        "amount": 3827725979.97,
+        "close": 126.26,
+        "date": "2023-06-21",
+        "high": 126.43,
+        "low": 125.69,
+        "open": 125.69,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687305600,
+        "volume": 30349233.0
+      },
+      {
+        "amount": 6558594464.11,
+        "close": 127.09,
+        "date": "2023-06-22",
+        "high": 127.65,
+        "low": 126.14,
+        "open": 126.15,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687392000,
+        "volume": 51659535.0
+      },
+      {
+        "amount": 5710669863.62,
+        "close": 127.17,
+        "date": "2023-06-23",
+        "high": 127.47,
+        "low": 126.28,
+        "open": 127.1,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687478400,
+        "volume": 44975599.0
+      },
+      {
+        "amount": 2209346732.35,
+        "close": 131.01,
+        "date": "2023-06-26",
+        "high": 131.55,
+        "low": 127.26,
+        "open": 127.66,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687737600,
+        "volume": 17002869.0
+      },
+      {
+        "amount": 2209035294.26,
+        "close": 130.12,
+        "date": "2023-06-27",
+        "high": 131.63,
+        "low": 130.09,
+        "open": 131.11,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687824000,
+        "volume": 16912783.0
+      },
+      {
+        "amount": 2700632021.92,
+        "close": 130.46,
+        "date": "2023-06-28",
+        "high": 131.33,
+        "low": 128.97,
+        "open": 129.7,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687910400,
+        "volume": 20733655.0
+      },
+      {
+        "amount": 3762496781.07,
+        "close": 126.53,
+        "date": "2023-06-29",
+        "high": 131.04,
+        "low": 125.92,
+        "open": 130.46,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1687996800,
+        "volume": 29432560.0
+      },
+      {
+        "amount": 2973217411.37,
+        "close": 125.86,
+        "date": "2023-06-30",
+        "high": 127.37,
+        "low": 125.07,
+        "open": 126.82,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1688083200,
+        "volume": 23578583.0
+      },
+      {
+        "amount": 6397870343.02,
+        "close": 127.75,
+        "date": "2023-07-03",
+        "high": 128.68,
+        "low": 125.17,
+        "open": 125.8,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1688342400,
+        "volume": 50298665.0
+      },
+      {
+        "amount": 3598683469.93,
+        "close": 128.14,
+        "date": "2023-07-04",
+        "high": 128.36,
+        "low": 127.66,
+        "open": 127.66,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1688428800,
+        "volume": 28103423.0
+      },
+      {
+        "amount": 6847195754.69,
+        "close": 127.83,
+        "date": "2023-07-05",
+        "high": 129.69,
+        "low": 127.47,
+        "open": 129.05,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1688515200,
+        "volume": 53355663.0
+      },
+      {
+        "amount": 6888971968.74,
+        "close": 126.62,
+        "date": "2023-07-06",
+        "high": 128.7,
+        "low": 126.15,
+        "open": 128.1,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1688601600,
+        "volume": 54177748.0
+      },
+      {
+        "amount": 4564410212.16,
+        "close": 126.77,
+        "date": "2023-07-07",
+        "high": 127.24,
+        "low": 126.08,
+        "open": 126.57,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1688688000,
+        "volume": 36026562.0
+      },
+      {
+        "amount": 6860157798.02,
+        "close": 132.02,
+        "date": "2023-07-10",
+        "high": 132.63,
+        "low": 126.56,
+        "open": 126.79,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1688947200,
+        "volume": 52607567.0
+      },
+      {
+        "amount": 2338135789.09,
+        "close": 127.16,
+        "date": "2023-07-11",
+        "high": 131.8,
+        "low": 126.58,
+        "open": 131.74,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689033600,
+        "volume": 18193768.0
+      },
+      {
+        "amount": 4511206532.91,
+        "close": 126.69,
+        "date": "2023-07-12",
+        "high": 128.45,
+        "low": 126.4,
+        "open": 127.84,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689120000,
+        "volume": 35470843.0
+      },
+      {
+        "amount": 5007272927.53,
+        "close": 127.86,
+        "date": "2023-07-13",
+        "high": 128.44,
+        "low": 126.64,
+        "open": 127.5,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689206400,
+        "volume": 39227695.0
+      },
+      {
+        "amount": 6296316344.64,
+        "close": 130.19,
+        "date": "2023-07-14",
+        "high": 130.91,
+        "low": 127.35,
+        "open": 127.77,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689292800,
+        "volume": 48626399.0
+      },
+      {
+        "amount": 5822648329.92,
+        "close": 128.52,
+        "date": "2023-07-17",
+        "high": 129.22,
+        "low": 128.4,
+        "open": 128.84,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689552000,
+        "volume": 45237775.0
+      },
+      {
+        "amount": 4426045087.33,
+        "close": 124.88,
+        "date": "2023-07-18",
+        "high": 128.11,
+        "low": 124.34,
+        "open": 127.44,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689638400,
+        "volume": 35190250.0
+      },
+      {
+        "amount": 2803490473.52,
+        "close": 123.83,
+        "date": "2023-07-19",
+        "high": 125.68,
+        "low": 123.47,
+        "open": 125.16,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689724800,
+        "volume": 22549100.0
+      },
+      {
+        "amount": 2074844634.49,
+        "close": 124.64,
+        "date": "2023-07-20",
+        "high": 125.02,
+        "low": 122.44,
+        "open": 123.31,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689811200,
+        "volume": 16727961.0
+      },
+      {
+        "amount": 4658067102.38,
+        "close": 124.68,
+        "date": "2023-07-21",
+        "high": 124.86,
+        "low": 124.44,
+        "open": 124.85,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1689897600,
+        "volume": 37366291.0
+      },
+      {
+        "amount": 5093852059.02,
+        "close": 124.85,
+        "date": "2023-07-24",
+        "high": 125.47,
+        "low": 123.63,
+        "open": 123.97,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1690156800,
+        "volume": 40865706.0
+      },
+      {
+        "amount": 5720485655.31,
+        "close": 123.0,
+        "date": "2023-07-25",
+        "high": 125.73,
+        "low": 122.19,
+        "open": 125.2,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1690243200,
+        "volume": 46268119.0
+      },
+      {
+        "amount": 3005884762.56,
+        "close": 123.25,
+        "date": "2023-07-26",
+        "high": 124.1,
+        "low": 123.07,
+        "open": 123.17,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1690329600,
+        "volume": 24343727.0
+      },
+      {
+        "amount": 6230516524.97,
+        "close": 123.52,
+        "date": "2023-07-27",
+        "high": 124.44,
+        "low": 121.24,
+        "open": 122.11,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1690416000,
+        "volume": 50627851.0
+      },
+      {
+        "amount": 4602606352.25,
+        "close": 124.91,
+        "date": "2023-07-28",
+        "high": 125.57,
+        "low": 122.74,
+        "open": 123.25,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1690502400,
+        "volume": 36996501.0
+      },
+      {
+        "amount": 6007251442.33,
+        "close": 125.22,
+        "date": "2023-07-31",
+        "high": 125.46,
+        "low": 124.11,
+        "open": 124.49,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1690761600,
+        "volume": 48085935.0
+      },
+      {
+        "amount": 7061687026.74,
+        "close": 126.06,
+        "date": "2023-08-01",
+        "high": 126.28,
+        "low": 124.5,
+        "open": 124.73,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1690848000,
+        "volume": 56218740.0
+      },
+      {
+        "amount": 6919647252.11,
+        "close": 123.72,
+        "date": "2023-08-02",
+        "high": 126.27,
+        "low": 122.77,
+        "open": 125.82,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1690934400,
+        "volume": 55691230.0
+      },
+      {
+        "amount": 6100508338.13,
+        "close": 121.43,
+        "date": "2023-08-03",
+        "high": 122.85,
+        "low": 121.4,
+        "open": 122.44,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1691020800,
+        "volume": 50047778.0
+      },
+      {
+        "amount": 5724014748.04,
+        "close": 121.65,
+        "date": "2023-08-04",
+        "high": 122.43,
+        "low": 120.08,
+        "open": 121.01,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1691107200,
+        "volume": 47156259.0
+      },
+      {
+        "amount": 5011129023.99,
+        "close": 122.3,
+        "date": "2023-08-07",
+        "high": 123.05,
+        "low": 120.98,
+        "open": 121.72,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1691366400,
+        "volume": 41037558.0
+      },
+      {
+        "amount": 5135977394.7,
+        "close": 122.58,
+        "date": "2023-08-08",
+        "high": 123.36,
+        "low": 122.5,
+        "open": 122.87,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1691452800,
+        "volume": 41820137.0
+      },
+      {
+        "amount": 2680177072.92,
+        "close": 119.07,
+        "date": "2023-08-09",
+        "high": 123.03,
+        "low": 118.19,
+        "open": 122.3,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1691539200,
+        "volume": 22317194.0
+      },
+      {
+        "amount": 5597041186.01,
+        "close": 119.4,
+        "date": "2023-08-10",
+        "high": 119.93,
+        "low": 119.1,
+        "open": 119.26,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1691625600,
+        "volume": 46845900.0
+      },
+      {
+        "amount": 2288712619.69,
+        "close": 115.91,
+        "date": "2023-08-11",
+        "high": 121.01,
+        "low": 115.8,
+        "open": 120.39,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1691712000,
+        "volume": 19466501.0
+      },
+      {
+        "amount": 2082277917.51,
+        "close": 119.04,
+        "date": "2023-08-14",
+        "high": 119.6,
+        "low": 115.38,
+        "open": 115.98,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1691971200,
+        "volume": 17645656.0
+      },
+      {
+        "amount": 1716769703.15,
+        "close": 116.53,
+        "date": "2023-08-15",
+        "high": 119.27,
+        "low": 116.14,
+        "open": 119.03,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692057600,
+        "volume": 14634251.0
+      },
+      {
+        "amount": 6031276349.5,
+        "close": 117.99,
+        "date": "2023-08-16",
+        "high": 118.41,
+        "low": 116.21,
+        "open": 116.77,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692144000,
+        "volume": 51314889.0
+      },
+      {
+        "amount": 2269958149.16,
+        "close": 118.66,
+        "date": "2023-08-17",
+        "high": 119.56,
+        "low": 117.34,
+        "open": 117.51,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692230400,
+        "volume": 19153066.0
+      },
+      {
+        "amount": 3916317385.45,
+        "close": 118.27,
+        "date": "2023-08-18",
+        "high": 119.88,
+        "low": 117.93,
+        "open": 119.52,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692316800,
+        "volume": 32994814.0
+      },
+      {
+        "amount": 5464540530.52,
+        "close": 117.58,
+        "date": "2023-08-21",
+        "high": 118.28,
+        "low": 117.12,
+        "open": 117.62,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692576000,
+        "volume": 46443957.0
+      },
+      {
+        "amount": 1950174742.01,
+        "close": 117.51,
+        "date": "2023-08-22",
+        "high": 118.4,
+        "low": 116.57,
+        "open": 117.64,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692662400,
+        "volume": 16598258.0
+      },
+      {
+        "amount": 3685398717.73,
+        "close": 119.39,
+        "date": "2023-08-23",
+        "high": 119.47,
+        "low": 116.55,
+        "open": 117.27,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692748800,
+        "volume": 31108623.0
+      },
+      {
+        "amount": 6017198664.68,
+        "close": 118.21,
+        "date": "2023-08-24",
+        "high": 120.32,
+        "low": 117.34,
+        "open": 119.45,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692835200,
+        "volume": 50724629.0
+      },
+      {
+        "amount": 4553303220.56,
+        "close": 113.83,
+        "date": "2023-08-25",
+        "high": 118.79,
+        "low": 113.29,
+        "open": 117.97,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1692921600,
+        "volume": 39489998.0
+      },
+      {
+        "amount": 3167885114.72,
+        "close": 113.27,
+        "date": "2023-08-28",
+        "high": 114.72,
+        "low": 112.48,
+        "open": 114.31,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1693180800,
+        "volume": 27913299.0
+      },
+      {
+        "amount": 4561026037.73,
+        "close": 113.03,
+        "date": "2023-08-29",
+        "high": 113.9,
+        "low": 112.32,
+        "open": 113.32,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1693267200,
+        "volume": 40333205.0
+      },
+      {
+        "amount": 3073633459.82,
+        "close": 108.73,
+        "date": "2023-08-30",
+        "high": 112.89,
+        "low": 107.87,
+        "open": 112.79,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1693353600,
+        "volume": 27985510.0
+      },
+      {
+        "amount": 3412940531.46,
+        "close": 109.93,
+        "date": "2023-08-31",
+        "high": 110.17,
+        "low": 108.91,
+        "open": 109.32,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1693440000,
+        "volume": 31119142.0
+      },
+      {
+        "amount": 2403386722.64,
+        "close": 107.61,
+        "date": "2023-09-01",
+        "high": 110.7,
+        "low": 107.29,
+        "open": 110.18,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1693526400,
+        "volume": 22144298.0
+      },
+      {
+        "amount": 3920947224.97,
+        "close": 109.21,
+        "date": "2023-09-04",
+        "high": 109.56,
+        "low": 107.83,
+        "open": 107.84,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1693785600,
+        "volume": 36016015.0
+      },
+      {
+        "amount": 3698857537.55,
+        "close": 108.73,
+        "date": "2023-09-05",
+        "high": 109.55,
+        "low": 108.13,
+        "open": 109.33,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1693872000,
+        "volume": 33995918.0
+      },
+      {
+        "amount": 2547728046.24,
+        "close": 109.6,
+        "date": "2023-09-06",
+        "high": 110.06,
+        "low": 108.17,
+        "open": 108.95,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1693958400,
+        "volume": 23314438.0
+      },
+      {
+        "amount": 5364970514.79,
+        "close": 111.9,
+        "date": "2023-09-07",
+        "high": 111.97,
+        "low": 109.31,
+        "open": 109.38,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1694044800,
+        "volume": 48306649.0
+      },
+      {
+        "amount": 3615100090.36,
+        "close": 114.76,
+        "date": "2023-09-08",
+        "high": 115.13,
+        "low": 111.71,
+        "open": 112.3,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1694131200,
+        "volume": 31748622.0
+      },
+      {
+        "amount": 4708361078.78,
+        "close": 115.66,
+        "date": "2023-09-11",
+        "high": 116.56,
+        "low": 115.2,
+        "open": 115.36,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1694390400,
+        "volume": 40656977.0
+      },
+      {
+        "amount": 6239405069.72,
+        "close": 114.24,
+        "date": "2023-09-12",
+        "high": 115.49,
+        "low": 113.67,
+        "open": 115.42,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1694476800,
+        "volume": 54508128.0
+      },
+      {
+        "amount": 3650816258.87,
+        "close": 115.73,
+        "date": "2023-09-13",
+        "high": 116.23,
+        "low": 114.26,
+        "open": 114.45,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1694563200,
+        "volume": 31633972.0
+      },
+      {
+        "amount": 2484501102.88,
+        "close": 116.08,
+        "date": "2023-09-14",
+        "high": 116.55,
+        "low": 114.57,
+        "open": 114.82,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1694649600,
+        "volume": 21467124.0
+      },
+      {
+        "amount": 2512162797.17,
+        "close": 112.63,
+        "date": "2023-09-15",
+        "high": 116.43,
+        "low": 112.05,
+        "open": 115.79,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1694736000,
+        "volume": 22094854.0
+      },
+      {
+        "amount": 2867681438.62,
+        "close": 110.3,
+        "date": "2023-09-18",
+        "high": 112.9,
+        "low": 110.04,
+        "open": 112.69,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1694995200,
+        "volume": 25816208.0
+      },
+      {
+        "amount": 4178742778.27,
+        "close": 112.53,
+        "date": "2023-09-19",
+        "high": 113.22,
+        "low": 110.31,
+        "open": 110.62,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695081600,
+        "volume": 37303244.0
+      },
+      {
+        "amount": 1842754330.33,
+        "close": 111.25,
+        "date": "2023-09-20",
+        "high": 112.94,
+        "low": 111.09,
+        "open": 112.34,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695168000,
+        "volume": 16488897.0
+      },
+      {
+        "amount": 3458022771.25,
+        "close": 109.29,
+        "date": "2023-09-21",
+        "high": 112.07,
+        "low": 109.17,
+        "open": 111.83,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695254400,
+        "volume": 31385907.0
+      },
+      {
+        "amount": 2346622785.37,
+        "close": 110.69,
+        "date": "2023-09-22",
+        "high": 110.87,
+        "low": 109.15,
+        "open": 109.22,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695340800,
+        "volume": 21286836.0
+      },
+      {
+        "amount": 3640332981.89,
+        "close": 108.51,
+        "date": "2023-09-25",
+        "high": 110.66,
+        "low": 107.91,
+        "open": 110.52,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695600000,
+        "volume": 33389782.0
+      },
+      {
+        "amount": 5147949553.05,
+        "close": 110.18,
+        "date": "2023-09-26",
+        "high": 111.03,
+        "low": 107.73,
+        "open": 107.97,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695686400,
+        "volume": 46950888.0
+      },
+      {
+        "amount": 3219112082.14,
+        "close": 108.7,
+        "date": "2023-09-27",
+        "high": 110.75,
+        "low": 108.62,
+        "open": 110.2,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695772800,
+        "volume": 29436524.0
+      },
+      {
+        "amount": 3339524537.63,
+        "close": 107.3,
+        "date": "2023-09-28",
+        "high": 109.76,
+        "low": 106.74,
+        "open": 109.03,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695859200,
+        "volume": 30940295.0
+      },
+      {
+        "amount": 5505818616.57,
+        "close": 104.74,
+        "date": "2023-09-29",
+        "high": 107.02,
+        "low": 104.38,
+        "open": 106.86,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1695945600,
+        "volume": 52247757.0
+      },
+      {
+        "amount": 4983576862.49,
+        "close": 104.18,
+        "date": "2023-10-02",
+        "high": 105.4,
+        "low": 104.01,
+        "open": 104.59,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1696204800,
+        "volume": 47676074.0
+      },
+      {
+        "amount": 1857196001.38,
+        "close": 101.42,
+        "date": "2023-10-03",
+        "high": 105.16,
+        "low": 101.07,
+        "open": 104.59,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1696291200,
+        "volume": 18109942.0
+      },
+      {
+        "amount": 3998608956.56,
+        "close": 100.36,
+        "date": "2023-10-04",
+        "high": 101.43,
+        "low": 99.87,
+        "open": 100.77,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1696377600,
+        "volume": 39765839.0
+      },
+      {
+        "amount": 3615796982.42,
+        "close": 101.11,
+        "date": "2023-10-05",
+        "high": 101.3,
+        "low": 99.61,
+        "open": 99.97,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1696464000,
+        "volume": 35916595.0
+      },
+      {
+        "amount": 4787816663.99,
+        "close": 104.43,
+        "date": "2023-10-06",
+        "high": 104.54,
+        "low": 100.66,
+        "open": 101.14,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1696550400,
+        "volume": 46388145.0
+      },
+      {
+        "amount": 3380425963.62,
+        "close": 106.17,
+        "date": "2023-10-09",
+        "high": 106.77,
+        "low": 104.41,
+        "open": 104.92,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1696809600,
+        "volume": 31955784.0
+      },
+      {
+        "amount": 3512969962.72,
+        "close": 108.64,
+        "date": "2023-10-10",
+        "high": 109.48,
+        "low": 106.26,
+        "open": 106.72,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1696896000,
+        "volume": 32489154.0
+      },
+      {
+        "amount": 4949714673.45,
+        "close": 106.88,
+        "date": "2023-10-11",
+        "high": 110.21,
+        "low": 106.2,
+        "open": 109.51,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1696982400,
+        "volume": 45932042.0
+      },
+      {
+        "amount": 5833983161.89,
+        "close": 104.67,
+        "date": "2023-10-12",
+        "high": 106.23,
+        "low": 104.57,
+        "open": 106.02,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1697068800,
+        "volume": 55479309.0
+      },
+      {
+        "amount": 4702837272.06,
+        "close": 101.64,
+        "date": "2023-10-13",
+        "high": 105.31,
+        "low": 100.87,
+        "open": 104.67,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1697155200,
+        "volume": 45833782.0
+      },
+      {
+        "amount": 1818403882.91,
+        "close": 104.98,
+        "date": "2023-10-16",
+        "high": 105.34,
+        "low": 101.52,
+        "open": 101.75,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1697414400,
+        "volume": 17493602.0
+      },
+      {
+        "amount": 3500069266.41,
+        "close": 102.88,
+        "date": "2023-10-17",
+        "high": 105.43,
+        "low": 102.83,
+        "open": 105.11,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1697500800,
+        "volume": 33747928.0
+      },
+      {
+        "amount": 2554557509.02,
+        "close": 102.62,
+        "date": "2023-10-18",
+        "high": 103.85,
+        "low": 101.99,
+        "open": 103.07,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1697587200,
+        "volume": 24844990.0
+      },
+      {
+        "amount": 4803498880.77,
+        "close": 100.71,
+        "date": "2023-10-19",
+        "high": 103.82,
+        "low": 100.12,
+        "open": 103.28,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1697673600,
+        "volume": 47301798.0
+      },
+      {
+        "amount": 5442748499.54,
+        "close": 99.96,
+        "date": "2023-10-20",
+        "high": 101.46,
+        "low": 99.19,
+        "open": 100.86,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1697760000,
+        "volume": 54317096.0
+      },
+      {
+        "amount": 4884189779.28,
+        "close": 100.95,
+        "date": "2023-10-23",
+        "high": 101.35,
+        "low": 100.04,
+        "open": 100.19,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698019200,
+        "volume": 48464815.0
+      },
+      {
+        "amount": 4587451439.57,
+        "close": 101.77,
+        "date": "2023-10-24",
+        "high": 102.49,
+        "low": 100.24,
+        "open": 100.5,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698105600,
+        "volume": 45196260.0
+      },
+      {
+        "amount": 1747830953.68,
+        "close": 100.53,
+        "date": "2023-10-25",
+        "high": 102.51,
+        "low": 99.93,
+        "open": 101.86,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698192000,
+        "volume": 17306936.0
+      },
+      {
+        "amount": 4630500540.41,
+        "close": 101.51,
+        "date": "2023-10-26",
+        "high": 101.64,
+        "low": 100.14,
+        "open": 100.72,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698278400,
+        "volume": 45802856.0
+      },
+      {
+        "amount": 5300532599.0,
+        "close": 100.68,
+        "date": "2023-10-27",
+        "high": 101.34,
+        "low": 100.04,
+        "open": 101.27,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698364800,
+        "volume": 52643566.0
+      },
+      {
+        "amount": 3163617989.51,
+        "close": 105.9,
+        "date": "2023-10-30",
+        "high": 106.6,
+        "low": 100.1,
+        "open": 100.72,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698624000,
+        "volume": 30361102.0
+      },
+      {
+        "amount": 1915316426.51,
+        "close": 104.87,
+        "date": "2023-10-31",
+        "high": 106.32,
+        "low": 104.32,
+        "open": 105.63,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698710400,
+        "volume": 18211576.0
+      },
+      {
+        "amount": 2527901598.72,
+        "close": 105.44,
+        "date": "2023-11-01",
+        "high": 106.06,
+        "low": 104.67,
+        "open": 105.81,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698796800,
+        "volume": 23986546.0
+      },
+      {
+        "amount": 4974321276.32,
+        "close": 105.84,
+        "date": "2023-11-02",
+        "high": 106.64,
+        "low": 104.61,
+        "open": 105.26,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698883200,
+        "volume": 47061131.0
+      },
+      {
+        "amount": 4544691323.58,
+        "close": 106.1,
+        "date": "2023-11-03",
+        "high": 106.33,
+        "low": 105.04,
+        "open": 105.48,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1698969600,
+        "volume": 42945652.0
+      },
+      {
+        "amount": 3746515088.94,
+        "close": 106.07,
+        "date": "2023-11-06",
+        "high": 107.0,
+        "low": 105.78,
+        "open": 106.22,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1699228800,
+        "volume": 35250486.0
+      },
+      {
+        "amount": 1890298045.76,
+        "close": 105.49,
+        "date": "2023-11-07",
+        "high": 105.93,
+        "low": 105.23,
+        "open": 105.71,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1699315200,
+        "volume": 17908932.0
+      },
+      {
+        "amount": 4685149535.62,
+        "close": 84.39,
+        "date": "2023-11-08",
+        "high": 105.48,
+        "low": 83.89,
+        "open": 104.69,
+        "quality": [
+          "simulated",
+          "limitDown"
+        ],
+        "source": "mock",
+        "ts": 1699401600,
+        "volume": 51342801.0
+      },
+      {
+        "amount": 4432265084.25,
+        "close": 83.47,
+        "date": "2023-11-09",
+        "high": 84.1,
+        "low": 83.21,
+        "open": 84.01,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1699488000,
+        "volume": 53021222.0
+      },
+      {
+        "amount": 3918216769.67,
+        "close": 88.44,
+        "date": "2023-11-10",
+        "high": 88.46,
+        "low": 83.5,
+        "open": 83.59,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1699574400,
+        "volume": 45141080.0
+      },
+      {
+        "amount": 4048565588.99,
+        "close": 88.39,
+        "date": "2023-11-13",
+        "high": 88.99,
+        "low": 87.81,
+        "open": 87.94,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1699833600,
+        "volume": 45800837.0
+      },
+      {
+        "amount": 2638082343.53,
+        "close": 88.64,
+        "date": "2023-11-14",
+        "high": 89.18,
+        "low": 87.28,
+        "open": 87.94,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1699920000,
+        "volume": 29854104.0
+      },
+      {
+        "amount": 3441511291.27,
+        "close": 86.82,
+        "date": "2023-11-15",
+        "high": 89.31,
+        "low": 86.75,
+        "open": 89.07,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1700006400,
+        "volume": 39274600.0
+      },
+      {
+        "amount": 3096858385.19,
+        "close": 86.45,
+        "date": "2023-11-16",
+        "high": 87.11,
+        "low": 86.39,
+        "open": 86.84,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1700092800,
+        "volume": 35740068.0
+      },
+      {
+        "amount": 1474821430.07,
+        "close": 85.53,
+        "date": "2023-11-17",
+        "high": 86.58,
+        "low": 85.06,
+        "open": 86.28,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1700179200,
+        "volume": 17204211.0
+      },
+      {
+        "amount": 2789254479.35,
+        "close": 80.96,
+        "date": "2023-11-20",
+        "high": 86.23,
+        "low": 80.43,
+        "open": 85.88,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1700438400,
+        "volume": 33793351.0
+      },
+      {
+        "amount": 4478512986.24,
+        "close": 81.6,
+        "date": "2023-11-21",
+        "high": 81.82,
+        "low": 81.08,
+        "open": 81.13,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1700524800,
+        "volume": 54952297.0
+      },
+      {
+        "amount": 4530688471.34,
+        "close": 82.43,
+        "date": "2023-11-22",
+        "high": 82.94,
+        "low": 82.12,
+        "open": 82.29,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1700611200,
+        "volume": 54920452.0
+      },
+      {
+        "amount": 2421999251.61,
+        "close": 83.89,
+        "date": "2023-11-23",
+        "high": 84.54,
+        "low": 82.75,
+        "open": 82.76,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1700697600,
+        "volume": 28927680.0
+      },
+      {
+        "amount": 2245127321.94,
+        "close": 83.54,
+        "date": "2023-11-24",
+        "high": 84.66,
+        "low": 83.14,
+        "open": 84.64,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1700784000,
+        "volume": 26798008.0
+      },
+      {
+        "amount": 3960399460.61,
+        "close": 83.99,
+        "date": "2023-11-27",
+        "high": 84.09,
+        "low": 83.02,
+        "open": 83.24,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701043200,
+        "volume": 47315393.0
+      },
+      {
+        "amount": 1905320870.13,
+        "close": 83.28,
+        "date": "2023-11-28",
+        "high": 84.72,
+        "low": 82.79,
+        "open": 84.11,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701129600,
+        "volume": 22792064.0
+      },
+      {
+        "amount": 2384561797.71,
+        "close": 83.68,
+        "date": "2023-11-29",
+        "high": 84.28,
+        "low": 82.94,
+        "open": 83.36,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701216000,
+        "volume": 28512399.0
+      },
+      {
+        "amount": 1292194077.38,
+        "close": 83.25,
+        "date": "2023-11-30",
+        "high": 84.02,
+        "low": 83.23,
+        "open": 83.46,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701302400,
+        "volume": 15475478.0
+      },
+      {
+        "amount": 4580930712.74,
+        "close": 83.65,
+        "date": "2023-12-01",
+        "high": 84.17,
+        "low": 83.09,
+        "open": 83.76,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701388800,
+        "volume": 54771822.0
+      },
+      {
+        "amount": 2949787414.24,
+        "close": 82.77,
+        "date": "2023-12-04",
+        "high": 84.09,
+        "low": 82.28,
+        "open": 83.63,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701648000,
+        "volume": 35519143.0
+      },
+      {
+        "amount": 3591718095.82,
+        "close": 83.86,
+        "date": "2023-12-05",
+        "high": 84.42,
+        "low": 82.84,
+        "open": 83.0,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701734400,
+        "volume": 42907299.0
+      },
+      {
+        "amount": 3697274237.79,
+        "close": 82.49,
+        "date": "2023-12-06",
+        "high": 84.31,
+        "low": 82.07,
+        "open": 83.69,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701820800,
+        "volume": 44569205.0
+      },
+      {
+        "amount": 2258162696.21,
+        "close": 81.03,
+        "date": "2023-12-07",
+        "high": 82.69,
+        "low": 80.69,
+        "open": 82.15,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701907200,
+        "volume": 27717339.0
+      },
+      {
+        "amount": 1993230270.78,
+        "close": 81.59,
+        "date": "2023-12-08",
+        "high": 82.03,
+        "low": 80.78,
+        "open": 81.17,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1701993600,
+        "volume": 24467344.0
+      },
+      {
+        "amount": 3831413351.67,
+        "close": 82.82,
+        "date": "2023-12-11",
+        "high": 83.27,
+        "low": 80.83,
+        "open": 81.45,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1702252800,
+        "volume": 46550680.0
+      },
+      {
+        "amount": 1404010742.49,
+        "close": 84.24,
+        "date": "2023-12-12",
+        "high": 84.55,
+        "low": 82.28,
+        "open": 82.89,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1702339200,
+        "volume": 16776180.0
+      },
+      {
+        "amount": 2892508688.67,
+        "close": 86.24,
+        "date": "2023-12-13",
+        "high": 86.56,
+        "low": 84.04,
+        "open": 84.2,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1702425600,
+        "volume": 33785879.0
+      },
+      {
+        "amount": 4892313097.97,
+        "close": 87.44,
+        "date": "2023-12-14",
+        "high": 87.55,
+        "low": 86.55,
+        "open": 87.03,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1702512000,
+        "volume": 56118290.0
+      },
+      {
+        "amount": 1996308225.15,
+        "close": 89.14,
+        "date": "2023-12-15",
+        "high": 89.54,
+        "low": 87.05,
+        "open": 87.66,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1702598400,
+        "volume": 22538218.0
+      },
+      {
+        "amount": 2021703671.34,
+        "close": 90.75,
+        "date": "2023-12-18",
+        "high": 91.44,
+        "low": 87.89,
+        "open": 88.42,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1702857600,
+        "volume": 22457127.0
+      },
+      {
+        "amount": 2834349218.33,
+        "close": 91.52,
+        "date": "2023-12-19",
+        "high": 91.64,
+        "low": 91.07,
+        "open": 91.5,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1702944000,
+        "volume": 31008079.0
+      },
+      {
+        "amount": 3163734211.02,
+        "close": 90.39,
+        "date": "2023-12-20",
+        "high": 92.08,
+        "low": 90.21,
+        "open": 91.65,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1703030400,
+        "volume": 34806604.0
+      },
+      {
+        "amount": 1895971411.21,
+        "close": 89.96,
+        "date": "2023-12-21",
+        "high": 90.62,
+        "low": 89.92,
+        "open": 90.58,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1703116800,
+        "volume": 21027716.0
+      },
+      {
+        "amount": 4681899312.27,
+        "close": 91.53,
+        "date": "2023-12-22",
+        "high": 92.1,
+        "low": 89.38,
+        "open": 90.05,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1703203200,
+        "volume": 51448394.0
+      },
+      {
+        "amount": 2272641218.33,
+        "close": 93.16,
+        "date": "2023-12-25",
+        "high": 93.44,
+        "low": 91.53,
+        "open": 91.84,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1703462400,
+        "volume": 24513308.0
+      },
+      {
+        "amount": 3975507114.34,
+        "close": 92.92,
+        "date": "2023-12-26",
+        "high": 93.42,
+        "low": 92.86,
+        "open": 93.01,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1703548800,
+        "volume": 42717158.0
+      },
+      {
+        "amount": 1981033199.61,
+        "close": 91.18,
+        "date": "2023-12-27",
+        "high": 93.87,
+        "low": 90.95,
+        "open": 93.29,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1703635200,
+        "volume": 21533100.0
+      },
+      {
+        "amount": 4919193962.11,
+        "close": 90.61,
+        "date": "2023-12-28",
+        "high": 91.45,
+        "low": 90.57,
+        "open": 91.12,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1703721600,
+        "volume": 54130860.0
+      },
+      {
+        "amount": 2699760348.45,
+        "close": 86.81,
+        "date": "2023-12-29",
+        "high": 90.61,
+        "low": 86.42,
+        "open": 90.18,
+        "quality": [
+          "simulated"
+        ],
+        "source": "mock",
+        "ts": 1703808000,
+        "volume": 30696980.0
+      }
+    ],
+    "datasetId": "sim-default",
+    "provenance": {
+      "dataVersion": "sim-v1.0",
+      "datasetGeneration": 1,
+      "datasetId": "sim-default",
+      "generatedAt": 1793966910,
+      "provider": "mock",
+      "simulated": true
+    },
+    "range": {
+      "barCount": 152,
+      "clamped": false,
+      "requestedFrom": "2023-06-01",
+      "requestedTo": "2023-12-29",
+      "returnedFrom": "2023-06-01",
+      "returnedTo": "2023-12-29"
+    },
+    "security": "300750.SZ",
+    "timeframe": "D",
+    "totalBars": 520
+  }
+}

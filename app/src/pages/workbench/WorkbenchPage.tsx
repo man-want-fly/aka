@@ -39,6 +39,9 @@ const RANGES = [
   { label: "全部", value: 9999 },
 ];
 
+/** 输入静默 120ms 后才发请求：连续输入（典型间隔 40ms）只保留最后一次，避免抖动请求 */
+const REQUEST_DEBOUNCE_MS = 120;
+
 export function WorkbenchPage({
   themeMode,
   onThemeMode,
@@ -94,32 +97,41 @@ export function WorkbenchPage({
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
-    const current = ++generation.current;
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      const current = ++generation.current;
+      setLoading(true);
+      setError(null);
 
-    const request = {
-      security: activeCode,
-      timeframe: "D" as const,
-      adj,
-      from: dateFrom || undefined,
-      to: dateTo || undefined,
-      generation: current,
-      instances: buildInstances(appliedParams),
+      const request = {
+        security: activeCode,
+        timeframe: "D" as const,
+        adj,
+        from: dateFrom || undefined,
+        to: dateTo || undefined,
+        generation: current,
+        instances: buildInstances(appliedParams),
+      };
+
+      Promise.all([ipc.getBars(request), ipc.calcIndicators(request)])
+        .then(([nextBars, nextCalc]) => {
+          if (current !== generation.current) return;
+          setBars(nextBars);
+          setCalc(nextCalc);
+          setLoading(false);
+        })
+        .catch((err) => {
+          if (current !== generation.current) return;
+          setError(describeError(err));
+          setLoading(false);
+        });
+    }, REQUEST_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
     };
-
-    Promise.all([ipc.getBars(request), ipc.calcIndicators(request)])
-      .then(([nextBars, nextCalc]) => {
-        if (current !== generation.current) return;
-        setBars(nextBars);
-        setCalc(nextCalc);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (current !== generation.current) return;
-        setError(describeError(err));
-        setLoading(false);
-      });
   }, [activeCode, adj, appliedParams, dateFrom, dateTo]);
 
   const security = securities.find((item) => item.code === activeCode);

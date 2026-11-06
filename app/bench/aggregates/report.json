@@ -1,0 +1,43 @@
+{
+  "aggregation": "ISO-8601 周（周一起）/ 公历自然月；停牌整周不生成周线",
+  "formatVersion": 1,
+  "provider": "mock(seed=42)",
+  "securities": [
+    {
+      "dailyBars": 520,
+      "firstOpenMatchesMonthly": true,
+      "firstOpenMatchesWeekly": true,
+      "lastCloseMatchesMonthly": true,
+      "lastCloseMatchesWeekly": true,
+      "monthlyBars": 24,
+      "security": "300750.SZ",
+      "volumeConservedMonthly": true,
+      "volumeConservedWeekly": true,
+      "weeklyBars": 104
+    },
+    {
+      "dailyBars": 520,
+      "firstOpenMatchesMonthly": true,
+      "firstOpenMatchesWeekly": true,
+      "lastCloseMatchesMonthly": true,
+      "lastCloseMatchesWeekly": true,
+      "monthlyBars": 24,
+      "security": "600519.SH",
+      "volumeConservedMonthly": true,
+      "volumeConservedWeekly": true,
+      "weeklyBars": 104
+    },
+    {
+      "dailyBars": 520,
+      "firstOpenMatchesMonthly": true,
+      "firstOpenMatchesWeekly": true,
+      "lastCloseMatchesMonthly": true,
+      "lastCloseMatchesWeekly": true,
+      "monthlyBars": 24,
+      "security": "002594.SZ",
+      "volumeConservedMonthly": true,
+      "volumeConservedWeekly": true,
+      "weeklyBars": 104
+    }
+  ]
+}

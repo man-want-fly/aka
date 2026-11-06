@@ -3,7 +3,7 @@
 
 use app_core::{
     AppError, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, ListSecuritiesRequest,
-    Manifest, RegistryRequest, RegistryResponse, SecurityDto,
+    Manifest, RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary,
 };
 use tauri::State;
 
@@ -46,4 +46,13 @@ pub async fn calc_indicators(
     req: CalcRequest,
 ) -> Result<CalcResponse, AppError> {
     state.core.calc_indicators(&req).await
+}
+
+/// QA 取证入口：导出最近 N 条埋点 + 事件计数 + 冷计算 P95。
+#[tauri::command]
+pub async fn telemetry_dump(
+    state: State<'_, AppState>,
+    recent: Option<usize>,
+) -> Result<TelemetrySummary, AppError> {
+    Ok(state.core.telemetry().summary(recent.unwrap_or(200).clamp(1, 4_096)))
 }

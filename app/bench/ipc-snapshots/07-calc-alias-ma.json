@@ -1,0 +1,76 @@
+{
+  "command": "calc_indicators",
+  "request": {
+    "adj": "qfq",
+    "from": "2023-12-01",
+    "generation": 2,
+    "instances": [
+      {
+        "indicatorId": "ma",
+        "instanceId": "alias-ma",
+        "params": {
+          "period": 10
+        }
+      }
+    ],
+    "security": "300750.SZ",
+    "timeframe": "D",
+    "to": "2023-12-29"
+  },
+  "response": {
+    "barCount": 21,
+    "cacheHit": false,
+    "computedMs": 0.06,
+    "datasetGeneration": 1,
+    "datasetId": "sim-default",
+    "engineVersion": "aka-engine-0.1.0",
+    "generation": 2,
+    "range": {
+      "barCount": 21,
+      "clamped": false,
+      "requestedFrom": "2023-12-01",
+      "requestedTo": "2023-12-29",
+      "returnedFrom": "2023-12-01",
+      "returnedTo": "2023-12-29"
+    },
+    "series": [
+      {
+        "engineVersion": 1,
+        "indicatorId": "T01",
+        "instanceId": "alias-ma",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "sma",
+            "kind": "line",
+            "labelZh": "SMA",
+            "values": [
+              83.02700000000013,
+              83.20800000000013,
+              83.43400000000013,
+              83.44000000000013,
+              83.15400000000012,
+              82.95900000000012,
+              82.84200000000013,
+              82.93800000000013,
+              83.19400000000012,
+              83.61300000000013,
+              84.16200000000012,
+              84.96000000000012,
+              85.72600000000013,
+              86.51600000000012,
+              87.40900000000012,
+              88.4030000000001,
+              89.43700000000011,
+              90.3050000000001,
+              90.79900000000012,
+              91.11600000000011,
+              90.88300000000011
+            ]
+          }
+        ],
+        "warmup": 9
+      }
+    ]
+  }
+}

@@ -12,6 +12,8 @@ use crate::types::{
 
 pub const MOCK_DATASET_ID: &str = "sim-default";
 pub const MOCK_DATA_VERSION: &str = "sim-v1.0";
+/// mock 数据集为固定内容，重建代数为 1；真实/sim 生成器写入的代数由 manifest 派生。
+pub const MOCK_DATASET_GENERATION: u64 = 1;
 pub const MOCK_SECURITY_COUNT: usize = 120;
 pub const MOCK_BARS_PER_SECURITY: usize = 520;
 pub const MOCK_FIRST_DATE: Date = Date::new(2023, 1, 2);
@@ -201,6 +203,7 @@ impl DataProvider for MockProvider {
             provider: ProviderId::Mock,
             dataset_id: MOCK_DATASET_ID.to_string(),
             data_version: MOCK_DATA_VERSION.to_string(),
+            dataset_generation: MOCK_DATASET_GENERATION,
             simulated: true,
             rows,
             generated_at: self.generated_at,

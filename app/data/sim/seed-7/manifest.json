@@ -1,0 +1,11 @@
+{
+  "datasetId": "sim-7-2023-01-02_2024-12-27-520-v1-71a4724d",
+  "dataVersion": "v1",
+  "rowCount": 520,
+  "coverageStart": "2023-01-02",
+  "coverageEnd": "2024-12-27",
+  "seed": 7,
+  "sha256": "71a4724d9cfceb2ebc3d485357a1096669459c32c7c04fc4e2fb0b54525fb322",
+  "provider": "sim",
+  "generatedAt": 1793967031
+}

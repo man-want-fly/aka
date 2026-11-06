@@ -52,6 +52,9 @@ pub struct GoldenSuite {
     pub name: String,
     pub seed: u64,
     pub bars: usize,
+    /// 容差适用条件说明；生成器写入，测试断言非空且覆盖全部容差类别
+    #[serde(default)]
+    pub tolerance_rules: String,
     pub input: GoldenInput,
     pub cases: Vec<GoldenCase>,
 }
@@ -290,6 +293,51 @@ mod tests {
     }
 
     #[test]
+    fn tolerance_rules_are_frozen() {
+        // 与 docs/indicators/b1-trend-kernels.md「容差口径」逐条一致；文档改了这里必须同步。
+        // 允许手算类夹具把单个 case 收紧到 absolute:1e-9（比任何类别默认都更严），但不允许放宽。
+        let suites = load_all().expect("夹具应可装载");
+        let mut checked = 0;
+        let mut tightened = 0;
+        for suite in &suites {
+            assert!(
+                suite.tolerance_rules.contains("relative:1e-6")
+                    && suite.tolerance_rules.contains("absolute:1e-6")
+                    && suite.tolerance_rules.contains("absolute:1e-4")
+                    && suite.tolerance_rules.contains("absolute:1e-9")
+                    && suite.tolerance_rules.contains("count"),
+                "{} 缺少容差适用条件说明（应覆盖 relative:1e-6 / absolute:1e-6 / absolute:1e-4 / absolute:1e-9 / count）",
+                suite.name
+            );
+            for case in &suite.cases {
+                let expected = match case.indicator_id.as_str() {
+                    "T21" => "absolute:1e-6",
+                    "E13" | "M06" => "absolute:1e-4",
+                    _ => "relative:1e-6",
+                };
+                if case.tolerance == "absolute:1e-9" {
+                    assert!(
+                        suite.name.starts_with("edge_manual") || suite.name.starts_with("edge_arithmetic"),
+                        "{} 出现收紧容差 absolute:1e-9：收紧只允许用于手算夹具",
+                        suite.name
+                    );
+                    tightened += 1;
+                } else {
+                    assert_eq!(
+                        case.tolerance, expected,
+                        "{} 的容差必须为 {expected}（夹具写的是 {}）",
+                        case.indicator_id, case.tolerance
+                    );
+                }
+                Tolerance::parse(&case.tolerance).expect("容差必须可解析");
+                checked += 1;
+            }
+        }
+        assert!(checked >= 40, "夹具覆盖过少：{checked}");
+        assert!(tightened >= 4, "手算收紧容差覆盖过少：{tightened}");
+    }
+
+    #[test]
     fn missing_fixture_dir_fails_loudly() {
         let err = GoldenSuite::load(Path::new("/nonexistent/aka-golden.json")).unwrap_err();
         assert!(err.contains("gen_reference.py"));
@@ -309,7 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn tolerance_rules_are_frozen() {
+    fn tolerance_parsing_semantics() {
         assert!(Tolerance::parse("relative:1e-6").unwrap().accepts(100.0, 100.00009));
         assert!(!Tolerance::parse("relative:1e-6").unwrap().accepts(100.0, 100.001));
         assert!(Tolerance::parse("absolute:1e-4").unwrap().accepts(0.00005, 0.00014));

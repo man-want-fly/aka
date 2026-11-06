@@ -1,0 +1,116 @@
+{
+  "failed": 0,
+  "failures": [],
+  "formatVersion": 1,
+  "generatedAtUnix": 1793967316,
+  "indicators": [
+    {
+      "cases": 5,
+      "failed": 0,
+      "indicatorId": "E13"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "M06"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T01"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T02"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T03"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T04"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T05"
+    },
+    {
+      "cases": 6,
+      "failed": 0,
+      "indicatorId": "T19"
+    },
+    {
+      "cases": 6,
+      "failed": 0,
+      "indicatorId": "T20"
+    },
+    {
+      "cases": 7,
+      "failed": 0,
+      "indicatorId": "T21"
+    },
+    {
+      "cases": 6,
+      "failed": 0,
+      "indicatorId": "T22"
+    }
+  ],
+  "passed": 54,
+  "result": "passed",
+  "suites": [
+    {
+      "bars": 520,
+      "cases": 11,
+      "failed": 0,
+      "name": "base_trend_seed42_520"
+    },
+    {
+      "bars": 20,
+      "cases": 4,
+      "failed": 0,
+      "name": "edge_arithmetic_regression"
+    },
+    {
+      "bars": 40,
+      "cases": 1,
+      "failed": 0,
+      "name": "edge_bias_zero_mean"
+    },
+    {
+      "bars": 40,
+      "cases": 11,
+      "failed": 0,
+      "name": "edge_constant_series"
+    },
+    {
+      "bars": 20,
+      "cases": 11,
+      "failed": 0,
+      "name": "edge_data_insufficient"
+    },
+    {
+      "bars": 1,
+      "cases": 11,
+      "failed": 0,
+      "name": "edge_first_bar"
+    },
+    {
+      "bars": 5,
+      "cases": 4,
+      "failed": 0,
+      "name": "edge_manual_nonlinear"
+    },
+    {
+      "bars": 40,
+      "cases": 1,
+      "failed": 0,
+      "name": "edge_t21_constant_window"
+    }
+  ],
+  "total": 54
+}

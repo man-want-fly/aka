@@ -1,0 +1,51 @@
+{
+  "csvFormat": "date,open,high,low,close,volume,amount（date 升序；价格 2 位、volume 0 位、amount 2 位）",
+  "datasets": [
+    {
+      "dir": "sim/seed-42",
+      "generations": [
+        {
+          "dataVersion": "v1",
+          "datasetId": "sim-42-2023-01-02_2024-12-27-520-v1-a78ba34e",
+          "generation": 1,
+          "sha256": "a78ba34e4f7e4eba18e9fd81c0340edc1f7f94eca2893e93d7305f0a0da492fc",
+          "verified": true
+        },
+        {
+          "dataVersion": "v2",
+          "datasetId": "sim-42-2023-01-02_2024-12-27-520-v2-a78ba34e",
+          "generation": 2,
+          "sha256": "a78ba34e4f7e4eba18e9fd81c0340edc1f7f94eca2893e93d7305f0a0da492fc",
+          "verified": true
+        }
+      ],
+      "rows": 520,
+      "security": "600519.SH",
+      "seed": 42
+    },
+    {
+      "dir": "sim/seed-7",
+      "generations": [
+        {
+          "dataVersion": "v1",
+          "datasetId": "sim-7-2023-01-02_2024-12-27-520-v1-71a4724d",
+          "generation": 1,
+          "sha256": "71a4724d9cfceb2ebc3d485357a1096669459c32c7c04fc4e2fb0b54525fb322",
+          "verified": true
+        }
+      ],
+      "rows": 520,
+      "security": "300750.SZ",
+      "seed": 7
+    }
+  ],
+  "formatVersion": 1,
+  "provider": "sim",
+  "realDir": {
+    "afterSha256": "9e44c1e2ccb2a5d987d522192d1484a1db6d180e72192e519f55b5c8584d303e",
+    "beforeSha256": "9e44c1e2ccb2a5d987d522192d1484a1db6d180e72192e519f55b5c8584d303e",
+    "changed": false,
+    "path": "real"
+  },
+  "realDirUntouched": true
+}

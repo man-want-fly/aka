@@ -3,6 +3,8 @@ dist/
 src-tauri/target/
 src-tauri/gen/schemas/
 target/
-data/
+data/*
+!data/sim/
+!data/real/
 .DS_Store
 *.log

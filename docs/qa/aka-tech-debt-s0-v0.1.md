@@ -1,6 +1,6 @@
 # AKA · Sprint 0 技术债登记（v0.1）
 
-> 状态：**全部「未清偿」**
+> 状态：**6 条已清偿 / 3 条部分清偿（2026-11-06 清债批次）**
 >
 > 本文件登记 BA S0 验收清单中 9 条阻塞项（`blocking=是`）的实际缺口。用户已拍板「带条件进 S1」，
 > 即 S1 期间允许在这些缺口未清零的情况下开工，但必须留账：
@@ -11,21 +11,24 @@
 > 4. 数据集 `sha256` 落地前，黄金夹具的数据源固定为可复现生成脚本
 >    `app/crates/indicator-golden/fixtures/gen_reference.py`，**禁止手工改数据文件**。
 >
+> 2026-11-06 清偿批次：机制与实现层全部落地；TD-S0-04 / 06 / 07 因「实机 UI 端到端取证」
+> 按 BA 裁定归入 S2 前端批次，如实标为**部分清偿**（证据见文末「清偿证据」）。
+>
 > 关联文档：[S0 验收清单](./aka-s0-acceptance-checklist-v0.1.md)、[README](../../app/README.md)。
 
 ## 总览
 
 | 编号 | 来源项 | 缺口摘要 | 偿还工作量 | 偿还时点 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| TD-S0-01 | T-01（部分） | DateRange 主链路已通，但周/月聚合与 T-01 完整验收证据未做 | 1.0 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
-| TD-S0-02 | T-05（实物） | dataset manifest 只有内存契约，无 `data/sim`、`data/real` 实物与 sha256 | 0.8 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
-| TD-S0-03 | QA-S0-015 | 周线聚合未实现，无法做 ISO 周手算对拍 | 0.4 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
-| TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
-| TD-S0-05 | QA-S0-028 | 无 `compute.count` / `compute.skip` 埋点，5 实例去重计数无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
-| TD-S0-06 | QA-S0-029 | 无 `indicator.cold_ms` 埋点，冷缓存 30 次 P95 无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
-| TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
-| TD-S0-08 | QA-S0-062 | `data/real` 实物不存在，无法验证 real 不变、仅 sim 变化 | 0.25 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
-| TD-S0-09 | QA-S0-070 | `data/sim` 实物与固定 sha256 算法未落地，无法重算对拍 | 0.25 人日 | S2 开工前 3.5 人日清零 | 未清偿 |
+| TD-S0-01 | T-01（部分） | DateRange 主链路已通，但周/月聚合与 T-01 完整验收证据未做 | 1.0 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
+| TD-S0-02 | T-05（实物） | dataset manifest 只有内存契约，无 `data/sim`、`data/real` 实物与 sha256 | 0.8 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
+| TD-S0-03 | QA-S0-015 | 周线聚合未实现，无法做 ISO 周手算对拍 | 0.4 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
+| TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **部分清偿**（UI 取证待 S2） |
+| TD-S0-05 | QA-S0-028 | 无 `compute.count` / `compute.skip` 埋点，5 实例去重计数无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
+| TD-S0-06 | QA-S0-029 | 无 `indicator.cold_ms` 埋点，冷缓存 30 次 P95 无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **部分清偿**（UI 取证待 S2） |
+| TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **部分清偿**（UI 取证待 S2） |
+| TD-S0-08 | QA-S0-062 | `data/real` 实物不存在，无法验证 real 不变、仅 sim 变化 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
+| TD-S0-09 | QA-S0-070 | `data/sim` 实物与固定 sha256 算法未落地，无法重算对拍 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 
 **合计：3.5 人日**（与用户裁定的 S2 前清零窗口一致）。
 
@@ -126,7 +129,96 @@
 - **偿还时点**：S2 开工前 3.5 人日清零。
 - **清零判据**：同一算法两次重算 64 位 sha256 逐字符相等，算法与排序规则写入契约文档。
 
-## 防污染声明（S1 适用）
+## 清偿证据（2026-11-06）
+
+> 全部证据均可在仓库根 `app/` 下复跑；状态判定只依据下述命令输出与产物，不依据口头说明。
+
+### TD-S0-01 · T-01 DateRange（部分）→ 已清偿
+
+- **改动**：新增 `data-provider::{aggregate, calendar}`；`app-core::series_for` 由同一天的日线批次派生 W/M；
+  新增 `aka-aggregate-export` 导出 3 只标的 D/W/M CSV 与 10 条 IPC 报文快照；新增 `tools/verify_aggregates.py`
+  用 Python `date.isocalendar()` 独立复算。
+- **命令 / 输出**：
+  - `cargo run -p indicator-golden --bin aka-aggregate-export` → `"300750.SZ" D=520 W=104 M=24 量守恒=true/true`（3 只标的同）
+  - `python3 tools/verify_aggregates.py` → `002594.SZ / 300750.SZ / 600519.SH` 各 `W=104(mismatch 0) M=24(mismatch 0)`，
+    `compare-report.json → passed`
+- **产物**：`app/bench/aggregates/{daily,weekly,monthly}-<code>.csv`、`compare-report.json`、`report.json`；
+  `app/bench/ipc-snapshots/`（10 条 + `index.json`）。
+- **边界**：停牌整周无周线、单日停牌保留周线，见 `aggregate` 单测；ISO 周年界手算见 `calendar` 单测。
+
+### TD-S0-02 · T-05（实物）→ 已清偿
+
+- **改动**：`DatasetManifest` 9 字段 + `deny_unknown_fields`；`sha256` 自实现；`sim_dataset` 生成/校验；
+  `dataset_generation` 由 `data_version` 解析并贯通 DTO。
+- **命令 / 输出**：`cargo run -p indicator-golden --bin aka-sim-dataset` → `seed=42 600519.SH rows=520 generations=2`、
+  `seed=7 300750.SZ rows=520 generations=1`。
+- **产物**：`app/data/sim/seed-42/{records.csv,manifest.json}`、`app/data/sim/seed-7/…`、
+  `app/data/sim/generation-report.json`。
+- **判据对拍**：两个 seed 的 `seed / datasetId / sha256 / coverage` 至少 3 项不同（`two_seeds_differ_in_at_least_three_fields`）；
+  缺字段 / 多字段 / 类型错三组坏输入均有明确报错（`missing_unknown_and_type_errors_are_explicit`）；
+  `sha_is_recomputable_and_changes_on_any_tamper`。
+
+### TD-S0-03 · QA-S0-015 周线聚合 → 已清偿
+
+- **改动**：`AggregatePeriod::Week/Month` + `aggregate_bars`；`app-core` 删除 W/M 的 `DATASET_MISSING` 分支。
+- **证据**：`weekly_and_monthly_aggregate_from_daily_batch`（周/月根数 = ISO 周数 / 月键数；首周 OHLC 手算；
+  首末与日线一致；`dataset_generation=1`）；`calendar` 的 `iso_week_year_boundary_is_hand_checked`
+  （2021-01-01 → 2020-W53，2024-12-30 → 2025-W01）；Python 独立对拍 mismatch 0（见 TD-S0-01）。
+
+### TD-S0-04 · QA-S0-022 参数防抖日志 → 部分清偿
+
+- **已落地**：`app-core::telemetry` 的 `indicator.compute` JSONL（字段 `code/period/adj/indicatorId/paramsHash/cacheKey/datasetId/barCount`）；
+  `ParamDebouncer`（`TYPICAL_INPUT_GAP_MS=40`、`DEFAULT_DEBOUNCE_QUIET_MS=120`）；
+  前端 `WorkbenchPage` 120ms 静默防抖。
+- **证据**：`debounce_fires_once_after_120ms_quiet_with_40ms_inputs`、`separate_bursts_fire_separately`、
+  `jsonl_sink_appends_machine_readable_events`；`cargo test -p app-core`。
+- **未清部分（原因）**：清零判据要求「实机连键 1→12→120 后日志仅 1 条」。这需要运行 Tauri UI 并读取
+  `~/Library/Application Support/aka/logs/telemetry.jsonl`；BA 已把渲染层/UI 取证归入 S2（`TD-B1-02`），
+  本批次不代跑，故标部分清偿。
+
+### TD-S0-05 · QA-S0-028 批量计算计数 → 已清偿
+
+- **改动**：`calc_indicators` 增加请求级 `request_cache` 去重；每个重复实例发 `compute.skip`，
+  每次真实计算发 `indicator.compute` + `indicator.cold_ms`，请求结束发 `compute.count`（`count/skip/instances/cacheHit`）。
+- **证据**：`calc_telemetry_records_dedup_cache_and_cold_ms` → `compute.count=2`、`compute.skip=1`、
+  `indicator.compute=2`；重复实例未重复计算。
+
+### TD-S0-06 · QA-S0-029 冷算耗时 → 部分清偿
+
+- **已落地**：`indicator.cold_ms` 事件 + 内存环就近秩 P95（`cold_p95_ms`），`telemetry_dump` 返回
+  `coldSamples / coldP95Ms`。
+- **证据**：`thirty_cold_samples_produce_p95`（30 样本 → P95=28.0）、`calc_telemetry_records_dedup_cache_and_cold_ms`
+  （`cold_p95_ms().is_some()`）。
+- **未清部分（原因）**：「冷缓存切 30 次 P95 ≤300ms、报价头 ≤60ms」需真实 UI 交互与墙钟采样；
+  实现层只保证埋点与统计口径正确，实机数值待 S2 取证。
+
+### TD-S0-07 · QA-S0-033 缓存命中日志 → 部分清偿
+
+- **已落地**：缓存命中/未命中均发 `cache.hit` / `cache.miss`；缓存键仍为 7 元组（含规范化 DateRange）。
+- **证据**：同一请求二次调用 → `second.cache_hit=true`，`cache.hit=2` 且 `indicator.compute` 仍为 2
+  （未重复计算，见 `calc_telemetry_records_dedup_cache_and_cold_ms`）。
+- **未清部分（原因）**：「切回总耗时 ≤120ms + 逐点一致」的实机取证属 S2 UI 批次；数值逐点一致由缓存直返保证，
+  但需 QA 在 UI 上复测。
+
+### TD-S0-08 · QA-S0-062 sim/real 隔离 → 已清偿
+
+- **改动**：`data/real/README.md` 隔离契约；`write_sim_dataset` / `verify_sim_dataset` 对路径含 `real` 返回
+  `PermissionDenied`；生成器统计 real 目录「文件名 + 文件 sha256」摘要，重建前后比对。
+- **命令 / 输出**：`cargo run -p indicator-golden --bin aka-sim-dataset` →
+  `real 目录未被写入：true（sha256 9e44c1e2…303e → 9e44c1e2…303e，changed=false）`
+- **产物**：`app/data/sim/generation-report.json` 的 `realDir {beforeSha256, afterSha256, changed:false}`；
+  单测 `generator_refuses_real_directories`。
+- **说明**：`data/real` 无真实行情数据，故只能以哨兵目录摘要不变为证；真实数据接入后的重建验证属后续 Sprint。
+
+### TD-S0-09 · QA-S0-070 sim sha256 重算 → 已清偿
+
+- **改动**：规范 CSV（表头/排序/小数位/末尾换行冻结）+ 仓库内 SHA-256 + `verify_sim_dataset` 只读复算。
+- **证据**：`canonical_csv_is_sorted_and_format_is_frozen`（逐字节比对）、`sha256_known_vectors`（空串/"abc"/长向量）、
+  `manifest_covers_rows_and_verifies_after_write`（写后复算通过）。
+- **产物**：`app/data/sim/seed-42/manifest.json.sha256` 与 `records.csv` 字节重算一致（`generation-report.json`
+  每个 generation `verified: true`）。
+
+## 防污染声明（S1 期间适用，已归档）
 
 - 上述 9 条在 S1 的 manifest、黄金夹具报告、bench 基线、README 中**均不得出现「已通过」**。
 - B1 每个指标的验收证据固定为：①manifest 9 字段；②黄金夹具（含边界与写死容差）；

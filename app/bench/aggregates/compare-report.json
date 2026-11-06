@@ -1,0 +1,31 @@
+{
+  "formatVersion": 1,
+  "comparator": "python3 tools/verify_aggregates.py",
+  "codes": [
+    {
+      "security": "002594.SZ",
+      "dailyBars": 520,
+      "weeklyBars": 104,
+      "weeklyMismatches": 0,
+      "monthlyBars": 24,
+      "monthlyMismatches": 0
+    },
+    {
+      "security": "300750.SZ",
+      "dailyBars": 520,
+      "weeklyBars": 104,
+      "weeklyMismatches": 0,
+      "monthlyBars": 24,
+      "monthlyMismatches": 0
+    },
+    {
+      "security": "600519.SH",
+      "dailyBars": 520,
+      "weeklyBars": 104,
+      "weeklyMismatches": 0,
+      "monthlyBars": 24,
+      "monthlyMismatches": 0
+    }
+  ],
+  "result": "passed"
+}

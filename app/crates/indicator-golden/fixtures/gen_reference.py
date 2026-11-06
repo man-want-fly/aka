@@ -171,11 +171,37 @@ def build_input(bars, seed):
             "close": closes, "volume": vols, "amount": amounts}
 
 
-def case(indicator_id, params, outputs, expected, tolerance="relative:1e-6"):
+def case(indicator_id, params, outputs, expected, tolerance=None):
+    if tolerance is None:
+        tolerance = tolerance_for(indicator_id)
     return {"indicatorId": indicator_id, "params": params, "outputs": outputs,
             "tolerance": tolerance,
             "expected": {key: [roundv(v) for v in column]
                          for key, column in expected.items()}}
+
+
+# 容差口径（与 docs/indicators/b1-trend-kernels.md 一致，测试 `tolerance_rules_are_frozen` 锁定）：
+# - 价格/金额口径（元、元/根）：relative 1e-6，分母 max(|expected|, 1.0)
+# - 无量纲比率（T21 R²）：absolute 1e-6
+# - 百分比振荡（E13 BIAS，%）与 MACD 副图：absolute 1e-4
+# - 手算类夹具（edge_manual_nonlinear / edge_arithmetic_regression）允许单 case 收紧到 absolute 1e-9
+TOLERANCE_RULES = (
+    "relative:1e-6=价格/斜率类（元、元/根），分母 max(|expected|,1.0)；"
+    "absolute:1e-6=R²（无量纲）；"
+    "absolute:1e-4=BIAS(%)、MACD 副图；"
+    "absolute:1e-9=仅手算夹具单 case 收紧；"
+    "count=计数严格相等"
+)
+TOLERANCE_BY_INDICATOR = {
+    "T21": "absolute:1e-6",
+    "E13": "absolute:1e-4",
+    "M06": "absolute:1e-4",
+}
+DEFAULT_TOLERANCE = "relative:1e-6"
+
+
+def tolerance_for(indicator_id):
+    return TOLERANCE_BY_INDICATOR.get(indicator_id, DEFAULT_TOLERANCE)
 
 
 def write(name, payload):
@@ -191,6 +217,7 @@ def suite(name, seed, bars, closes, cases, volume=None):
         volume = [0.0] * bars
     flat = closes
     return {"formatVersion": 1, "name": name, "seed": seed, "bars": bars,
+            "toleranceRules": TOLERANCE_RULES,
             "input": {"open": flat, "high": flat, "low": flat,
                       "close": closes, "volume": volume,
                       "amount": [0.0] * bars},
@@ -231,6 +258,12 @@ def main():
         case("T05", {"period": 20}, ["tema"], {"tema": tema(short, 20)}),
         case("T19", {"period": 60}, ["forecast"],
              {"forecast": linreg(short, 60)["forecast"]}),
+        case("T20", {"period": 60}, ["intercept"],
+             {"intercept": linreg(short, 60)["intercept"]}),
+        case("T21", {"period": 60}, ["r2"], {"r2": linreg(short, 60)["r2"]}),
+        case("T22", {"period": 60}, ["slope"], {"slope": linreg(short, 60)["slope"]}),
+        case("M06", {"fast": 12, "slow": 26, "signal": 9},
+             ["dif", "dea", "hist"], macd(short, 12, 26, 9)),
         case("E13", {"period1": 6, "period2": 12, "period3": 24},
              ["bias6", "bias12", "bias24"],
              {"bias6": bias(short, 6), "bias12": bias(short, 12),
@@ -252,6 +285,8 @@ def main():
              {"intercept": linreg(flat, 20)["intercept"]}),
         case("T21", {"period": 20}, ["r2"], {"r2": linreg(flat, 20)["r2"]}),
         case("T22", {"period": 20}, ["slope"], {"slope": linreg(flat, 20)["slope"]}),
+        case("M06", {"fast": 12, "slow": 26, "signal": 9},
+             ["dif", "dea", "hist"], macd(flat, 12, 26, 9)),
         case("E13", {"period1": 6, "period2": 12, "period3": 24},
              ["bias6", "bias12", "bias24"],
              {"bias6": bias(flat, 6), "bias12": bias(flat, 12),
@@ -292,6 +327,46 @@ def main():
     ]
     write("edge_first_bar.json",
           suite("edge_first_bar", 0, 1, one, first_bar))
+
+    # 非平凡手算对拍：close = [1,2,4,5,8]（非常数、非线性），period=5。
+    # 推导（见 manual_regression_notes.md）：
+    #   x̄=2, ȳ=4, Sxx=10, Sxy=17, Syy=30
+    #   slope=17/10=1.7；intercept=4-1.7*2=0.6；forecast(x=4)=0.6+1.7*4=7.4
+    #   R²=17²/(10*30)=289/300=0.963333333...
+    nonlinear = [1.0, 2.0, 4.0, 5.0, 8.0]
+    tail = lambda value: [NAN, NAN, NAN, NAN, value]
+    manual = [
+        case("T19", {"period": 5}, ["forecast"],
+             {"forecast": tail(7.4)}, "absolute:1e-9"),
+        case("T20", {"period": 5}, ["intercept"],
+             {"intercept": tail(0.6)}, "absolute:1e-9"),
+        case("T21", {"period": 5}, ["r2"],
+             {"r2": tail(289.0 / 300.0)}, "absolute:1e-9"),
+        case("T22", {"period": 5}, ["slope"],
+             {"slope": tail(1.7)}, "absolute:1e-9"),
+    ]
+    write("edge_manual_nonlinear.json",
+          suite("edge_manual_nonlinear", 0, 5, nonlinear, manual))
+
+    # 等差序列手算（BA 裁定 §4 表 #6）：close = 10.00 + 0.15·k（k=0..19），period=20。
+    # x̄=9.5、ȳ=11.425、b=0.15、a=10.00、forecast(x=19)=12.85、R²=1.0。
+    arithmetic = [10.00 + 0.15 * k for k in range(20)]
+    last_only = lambda n, value: [NAN] * (n - 1) + [value]
+    arithmetic_cases = [
+        case("T19", {"period": 20}, ["forecast"], {"forecast": last_only(20, 12.85)}),
+        case("T20", {"period": 20}, ["intercept"], {"intercept": last_only(20, 10.00)}),
+        case("T21", {"period": 20}, ["r2"], {"r2": last_only(20, 1.0)}),
+        case("T22", {"period": 20}, ["slope"], {"slope": last_only(20, 0.15)}),
+    ]
+    write("edge_arithmetic_regression.json",
+          suite("edge_arithmetic_regression", 0, 20, arithmetic, arithmetic_cases))
+
+    # T21 常数窗口（BA 裁定 §4 表 #7）：前 20 根线性、后 20 根恒为 9.0。
+    # 第 39 根窗口全常数 → Syy=0 → R² 定义为 1.0（manifest notes / 口径页一致）。
+    jumpy = [10.0 + 0.1 * k for k in range(20)] + [9.0] * 20
+    write("edge_t21_constant_window.json",
+          suite("edge_t21_constant_window", 0, 40, jumpy,
+                [case("T21", {"period": 20}, ["r2"], {"r2": linreg(jumpy, 20)["r2"]})]))
 
 
 if __name__ == "__main__":

@@ -74,6 +74,16 @@ impl DatasetManifest {
         }
     }
 
+    /// 重建代数：从 `data_version = v<N>...` 解析；`v1` → 1，`v2.1` → 2。
+    /// 用于 DTO 的 `dataset_generation`，避免把代数塞进 manifest 第 10 个字段。
+    pub fn generation(&self) -> u64 {
+        self.data_version
+            .strip_prefix('v')
+            .and_then(|tail| tail.split('.').next())
+            .and_then(|head| head.parse::<u64>().ok())
+            .unwrap_or(1)
+    }
+
     /// 从 JSON 文本解析；缺字段/多字段/类型错都返回明确错误，不 panic。
     pub fn from_json(text: &str) -> Result<Self, ManifestIssue> {
         serde_json::from_str::<Self>(text)
@@ -177,6 +187,13 @@ mod tests {
             a.sha256 != b.sha256,
         ];
         assert_eq!(diffs.iter().filter(|d| **d).count(), 3);
+    }
+
+    #[test]
+    fn generation_comes_from_data_version() {
+        assert_eq!(manifest(42, SHA_A).generation(), 1);
+        let rebuilt = DatasetManifest::build("sim", 42, "2015-01-05", "2024-12-31", 240_000, "v2", SHA_A, 1_730_000_001);
+        assert_eq!(rebuilt.generation(), 2);
     }
 
     #[test]

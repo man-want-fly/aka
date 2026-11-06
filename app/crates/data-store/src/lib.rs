@@ -34,6 +34,8 @@ pub struct CandleSeries {
     pub provider: String,
     pub dataset_id: String,
     pub data_version: String,
+    /// 数据集重建代数；随 DTO 透出，供前端丢弃旧缓存（TD-S0-08）。
+    pub dataset_generation: u64,
     pub simulated: bool,
     pub generated_at: i64,
     pub candles: Vec<Candle>,

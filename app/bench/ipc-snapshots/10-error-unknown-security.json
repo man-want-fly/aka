@@ -1,0 +1,18 @@
+{
+  "command": "get_bars",
+  "error": {
+    "code": "UNKNOWN_SECURITY",
+    "details": {
+      "security": "999999.XX"
+    },
+    "message": "未知标的：999999.XX",
+    "retryable": false
+  },
+  "request": {
+    "adj": "qfq",
+    "from": null,
+    "security": "999999.XX",
+    "timeframe": "D",
+    "to": null
+  }
+}
