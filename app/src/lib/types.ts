@@ -110,6 +110,16 @@ export interface ProvenanceDto {
   generatedAt: number;
 }
 
+export interface RangeDto {
+  requestedFrom: string | null;
+  requestedTo: string | null;
+  from: string | null;
+  to: string | null;
+  barCount: number;
+  /** 请求区间被数据集边界吸附/截断时为 true */
+  clamped: boolean;
+}
+
 export interface BarsResponse {
   security: string;
   timeframe: string;
@@ -117,6 +127,7 @@ export interface BarsResponse {
   datasetId: string;
   totalBars: number;
   bars: BarDto[];
+  range: RangeDto;
   provenance: ProvenanceDto;
 }
 
@@ -124,8 +135,10 @@ export interface GetBarsRequest {
   security: string;
   timeframe: "D" | "W" | "M";
   adj: "none" | "qfq" | "hfq";
-  from?: number;
-  to?: number;
+  /** 起始日期（含），YYYY-MM-DD；缺省 = 数据集起点 */
+  from?: string;
+  /** 结束日期（含），YYYY-MM-DD；缺省 = 数据集末尾 */
+  to?: string;
 }
 
 export interface InstanceRequest {
@@ -138,8 +151,8 @@ export interface CalcRequest {
   security: string;
   timeframe: "D" | "W" | "M";
   adj: "none" | "qfq" | "hfq";
-  from?: number;
-  to?: number;
+  from?: string;
+  to?: string;
   generation: number;
   instances: InstanceRequest[];
 }
@@ -167,6 +180,7 @@ export interface CalcResponse {
   computedMs: number;
   cacheHit: boolean;
   barCount: number;
+  range: RangeDto;
   series: SeriesDto[];
 }
 

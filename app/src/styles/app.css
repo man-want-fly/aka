@@ -414,6 +414,27 @@ select {
   flex: 1;
 }
 
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-range input[type="date"] {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.date-range .date-sep {
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
 .engine-note {
   font-family: var(--mono);
   font-size: 10.5px;

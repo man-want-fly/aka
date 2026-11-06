@@ -84,6 +84,36 @@ impl Date {
     pub fn iso(self) -> String {
         format!("{:04}-{:02}-{:02}", self.year, self.month, self.day)
     }
+
+    /// 解析严格的 `YYYY-MM-DD`。非法日期（如 2023-02-30）返回 None，
+    /// 不做自动纠偏，避免把用户输错的区间静默挪到别的交易日。
+    pub fn parse(text: &str) -> Option<Self> {
+        let bytes = text.as_bytes();
+        if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
+            return None;
+        }
+        let year = text.get(0..4)?.parse::<i32>().ok()?;
+        let month = text.get(5..7)?.parse::<u8>().ok()?;
+        let day = text.get(8..10)?.parse::<u8>().ok()?;
+        if !(1..=12).contains(&month) || day == 0 || day > days_in_month(year, month) {
+            return None;
+        }
+        Some(Self::new(year, month, day))
+    }
+}
+
+const fn is_leap_year(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+}
+
+const fn days_in_month(year: i32, month: u8) -> u8 {
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if is_leap_year(year) => 29,
+        2 => 28,
+        _ => 0,
+    }
 }
 
 impl std::fmt::Display for Date {
@@ -111,5 +141,16 @@ mod tests {
         let d = Date::new(2024, 12, 28);
         assert!(d.is_weekend());
         assert_eq!(d.next_weekday(), Date::new(2024, 12, 30));
+    }
+
+    #[test]
+    fn parse_is_strict() {
+        assert_eq!(Date::parse("2024-02-29"), Some(Date::new(2024, 2, 29)));
+        assert_eq!(Date::parse("2023-02-29"), None); // 非闰年
+        assert_eq!(Date::parse("2024-13-01"), None);
+        assert_eq!(Date::parse("2024-04-31"), None);
+        assert_eq!(Date::parse("2024-1-01"), None);
+        assert_eq!(Date::parse("2024-01-01T00:00"), None);
+        assert_eq!(Date::parse(""), None);
     }
 }

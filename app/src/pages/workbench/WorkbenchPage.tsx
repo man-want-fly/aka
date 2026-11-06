@@ -49,6 +49,8 @@ export function WorkbenchPage({
   const [activeCode, setActiveCode] = useState("300750.SZ");
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">("qfq");
   const [range, setRange] = useState(120);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [params, setParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
   const [appliedParams, setAppliedParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
   const [bars, setBars] = useState<BarsResponse | null>(null);
@@ -93,6 +95,8 @@ export function WorkbenchPage({
       security: activeCode,
       timeframe: "D" as const,
       adj,
+      from: dateFrom || undefined,
+      to: dateTo || undefined,
       generation: current,
       instances: buildInstances(appliedParams),
     };
@@ -109,7 +113,7 @@ export function WorkbenchPage({
         setError(describeError(err));
         setLoading(false);
       });
-  }, [activeCode, adj, appliedParams]);
+  }, [activeCode, adj, appliedParams, dateFrom, dateTo]);
 
   const security = securities.find((item) => item.code === activeCode);
   const lastIndex = bars && bars.bars.length > 0 ? bars.bars.length - 1 : -1;
@@ -267,6 +271,34 @@ export function WorkbenchPage({
                 ))}
               </div>
 
+              <span className="caption">日期</span>
+              <div className="date-range">
+                <input
+                  type="date"
+                  aria-label="起始日期"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                />
+                <span className="date-sep">~</span>
+                <input
+                  type="date"
+                  aria-label="结束日期"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                />
+                {(dateFrom || dateTo) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                    }}
+                  >
+                    清除
+                  </button>
+                )}
+              </div>
+
               <div className="grow" />
               <span className="engine-note">
                 按需计算 · {loading ? "更新中" : calc?.cacheHit ? "缓存命中" : "已计算"} ·{" "}
@@ -331,7 +363,8 @@ export function WorkbenchPage({
             engine <b>{calc?.engineVersion ?? "aka-engine-0.1.0"}</b>
           </span>
           <span>
-            区间 <b>{bars ? `${bars.bars[0]?.date ?? "—"} ~ ${lastBar?.date ?? "—"}` : "—"}</b>
+            区间 <b>{bars ? `${bars.range.from ?? "—"} ~ ${bars.range.to ?? "—"}` : "—"}</b>
+            {bars?.range.clamped ? "（已吸附）" : ""}
           </span>
           <span>
             样本 <b>{bars?.totalBars ?? 0}</b>

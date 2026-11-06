@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
 use data_provider::mock::MockProvider;
-use data_provider::{Adjust, BarRequest, DataProvider, Security, Timeframe};
+use data_provider::{Adjust, BarRequest, DataProvider, Date, Security, Timeframe};
 use data_store::{CacheStats, Candle, CandleSeries, CandleStore, SeriesKey};
 use indicator_core::{
     all, implemented_count, lookup, merge_defaults, validate, CalcError, Category, Indicator,
@@ -12,8 +12,8 @@ use indicator_core::{
 
 use crate::dto::{
     BarDto, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, IndicatorMetaDto, InputsDto,
-    ListSecuritiesRequest, OutputSeriesDto, OutputSpecDto, ProvenanceDto, RegistryResponse,
-    SecurityDto, SeriesDto,
+    ListSecuritiesRequest, OutputSeriesDto, OutputSpecDto, ProvenanceDto, RangeDto,
+    RegistryResponse, SecurityDto, SeriesDto,
 };
 use crate::error::{AppError, ErrorCode};
 
@@ -110,10 +110,10 @@ impl AppCore {
         let series = self.series_for(&req.security, timeframe, adj).await?;
 
         let total = series.len();
-        let (start, end) = window(total, req.from, req.to)?;
+        let window = resolve_window(&series, req.from.as_deref(), req.to.as_deref())?;
 
         let bars = series
-            .slice(start, end)
+            .slice(window.start, window.end)
             .iter()
             .map(|candle| BarDto {
                 ts: candle.ts,
@@ -136,6 +136,7 @@ impl AppCore {
             dataset_id: series.dataset_id.clone(),
             total_bars: total,
             bars,
+            range: window.range,
             provenance: ProvenanceDto {
                 provider: series.provider.clone(),
                 dataset_id: series.dataset_id.clone(),
@@ -153,7 +154,7 @@ impl AppCore {
         let series = self.series_for(&req.security, timeframe, adj).await?;
 
         let total = series.len();
-        let (start, end) = window(total, req.from, req.to)?;
+        let window = resolve_window(&series, req.from.as_deref(), req.to.as_deref())?;
         let columns = SeriesColumns::new(&series);
         let view = columns.view();
 
@@ -224,7 +225,7 @@ impl AppCore {
                     label_zh: spec.label_zh,
                     kind: spec.kind,
                     color: spec.color,
-                    values: values[start..end]
+                    values: values[window.start..window.end]
                         .iter()
                         .map(|v| if v.is_finite() { Some(*v) } else { None })
                         .collect(),
@@ -256,7 +257,8 @@ impl AppCore {
             engine_version: ENGINE_VERSION,
             computed_ms: (computed_ms * 100.0).round() / 100.0,
             cache_hit,
-            bar_count: end - start,
+            bar_count: window.end - window.start,
+            range: window.range,
             series: output,
         })
     }
@@ -365,23 +367,136 @@ fn parse_timeframe(value: &str) -> Result<Timeframe, AppError> {
         .ok_or_else(|| AppError::invalid_argument(format!("未知周期：{value}")))
 }
 
-/// `to` 为含端点索引；返回半开区间 `[start, end)`。
-fn window(
-    total: usize,
-    from: Option<usize>,
-    to: Option<usize>,
-) -> Result<(usize, usize), AppError> {
+/// 日历跨度上限（10 年）与返回根数上限，防止前端一次拉全历史把 IPC/渲染拖死。
+const MAX_RANGE_DAYS: i64 = 3_660;
+const MAX_RANGE_BARS: usize = 2_500;
+
+#[derive(Debug)]
+struct ResolvedWindow {
+    start: usize,
+    end: usize,
+    range: RangeDto,
+}
+
+/// 把请求的日期闭区间映射成半开下标区间 `[start, end)`。
+///
+/// 规则：
+/// - 非交易日 / 停牌日不是错误，区间内没有 K 线就直接缺席；
+/// - `from` 落在非交易日时吸附到其后第一根，`to` 吸附到其前最后一根；
+/// - `to` 晚于最新交易日时截断到最新（`clamped = true`）；
+/// - `from` 晚于最新交易日、或区间内无任何 K 线 → `INSUFFICIENT_DATA`；
+/// - `from > to` → `INVALID_ARGUMENT`（区间倒置）；
+/// - 日历跨度 > 10 年或返回根数 > 2500 → `INVALID_ARGUMENT`（超长区间）。
+fn resolve_window(
+    series: &CandleSeries,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Result<ResolvedWindow, AppError> {
+    let requested_from = parse_bound(from, "from")?;
+    let requested_to = parse_bound(to, "to")?;
+
+    if let (Some(f), Some(t)) = (requested_from, requested_to) {
+        if f > t {
+            return Err(AppError::invalid_argument(format!("区间倒置：起始 {f} 晚于结束 {t}"))
+                .with_details(serde_json::json!({"from": f.iso(), "to": t.iso()})));
+        }
+        if t.epoch_secs() / 86_400 - f.epoch_secs() / 86_400 > MAX_RANGE_DAYS {
+            return Err(AppError::invalid_argument(format!(
+                "区间超长：{f} 至 {t} 超过 {MAX_RANGE_DAYS} 天上限"
+            ))
+            .with_details(serde_json::json!({"maxDays": MAX_RANGE_DAYS})));
+        }
+    }
+
+    let total = series.len();
+    let first = series.candles.first().map(|c| c.date.as_str());
+    let last = series.candles.last().map(|c| c.date.as_str());
+    let empty_range = |code: ErrorCode, message: String| {
+        AppError::new(code, message).with_details(serde_json::json!({
+            "requestedFrom": requested_from.map(|d| d.iso()),
+            "requestedTo": requested_to.map(|d| d.iso()),
+            "availableFrom": first,
+            "availableTo": last,
+            "totalBars": total,
+        }))
+    };
+
     if total == 0 {
-        return Ok((0, 0));
+        return Err(empty_range(
+            ErrorCode::InsufficientData,
+            "数据集为空，无法按日期区间取数".to_string(),
+        ));
     }
-    let start = from.unwrap_or(0).min(total - 1);
-    let end = to.map(|t| t.min(total - 1)).unwrap_or(total - 1);
-    if start > end {
+
+    let from_iso = requested_from.map(|d| d.iso());
+    let to_iso = requested_to.map(|d| d.iso());
+
+    let start = match from_iso.as_deref() {
+        Some(bound) => series
+            .candles
+            .iter()
+            .position(|c| c.date.as_str() >= bound)
+            .ok_or_else(|| {
+                empty_range(
+                    ErrorCode::InsufficientData,
+                    format!("起始日期 {bound} 晚于最新交易日 {last:?}"),
+                )
+            })?,
+        None => 0,
+    };
+    let end = match to_iso.as_deref() {
+        Some(bound) => series
+            .candles
+            .iter()
+            .rposition(|c| c.date.as_str() <= bound)
+            .map(|idx| idx + 1)
+            .unwrap_or(0),
+        None => total,
+    };
+
+    if start >= end {
+        return Err(empty_range(
+            ErrorCode::InsufficientData,
+            "请求区间内没有可用的 K 线".to_string(),
+        ));
+    }
+
+    let bar_count = end - start;
+    if bar_count > MAX_RANGE_BARS {
         return Err(AppError::invalid_argument(format!(
-            "区间非法：from={start} 大于 to={end}"
-        )));
+            "区间包含 {bar_count} 根 K 线，超过 {MAX_RANGE_BARS} 根上限"
+        ))
+        .with_details(serde_json::json!({"maxBars": MAX_RANGE_BARS, "requestedBars": bar_count})));
     }
-    Ok((start, end + 1))
+
+    let actual_from = series.candles[start].date.clone();
+    let actual_to = series.candles[end - 1].date.clone();
+    let clamped = from_iso.as_deref().is_some_and(|b| b != actual_from)
+        || to_iso.as_deref().is_some_and(|b| b != actual_to);
+
+    Ok(ResolvedWindow {
+        start,
+        end,
+        range: RangeDto {
+            requested_from: from_iso,
+            requested_to: to_iso,
+            from: Some(actual_from),
+            to: Some(actual_to),
+            bar_count,
+            clamped,
+        },
+    })
+}
+
+fn parse_bound(value: Option<&str>, field: &str) -> Result<Option<Date>, AppError> {
+    match value {
+        None => Ok(None),
+        Some(text) if text.trim().is_empty() => Ok(None),
+        Some(text) => Date::parse(text.trim()).map(Some).ok_or_else(|| {
+            AppError::invalid_argument(format!("{field} 不是合法日期（YYYY-MM-DD）：{text}"))
+                .with_details(serde_json::json!({"field": field, "value": text}))
+        }),
+    }
 }
 
 /// 指标内核只接收切片，因此先把 K 线列拷成连续数组，避免在循环里反复分配。
@@ -483,5 +598,97 @@ fn category_key(category: Category) -> &'static str {
         Category::Volume => "volume",
         Category::Stat => "stat",
         Category::Breadth => "breadth",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn series(from: Date, bars: usize) -> CandleSeries {
+        let mut day = from;
+        let mut candles = Vec::new();
+        for i in 0..bars {
+            candles.push(Candle {
+                ts: day.epoch_secs(),
+                date: day.iso(),
+                open: 10.0 + i as f64,
+                high: 11.0 + i as f64,
+                low: 9.0 + i as f64,
+                close: 10.5 + i as f64,
+                volume: 1_000.0,
+                amount: 10_500.0,
+                adj_factor: 1.0,
+                quality: vec![],
+                source: "mock".to_string(),
+            });
+            day = day.next_weekday();
+        }
+        CandleSeries {
+            security: "600519.SH".into(),
+            timeframe: "1d".into(),
+            adj: "qfq".into(),
+            provider: "mock".into(),
+            dataset_id: "ds".into(),
+            data_version: "v0".into(),
+            simulated: true,
+            generated_at: 0,
+            candles,
+        }
+    }
+
+    #[test]
+    fn snaps_to_trading_day_and_clamps() {
+        // 2024-12-20 周五起 10 个交易日；起点给周六，终点给周日之外
+        let s = series(Date::new(2024, 12, 20), 10);
+        let w = resolve_window(&s, Some("2024-12-21"), Some("2024-12-24")).unwrap();
+        assert_eq!(s.candles[w.start].date, "2024-12-23");
+        assert_eq!(s.candles[w.end - 1].date, "2024-12-24");
+        assert_eq!(w.range.bar_count, 2);
+        assert!(w.range.clamped);
+    }
+
+    #[test]
+    fn to_beyond_last_is_clamped_not_error() {
+        let s = series(Date::new(2024, 12, 20), 5);
+        let w = resolve_window(&s, None, Some("2025-06-01")).unwrap();
+        assert_eq!(w.end, 5);
+        assert_eq!(w.range.to.as_deref(), Some(s.candles.last().unwrap().date.as_str()));
+        assert!(w.range.clamped);
+    }
+
+    #[test]
+    fn from_after_last_is_insufficient_data() {
+        let s = series(Date::new(2024, 12, 20), 5);
+        let err = resolve_window(&s, Some("2025-06-01"), None).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InsufficientData);
+        assert_eq!(err.details.as_ref().unwrap()["totalBars"], 5);
+    }
+
+    #[test]
+    fn inverted_and_too_long_are_invalid() {
+        let s = series(Date::new(2024, 12, 20), 5);
+        let err = resolve_window(&s, Some("2024-12-24"), Some("2024-12-23")).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidArgument);
+
+        let err = resolve_window(&s, Some("2014-01-01"), Some("2024-12-31")).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidArgument);
+        assert_eq!(err.details.as_ref().unwrap()["maxDays"], MAX_RANGE_DAYS);
+    }
+
+    #[test]
+    fn bad_date_format_is_invalid() {
+        let s = series(Date::new(2024, 12, 20), 5);
+        let err = resolve_window(&s, Some("2024-02-30"), None).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidArgument);
+        assert_eq!(err.details.as_ref().unwrap()["field"], "from");
+    }
+
+    #[test]
+    fn default_window_covers_all_bars() {
+        let s = series(Date::new(2024, 12, 20), 7);
+        let w = resolve_window(&s, None, None).unwrap();
+        assert_eq!((w.start, w.end), (0, 7));
+        assert!(!w.range.clamped);
     }
 }

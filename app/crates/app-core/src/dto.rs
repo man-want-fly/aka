@@ -33,12 +33,14 @@ pub struct GetBarsRequest {
     pub timeframe: String,
     #[serde(default = "default_adj")]
     pub adj: String,
-    /// 起始索引，含；None = 0
+    /// 起始日期（含），`YYYY-MM-DD`；None = 数据集起点。
+    /// 非交易日/停牌日不是错误：自动吸附到区间内第一根有数据的 K 线。
     #[serde(default)]
-    pub from: Option<usize>,
-    /// 结束索引，含；None = 末尾
+    pub from: Option<String>,
+    /// 结束日期（含），`YYYY-MM-DD`；None = 数据集末尾。
+    /// 晚于最新数据时截断到最新交易日。
     #[serde(default)]
-    pub to: Option<usize>,
+    pub to: Option<String>,
 }
 
 fn default_timeframe() -> String {
@@ -84,7 +86,24 @@ pub struct BarsResponse {
     pub dataset_id: String,
     pub total_bars: usize,
     pub bars: Vec<BarDto>,
+    pub range: RangeDto,
     pub provenance: ProvenanceDto,
+}
+
+/// 请求日期区间与实际返回区间的回显。前端据此判断是否发生了吸附/截断。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RangeDto {
+    pub requested_from: Option<String>,
+    pub requested_to: Option<String>,
+    /// 实际返回的第一根 K 线日期；空区间时为 None
+    pub from: Option<String>,
+    /// 实际返回的最后一根 K 线日期
+    pub to: Option<String>,
+    /// 实际返回的 K 线根数
+    pub bar_count: usize,
+    /// true 表示请求区间被数据集边界吸附/截断
+    pub clamped: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -180,10 +199,12 @@ pub struct CalcRequest {
     pub timeframe: String,
     #[serde(default = "default_adj")]
     pub adj: String,
+    /// 起始日期（含），`YYYY-MM-DD`；None = 数据集起点。
     #[serde(default)]
-    pub from: Option<usize>,
+    pub from: Option<String>,
+    /// 结束日期（含），`YYYY-MM-DD`；None = 数据集末尾。
     #[serde(default)]
-    pub to: Option<usize>,
+    pub to: Option<String>,
     #[serde(default)]
     pub generation: u64,
     pub instances: Vec<InstanceRequest>,
@@ -219,5 +240,6 @@ pub struct CalcResponse {
     pub computed_ms: f64,
     pub cache_hit: bool,
     pub bar_count: usize,
+    pub range: RangeDto,
     pub series: Vec<SeriesDto>,
 }
