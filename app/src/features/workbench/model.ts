@@ -76,61 +76,43 @@ export function sameParams(a: WorkbenchParams, b: WorkbenchParams) {
   );
 }
 
+/** 选项文案只从 manifest 的 abbr 来，id 只作引擎键；beta 由 manifest status 派生。 */
+type Choice = { id: string; label: string };
+
+const MANIFEST_INDEX = new Map(
+  (manifestJson.indicators as Array<{ id: string; abbr: string; status: string }>).map((item) => [
+    item.id,
+    item,
+  ]),
+);
+
+function choices(ids: readonly string[]): Choice[] {
+  return ids.map((id) => {
+    const item = MANIFEST_INDEX.get(id);
+    if (!item) throw new Error(`manifest 缺少 ${id}`);
+    return { id, label: `${id} ${item.abbr}${item.status === "beta" ? "（beta）" : ""}` };
+  });
+}
+
 /** B2 主图叠加候选（11 个面板=主图的指标）。 */
-export const B2_OVERLAY_CHOICES: Array<{ id: string; label: string }> = [
-  { id: "T08", label: "T08 Envelopes" },
-  { id: "T09", label: "T09 BOLL" },
-  { id: "T10", label: "T10 Keltner" },
-  { id: "T11", label: "T11 Donchian" },
-  { id: "T12", label: "T12 ATR Bands" },
-  { id: "T13", label: "T13 ATR Trail" },
-  { id: "T14", label: "T14 Chandelier" },
-  { id: "T15", label: "T15 Ichimoku" },
-  { id: "T16", label: "T16 PSAR（beta）" },
-  { id: "T23", label: "T23 Pivot" },
-  { id: "T24", label: "T24 HHV/LLV" },
-];
+export const B2_OVERLAY_CHOICES: Choice[] = choices([
+  "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T23", "T24",
+]);
 
 /** B2 副图候选（9 个波动指标）+ 既有 MACD。 */
-export const B2_SUB_CHOICES: Array<{ id: string; label: string }> = [
-  { id: "M06", label: "M06 MACD" },
-  { id: "V01", label: "V01 ATR" },
-  { id: "V02", label: "V02 ATRP" },
-  { id: "V03", label: "V03 StdDev" },
-  { id: "V04", label: "V04 BB Width" },
-  { id: "V05", label: "V05 %B" },
-  { id: "V07", label: "V07 Ulcer" },
-  { id: "V08", label: "V08 GAPO" },
-  { id: "V09", label: "V09 振幅" },
-  { id: "V10", label: "V10 TR" },
-];
+export const B2_SUB_CHOICES: Choice[] = choices([
+  "M06", "V01", "V02", "V03", "V04", "V05", "V07", "V08", "V09", "V10",
+]);
 
 /** B3 副图候选（13 个动量/摆动指标；M06 已在 B2 副图清单）。Q-01~Q-04 已裁定，均不再标 beta。 */
-export const B3_SUB_CHOICES: Array<{ id: string; label: string }> = [
-  { id: "M01", label: "M01 RSI" },
-  { id: "M02", label: "M02 KDJ" },
-  { id: "M04", label: "M04 %R" },
-  { id: "M05", label: "M05 CCI" },
-  { id: "M08", label: "M08 PPO" },
-  { id: "M09", label: "M09 ROC" },
-  { id: "M10", label: "M10 Momentum" },
-  { id: "M19", label: "M19 Aroon" },
-  { id: "M20", label: "M20 Vortex" },
-  { id: "M21", label: "M21 CMO" },
-  { id: "M24", label: "M24 Mass Index" },
-  { id: "M25", label: "M25 Elder Impulse" },
-  { id: "M26", label: "M26 NR7" },
-];
+export const B3_SUB_CHOICES: Choice[] = choices([
+  "M01", "M02", "M04", "M05", "M08", "M09", "M10", "M19", "M20", "M21", "M24", "M25", "M26",
+]);
 
-export const SUB_CHOICES = [...B2_SUB_CHOICES, ...B3_SUB_CHOICES, { id: "E13", label: "E13 BIAS" }];
+export const SUB_CHOICES: Choice[] = [...B2_SUB_CHOICES, ...B3_SUB_CHOICES, ...choices(["E13"])];
 
 /** B1 回归族与 BIAS：AC-03.04-11 / -15 要求自 B2 起可上图（T19/T21 为 beta，带徽标、不进默认）。 */
-export const B1_OVERLAY_CHOICES: Array<{ id: string; label: string }> = [
-  { id: "T19", label: "T19 回归预测（beta）" },
-  { id: "T20", label: "T20 回归截距" },
-  { id: "T21", label: "T21 回归 R²（beta）" },
-  { id: "T22", label: "T22 回归斜率" },
-];
+export const B1_OVERLAY_CHOICES: Choice[] = choices(["T19", "T20", "T21", "T22"]);
 
 export const DEFAULT_B2_OVERLAYS = ["T09", "T24"];
 export const DEFAULT_SUB_ID = "M06";
