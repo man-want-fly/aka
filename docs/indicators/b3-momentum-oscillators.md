@@ -113,17 +113,20 @@
 
 ### M25 Elder Impulse
 
-- `hist = 2×(DIF - DEA)`（与 M06 同源）；`impulse = EMA13(hist)`；
-  `state ∈ {+1,0,-1}`：`hist>0 且 impulse 上行 → +1`、`hist<0 且 impulse 下行 → -1`、其余 `0`。
+- `hist = 2×(DIF - DEA)`（与 M06 同源）；`impulse = EMA13(hist)`。
 - 参数：12 / 26 / 9 / `ema` 13。首个有效值 `slow+signal+ema-2 = 46`
   （impulse 自 45 起，state 需前一根 impulse）。
-- **已裁定（Q-03，2026-11-06）**：柱 **2×**、脉冲 **EMA13(柱)**、判定**先符号后差分**；
-  渲染色按本产品「红涨绿跌」：`+1` 红、`-1` 绿、`0` 蓝（与 Elder 原版「绿多红空」相反，口径页须写明）。
-  断言见 [`b3-beta-rulings.md`](./b3-beta-rulings.md) §4。
-- **零阈值（v0.2 定稿）**：`eps_i = 1e-9 × max(abs(C[i]), 1.0)`。
-  ① `abs(hist[i]) ≤ eps_i` → `state=0`；② `abs(impulse[i]−impulse[i−1]) ≤ eps_i` → `state=0`；
-  ③ 其余再按「`hist` 符号 + 脉冲差分」给 `±1`。线性上涨的 `hist` 只剩 `≈−1.8e−15` 残差，
-  无阈值会被裸符号判成 `−1`；该阈值不改变任何既有黄金 case。
+- **Q-03 产品口径（BA `ba0cbb8`，2026-11-06）**，判定顺序就是下面三条，阈值按当根收盘价逐根计算，
+  不是全局常数：
+  ```
+  eps_i = 1e-9 × max(abs(C[i]), 1.0)
+  ① abs(hist[i]) ≤ eps_i                     → state = 0
+  ② abs(impulse[i] − impulse[i−1]) ≤ eps_i   → state = 0
+  ③ 其余：hist 为正且脉冲上行 → +1；hist 为负且脉冲下行 → −1；方向冲突 → 0
+  ```
+  线性上涨的 `hist` 只剩 `≈−1.8e−15` 残差，无阈值会被裸符号判成 `−1`；该阈值不改变任何既有黄金 case。
+  渲染色按本产品「红涨绿跌」：`+1` 红、`-1` 绿、`0` 蓝（与 Elder 原版「绿多红空」相反）。
+  断言见 [`b3-beta-rulings.md`](./b3-beta-rulings.md) §4.
 
 ### M26 NR7
 

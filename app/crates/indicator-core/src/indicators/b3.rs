@@ -553,11 +553,21 @@ impl Indicator for ElderImpulse {
             if !impulse[i].is_finite() || !impulse[i - 1].is_finite() || !hist[i].is_finite() {
                 continue;
             }
-            // 线性行情下 DIF/DEA 收敛到同一仿射函数，柱只剩浮点残差；按价格量级的相对阈值判零，避免噪声触发 ±1
+            // Q-03 产品口径（eps 按当根收盘价定，不是全局常数）：
+            //   eps_i = 1e-9 × max(abs(C[i]), 1.0)
+            //   ① |hist[i]| ≤ eps_i                            → state = 0
+            //   ② |impulse[i] − impulse[i−1]| ≤ eps_i          → state = 0
+            //   ③ 其余：hist 为正且脉冲上行 → +1；hist 为负且脉冲下行 → −1；方向冲突 → 0
+            // 线性行情下 DIF/DEA 收敛到同一仿射函数，柱只剩浮点残差，② 用于挡住这点噪声。
             let eps = 1e-9 * view.close[i].abs().max(1.0);
-            let state = if hist[i] > eps && impulse[i] > impulse[i - 1] {
+            let delta = impulse[i] - impulse[i - 1];
+            let state = if hist[i].abs() <= eps {
+                0.0
+            } else if delta.abs() <= eps {
+                0.0
+            } else if hist[i] > 0.0 && delta > 0.0 {
                 1.0
-            } else if hist[i] < -eps && impulse[i] < impulse[i - 1] {
+            } else if hist[i] < 0.0 && delta < 0.0 {
                 -1.0
             } else {
                 0.0
@@ -768,13 +778,27 @@ mod tests {
         assert!((out[2][8] - 50.0).abs() <= 1e-9);
 
         let close: Vec<f64> = (0..30).map(|i| 10.0 + i as f64).collect();
-        // 裁定表按 RSV=100 手算 K/D/J：H=L=C 时窗口高低差恰为 100%，C±1 会得到 RSV=90
+        // AC-03.06-02 两条分支：H=L=C 与 H=C±1（BA `ba0cbb8` 勘误）
         let out = calc_ohlc(M02_ID, &close, &close, &close, &Params::new());
         assert!(out.iter().all(|column| column[7].is_nan()));
-        // 按裁定给的递推式 (2×50+100)/3 实算为 66.6667；裁定表写的 83.3333/77.7778 手算有误（已回报 BA）
         assert!((out[0][8] - 66.6667).abs() <= 1e-4);
         assert!((out[1][8] - 55.5556).abs() <= 1e-4);
         assert!((out[2][8] - 88.8889).abs() <= 1e-4);
+        assert!((out[0][9] - 77.7778).abs() <= 1e-4);
+        assert!((out[1][9] - 62.9630).abs() <= 1e-4);
+        assert!((out[2][9] - 107.4074).abs() <= 1e-4);
+
+        // 分支二：H=C+1、L=C−1 → 下标 8 窗口 HHV=19 / LLV=9 → RSV=90
+        let high: Vec<f64> = close.iter().map(|value| value + 1.0).collect();
+        let low: Vec<f64> = close.iter().map(|value| value - 1.0).collect();
+        let out = calc_ohlc(M02_ID, &high, &low, &close, &Params::new());
+        assert!(out.iter().all(|column| column[7].is_nan()));
+        assert!((out[0][8] - 63.3333).abs() <= 1e-4);
+        assert!((out[1][8] - 54.4444).abs() <= 1e-4);
+        assert!((out[2][8] - 81.1111).abs() <= 1e-4);
+        assert!((out[0][9] - 72.2222).abs() <= 1e-4);
+        assert!((out[1][9] - 60.3704).abs() <= 1e-4);
+        assert!((out[2][9] - 95.9259).abs() <= 1e-4);
 
         let mut params = Params::new();
         params.insert("k".to_string(), crate::ParamValue::Int(2));
@@ -783,6 +807,32 @@ mod tests {
         assert!(out[0][..8].iter().all(|value| value.is_nan()));
         assert!((out[0][8] - 75.0).abs() <= 1e-9);
         assert!((out[1][8] - 62.5).abs() <= 1e-9);
+    }
+
+    /// AC-03.06-03（BA `ba0cbb8`）：两条分支的输入与期望必须配对，不能把 −50.0 挂在 C=10+i 上。
+    #[test]
+    fn williams_r_two_branches() {
+        // 分支一：恒定振幅（H=11、L=9、C=10）→ 任意根 %R 恒为 −50.0
+        let len = 30;
+        let close = vec![10.0; len];
+        let high = vec![11.0; len];
+        let low = vec![9.0; len];
+        let out = calc_ohlc(M04_ID, &high, &low, &close, &Params::new());
+        assert!(out[0][..13].iter().all(|value| value.is_nan()));
+        for index in 13..len {
+            assert!((out[0][index] + 50.0).abs() <= 1e-9, "index {index}");
+        }
+
+        // 分支二：C=10+i、H=C+1、L=C−1 → 下标 13 的 HHV=24 / LLV=9 / C=23 → −6.6667
+        let close: Vec<f64> = (0..len).map(|i| 10.0 + i as f64).collect();
+        let high: Vec<f64> = close.iter().map(|value| value + 1.0).collect();
+        let low: Vec<f64> = close.iter().map(|value| value - 1.0).collect();
+        let out = calc_ohlc(M04_ID, &high, &low, &close, &Params::new());
+        assert!((out[0][13] + 6.6667).abs() <= 1e-4);
+        // 三级连续：输入 → 窗口极值 → 输出
+        assert!((high[13] - 24.0).abs() <= 1e-9);
+        assert!((low[0] - 9.0).abs() <= 1e-9);
+        assert!(((high[13] - close[13]) / (high[13] - low[0]) * -100.0 + 6.6667).abs() <= 1e-4);
     }
 
     /// Q-02：Mass 首值下标 40；range 恒 2 时 Mass=25；range=0 时 NaN。
@@ -801,28 +851,33 @@ mod tests {
         assert!(out[0].iter().all(|value| value.is_nan()));
     }
 
-    /// Q-03：柱 2×、先符号后差分、等值取 0；常数序列不出 ±1。
+    /// Q-03（BA `ba0cbb8` 最终版）：eps 逐根按 C[i] 取；正例指数上涨、反例线性上涨。
     #[test]
     fn elder_impulse_rulings_q03() {
-        // 线性上涨时 DIF/DEA 收敛，柱趋近 0，无法满足「hist>0 且脉冲上行」；用指数上涨构造持续正柱
+        // 正例：C[i]=10×1.01^i，柱持续为正且脉冲上行
         let close: Vec<f64> = (0..60).map(|i| 10.0 * 1.01f64.powi(i)).collect();
         let high: Vec<f64> = close.iter().map(|value| value + 1.0).collect();
         let low: Vec<f64> = close.iter().map(|value| value - 1.0).collect();
         let out = calc_ohlc(M25_ID, &high, &low, &close, &Params::new());
         assert!(out[0][..45].iter().all(|value| value.is_nan()));
         assert!(out[1][45].is_nan());
-        assert!(out[1][46..].iter().all(|value| *value == 1.0));
+        assert!((out[0][45] - 0.0496).abs() <= 1e-3, "impulse[45]={}", out[0][45]);
+        assert!((out[1][46..60].iter().filter(|value| **value == 1.0).count() as f64 - 14.0).abs() <= 1e-9);
+        assert!(out[1][46..60].iter().all(|value| *value == 1.0));
         let (_, _, hist) = macd_columns(
             &OhlcvView::new(&close, &high, &low, &close, &close, &close),
             12,
             26,
             9,
         );
-        assert!(hist[33..].iter().all(|value| *value > 0.0));
+        assert!((hist[45] - 0.0590).abs() <= 1e-3, "hist[45]={}", hist[45]);
 
-        let flat = vec![10.0; 60];
-        let out = calc_ohlc(M25_ID, &flat, &flat, &flat, &Params::new());
-        assert!(out[1][46..].iter().all(|value| *value == 0.0));
+        // 反例：线性上涨 C=10+0.5i，柱只剩浮点残差，46–59 必须全 0（既非 +1 也非 −1）
+        let close: Vec<f64> = (0..60).map(|i| 10.0 + 0.5 * i as f64).collect();
+        let high: Vec<f64> = close.iter().map(|value| value + 1.0).collect();
+        let low: Vec<f64> = close.iter().map(|value| value - 1.0).collect();
+        let out = calc_ohlc(M25_ID, &high, &low, &close, &Params::new());
+        assert!(out[1][46..60].iter().all(|value| *value == 0.0));
     }
 
     /// Q-04：M06 柱 = 2×(DIF−DEA)，与 M25 复用的柱逐根一致。
