@@ -53,6 +53,24 @@ pub struct ManifestIndicator {
     /// 口径说明：公式要点、首个有效值、边界规则
     #[serde(default)]
     pub notes: String,
+    /// 目录缩写（如 `MACD`），用于搜索与条目主标识
+    #[serde(default)]
+    pub abbr: String,
+    /// 中文名拼音首字母（如 `kdj`），用于拼音搜索
+    #[serde(default)]
+    pub pinyin_initials: String,
+    /// 面板归属：`主` / `副`
+    #[serde(default)]
+    pub panel: String,
+    /// 公式摘要（目录元信息一行展示）
+    #[serde(default)]
+    pub formula_summary: String,
+    /// 优先级：`P0` / `P1`
+    #[serde(default)]
+    pub priority: String,
+    /// PRD 附录 A 的预热根数（文档用途，实际以 `warmup` 纯函数为准）
+    #[serde(default)]
+    pub warmup_bars: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -291,6 +309,44 @@ mod tests {
             assert!(!item.unit.is_empty(), "{} 缺少单位/量纲说明", item.id);
             assert!(!item.notes.is_empty(), "{} 缺少口径说明", item.id);
         }
+    }
+
+    #[test]
+    fn manifest_covers_prd_catalog_and_metadata() {
+        use std::collections::BTreeMap;
+
+        let manifest = manifest();
+        assert_eq!(manifest.indicators.len(), 105, "目录应为 PRD 的 105 条");
+        assert_eq!(manifest.planned_count, 105);
+
+        let mut counts = BTreeMap::new();
+        for item in &manifest.indicators {
+            *counts.entry(item.category.as_str()).or_insert(0_usize) += 1;
+            assert!(!item.abbr.is_empty(), "{} 缺 abbr", item.id);
+            assert!(!item.pinyin_initials.is_empty(), "{} 缺拼音首字母", item.id);
+            assert!(item.panel == "主" || item.panel == "副", "{} 面板非法：{}", item.id, item.panel);
+            assert!(!item.formula_summary.is_empty(), "{} 缺公式摘要", item.id);
+            assert!(item.priority == "P0" || item.priority == "P1", "{} 优先级非法", item.id);
+        }
+        assert_eq!(
+            counts,
+            BTreeMap::from([
+                ("trend", 24),
+                ("momentum", 26),
+                ("volatility", 10),
+                ("volume", 15),
+                ("stat", 14),
+                ("breadth", 16),
+            ])
+        );
+
+        let implemented = manifest
+            .indicators
+            .iter()
+            .filter(|item| item.status != "planned")
+            .count();
+        assert_eq!(implemented, 44, "已实现条目数不得被规划项污染");
+        assert_eq!(manifest.indicators.iter().filter(|i| i.status == "planned").count(), 61);
     }
 
     #[test]

@@ -14,23 +14,46 @@
     {
       "id": "T01",
       "prdId": "T01",
-      "aliases": ["ma"],
+      "aliases": [
+        "ma"
+      ],
       "nameZh": "简单移动平均线",
       "nameEn": "Simple Moving Average",
       "category": "trend",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "sma", "labelZh": "SMA", "kind": "line", "color": "var(--accent)" }
+        {
+          "key": "sma",
+          "labelZh": "SMA",
+          "kind": "line",
+          "color": "var(--accent)"
+        }
       ],
       "formulaRef": "docs/indicators/b1-trend-kernels.md#t01-sma",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+      "notes": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。",
+      "abbr": "SMA",
+      "pinyinInitials": "jdydpjx",
+      "panel": "主",
+      "formulaSummary": "N 日算术平均",
+      "priority": "P0",
+      "warmupBars": 20
     },
     {
       "id": "T02",
@@ -39,19 +62,40 @@
       "nameZh": "指数移动平均线",
       "nameEn": "Exponential Moving Average",
       "category": "trend",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "ema", "labelZh": "EMA", "kind": "line", "color": "var(--warn)" }
+        {
+          "key": "ema",
+          "labelZh": "EMA",
+          "kind": "line",
+          "color": "var(--warn)"
+        }
       ],
       "formulaRef": "docs/indicators/b1-trend-kernels.md#t02-ema",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "前 N 根 SMA 作种子，α=2/(N+1) 递推；首个有效值 N-1，应用层按 B1 建议预热 3N 根（warmup=3N-1）。"
+      "notes": "前 N 根 SMA 作种子，α=2/(N+1) 递推；首个有效值 N-1，应用层按 B1 建议预热 3N 根（warmup=3N-1）。",
+      "abbr": "EMA",
+      "pinyinInitials": "zsydpjx",
+      "panel": "主",
+      "formulaSummary": "前 N 根 SMA 作种子，α=2/(N+1) 递推",
+      "priority": "P0",
+      "warmupBars": 60
     },
     {
       "id": "T03",
@@ -60,19 +104,40 @@
       "nameZh": "加权移动平均线",
       "nameEn": "Weighted Moving Average",
       "category": "trend",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "wma", "labelZh": "WMA", "kind": "line", "color": "#8b5cf6" }
+        {
+          "key": "wma",
+          "labelZh": "WMA",
+          "kind": "line",
+          "color": "#8b5cf6"
+        }
       ],
       "formulaRef": "docs/indicators/b1-trend-kernels.md#t03-wma",
       "version": 1,
       "specStatus": "partial",
       "status": "beta",
       "unit": "元",
-      "notes": "权重 1..N，最新一根权重最大；前 N-1 根为 NaN。B1 标记「完整▲」，边界说明仍待补，暂标 beta。"
+      "notes": "权重 1..N，最新一根权重最大；前 N-1 根为 NaN。B1 标记「完整▲」，边界说明仍待补，暂标 beta。",
+      "abbr": "WMA",
+      "pinyinInitials": "jqydpjx",
+      "panel": "主",
+      "formulaSummary": "权重 1..N，最新一根权重最大",
+      "priority": "P0",
+      "warmupBars": 20
     },
     {
       "id": "T04",
@@ -81,19 +146,40 @@
       "nameZh": "双重指数移动平均线",
       "nameEn": "Double Exponential Moving Average",
       "category": "trend",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "dema", "labelZh": "DEMA", "kind": "line", "color": "#22d3ee" }
+        {
+          "key": "dema",
+          "labelZh": "DEMA",
+          "kind": "line",
+          "color": "#22d3ee"
+        }
       ],
       "formulaRef": "docs/indicators/b1-trend-kernels.md#t04-dema",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "DEMA=2·E1-E2，E2=EMA(E1,N)；首个有效值 2N-2，应用层按 B1 建议预热 3N 根（warmup=3N-1）。"
+      "notes": "DEMA=2·E1-E2，E2=EMA(E1,N)；首个有效值 2N-2，应用层按 B1 建议预热 3N 根（warmup=3N-1）。",
+      "abbr": "DEMA",
+      "pinyinInitials": "sczsydpjx",
+      "panel": "主",
+      "formulaSummary": "DEMA=2·E1-E2，E2=EMA(E1,N)",
+      "priority": "P0",
+      "warmupBars": 60
     },
     {
       "id": "T05",
@@ -102,153 +188,108 @@
       "nameZh": "三重指数移动平均线",
       "nameEn": "Triple Exponential Moving Average",
       "category": "trend",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "tema", "labelZh": "TEMA", "kind": "line", "color": "#f59e0b" }
+        {
+          "key": "tema",
+          "labelZh": "TEMA",
+          "kind": "line",
+          "color": "#f59e0b"
+        }
       ],
       "formulaRef": "docs/indicators/b1-trend-kernels.md#t05-tema",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "TEMA=3·E1-3·E2+E3；首个有效值 3N-3，应用层按 B1 建议预热 4.5N 根（warmup=4.5N-1）。"
+      "notes": "TEMA=3·E1-3·E2+E3；首个有效值 3N-3，应用层按 B1 建议预热 4.5N 根（warmup=4.5N-1）。",
+      "abbr": "TEMA",
+      "pinyinInitials": "sczsydpjx",
+      "panel": "主",
+      "formulaSummary": "TEMA=3·E1-3·E2+E3",
+      "priority": "P0",
+      "warmupBars": 90
     },
     {
-      "id": "T19",
-      "prdId": "T19",
-      "aliases": [],
-      "nameZh": "线性回归预测",
-      "nameEn": "Linear Regression Forecast",
-      "category": "stat",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      "id": "T06",
+      "prdId": "T06",
+      "aliases": [
+        "hma"
       ],
+      "nameZh": "赫尔均线",
+      "nameEn": "HMA",
+      "abbr": "HMA",
+      "pinyinInitials": "hejx",
+      "panel": "主",
+      "priority": "P1",
+      "category": "trend",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
       "outputs": [
-        { "key": "forecast", "labelZh": "LinReg 预测", "kind": "line", "color": "#60a5fa" }
+        {
+          "key": "value",
+          "labelZh": "HMA",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
       ],
-      "formulaRef": "docs/indicators/b1-trend-kernels.md#t19-linreg-forecast",
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
-      "unit": "元",
-      "notes": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测；该终点口径为自定，暂标 beta。"
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 40
     },
     {
-      "id": "T20",
-      "prdId": "T20",
-      "aliases": [],
-      "nameZh": "线性回归截距",
-      "nameEn": "Linear Regression Intercept",
-      "category": "stat",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      "id": "T07",
+      "prdId": "T07",
+      "aliases": [
+        "kama"
       ],
+      "nameZh": "自适应均线",
+      "nameEn": "KAMA",
+      "abbr": "KAMA",
+      "pinyinInitials": "zsyjx",
+      "panel": "主",
+      "priority": "P0",
+      "category": "trend",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
       "outputs": [
-        { "key": "intercept", "labelZh": "LinReg 截距", "kind": "line", "color": "#a78bfa" }
+        {
+          "key": "value",
+          "labelZh": "KAMA",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
       ],
-      "formulaRef": "docs/indicators/b1-trend-kernels.md#t20-linreg-intercept",
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "元",
-      "notes": "窗口首根（x=0）的拟合值，等于 intercept。"
-    },
-    {
-      "id": "T21",
-      "prdId": "T21",
-      "aliases": [],
-      "nameZh": "线性回归 R²",
-      "nameEn": "Linear Regression R-Squared",
-      "category": "stat",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "r2", "labelZh": "R²", "kind": "line", "color": "#34d399" }
-      ],
-      "formulaRef": "docs/indicators/b1-trend-kernels.md#t21-r2",
-      "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
-      "unit": "无量纲",
-      "notes": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]；Syy=0（常数序列）定义为 1.0；该退化口径为自定，暂标 beta。"
-    },
-    {
-      "id": "T22",
-      "prdId": "T22",
-      "aliases": [],
-      "nameZh": "线性回归斜率",
-      "nameEn": "Linear Regression Slope",
-      "category": "stat",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "slope", "labelZh": "LinReg 斜率", "kind": "line", "color": "#f472b6" }
-      ],
-      "formulaRef": "docs/indicators/b1-trend-kernels.md#t22-linreg-slope",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "元/根",
-      "notes": "窗口内每根 K 线的价格变化量（元/根）。"
-    },
-    {
-      "id": "E13",
-      "prdId": "E13",
-      "aliases": [],
-      "nameZh": "乖离率",
-      "nameEn": "BIAS",
-      "category": "momentum",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period1", "label": "周期 1", "min": 2, "max": 200, "default": 6, "step": 1 },
-        { "kind": "int", "key": "period2", "label": "周期 2", "min": 2, "max": 200, "default": 12, "step": 1 },
-        { "kind": "int", "key": "period3", "label": "周期 3", "min": 2, "max": 200, "default": 24, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "bias6", "labelZh": "BIAS(6)", "kind": "line", "color": "var(--accent)" },
-        { "key": "bias12", "labelZh": "BIAS(12)", "kind": "line", "color": "var(--warn)" },
-        { "key": "bias24", "labelZh": "BIAS(24)", "kind": "line", "color": "#94a3b8" }
-      ],
-      "formulaRef": "docs/indicators/b1-trend-kernels.md#e13-bias",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "%",
-      "notes": "BIAS=(C-SMA_N)/SMA_N×100%；SMA=0 时输出 NaN，不产生 Infinity；warmup=min(周期)-1。"
-    },
-    {
-      "id": "M06",
-      "prdId": "M06",
-      "aliases": ["macd"],
-      "nameZh": "指数平滑异同移动平均线",
-      "nameEn": "MACD",
-      "category": "momentum",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "fast", "label": "快线 EMA", "min": 2, "max": 200, "default": 12, "step": 1 },
-        { "kind": "int", "key": "slow", "label": "慢线 EMA", "min": 2, "max": 200, "default": 26, "step": 1 },
-        { "kind": "int", "key": "signal", "label": "信号线", "min": 2, "max": 200, "default": 9, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "dif", "labelZh": "DIF", "kind": "line", "color": "var(--accent)" },
-        { "key": "dea", "labelZh": "DEA", "kind": "line", "color": "var(--warn)" },
-        { "key": "hist", "labelZh": "MACD 柱", "kind": "histogram", "color": "var(--rise)" }
-      ],
-      "formulaRef": "docs/indicators/b1-trend-kernels.md#m06-macd",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "元",
-      "notes": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)（A 股主流，Q-04 确认沿用 B1）；旧 id «macd» 保留 alias 一版。"
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 40
     },
     {
       "id": "T08",
@@ -257,22 +298,62 @@
       "nameZh": "均线包络",
       "nameEn": "Envelopes",
       "category": "trend",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
-        { "kind": "float", "key": "pct", "label": "带宽 %", "min": 0.1, "max": 20.0, "default": 2.5, "step": 0.1, "unit": "%" }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        },
+        {
+          "kind": "float",
+          "key": "pct",
+          "label": "带宽 %",
+          "min": 0.1,
+          "max": 20.0,
+          "default": 2.5,
+          "step": 0.1,
+          "unit": "%"
+        }
       ],
       "outputs": [
-        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
-        { "key": "middle", "labelZh": "中轨", "kind": "line", "color": "var(--accent)" },
-        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "upper",
+          "labelZh": "上轨",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "middle",
+          "labelZh": "中轨",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "lower",
+          "labelZh": "下轨",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t08-envelopes",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "中轨=SMA(close,N)；上/下轨=中轨×(1±pct%)；首根有效值 N-1。"
+      "notes": "中轨=SMA(close,N)；上/下轨=中轨×(1±pct%)；首根有效值 N-1。",
+      "abbr": "Envelopes",
+      "pinyinInitials": "jxbl",
+      "panel": "主",
+      "formulaSummary": "中轨=SMA(close,N)",
+      "priority": "P0",
+      "warmupBars": 20
     },
     {
       "id": "T09",
@@ -281,22 +362,61 @@
       "nameZh": "布林带",
       "nameEn": "Bollinger Bands",
       "category": "trend",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
-        { "kind": "float", "key": "mult", "label": "标准差倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        },
+        {
+          "kind": "float",
+          "key": "mult",
+          "label": "标准差倍数",
+          "min": 0.1,
+          "max": 10.0,
+          "default": 2.0,
+          "step": 0.1
+        }
       ],
       "outputs": [
-        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
-        { "key": "middle", "labelZh": "中轨", "kind": "line", "color": "var(--accent)" },
-        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "upper",
+          "labelZh": "上轨",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "middle",
+          "labelZh": "中轨",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "lower",
+          "labelZh": "下轨",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t09-boll",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "中轨=SMA(close,N)；σ 为样本标准差（ddof=1）；上/下轨=中轨±kσ。"
+      "notes": "中轨=SMA(close,N)；σ 为样本标准差（ddof=1）；上/下轨=中轨±kσ。",
+      "abbr": "BOLL",
+      "pinyinInitials": "bld",
+      "panel": "主",
+      "formulaSummary": "中轨=SMA(close,N)",
+      "priority": "P0",
+      "warmupBars": 20
     },
     {
       "id": "T10",
@@ -305,22 +425,63 @@
       "nameZh": "肯特纳通道",
       "nameEn": "Keltner Channel",
       "category": "trend",
-      "inputs": { "high": true, "low": true, "close": true },
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
-        { "kind": "float", "key": "mult", "label": "ATR 倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        },
+        {
+          "kind": "float",
+          "key": "mult",
+          "label": "ATR 倍数",
+          "min": 0.1,
+          "max": 10.0,
+          "default": 2.0,
+          "step": 0.1
+        }
       ],
       "outputs": [
-        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
-        { "key": "middle", "labelZh": "中轨", "kind": "line", "color": "var(--accent)" },
-        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "upper",
+          "labelZh": "上轨",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "middle",
+          "labelZh": "中轨",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "lower",
+          "labelZh": "下轨",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t10-keltner",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "中轨=EMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。"
+      "notes": "中轨=EMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。",
+      "abbr": "Keltner",
+      "pinyinInitials": "ktntd",
+      "panel": "主",
+      "formulaSummary": "中轨=EMA(close,N)",
+      "priority": "P0",
+      "warmupBars": 40
     },
     {
       "id": "T11",
@@ -329,20 +490,47 @@
       "nameZh": "唐奇安通道",
       "nameEn": "Donchian Channel",
       "category": "trend",
-      "inputs": { "high": true, "low": true },
+      "inputs": {
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
-        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "upper",
+          "labelZh": "上轨",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "lower",
+          "labelZh": "下轨",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t11-donchian",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "上轨=近 N 根最高价；下轨=近 N 根最低价；首根有效值 N-1。"
+      "notes": "上轨=近 N 根最高价；下轨=近 N 根最低价；首根有效值 N-1。",
+      "abbr": "Donchian",
+      "pinyinInitials": "tqatd",
+      "panel": "主",
+      "formulaSummary": "上轨=近 N 根最高价",
+      "priority": "P0",
+      "warmupBars": 20
     },
     {
       "id": "T12",
@@ -351,22 +539,63 @@
       "nameZh": "ATR 通道",
       "nameEn": "ATR Bands",
       "category": "trend",
-      "inputs": { "high": true, "low": true, "close": true },
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
-        { "kind": "float", "key": "mult", "label": "ATR 倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        },
+        {
+          "kind": "float",
+          "key": "mult",
+          "label": "ATR 倍数",
+          "min": 0.1,
+          "max": 10.0,
+          "default": 2.0,
+          "step": 0.1
+        }
       ],
       "outputs": [
-        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
-        { "key": "middle", "labelZh": "中轨", "kind": "line", "color": "var(--accent)" },
-        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "upper",
+          "labelZh": "上轨",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "middle",
+          "labelZh": "中轨",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "lower",
+          "labelZh": "下轨",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t12-atr-bands",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "中轨=SMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。"
+      "notes": "中轨=SMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。",
+      "abbr": "ATR Bands",
+      "pinyinInitials": "atrtd",
+      "panel": "主",
+      "formulaSummary": "中轨=SMA(close,N)",
+      "priority": "P0",
+      "warmupBars": 60
     },
     {
       "id": "T13",
@@ -375,21 +604,57 @@
       "nameZh": "ATR 移动止损",
       "nameEn": "ATR Trailing Stop",
       "category": "trend",
-      "inputs": { "high": true, "low": true, "close": true },
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "ATR 周期", "min": 2, "max": 200, "default": 14, "step": 1 },
-        { "kind": "float", "key": "mult", "label": "ATR 倍数", "min": 0.1, "max": 10.0, "default": 3.5, "step": 0.1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "ATR 周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        },
+        {
+          "kind": "float",
+          "key": "mult",
+          "label": "ATR 倍数",
+          "min": 0.1,
+          "max": 10.0,
+          "default": 3.5,
+          "step": 0.1
+        }
       ],
       "outputs": [
-        { "key": "long", "labelZh": "多头止损", "kind": "line", "color": "var(--rise)" },
-        { "key": "short", "labelZh": "空头止损", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "long",
+          "labelZh": "多头止损",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "short",
+          "labelZh": "空头止损",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t13-atr-trail",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空；翻空当根冻结旧值，空头止损重置为 C+k×ATR。未激活一侧 NaN。"
+      "notes": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空；翻空当根冻结旧值，空头止损重置为 C+k×ATR。未激活一侧 NaN。",
+      "abbr": "ATR Trail",
+      "pinyinInitials": "atrydzs",
+      "panel": "主",
+      "formulaSummary": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空",
+      "priority": "P0",
+      "warmupBars": 40
     },
     {
       "id": "T14",
@@ -398,21 +663,57 @@
       "nameZh": "吊灯止损",
       "nameEn": "Chandelier Exit",
       "category": "trend",
-      "inputs": { "high": true, "low": true, "close": true },
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 22, "step": 1 },
-        { "kind": "float", "key": "mult", "label": "ATR 倍数", "min": 0.1, "max": 10.0, "default": 3.0, "step": 0.1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 22,
+          "step": 1
+        },
+        {
+          "kind": "float",
+          "key": "mult",
+          "label": "ATR 倍数",
+          "min": 0.1,
+          "max": 10.0,
+          "default": 3.0,
+          "step": 0.1
+        }
       ],
       "outputs": [
-        { "key": "long", "labelZh": "多头止损", "kind": "line", "color": "var(--rise)" },
-        { "key": "short", "labelZh": "空头止损", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "long",
+          "labelZh": "多头止损",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "short",
+          "labelZh": "空头止损",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t14-chandelier",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "多头=HHV(high,N)-k×ATR(N)；空头=LLV(low,N)+k×ATR(N)；首个有效值 N。"
+      "notes": "多头=HHV(high,N)-k×ATR(N)；空头=LLV(low,N)+k×ATR(N)；首个有效值 N。",
+      "abbr": "Chandelier",
+      "pinyinInitials": "ddzs",
+      "panel": "主",
+      "formulaSummary": "多头=HHV(high,N)-k×ATR(N)",
+      "priority": "P0",
+      "warmupBars": 40
     },
     {
       "id": "T15",
@@ -421,26 +722,93 @@
       "nameZh": "一目均衡表",
       "nameEn": "Ichimoku Kinko Hyo",
       "category": "trend",
-      "inputs": { "high": true, "low": true, "close": true },
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "tenkan", "label": "转换线周期", "min": 2, "max": 200, "default": 9, "step": 1 },
-        { "kind": "int", "key": "kijun", "label": "基准线周期", "min": 2, "max": 200, "default": 26, "step": 1 },
-        { "kind": "int", "key": "senkou", "label": "先行带周期", "min": 2, "max": 200, "default": 52, "step": 1 },
-        { "kind": "int", "key": "displacement", "label": "位移", "min": 0, "max": 200, "default": 26, "step": 1 }
+        {
+          "kind": "int",
+          "key": "tenkan",
+          "label": "转换线周期",
+          "min": 2,
+          "max": 200,
+          "default": 9,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "kijun",
+          "label": "基准线周期",
+          "min": 2,
+          "max": 200,
+          "default": 26,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "senkou",
+          "label": "先行带周期",
+          "min": 2,
+          "max": 200,
+          "default": 52,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "displacement",
+          "label": "位移",
+          "min": 0,
+          "max": 200,
+          "default": 26,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "tenkan", "labelZh": "转换线", "kind": "line", "color": "#60a5fa" },
-        { "key": "kijun", "labelZh": "基准线", "kind": "line", "color": "#f472b6" },
-        { "key": "senkouA", "labelZh": "先行带 A", "kind": "line", "color": "var(--rise)" },
-        { "key": "senkouB", "labelZh": "先行带 B", "kind": "line", "color": "var(--fall)" },
-        { "key": "chikou", "labelZh": "迟行线", "kind": "line", "color": "#94a3b8" }
+        {
+          "key": "tenkan",
+          "labelZh": "转换线",
+          "kind": "line",
+          "color": "#60a5fa"
+        },
+        {
+          "key": "kijun",
+          "labelZh": "基准线",
+          "kind": "line",
+          "color": "#f472b6"
+        },
+        {
+          "key": "senkouA",
+          "labelZh": "先行带 A",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "senkouB",
+          "labelZh": "先行带 B",
+          "kind": "line",
+          "color": "var(--fall)"
+        },
+        {
+          "key": "chikou",
+          "labelZh": "迟行线",
+          "kind": "line",
+          "color": "#94a3b8"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t15-ichimoku",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2；先行带 A/B 右移 D 根，末尾 D 根留白；迟行线取 D 根前收盘，前 D 根留白。"
+      "notes": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2；先行带 A/B 右移 D 根，末尾 D 根留白；迟行线取 D 根前收盘，前 D 根留白。",
+      "abbr": "Ichimoku",
+      "pinyinInitials": "ymjhb",
+      "panel": "主",
+      "formulaSummary": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2",
+      "priority": "P0",
+      "warmupBars": 90
     },
     {
       "id": "T16",
@@ -449,21 +817,296 @@
       "nameZh": "抛物线转向",
       "nameEn": "Parabolic SAR",
       "category": "trend",
-      "inputs": { "high": true, "low": true, "close": true },
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
       "params": [
-        { "kind": "float", "key": "step", "label": "初始 AF", "min": 0.001, "max": 0.2, "default": 0.02, "step": 0.001 },
-        { "kind": "float", "key": "increment", "label": "AF 步长", "min": 0.001, "max": 0.2, "default": 0.02, "step": 0.001 },
-        { "kind": "float", "key": "max", "label": "AF 上限", "min": 0.01, "max": 1.0, "default": 0.2, "step": 0.01 }
+        {
+          "kind": "float",
+          "key": "step",
+          "label": "初始 AF",
+          "min": 0.001,
+          "max": 0.2,
+          "default": 0.02,
+          "step": 0.001
+        },
+        {
+          "kind": "float",
+          "key": "increment",
+          "label": "AF 步长",
+          "min": 0.001,
+          "max": 0.2,
+          "default": 0.02,
+          "step": 0.001
+        },
+        {
+          "kind": "float",
+          "key": "max",
+          "label": "AF 上限",
+          "min": 0.01,
+          "max": 1.0,
+          "default": 0.2,
+          "step": 0.01
+        }
       ],
       "outputs": [
-        { "key": "psar", "labelZh": "PSAR", "kind": "dot", "color": "#f59e0b" }
+        {
+          "key": "psar",
+          "labelZh": "PSAR",
+          "kind": "dot",
+          "color": "#f59e0b"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t16-psar",
       "version": 1,
       "specStatus": "partial",
       "status": "beta",
       "unit": "元",
-      "notes": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家不一致，A 股无公开公式可逐点核对；本实现取 Wilder 推荐值，取得商业软件对照后再定。"
+      "notes": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家不一致，A 股无公开公式可逐点核对；本实现取 Wilder 推荐值，取得商业软件对照后再定。",
+      "abbr": "PSAR",
+      "pinyinInitials": "pwxzx",
+      "panel": "主",
+      "formulaSummary": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家不一致，A 股无公开公式可逐点核对",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "T17",
+      "prdId": "T17",
+      "aliases": [
+        "alligator"
+      ],
+      "nameZh": "鳄鱼线",
+      "nameEn": "Alligator",
+      "abbr": "Alligator",
+      "pinyinInitials": "eyx",
+      "panel": "主",
+      "priority": "P1",
+      "category": "trend",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Alligator",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 60
+    },
+    {
+      "id": "T18",
+      "prdId": "T18",
+      "aliases": [
+        "zigzag"
+      ],
+      "nameZh": "之字转向",
+      "nameEn": "ZigZag",
+      "abbr": "ZigZag",
+      "pinyinInitials": "zzzx",
+      "panel": "主",
+      "priority": "P1",
+      "category": "trend",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "ZigZag",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 12
+    },
+    {
+      "id": "T19",
+      "prdId": "T19",
+      "aliases": [],
+      "nameZh": "线性回归预测",
+      "nameEn": "Linear Regression Forecast",
+      "category": "trend",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "forecast",
+          "labelZh": "LinReg 预测",
+          "kind": "line",
+          "color": "#60a5fa"
+        }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t19-linreg-forecast",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "元",
+      "notes": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测；该终点口径为自定，暂标 beta。",
+      "abbr": "LinReg Forecast",
+      "pinyinInitials": "xxhgyc",
+      "panel": "主",
+      "formulaSummary": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "T20",
+      "prdId": "T20",
+      "aliases": [],
+      "nameZh": "线性回归截距",
+      "nameEn": "Linear Regression Intercept",
+      "category": "trend",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "intercept",
+          "labelZh": "LinReg 截距",
+          "kind": "line",
+          "color": "#a78bfa"
+        }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t20-linreg-intercept",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "窗口首根（x=0）的拟合值，等于 intercept。",
+      "abbr": "LinReg Intercept",
+      "pinyinInitials": "xxhgjj",
+      "panel": "主",
+      "formulaSummary": "窗口首根（x=0）的拟合值，等于 intercept",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "T21",
+      "prdId": "T21",
+      "aliases": [],
+      "nameZh": "线性回归 R²",
+      "nameEn": "Linear Regression R-Squared",
+      "category": "trend",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "r2",
+          "labelZh": "R²",
+          "kind": "line",
+          "color": "#34d399"
+        }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t21-r2",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "无量纲",
+      "notes": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]；Syy=0（常数序列）定义为 1.0；该退化口径为自定，暂标 beta。",
+      "abbr": "LinReg R²",
+      "pinyinInitials": "xxhgr",
+      "panel": "主",
+      "formulaSummary": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "T22",
+      "prdId": "T22",
+      "aliases": [],
+      "nameZh": "线性回归斜率",
+      "nameEn": "Linear Regression Slope",
+      "category": "trend",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "slope",
+          "labelZh": "LinReg 斜率",
+          "kind": "line",
+          "color": "#f472b6"
+        }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t22-linreg-slope",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元/根",
+      "notes": "窗口内每根 K 线的价格变化量（元/根）。",
+      "abbr": "Slope",
+      "pinyinInitials": "xxhgxl",
+      "panel": "主",
+      "formulaSummary": "窗口内每根 K 线的价格变化量（元/根）",
+      "priority": "P0",
+      "warmupBars": 20
     },
     {
       "id": "T23",
@@ -472,19 +1115,44 @@
       "nameZh": "轴心点",
       "nameEn": "Pivot Points",
       "category": "trend",
-      "inputs": { "high": true, "low": true, "close": true },
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
       "params": [],
       "outputs": [
-        { "key": "pivot", "labelZh": "P", "kind": "line", "color": "var(--accent)" },
-        { "key": "r1", "labelZh": "R1", "kind": "line", "color": "var(--rise)" },
-        { "key": "s1", "labelZh": "S1", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "pivot",
+          "labelZh": "P",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "r1",
+          "labelZh": "R1",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "s1",
+          "labelZh": "S1",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t23-pivot",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根；日/周/月由图表周期决定，不设参数；只输出 P/R1/S1。"
+      "notes": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根；日/周/月由图表周期决定，不设参数；只输出 P/R1/S1。",
+      "abbr": "Pivot Points",
+      "pinyinInitials": "zxd",
+      "panel": "主",
+      "formulaSummary": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根",
+      "priority": "P0",
+      "warmupBars": 1
     },
     {
       "id": "T24",
@@ -493,207 +1161,47 @@
       "nameZh": "最高最低",
       "nameEn": "HHV/LLV",
       "category": "trend",
-      "inputs": { "high": true, "low": true },
+      "inputs": {
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "hhv", "labelZh": "HHV", "kind": "line", "color": "var(--rise)" },
-        { "key": "llv", "labelZh": "LLV", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "hhv",
+          "labelZh": "HHV",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "llv",
+          "labelZh": "LLV",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t24-hhvllv",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出；首根有效值 N-1。"
-    },
-    {
-      "id": "V01",
-      "prdId": "V01",
-      "aliases": [],
-      "nameZh": "真实波幅均值",
-      "nameEn": "Average True Range",
-      "category": "volatility",
-      "inputs": { "high": true, "low": true, "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "atr", "labelZh": "ATR", "kind": "line", "color": "#f59e0b" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v01-atr",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "元",
-      "notes": "TR 首根 NaN；ATR 为 TR 的 Wilder 平滑，种子取前 N 个 TR 的均值；首个有效值 N。"
-    },
-    {
-      "id": "V02",
-      "prdId": "V02",
-      "aliases": [],
-      "nameZh": "归一化 ATR",
-      "nameEn": "ATR Percentage",
-      "category": "volatility",
-      "inputs": { "high": true, "low": true, "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "atrp", "labelZh": "ATRP", "kind": "line", "color": "#22d3ee" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v02-atrp",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "无量纲",
-      "notes": "ATRP=ATR/收盘，无量纲比值（非百分数）；收盘为 0 时 NaN。"
-    },
-    {
-      "id": "V03",
-      "prdId": "V03",
-      "aliases": [],
-      "nameZh": "标准差",
-      "nameEn": "Standard Deviation",
-      "category": "volatility",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "std", "labelZh": "StdDev", "kind": "line", "color": "#a78bfa" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v03-stddev",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "元",
-      "notes": "样本标准差（ddof=1）；分母 N-1；首根有效值 N-1。"
-    },
-    {
-      "id": "V04",
-      "prdId": "V04",
-      "aliases": [],
-      "nameZh": "布林带宽",
-      "nameEn": "Bollinger Band Width",
-      "category": "volatility",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
-        { "kind": "float", "key": "mult", "label": "标准差倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
-      ],
-      "outputs": [
-        { "key": "width", "labelZh": "带宽", "kind": "line", "color": "#94a3b8" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v04-bb-width",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "无量纲",
-      "notes": "带宽=(上轨-下轨)/中轨=2kσ/SMA；中轨为 0 时 NaN。"
-    },
-    {
-      "id": "V05",
-      "prdId": "V05",
-      "aliases": [],
-      "nameZh": "布林 %B",
-      "nameEn": "Bollinger %B",
-      "category": "volatility",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
-        { "kind": "float", "key": "mult", "label": "标准差倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
-      ],
-      "outputs": [
-        { "key": "percentB", "labelZh": "%B", "kind": "line", "color": "#34d399" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v05-percent-b",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "无量纲",
-      "notes": "%B=(C-下轨)/(上轨-下轨)；零带宽输出 NaN。"
-    },
-    {
-      "id": "V07",
-      "prdId": "V07",
-      "aliases": [],
-      "nameZh": "溃疡指数",
-      "nameEn": "Ulcer Index",
-      "category": "volatility",
-      "inputs": { "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "ulcer", "labelZh": "Ulcer", "kind": "line", "color": "#f472b6" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v07-ulcer",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "%",
-      "notes": "回撤=(C-窗口峰值)/窗口峰值×100；UI=sqrt(mean(回撤²))；峰值为 0 时 NaN。"
-    },
-    {
-      "id": "V08",
-      "prdId": "V08",
-      "aliases": [],
-      "nameZh": "GAPO 跳空",
-      "nameEn": "GAPO",
-      "category": "volatility",
-      "inputs": { "open": true, "high": true, "low": true, "close": true },
-      "params": [
-        { "kind": "int", "key": "period", "label": "ATR 周期", "min": 2, "max": 200, "default": 14, "step": 1 }
-      ],
-      "outputs": [
-        { "key": "gapo", "labelZh": "GAPO", "kind": "line", "color": "#f59e0b" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v08-gapo",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "%",
-      "notes": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向；ATR 未就绪或 ATR=0 时 NaN；首值第 15 根。"
-    },
-    {
-      "id": "V09",
-      "prdId": "V09",
-      "aliases": [],
-      "nameZh": "振幅",
-      "nameEn": "High − Low",
-      "category": "volatility",
-      "inputs": { "high": true, "low": true },
-      "params": [],
-      "outputs": [
-        { "key": "amplitude", "labelZh": "振幅", "kind": "line", "color": "#60a5fa" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v09-amplitude",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "元",
-      "notes": "单根 H-L（元），首根即有效。"
-    },
-    {
-      "id": "V10",
-      "prdId": "V10",
-      "aliases": [],
-      "nameZh": "真实波幅",
-      "nameEn": "True Range",
-      "category": "volatility",
-      "inputs": { "high": true, "low": true, "close": true },
-      "params": [],
-      "outputs": [
-        { "key": "tr", "labelZh": "TR", "kind": "line", "color": "#94a3b8" }
-      ],
-      "formulaRef": "docs/indicators/b2-channel-volatility.md#v10-true-range",
-      "version": 1,
-      "specStatus": "manualComplete",
-      "status": "normal",
-      "unit": "元",
-      "notes": "TR=max(H-L, |H-PC|, |L-PC|)；首根 NaN。"
+      "notes": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出；首根有效值 N-1。",
+      "abbr": "HHV / LLV",
+      "pinyinInitials": "zgzd",
+      "panel": "主",
+      "formulaSummary": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出",
+      "priority": "P0",
+      "warmupBars": 20
     },
     {
       "id": "M01",
@@ -702,19 +1210,40 @@
       "nameZh": "相对强弱指数",
       "nameEn": "Relative Strength Index",
       "category": "momentum",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "rsi", "labelZh": "RSI", "kind": "line", "color": "var(--accent)" }
+        {
+          "key": "rsi",
+          "labelZh": "RSI",
+          "kind": "line",
+          "color": "var(--accent)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m01-rsi",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "%",
-      "notes": "Wilder 平滑涨幅/跌幅，RSI=100-100/(1+RS)；avg_loss=0→100，avg_gain=0→0；首根有效值 14（0-based）。"
+      "notes": "Wilder 平滑涨幅/跌幅，RSI=100-100/(1+RS)；avg_loss=0→100，avg_gain=0→0；首根有效值 14（0-based）。",
+      "abbr": "RSI",
+      "pinyinInitials": "xdqrzs",
+      "panel": "副",
+      "formulaSummary": "Wilder 平滑涨幅/跌幅，RSI=100-100/(1+RS)",
+      "priority": "P0",
+      "warmupBars": 14
     },
     {
       "id": "M02",
@@ -723,23 +1252,106 @@
       "nameZh": "随机指标 KDJ",
       "nameEn": "Stochastic KDJ",
       "category": "momentum",
-      "inputs": { "close": true, "high": true, "low": true },
+      "inputs": {
+        "close": true,
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "RSV 周期", "min": 2, "max": 200, "default": 9, "step": 1 },
-        { "kind": "int", "key": "k", "label": "K 平滑", "min": 2, "max": 20, "default": 3, "step": 1 },
-        { "kind": "int", "key": "d", "label": "D 平滑", "min": 2, "max": 20, "default": 3, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "RSV 周期",
+          "min": 2,
+          "max": 200,
+          "default": 9,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "k",
+          "label": "K 平滑",
+          "min": 2,
+          "max": 20,
+          "default": 3,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "d",
+          "label": "D 平滑",
+          "min": 2,
+          "max": 20,
+          "default": 3,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "k", "labelZh": "K", "kind": "line", "color": "var(--accent)" },
-        { "key": "d", "labelZh": "D", "kind": "line", "color": "var(--warn)" },
-        { "key": "j", "labelZh": "J", "kind": "line", "color": "#8b5cf6" }
+        {
+          "key": "k",
+          "labelZh": "K",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "d",
+          "labelZh": "D",
+          "kind": "line",
+          "color": "var(--warn)"
+        },
+        {
+          "key": "j",
+          "labelZh": "J",
+          "kind": "line",
+          "color": "#8b5cf6"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m02-kdj",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "%",
-      "notes": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100；K/D 以 50/50 为种子按 (N-1)/N 权重递推，J=3K-2D；首根有效值 8（0-based）。零区间 RSV=50、种子 K=D=50、无额外预热、首值下标 8；Q-01 已裁定。"
+      "notes": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100；K/D 以 50/50 为种子按 (N-1)/N 权重递推，J=3K-2D；首根有效值 8（0-based）。零区间 RSV=50、种子 K=D=50、无额外预热、首值下标 8；Q-01 已裁定。",
+      "abbr": "KDJ",
+      "pinyinInitials": "sjzbkdj",
+      "panel": "副",
+      "formulaSummary": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100",
+      "priority": "P0",
+      "warmupBars": 9
+    },
+    {
+      "id": "M03",
+      "prdId": "M03",
+      "aliases": [
+        "stochrsi"
+      ],
+      "nameZh": "随机 RSI",
+      "nameEn": "StochRSI",
+      "abbr": "StochRSI",
+      "pinyinInitials": "sjrsi",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "StochRSI",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 28
     },
     {
       "id": "M04",
@@ -748,19 +1360,42 @@
       "nameZh": "威廉指标",
       "nameEn": "Williams %R",
       "category": "momentum",
-      "inputs": { "close": true, "high": true, "low": true },
+      "inputs": {
+        "close": true,
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "wr", "labelZh": "%R", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "wr",
+          "labelZh": "%R",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m04-williams-r",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "%",
-      "notes": "%R=(HHV(H,N)-C)/(HHV(H,N)-LLV(L,N))×-100，值域 [-100,0]；高低差为 0 时 NaN；首根有效值 13。"
+      "notes": "%R=(HHV(H,N)-C)/(HHV(H,N)-LLV(L,N))×-100，值域 [-100,0]；高低差为 0 时 NaN；首根有效值 13。",
+      "abbr": "Williams %R",
+      "pinyinInitials": "wlzb",
+      "panel": "副",
+      "formulaSummary": "%R=(HHV(H,N)-C)/(HHV(H,N)-LLV(L,N))×-100，值域 [-100,0]",
+      "priority": "P0",
+      "warmupBars": 14
     },
     {
       "id": "M05",
@@ -769,19 +1404,148 @@
       "nameZh": "顺势指标",
       "nameEn": "Commodity Channel Index",
       "category": "momentum",
-      "inputs": { "close": true, "high": true, "low": true },
+      "inputs": {
+        "close": true,
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "cci", "labelZh": "CCI", "kind": "line", "color": "var(--accent)" }
+        {
+          "key": "cci",
+          "labelZh": "CCI",
+          "kind": "line",
+          "color": "var(--accent)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m05-cci",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "指数",
-      "notes": "TP=(H+L+C)/3；CCI=(TP-SMA(TP,N))/(0.015×平均绝对偏差)；偏差为 0 时 NaN；首根有效值 19。"
+      "notes": "TP=(H+L+C)/3；CCI=(TP-SMA(TP,N))/(0.015×平均绝对偏差)；偏差为 0 时 NaN；首根有效值 19。",
+      "abbr": "CCI",
+      "pinyinInitials": "sszb",
+      "panel": "副",
+      "formulaSummary": "TP=(H+L+C)/3",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "M06",
+      "prdId": "M06",
+      "aliases": [
+        "macd"
+      ],
+      "nameZh": "指数平滑异同移动平均线",
+      "nameEn": "MACD",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "fast",
+          "label": "快线 EMA",
+          "min": 2,
+          "max": 200,
+          "default": 12,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "slow",
+          "label": "慢线 EMA",
+          "min": 2,
+          "max": 200,
+          "default": 26,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "signal",
+          "label": "信号线",
+          "min": 2,
+          "max": 200,
+          "default": 9,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "dif",
+          "labelZh": "DIF",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "dea",
+          "labelZh": "DEA",
+          "kind": "line",
+          "color": "var(--warn)"
+        },
+        {
+          "key": "hist",
+          "labelZh": "MACD 柱",
+          "kind": "histogram",
+          "color": "var(--rise)"
+        }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#m06-macd",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)（A 股主流，Q-04 确认沿用 B1）；旧 id «macd» 保留 alias 一版。",
+      "abbr": "MACD",
+      "pinyinInitials": "zsphytydpjx",
+      "panel": "副",
+      "formulaSummary": "DIF=EMA(fast)-EMA(slow)",
+      "priority": "P0",
+      "warmupBars": 34
+    },
+    {
+      "id": "M07",
+      "prdId": "M07",
+      "aliases": [],
+      "nameZh": "归一化 MACD",
+      "nameEn": "MACD-V",
+      "abbr": "MACD-V",
+      "pinyinInitials": "gyhmacd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "MACD-V",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 34
     },
     {
       "id": "M08",
@@ -790,22 +1554,64 @@
       "nameZh": "百分比价格振荡器",
       "nameEn": "Percentage Price Oscillator",
       "category": "momentum",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "fast", "label": "快线", "min": 2, "max": 200, "default": 12, "step": 1 },
-        { "kind": "int", "key": "slow", "label": "慢线", "min": 2, "max": 200, "default": 26, "step": 1 },
-        { "kind": "int", "key": "signal", "label": "信号", "min": 2, "max": 200, "default": 9, "step": 1 }
+        {
+          "kind": "int",
+          "key": "fast",
+          "label": "快线",
+          "min": 2,
+          "max": 200,
+          "default": 12,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "slow",
+          "label": "慢线",
+          "min": 2,
+          "max": 200,
+          "default": 26,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "signal",
+          "label": "信号",
+          "min": 2,
+          "max": 200,
+          "default": 9,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "ppo", "labelZh": "PPO", "kind": "line", "color": "var(--accent)" },
-        { "key": "signal", "labelZh": "信号线", "kind": "line", "color": "var(--warn)" }
+        {
+          "key": "ppo",
+          "labelZh": "PPO",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "signal",
+          "labelZh": "信号线",
+          "kind": "line",
+          "color": "var(--warn)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m08-ppo",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "%",
-      "notes": "PPO=(EMA(fast)-EMA(slow))/EMA(slow)×100；signal=PPO 的 EMA(signal)；fast<slow；首根有效值 slow+signal-2=33。本口径只出双线，不出柱。"
+      "notes": "PPO=(EMA(fast)-EMA(slow))/EMA(slow)×100；signal=PPO 的 EMA(signal)；fast<slow；首根有效值 slow+signal-2=33。本口径只出双线，不出柱。",
+      "abbr": "PPO",
+      "pinyinInitials": "bfbjgzdq",
+      "panel": "副",
+      "formulaSummary": "PPO=(EMA(fast)-EMA(slow))/EMA(slow)×100",
+      "priority": "P0",
+      "warmupBars": 34
     },
     {
       "id": "M09",
@@ -814,19 +1620,40 @@
       "nameZh": "变动率",
       "nameEn": "Rate of Change",
       "category": "momentum",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 12, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 12,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "roc", "labelZh": "ROC", "kind": "line", "color": "var(--accent)" }
+        {
+          "key": "roc",
+          "labelZh": "ROC",
+          "kind": "line",
+          "color": "var(--accent)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m09-roc",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "%",
-      "notes": "ROC=(C-C[-N])/C[-N]×100；前值为 0 时 NaN；首根有效值 12。"
+      "notes": "ROC=(C-C[-N])/C[-N]×100；前值为 0 时 NaN；首根有效值 12。",
+      "abbr": "ROC",
+      "pinyinInitials": "bdl",
+      "panel": "副",
+      "formulaSummary": "ROC=(C-C[-N])/C[-N]×100",
+      "priority": "P0",
+      "warmupBars": 12
     },
     {
       "id": "M10",
@@ -835,19 +1662,312 @@
       "nameZh": "动量",
       "nameEn": "Momentum",
       "category": "momentum",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 10, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 10,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "mom", "labelZh": "MOM", "kind": "line", "color": "var(--accent)" }
+        {
+          "key": "mom",
+          "labelZh": "MOM",
+          "kind": "line",
+          "color": "var(--accent)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m10-momentum",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "元",
-      "notes": "MOM=C-C[-N]，差额单位元；首根有效值 10。"
+      "notes": "MOM=C-C[-N]，差额单位元；首根有效值 10。",
+      "abbr": "Momentum",
+      "pinyinInitials": "dl",
+      "panel": "副",
+      "formulaSummary": "MOM=C-C[-N]，差额单位元",
+      "priority": "P0",
+      "warmupBars": 10
+    },
+    {
+      "id": "M11",
+      "prdId": "M11",
+      "aliases": [
+        "trix"
+      ],
+      "nameZh": "三重指数平滑",
+      "nameEn": "TRIX",
+      "abbr": "TRIX",
+      "pinyinInitials": "sczsph",
+      "panel": "副",
+      "priority": "P0",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "TRIX",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 45
+    },
+    {
+      "id": "M12",
+      "prdId": "M12",
+      "aliases": [
+        "dpo"
+      ],
+      "nameZh": "去趋势价格",
+      "nameEn": "DPO",
+      "abbr": "DPO",
+      "pinyinInitials": "qqsjg",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "DPO",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "M13",
+      "prdId": "M13",
+      "aliases": [
+        "pmo"
+      ],
+      "nameZh": "价格动量振荡",
+      "nameEn": "PMO",
+      "abbr": "PMO",
+      "pinyinInitials": "jgdlzd",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "PMO",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 40
+    },
+    {
+      "id": "M14",
+      "prdId": "M14",
+      "aliases": [
+        "coppock"
+      ],
+      "nameZh": "科波克曲线",
+      "nameEn": "Coppock",
+      "abbr": "Coppock",
+      "pinyinInitials": "kbkqx",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Coppock",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 30
+    },
+    {
+      "id": "M15",
+      "prdId": "M15",
+      "aliases": [
+        "kst"
+      ],
+      "nameZh": "知识节奏",
+      "nameEn": "KST",
+      "abbr": "KST",
+      "pinyinInitials": "zsjz",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "KST",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 40
+    },
+    {
+      "id": "M16",
+      "prdId": "M16",
+      "aliases": [
+        "ultimate"
+      ],
+      "nameZh": "终极振荡",
+      "nameEn": "Ultimate",
+      "abbr": "Ultimate",
+      "pinyinInitials": "zjzd",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Ultimate",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 30
+    },
+    {
+      "id": "M17",
+      "prdId": "M17",
+      "aliases": [
+        "tsi"
+      ],
+      "nameZh": "真实强度",
+      "nameEn": "TSI",
+      "abbr": "TSI",
+      "pinyinInitials": "zsqd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "TSI",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 40
+    },
+    {
+      "id": "M18",
+      "prdId": "M18",
+      "aliases": [
+        "connorsrsi"
+      ],
+      "nameZh": "康纳斯 RSI",
+      "nameEn": "ConnorsRSI",
+      "abbr": "ConnorsRSI",
+      "pinyinInitials": "knsrsi",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "ConnorsRSI",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 10
     },
     {
       "id": "M19",
@@ -856,20 +1976,48 @@
       "nameZh": "阿隆指标",
       "nameEn": "Aroon",
       "category": "momentum",
-      "inputs": { "close": true, "high": true, "low": true },
+      "inputs": {
+        "close": true,
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 25, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 25,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "aroonUp", "labelZh": "Aroon Up", "kind": "line", "color": "var(--rise)" },
-        { "key": "aroonDown", "labelZh": "Aroon Down", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "aroonUp",
+          "labelZh": "Aroon Up",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "aroonDown",
+          "labelZh": "Aroon Down",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m19-aroon",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "%",
-      "notes": "Up=100×(N-距最高价根数)/N，Down 同理取最低价；窗口 N 根，并列极值取最近一次；首根有效值 24。"
+      "notes": "Up=100×(N-距最高价根数)/N，Down 同理取最低价；窗口 N 根，并列极值取最近一次；首根有效值 24。",
+      "abbr": "Aroon",
+      "pinyinInitials": "alzb",
+      "panel": "副",
+      "formulaSummary": "Up=100×(N-距最高价根数)/N，Down 同理取最低价",
+      "priority": "P0",
+      "warmupBars": 25
     },
     {
       "id": "M20",
@@ -878,20 +2026,48 @@
       "nameZh": "涡旋指标",
       "nameEn": "Vortex Indicator",
       "category": "momentum",
-      "inputs": { "close": true, "high": true, "low": true },
+      "inputs": {
+        "close": true,
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "viPlus", "labelZh": "VI+", "kind": "line", "color": "var(--rise)" },
-        { "key": "viMinus", "labelZh": "VI-", "kind": "line", "color": "var(--fall)" }
+        {
+          "key": "viPlus",
+          "labelZh": "VI+",
+          "kind": "line",
+          "color": "var(--rise)"
+        },
+        {
+          "key": "viMinus",
+          "labelZh": "VI-",
+          "kind": "line",
+          "color": "var(--fall)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m20-vortex",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "比值",
-      "notes": "VI+=Σ|H_i-L_{i-1}|/ΣTR，VI-=Σ|L_i-H_{i-1}|/ΣTR，窗口 N；ΣTR=0 时 NaN；首根有效值 14。"
+      "notes": "VI+=Σ|H_i-L_{i-1}|/ΣTR，VI-=Σ|L_i-H_{i-1}|/ΣTR，窗口 N；ΣTR=0 时 NaN；首根有效值 14。",
+      "abbr": "Vortex",
+      "pinyinInitials": "wxzb",
+      "panel": "副",
+      "formulaSummary": "VI+=Σ|H_i-L_{i-1}|/ΣTR，VI-=Σ|L_i-H_{i-1}|/ΣTR，窗口 N",
+      "priority": "P0",
+      "warmupBars": 14
     },
     {
       "id": "M21",
@@ -900,19 +2076,108 @@
       "nameZh": "钱德动量摆动指标",
       "nameEn": "Chande Momentum Oscillator",
       "category": "momentum",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "cmo", "labelZh": "CMO", "kind": "line", "color": "var(--accent)" }
+        {
+          "key": "cmo",
+          "labelZh": "CMO",
+          "kind": "line",
+          "color": "var(--accent)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m21-cmo",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "%",
-      "notes": "CMO=100×(Σ涨幅-Σ跌幅)/(Σ涨幅+Σ跌幅)，窗口 N；分母为 0 时 NaN；首根有效值 14。"
+      "notes": "CMO=100×(Σ涨幅-Σ跌幅)/(Σ涨幅+Σ跌幅)，窗口 N；分母为 0 时 NaN；首根有效值 14。",
+      "abbr": "CMO",
+      "pinyinInitials": "qddlbdzb",
+      "panel": "副",
+      "formulaSummary": "CMO=100×(Σ涨幅-Σ跌幅)/(Σ涨幅+Σ跌幅)，窗口 N",
+      "priority": "P0",
+      "warmupBars": 14
+    },
+    {
+      "id": "M22",
+      "prdId": "M22",
+      "aliases": [
+        "cmb"
+      ],
+      "nameZh": "综合动量",
+      "nameEn": "CMB",
+      "abbr": "CMB",
+      "pinyinInitials": "zhdl",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "CMB",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "M23",
+      "prdId": "M23",
+      "aliases": [
+        "chandetrend"
+      ],
+      "nameZh": "钱德趋势计",
+      "nameEn": "Chande Trend",
+      "abbr": "Chande Trend",
+      "pinyinInitials": "qdqsj",
+      "panel": "副",
+      "priority": "P1",
+      "category": "momentum",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Chande Trend",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 30
     },
     {
       "id": "M24",
@@ -921,20 +2186,51 @@
       "nameZh": "质量指数",
       "nameEn": "Mass Index",
       "category": "momentum",
-      "inputs": { "close": true, "high": true, "low": true },
+      "inputs": {
+        "close": true,
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "ema", "label": "EMA 周期", "min": 2, "max": 200, "default": 9, "step": 1 },
-        { "kind": "int", "key": "sum", "label": "求和窗口", "min": 2, "max": 200, "default": 25, "step": 1 }
+        {
+          "kind": "int",
+          "key": "ema",
+          "label": "EMA 周期",
+          "min": 2,
+          "max": 200,
+          "default": 9,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "sum",
+          "label": "求和窗口",
+          "min": 2,
+          "max": 200,
+          "default": 25,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "massIndex", "labelZh": "Mass", "kind": "line", "color": "var(--accent)" }
+        {
+          "key": "massIndex",
+          "labelZh": "Mass",
+          "kind": "line",
+          "color": "var(--accent)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m24-mass-index",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "比值",
-      "notes": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根；首值下标 40；warmup 40（CSV/PRD 原 30 为笔误）；Q-02 已裁定。"
+      "notes": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根；首值下标 40；warmup 40（CSV/PRD 原 30 为笔误）；Q-02 已裁定。",
+      "abbr": "Mass Index",
+      "pinyinInitials": "zlzs",
+      "panel": "副",
+      "formulaSummary": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根",
+      "priority": "P0",
+      "warmupBars": 40
     },
     {
       "id": "M25",
@@ -943,23 +2239,73 @@
       "nameZh": "埃尔德脉冲",
       "nameEn": "Elder Impulse System",
       "category": "momentum",
-      "inputs": { "close": true },
+      "inputs": {
+        "close": true
+      },
       "params": [
-        { "kind": "int", "key": "fast", "label": "快线", "min": 2, "max": 200, "default": 12, "step": 1 },
-        { "kind": "int", "key": "slow", "label": "慢线", "min": 2, "max": 200, "default": 26, "step": 1 },
-        { "kind": "int", "key": "signal", "label": "信号", "min": 2, "max": 200, "default": 9, "step": 1 },
-        { "kind": "int", "key": "ema", "label": "脉冲 EMA", "min": 2, "max": 200, "default": 13, "step": 1 }
+        {
+          "kind": "int",
+          "key": "fast",
+          "label": "快线",
+          "min": 2,
+          "max": 200,
+          "default": 12,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "slow",
+          "label": "慢线",
+          "min": 2,
+          "max": 200,
+          "default": 26,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "signal",
+          "label": "信号",
+          "min": 2,
+          "max": 200,
+          "default": 9,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "ema",
+          "label": "脉冲 EMA",
+          "min": 2,
+          "max": 200,
+          "default": 13,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "impulse", "labelZh": "脉冲线", "kind": "line", "color": "var(--accent)" },
-        { "key": "state", "labelZh": "三色状态", "kind": "dot", "color": "#94a3b8" }
+        {
+          "key": "impulse",
+          "labelZh": "脉冲线",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "state",
+          "labelZh": "三色状态",
+          "kind": "dot",
+          "color": "#94a3b8"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m25-elder-impulse",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "无量纲",
-      "notes": "eps_i=1e-9×max(abs(C[i]),1.0)（按当根收盘价，非全局常数）；柱=2×(DIF-DEA)（复用 M06 口径）；脉冲=EMA13(柱)；状态 {+1,0,-1}：① abs(hist[i])≤eps_i→0；② abs(impulse[i]-impulse[i-1])≤eps_i→0；③ 其余 hist 为正且脉冲上行→+1、hist 为负且脉冲下行→-1、方向冲突→0；渲染色 +1 红/−1 绿/0 蓝（与 Elder 原版相反）；首值 46；Q-03（BA ba0cbb8）最终口径。"
+      "notes": "eps_i=1e-9×max(abs(C[i]),1.0)（按当根收盘价，非全局常数）；柱=2×(DIF-DEA)（复用 M06 口径）；脉冲=EMA13(柱)；状态 {+1,0,-1}：① abs(hist[i])≤eps_i→0；② abs(impulse[i]-impulse[i-1])≤eps_i→0；③ 其余 hist 为正且脉冲上行→+1、hist 为负且脉冲下行→-1、方向冲突→0；渲染色 +1 红/−1 绿/0 蓝（与 Elder 原版相反）；首值 46；Q-03（BA ba0cbb8）最终口径。",
+      "abbr": "Elder Impulse",
+      "pinyinInitials": "aedmc",
+      "panel": "副",
+      "formulaSummary": "eps_i=1e-9×max(abs(C[i]),1.0)（按当根收盘价，非全局常数）",
+      "priority": "P0",
+      "warmupBars": 46
     },
     {
       "id": "M26",
@@ -968,19 +2314,2020 @@
       "nameZh": "NR7 窄幅",
       "nameEn": "NR7",
       "category": "momentum",
-      "inputs": { "close": true, "high": true, "low": true },
+      "inputs": {
+        "close": true,
+        "high": true,
+        "low": true
+      },
       "params": [
-        { "kind": "int", "key": "period", "label": "窗口", "min": 2, "max": 200, "default": 7, "step": 1 }
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "窗口",
+          "min": 2,
+          "max": 200,
+          "default": 7,
+          "step": 1
+        }
       ],
       "outputs": [
-        { "key": "nr7", "labelZh": "NR7", "kind": "dot", "color": "var(--warn)" }
+        {
+          "key": "nr7",
+          "labelZh": "NR7",
+          "kind": "dot",
+          "color": "var(--warn)"
+        }
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m26-nr7",
       "version": 1,
       "specStatus": "manualComplete",
       "status": "normal",
       "unit": "0/1",
-      "notes": "range=H-L；当根为近 7 根最小振幅→1，否则 0；首根有效值 6。"
+      "notes": "range=H-L；当根为近 7 根最小振幅→1，否则 0；首根有效值 6。",
+      "abbr": "NR7",
+      "pinyinInitials": "nrzf",
+      "panel": "副",
+      "formulaSummary": "range=H-L",
+      "priority": "P0",
+      "warmupBars": 7
+    },
+    {
+      "id": "V01",
+      "prdId": "V01",
+      "aliases": [],
+      "nameZh": "真实波幅均值",
+      "nameEn": "Average True Range",
+      "category": "volatility",
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "atr",
+          "labelZh": "ATR",
+          "kind": "line",
+          "color": "#f59e0b"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v01-atr",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "TR 首根 NaN；ATR 为 TR 的 Wilder 平滑，种子取前 N 个 TR 的均值；首个有效值 N。",
+      "abbr": "ATR",
+      "pinyinInitials": "zsbfjz",
+      "panel": "副",
+      "formulaSummary": "TR 首根 NaN",
+      "priority": "P0",
+      "warmupBars": 14
+    },
+    {
+      "id": "V02",
+      "prdId": "V02",
+      "aliases": [],
+      "nameZh": "归一化 ATR",
+      "nameEn": "ATR Percentage",
+      "category": "volatility",
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "atrp",
+          "labelZh": "ATRP",
+          "kind": "line",
+          "color": "#22d3ee"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v02-atrp",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "无量纲",
+      "notes": "ATRP=ATR/收盘，无量纲比值（非百分数）；收盘为 0 时 NaN。",
+      "abbr": "ATRP",
+      "pinyinInitials": "gyhatr",
+      "panel": "副",
+      "formulaSummary": "ATRP=ATR/收盘，无量纲比值（非百分数）",
+      "priority": "P0",
+      "warmupBars": 14
+    },
+    {
+      "id": "V03",
+      "prdId": "V03",
+      "aliases": [],
+      "nameZh": "标准差",
+      "nameEn": "Standard Deviation",
+      "category": "volatility",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "std",
+          "labelZh": "StdDev",
+          "kind": "line",
+          "color": "#a78bfa"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v03-stddev",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "样本标准差（ddof=1）；分母 N-1；首根有效值 N-1。",
+      "abbr": "StdDev",
+      "pinyinInitials": "bzc",
+      "panel": "副",
+      "formulaSummary": "样本标准差（ddof=1）",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "V04",
+      "prdId": "V04",
+      "aliases": [],
+      "nameZh": "布林带宽",
+      "nameEn": "Bollinger Band Width",
+      "category": "volatility",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        },
+        {
+          "kind": "float",
+          "key": "mult",
+          "label": "标准差倍数",
+          "min": 0.1,
+          "max": 10.0,
+          "default": 2.0,
+          "step": 0.1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "width",
+          "labelZh": "带宽",
+          "kind": "line",
+          "color": "#94a3b8"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v04-bb-width",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "无量纲",
+      "notes": "带宽=(上轨-下轨)/中轨=2kσ/SMA；中轨为 0 时 NaN。",
+      "abbr": "BB Width",
+      "pinyinInitials": "bldk",
+      "panel": "副",
+      "formulaSummary": "带宽=(上轨-下轨)/中轨=2kσ/SMA",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "V05",
+      "prdId": "V05",
+      "aliases": [],
+      "nameZh": "布林 %B",
+      "nameEn": "Bollinger %B",
+      "category": "volatility",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        },
+        {
+          "kind": "float",
+          "key": "mult",
+          "label": "标准差倍数",
+          "min": 0.1,
+          "max": 10.0,
+          "default": 2.0,
+          "step": 0.1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "percentB",
+          "labelZh": "%B",
+          "kind": "line",
+          "color": "#34d399"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v05-percent-b",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "无量纲",
+      "notes": "%B=(C-下轨)/(上轨-下轨)；零带宽输出 NaN。",
+      "abbr": "%B",
+      "pinyinInitials": "blb",
+      "panel": "副",
+      "formulaSummary": "%B=(C-下轨)/(上轨-下轨)",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "V06",
+      "prdId": "V06",
+      "aliases": [
+        "ttmsqueeze"
+      ],
+      "nameZh": "TTM 挤压",
+      "nameEn": "TTM Squeeze",
+      "abbr": "TTM Squeeze",
+      "pinyinInitials": "ttmjy",
+      "panel": "副",
+      "priority": "P1",
+      "category": "volatility",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "TTM Squeeze",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 50
+    },
+    {
+      "id": "V07",
+      "prdId": "V07",
+      "aliases": [],
+      "nameZh": "溃疡指数",
+      "nameEn": "Ulcer Index",
+      "category": "volatility",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "ulcer",
+          "labelZh": "Ulcer",
+          "kind": "line",
+          "color": "#f472b6"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v07-ulcer",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "回撤=(C-窗口峰值)/窗口峰值×100；UI=sqrt(mean(回撤²))；峰值为 0 时 NaN。",
+      "abbr": "Ulcer Index",
+      "pinyinInitials": "kyzs",
+      "panel": "副",
+      "formulaSummary": "回撤=(C-窗口峰值)/窗口峰值×100",
+      "priority": "P0",
+      "warmupBars": 14
+    },
+    {
+      "id": "V08",
+      "prdId": "V08",
+      "aliases": [],
+      "nameZh": "GAPO 跳空",
+      "nameEn": "GAPO",
+      "category": "volatility",
+      "inputs": {
+        "open": true,
+        "high": true,
+        "low": true,
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "ATR 周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "gapo",
+          "labelZh": "GAPO",
+          "kind": "line",
+          "color": "#f59e0b"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v08-gapo",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向；ATR 未就绪或 ATR=0 时 NaN；首值第 15 根。",
+      "abbr": "GAPO",
+      "pinyinInitials": "gapotk",
+      "panel": "副",
+      "formulaSummary": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向",
+      "priority": "P0",
+      "warmupBars": 20
+    },
+    {
+      "id": "V09",
+      "prdId": "V09",
+      "aliases": [],
+      "nameZh": "振幅",
+      "nameEn": "High − Low",
+      "category": "volatility",
+      "inputs": {
+        "high": true,
+        "low": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "amplitude",
+          "labelZh": "振幅",
+          "kind": "line",
+          "color": "#60a5fa"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v09-amplitude",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "单根 H-L（元），首根即有效。",
+      "abbr": "High − Low",
+      "pinyinInitials": "zf",
+      "panel": "副",
+      "formulaSummary": "单根 H-L（元），首根即有效",
+      "priority": "P0",
+      "warmupBars": 2
+    },
+    {
+      "id": "V10",
+      "prdId": "V10",
+      "aliases": [],
+      "nameZh": "真实波幅",
+      "nameEn": "True Range",
+      "category": "volatility",
+      "inputs": {
+        "high": true,
+        "low": true,
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "tr",
+          "labelZh": "TR",
+          "kind": "line",
+          "color": "#94a3b8"
+        }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v10-true-range",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "TR=max(H-L, |H-PC|, |L-PC|)；首根 NaN。",
+      "abbr": "True Range",
+      "pinyinInitials": "zsbf",
+      "panel": "副",
+      "formulaSummary": "TR=max(H-L, |H-PC|, |L-PC|)",
+      "priority": "P0",
+      "warmupBars": 2
+    },
+    {
+      "id": "D01",
+      "prdId": "D01",
+      "aliases": [
+        "obv"
+      ],
+      "nameZh": "能量潮",
+      "nameEn": "OBV",
+      "abbr": "OBV",
+      "pinyinInitials": "nlc",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "OBV",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "D02",
+      "prdId": "D02",
+      "aliases": [],
+      "nameZh": "累积派发线",
+      "nameEn": "A/D Line",
+      "abbr": "A/D Line",
+      "pinyinInitials": "ljpfx",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "A/D Line",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "D03",
+      "prdId": "D03",
+      "aliases": [
+        "cmf"
+      ],
+      "nameZh": "钱德资金流",
+      "nameEn": "CMF",
+      "abbr": "CMF",
+      "pinyinInitials": "qdzjl",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "CMF",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "D04",
+      "prdId": "D04",
+      "aliases": [
+        "chaikinosc"
+      ],
+      "nameZh": "蔡金振荡",
+      "nameEn": "Chaikin Osc",
+      "abbr": "Chaikin Osc",
+      "pinyinInitials": "cjzd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Chaikin Osc",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "D05",
+      "prdId": "D05",
+      "aliases": [
+        "mfi"
+      ],
+      "nameZh": "资金流量",
+      "nameEn": "MFI",
+      "abbr": "MFI",
+      "pinyinInitials": "zjll",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "MFI",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 14
+    },
+    {
+      "id": "D06",
+      "prdId": "D06",
+      "aliases": [
+        "forceindex"
+      ],
+      "nameZh": "力度指数",
+      "nameEn": "Force Index",
+      "abbr": "Force Index",
+      "pinyinInitials": "ldzs",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Force Index",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 14
+    },
+    {
+      "id": "D07",
+      "prdId": "D07",
+      "aliases": [
+        "eom"
+      ],
+      "nameZh": "简易波动",
+      "nameEn": "EOM",
+      "abbr": "EOM",
+      "pinyinInitials": "jybd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "EOM",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 14
+    },
+    {
+      "id": "D08",
+      "prdId": "D08",
+      "aliases": [
+        "nvi"
+      ],
+      "nameZh": "负量指标",
+      "nameEn": "NVI",
+      "abbr": "NVI",
+      "pinyinInitials": "flzb",
+      "panel": "副",
+      "priority": "P1",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "NVI",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "D09",
+      "prdId": "D09",
+      "aliases": [
+        "pvi"
+      ],
+      "nameZh": "正量指标",
+      "nameEn": "PVI",
+      "abbr": "PVI",
+      "pinyinInitials": "zlzb",
+      "panel": "副",
+      "priority": "P1",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "PVI",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "D10",
+      "prdId": "D10",
+      "aliases": [
+        "pvo"
+      ],
+      "nameZh": "量能振荡",
+      "nameEn": "PVO",
+      "abbr": "PVO",
+      "pinyinInitials": "lnzd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "PVO",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 34
+    },
+    {
+      "id": "D11",
+      "prdId": "D11",
+      "aliases": [
+        "rvol"
+      ],
+      "nameZh": "量比",
+      "nameEn": "RVOL",
+      "abbr": "RVOL",
+      "pinyinInitials": "lb",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "RVOL",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 5
+    },
+    {
+      "id": "D12",
+      "prdId": "D12",
+      "aliases": [
+        "bop"
+      ],
+      "nameZh": "多空力量",
+      "nameEn": "BOP",
+      "abbr": "BOP",
+      "pinyinInitials": "dkll",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "BOP",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "D13",
+      "prdId": "D13",
+      "aliases": [
+        "vwap"
+      ],
+      "nameZh": "成交量加权价",
+      "nameEn": "VWAP",
+      "abbr": "VWAP",
+      "pinyinInitials": "cjljqj",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "VWAP",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "D14",
+      "prdId": "D14",
+      "aliases": [
+        "anchoredvwap"
+      ],
+      "nameZh": "锚定 VWAP",
+      "nameEn": "Anchored VWAP",
+      "abbr": "Anchored VWAP",
+      "pinyinInitials": "mdvwap",
+      "panel": "副",
+      "priority": "P0",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Anchored VWAP",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "D15",
+      "prdId": "D15",
+      "aliases": [
+        "volumeprofile"
+      ],
+      "nameZh": "筹码分布",
+      "nameEn": "Volume Profile",
+      "abbr": "Volume Profile",
+      "pinyinInitials": "cmfb",
+      "panel": "副",
+      "priority": "P1",
+      "category": "volume",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Volume Profile",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 60
+    },
+    {
+      "id": "E01",
+      "prdId": "E01",
+      "aliases": [
+        "pricerelative"
+      ],
+      "nameZh": "价格相对强度",
+      "nameEn": "Price Relative",
+      "abbr": "Price Relative",
+      "pinyinInitials": "jgxdqd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Price Relative",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "E02",
+      "prdId": "E02",
+      "aliases": [
+        "rspercentile"
+      ],
+      "nameZh": "RS 分位",
+      "nameEn": "RS Percentile",
+      "abbr": "RS Percentile",
+      "pinyinInitials": "rsfw",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "RS Percentile",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 60
+    },
+    {
+      "id": "E03",
+      "prdId": "E03",
+      "aliases": [
+        "sctr"
+      ],
+      "nameZh": "SCTR 评分",
+      "nameEn": "SCTR",
+      "abbr": "SCTR",
+      "pinyinInitials": "sctrpf",
+      "panel": "副",
+      "priority": "P1",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "SCTR",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 60
+    },
+    {
+      "id": "E04",
+      "prdId": "E04",
+      "aliases": [
+        "rrgratio"
+      ],
+      "nameZh": "RRG RS-Ratio",
+      "nameEn": "RRG Ratio",
+      "abbr": "RRG Ratio",
+      "pinyinInitials": "rrgrsratio",
+      "panel": "副",
+      "priority": "P1",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "RRG Ratio",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "E05",
+      "prdId": "E05",
+      "aliases": [
+        "rrgmomentum"
+      ],
+      "nameZh": "RRG 动量",
+      "nameEn": "RRG Momentum",
+      "abbr": "RRG Momentum",
+      "pinyinInitials": "rrgdl",
+      "panel": "副",
+      "priority": "P1",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "RRG Momentum",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "E06",
+      "prdId": "E06",
+      "aliases": [
+        "performancespread"
+      ],
+      "nameZh": "收益差",
+      "nameEn": "Performance Spread",
+      "abbr": "Performance Spread",
+      "pinyinInitials": "syc",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Performance Spread",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "E07",
+      "prdId": "E07",
+      "aliases": [
+        "correlation"
+      ],
+      "nameZh": "相关系数",
+      "nameEn": "Correlation",
+      "abbr": "Correlation",
+      "pinyinInitials": "xgxs",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Correlation",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 60
+    },
+    {
+      "id": "E08",
+      "prdId": "E08",
+      "aliases": [
+        "medianprice"
+      ],
+      "nameZh": "中位价",
+      "nameEn": "Median Price",
+      "abbr": "Median Price",
+      "pinyinInitials": "zwj",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Median Price",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "E09",
+      "prdId": "E09",
+      "aliases": [
+        "typicalprice"
+      ],
+      "nameZh": "典型价",
+      "nameEn": "Typical Price",
+      "abbr": "Typical Price",
+      "pinyinInitials": "dxj",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Typical Price",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "E10",
+      "prdId": "E10",
+      "aliases": [
+        "weightedclose"
+      ],
+      "nameZh": "加权收盘",
+      "nameEn": "Weighted Close",
+      "abbr": "Weighted Close",
+      "pinyinInitials": "jqsp",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Weighted Close",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "E11",
+      "prdId": "E11",
+      "aliases": [
+        "distancefromhigh"
+      ],
+      "nameZh": "距高点",
+      "nameEn": "Distance From High",
+      "abbr": "Distance From High",
+      "pinyinInitials": "jgd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Distance From High",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "E12",
+      "prdId": "E12",
+      "aliases": [
+        "distancefromlow"
+      ],
+      "nameZh": "距低点",
+      "nameEn": "Distance From Low",
+      "abbr": "Distance From Low",
+      "pinyinInitials": "jdd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Distance From Low",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "E13",
+      "prdId": "E13",
+      "aliases": [],
+      "nameZh": "乖离率",
+      "nameEn": "BIAS",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period1",
+          "label": "周期 1",
+          "min": 2,
+          "max": 200,
+          "default": 6,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "period2",
+          "label": "周期 2",
+          "min": 2,
+          "max": 200,
+          "default": 12,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "period3",
+          "label": "周期 3",
+          "min": 2,
+          "max": 200,
+          "default": 24,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        {
+          "key": "bias6",
+          "labelZh": "BIAS(6)",
+          "kind": "line",
+          "color": "var(--accent)"
+        },
+        {
+          "key": "bias12",
+          "labelZh": "BIAS(12)",
+          "kind": "line",
+          "color": "var(--warn)"
+        },
+        {
+          "key": "bias24",
+          "labelZh": "BIAS(24)",
+          "kind": "line",
+          "color": "#94a3b8"
+        }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#e13-bias",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "BIAS=(C-SMA_N)/SMA_N×100%；SMA=0 时输出 NaN，不产生 Infinity；warmup=min(周期)-1。",
+      "abbr": "BIAS",
+      "pinyinInitials": "gll",
+      "panel": "副",
+      "formulaSummary": "BIAS=(C-SMA_N)/SMA_N×100%",
+      "priority": "P0",
+      "warmupBars": 6
+    },
+    {
+      "id": "E14",
+      "prdId": "E14",
+      "aliases": [
+        "seasonality"
+      ],
+      "nameZh": "季节效应",
+      "nameEn": "Seasonality",
+      "abbr": "Seasonality",
+      "pinyinInitials": "jjxy",
+      "panel": "副",
+      "priority": "P1",
+      "category": "stat",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Seasonality",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 250
+    },
+    {
+      "id": "F01",
+      "prdId": "F01",
+      "aliases": [
+        "adl"
+      ],
+      "nameZh": "涨跌线",
+      "nameEn": "ADL",
+      "abbr": "ADL",
+      "pinyinInitials": "zdx",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "ADL",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "F02",
+      "prdId": "F02",
+      "aliases": [
+        "adpercent"
+      ],
+      "nameZh": "涨跌比率",
+      "nameEn": "AD Percent",
+      "abbr": "AD Percent",
+      "pinyinInitials": "zdbl",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "AD Percent",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "F03",
+      "prdId": "F03",
+      "aliases": [
+        "advolume"
+      ],
+      "nameZh": "涨跌量线",
+      "nameEn": "AD Volume",
+      "abbr": "AD Volume",
+      "pinyinInitials": "zdlx",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "AD Volume",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "F04",
+      "prdId": "F04",
+      "aliases": [],
+      "nameZh": "涨跌量占比",
+      "nameEn": "AD Volume %",
+      "abbr": "AD Volume %",
+      "pinyinInitials": "zdlzb",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "AD Volume %",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "F05",
+      "prdId": "F05",
+      "aliases": [
+        "mcclellanosc"
+      ],
+      "nameZh": "麦克莱伦振荡",
+      "nameEn": "McClellan Osc",
+      "abbr": "McClellan Osc",
+      "pinyinInitials": "mkllzd",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "McClellan Osc",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 39
+    },
+    {
+      "id": "F06",
+      "prdId": "F06",
+      "aliases": [
+        "mcclellansum"
+      ],
+      "nameZh": "麦克莱伦累积",
+      "nameEn": "McClellan Sum",
+      "abbr": "McClellan Sum",
+      "pinyinInitials": "mklllj",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "McClellan Sum",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 39
+    },
+    {
+      "id": "F07",
+      "prdId": "F07",
+      "aliases": [
+        "bpi"
+      ],
+      "nameZh": "站上均线占比",
+      "nameEn": "BPI",
+      "abbr": "BPI",
+      "pinyinInitials": "zsjxzb",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "BPI",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 20
+    },
+    {
+      "id": "F08",
+      "prdId": "F08",
+      "aliases": [],
+      "nameZh": "新高新低指数",
+      "nameEn": "High-Low Index",
+      "abbr": "High-Low Index",
+      "pinyinInitials": "xgxdzs",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "High-Low Index",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 250
+    },
+    {
+      "id": "F09",
+      "prdId": "F09",
+      "aliases": [],
+      "nameZh": "新高新低占比",
+      "nameEn": "High-Low %",
+      "abbr": "High-Low %",
+      "pinyinInitials": "xgxdzb",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "High-Low %",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 250
+    },
+    {
+      "id": "F10",
+      "prdId": "F10",
+      "aliases": [
+        "netnewhighs"
+      ],
+      "nameZh": "净新高家数",
+      "nameEn": "Net New Highs",
+      "abbr": "Net New Highs",
+      "pinyinInitials": "jxgjs",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Net New Highs",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 250
+    },
+    {
+      "id": "F11",
+      "prdId": "F11",
+      "aliases": [
+        "percentabovema"
+      ],
+      "nameZh": "站上 MA50 占比",
+      "nameEn": "Percent Above MA",
+      "abbr": "Percent Above MA",
+      "pinyinInitials": "zsmazb",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Percent Above MA",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 60
+    },
+    {
+      "id": "F12",
+      "prdId": "F12",
+      "aliases": [],
+      "nameZh": "历史新高占比",
+      "nameEn": "Record High %",
+      "abbr": "Record High %",
+      "pinyinInitials": "lsxgzb",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Record High %",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 250
+    },
+    {
+      "id": "F13",
+      "prdId": "F13",
+      "aliases": [
+        "trin"
+      ],
+      "nameZh": "TRIN 指数",
+      "nameEn": "TRIN",
+      "abbr": "TRIN",
+      "pinyinInitials": "trinzs",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "TRIN",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "F14",
+      "prdId": "F14",
+      "aliases": [
+        "pringdiffusion"
+      ],
+      "nameZh": "普林扩散",
+      "nameEn": "Pring Diffusion",
+      "abbr": "Pring Diffusion",
+      "pinyinInitials": "plks",
+      "panel": "副",
+      "priority": "P1",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Pring Diffusion",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 30
+    },
+    {
+      "id": "F15",
+      "prdId": "F15",
+      "aliases": [
+        "limitratio"
+      ],
+      "nameZh": "涨跌停家数比",
+      "nameEn": "Limit Ratio",
+      "abbr": "Limit Ratio",
+      "pinyinInitials": "zdtjsb",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Limit Ratio",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 2
+    },
+    {
+      "id": "F16",
+      "prdId": "F16",
+      "aliases": [
+        "breadththrust"
+      ],
+      "nameZh": "广度突破",
+      "nameEn": "Breadth Thrust",
+      "abbr": "Breadth Thrust",
+      "pinyinInitials": "gdtp",
+      "panel": "副",
+      "priority": "P0",
+      "category": "breadth",
+      "inputs": {
+        "close": true
+      },
+      "params": [],
+      "outputs": [
+        {
+          "key": "value",
+          "labelZh": "Breadth Thrust",
+          "kind": "line",
+          "color": "var(--muted)"
+        }
+      ],
+      "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "planned",
+      "unit": "—",
+      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
+      "formulaSummary": "规划中，公式与参数待实现",
+      "warmupBars": 10
     }
   ]
 }
