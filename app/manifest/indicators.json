@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "plannedCount": 105,
+  "cacheKey": [
+    "datasetVersion",
+    "security",
+    "timeframe",
+    "adjust",
+    "indicatorId",
+    "params",
+    "dateRange"
+  ],
+  "indicators": [
+    {
+      "id": "ma",
+      "prdId": "T01",
+      "aliases": [],
+      "nameZh": "移动平均线",
+      "nameEn": "Moving Average",
+      "category": "trend",
+      "inputs": { "close": true },
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 200,
+          "default": 20,
+          "step": 1
+        },
+        {
+          "kind": "enum",
+          "key": "maType",
+          "label": "均线类型",
+          "variants": ["sma", "ema", "wma"],
+          "default": "sma"
+        }
+      ],
+      "outputs": [
+        { "key": "ma", "labelZh": "MA", "kind": "line", "color": "var(--accent)" }
+      ],
+      "formulaRef": "docs/indicators/T01-ma.md",
+      "version": 1,
+      "specStatus": "productDefined",
+      "status": "beta"
+    },
+    {
+      "id": "macd",
+      "prdId": "M06",
+      "aliases": [],
+      "nameZh": "指数平滑异同移动平均线",
+      "nameEn": "MACD",
+      "category": "momentum",
+      "inputs": { "close": true },
+      "params": [
+        {
+          "kind": "int",
+          "key": "fast",
+          "label": "快线 EMA",
+          "min": 2,
+          "max": 100,
+          "default": 12,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "slow",
+          "label": "慢线 EMA",
+          "min": 2,
+          "max": 200,
+          "default": 26,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "signal",
+          "label": "信号线",
+          "min": 2,
+          "max": 100,
+          "default": 9,
+          "step": 1
+        }
+      ],
+      "outputs": [
+        { "key": "dif", "labelZh": "DIF", "kind": "line", "color": "var(--accent)" },
+        { "key": "dea", "labelZh": "DEA", "kind": "line", "color": "var(--warn)" },
+        { "key": "hist", "labelZh": "MACD 柱", "kind": "histogram", "color": "var(--rise)" }
+      ],
+      "formulaRef": "docs/indicators/M06-macd.md",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta"
+    }
+  ]
+}

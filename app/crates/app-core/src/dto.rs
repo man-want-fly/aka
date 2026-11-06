@@ -91,15 +91,17 @@ pub struct BarsResponse {
 }
 
 /// 请求日期区间与实际返回区间的回显。前端据此判断是否发生了吸附/截断。
+/// T-01 口径：`requested*` = 用户请求；`returned*` = 实际命中的首末交易日；
+/// `clamped` = 是否发生吸附/截断；区间无数据时以 `INSUFFICIENT_DATA` 返回。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RangeDto {
     pub requested_from: Option<String>,
     pub requested_to: Option<String>,
     /// 实际返回的第一根 K 线日期；空区间时为 None
-    pub from: Option<String>,
+    pub returned_from: Option<String>,
     /// 实际返回的最后一根 K 线日期
-    pub to: Option<String>,
+    pub returned_to: Option<String>,
     /// 实际返回的 K 线根数
     pub bar_count: usize,
     /// true 表示请求区间被数据集边界吸附/截断

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUnix": 1793953833,
+  "machine": {
+    "os": "macos",
+    "arch": "x86_64",
+    "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "profile": "release",
+    "engineVersion": "aka-engine-0.1.0",
+    "benchVersion": "0.1.0"
+  },
+  "iterations": 200,
+  "peakRssBytes": 1646592,
+  "thresholds": {
+    "p95MsAt520Bars": 1.0,
+    "p95MsAt2500Bars": 8.0,
+    "note": "S0 判定阈值；只在 release 下判 pass/fail，debug 记为 debug-unchecked"
+  },
+  "cases": [
+    {
+      "indicatorId": "ma",
+      "variant": "sma20",
+      "bars": 520,
+      "runs": 200,
+      "p50Ms": 0.001,
+      "p95Ms": 0.001,
+      "maxMs": 0.001,
+      "thresholdMs": 1.0,
+      "verdict": "pass"
+    },
+    {
+      "indicatorId": "ma",
+      "variant": "ema20",
+      "bars": 520,
+      "runs": 200,
+      "p50Ms": 0.002,
+      "p95Ms": 0.002,
+      "maxMs": 0.002,
+      "thresholdMs": 1.0,
+      "verdict": "pass"
+    },
+    {
+      "indicatorId": "ma",
+      "variant": "wma20",
+      "bars": 520,
+      "runs": 200,
+      "p50Ms": 0.011,
+      "p95Ms": 0.018,
+      "maxMs": 0.043,
+      "thresholdMs": 1.0,
+      "verdict": "pass"
+    },
+    {
+      "indicatorId": "macd",
+      "variant": "macd12/26/9",
+      "bars": 520,
+      "runs": 200,
+      "p50Ms": 0.009,
+      "p95Ms": 0.01,
+      "maxMs": 0.034,
+      "thresholdMs": 1.0,
+      "verdict": "pass"
+    },
+    {
+      "indicatorId": "ma",
+      "variant": "sma20",
+      "bars": 2500,
+      "runs": 100,
+      "p50Ms": 0.004,
+      "p95Ms": 0.004,
+      "maxMs": 0.004,
+      "thresholdMs": 8.0,
+      "verdict": "pass"
+    },
+    {
+      "indicatorId": "ma",
+      "variant": "ema20",
+      "bars": 2500,
+      "runs": 100,
+      "p50Ms": 0.008,
+      "p95Ms": 0.008,
+      "maxMs": 0.012,
+      "thresholdMs": 8.0,
+      "verdict": "pass"
+    },
+    {
+      "indicatorId": "ma",
+      "variant": "wma20",
+      "bars": 2500,
+      "runs": 100,
+      "p50Ms": 0.054,
+      "p95Ms": 0.122,
+      "maxMs": 0.297,
+      "thresholdMs": 8.0,
+      "verdict": "pass"
+    },
+    {
+      "indicatorId": "macd",
+      "variant": "macd12/26/9",
+      "bars": 2500,
+      "runs": 100,
+      "p50Ms": 0.044,
+      "p95Ms": 0.049,
+      "maxMs": 0.116,
+      "thresholdMs": 8.0,
+      "verdict": "pass"
+    }
+  ]
+}

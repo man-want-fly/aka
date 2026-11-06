@@ -1,9 +1,11 @@
-//! 本地行情存储骨架：MVP 只做进程内缓存，落盘（SQLite / Parquet）留给后续 Sprint。
+//! 本地行情存储：内存 K 线缓存 + SQLite `state.db`（自选/设置/参数/数据版本）。
 //!
-//! 依赖边界：本 crate 只依赖标准库；不认识 provider、指标与 Tauri。
+//! 依赖边界：本 crate 不认识 provider、指标与 Tauri；DB 路径由调用方注入。
 
 use std::collections::HashMap;
 use std::sync::Arc;
+
+pub mod state_db;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Candle {

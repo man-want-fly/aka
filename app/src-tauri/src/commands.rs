@@ -3,7 +3,7 @@
 
 use app_core::{
     AppError, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, ListSecuritiesRequest,
-    RegistryRequest, RegistryResponse, SecurityDto,
+    Manifest, RegistryRequest, RegistryResponse, SecurityDto,
 };
 use tauri::State;
 
@@ -31,6 +31,13 @@ pub async fn indicator_registry(
     req: RegistryRequest,
 ) -> Result<RegistryResponse, AppError> {
     Ok(state.core.indicator_registry(req.category.as_deref()))
+}
+
+#[tauri::command]
+pub async fn indicator_manifest(
+    state: State<'_, AppState>,
+) -> Result<&'static Manifest, AppError> {
+    Ok(state.core.indicator_manifest())
 }
 
 #[tauri::command]

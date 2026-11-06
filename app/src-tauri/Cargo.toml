@@ -16,3 +16,4 @@ tauri = { version = "2", features = [] }
 serde.workspace = true
 serde_json.workspace = true
 app-core = { path = "../crates/app-core" }
+data-store = { path = "../crates/data-store" }

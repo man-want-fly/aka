@@ -9,3 +9,4 @@ pub mod error;
 pub use core::AppCore;
 pub use dto::*;
 pub use error::{AppError, ErrorCode};
+pub use indicator_core::{Manifest, ManifestIndicator, ManifestInputs, ManifestParam, ManifestOutput};

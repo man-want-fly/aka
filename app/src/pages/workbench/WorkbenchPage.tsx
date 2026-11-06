@@ -10,6 +10,7 @@ import type {
   AppError,
   BarsResponse,
   CalcResponse,
+  ManifestResponse,
   RegistryResponse,
   SecurityDto,
 } from "../../lib/types";
@@ -46,6 +47,7 @@ export function WorkbenchPage({
 }: Props) {
   const [securities, setSecurities] = useState<SecurityDto[]>([]);
   const [registry, setRegistry] = useState<RegistryResponse | null>(null);
+  const [manifest, setManifest] = useState<ManifestResponse | null>(null);
   const [activeCode, setActiveCode] = useState("300750.SZ");
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">("qfq");
   const [range, setRange] = useState(120);
@@ -70,11 +72,16 @@ export function WorkbenchPage({
       return;
     }
     let alive = true;
-    Promise.all([ipc.listSecurities(120), ipc.indicatorRegistry()])
-      .then(([items, meta]) => {
+    Promise.all([
+      ipc.listSecurities(120),
+      ipc.indicatorRegistry(),
+      ipc.indicatorManifest(),
+    ])
+      .then(([items, meta, catalog]) => {
         if (!alive) return;
         setSecurities(items);
         setRegistry(meta);
+        setManifest(catalog);
       })
       .catch((err) => {
         if (!alive) return;
@@ -360,10 +367,13 @@ export function WorkbenchPage({
             版本 <b>{bars?.provenance.dataVersion ?? "sim-v1.0"}</b>
           </span>
           <span>
-            engine <b>{calc?.engineVersion ?? "aka-engine-0.1.0"}</b>
+            引擎 <b>{calc?.engineVersion ?? "aka-engine-0.1.0"}</b>
           </span>
           <span>
-            区间 <b>{bars ? `${bars.range.from ?? "—"} ~ ${bars.range.to ?? "—"}` : "—"}</b>
+            目录 <b>{manifest ? `${manifest.indicators.length} 条 / schema v${manifest.schemaVersion}` : "—"}</b>
+          </span>
+          <span>
+            区间 <b>{bars ? `${bars.range.returnedFrom ?? "—"} ~ ${bars.range.returnedTo ?? "—"}` : "—"}</b>
             {bars?.range.clamped ? "（已吸附）" : ""}
           </span>
           <span>

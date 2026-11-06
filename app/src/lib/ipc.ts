@@ -5,6 +5,7 @@ import type {
   CalcRequest,
   CalcResponse,
   GetBarsRequest,
+  ManifestResponse,
   RegistryResponse,
   SecurityDto,
 } from "./types";
@@ -48,6 +49,10 @@ export const ipc = {
     invoke<RegistryResponse>("indicator_registry", {
       req: { category: category ?? null },
     }),
+
+  /** 指标目录唯一事实来源；生成指标列表/参数面板应优先用它。 */
+  indicatorManifest: (): Promise<ManifestResponse> =>
+    invoke<ManifestResponse>("indicator_manifest"),
 
   calcIndicators: (req: CalcRequest): Promise<CalcResponse> =>
     invoke<CalcResponse>("calc_indicators", { req }),

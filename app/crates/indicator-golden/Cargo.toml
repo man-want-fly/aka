@@ -8,3 +8,6 @@ rust-version.workspace = true
 indicator-core = { path = "../indicator-core" }
 serde.workspace = true
 serde_json.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"

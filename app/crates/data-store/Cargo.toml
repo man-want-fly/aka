@@ -5,3 +5,5 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde_json = { workspace = true }

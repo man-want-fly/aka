@@ -80,6 +80,47 @@ export interface RegistryResponse {
   indicators: IndicatorMetaDto[];
 }
 
+/** manifest 参数：字段名是 `label`（与运行期 ParamSpec 的 label 一致） */
+export type ManifestParam =
+  | { kind: "int"; key: string; label: string; min: number; max: number; default: number; step: number }
+  | {
+      kind: "float";
+      key: string;
+      label: string;
+      min: number;
+      max: number;
+      default: number;
+      step: number;
+      unit: string | null;
+    }
+  | { kind: "enum"; key: string; label: string; variants: string[]; default: string }
+  | { kind: "bool"; key: string; label: string; default: boolean };
+
+export interface ManifestIndicatorDto {
+  id: string;
+  prdId: string;
+  aliases: string[];
+  nameZh: string;
+  nameEn: string;
+  category: Category;
+  inputs: InputsDto;
+  params: ManifestParam[];
+  outputs: OutputSpecDto[];
+  formulaRef: string;
+  version: number;
+  specStatus: SpecStatus;
+  status: "normal" | "beta";
+}
+
+/** 指标目录的单一事实来源；前端指标列表一律由它生成。 */
+export interface ManifestResponse {
+  schemaVersion: number;
+  plannedCount: number;
+  /** 缓存键维度（七元组：后三项固定为 indicatorId、params、dateRange） */
+  cacheKey: string[];
+  indicators: ManifestIndicatorDto[];
+}
+
 export interface SecurityDto {
   code: string;
   name: string;
@@ -113,8 +154,10 @@ export interface ProvenanceDto {
 export interface RangeDto {
   requestedFrom: string | null;
   requestedTo: string | null;
-  from: string | null;
-  to: string | null;
+  /** 实际命中的第一根 K 线日期 */
+  returnedFrom: string | null;
+  /** 实际命中的最后一根 K 线日期 */
+  returnedTo: string | null;
   barCount: number;
   /** 请求区间被数据集边界吸附/截断时为 true */
   clamped: boolean;

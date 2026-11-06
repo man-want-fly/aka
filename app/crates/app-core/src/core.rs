@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use data_provider::mock::MockProvider;
 use data_provider::{Adjust, BarRequest, DataProvider, Date, Security, Timeframe};
+use data_store::state_db::StateDb;
 use data_store::{CacheStats, Candle, CandleSeries, CandleStore, SeriesKey};
 use indicator_core::{
     all, implemented_count, lookup, merge_defaults, validate, CalcError, Category, Indicator,
@@ -25,6 +26,9 @@ pub struct AppCore {
     store: Mutex<CandleStore>,
     calc_cache: Mutex<HashMap<String, Arc<Vec<Vec<f64>>>>>,
     calc_stats: Mutex<CacheStats>,
+    /// rusqlite `Connection` 是 `Send` 但不是 `Sync`，因此包一层 Mutex 才能随 `AppCore`
+    /// 被 Tauri 的 `State` 共享。
+    state: Option<Mutex<StateDb>>,
 }
 
 impl AppCore {
@@ -39,7 +43,34 @@ impl AppCore {
             store: Mutex::new(CandleStore::new()),
             calc_cache: Mutex::new(HashMap::new()),
             calc_stats: Mutex::new(CacheStats::default()),
+            state: None,
         })
+    }
+
+    /// 注入 `state.db`（路径由 aka-desktop 决定）；不注入时应用照常可跑。
+    pub fn with_state_db(mut self, db: StateDb) -> Self {
+        self.state = Some(Mutex::new(db));
+        self
+    }
+
+    pub fn state_db(&self) -> Option<MutexGuard<'_, StateDb>> {
+        self.state
+            .as_ref()
+            .map(|db| db.lock().unwrap_or_else(|err| err.into_inner()))
+    }
+
+    pub fn setting(&self, key: &str) -> Result<Option<String>, AppError> {
+        self.state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?
+            .setting(key)
+            .map_err(AppError::from)
+    }
+
+    pub fn set_setting(&self, key: &str, value: &str) -> Result<(), AppError> {
+        self.state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?
+            .set_setting(key, value)
+            .map_err(AppError::from)
     }
 
     /// MVP 装配：mock 是唯一启用的数据源。
@@ -81,6 +112,11 @@ impl AppCore {
                 base_price: sec.base_price,
             })
             .collect()
+    }
+
+    /// 指标 manifest：目录的唯一事实来源，前端据此生成指标目录（含未实现项）。
+    pub fn indicator_manifest(&self) -> &'static indicator_core::Manifest {
+        indicator_core::manifest()
     }
 
     pub fn indicator_registry(&self, category: Option<&str>) -> RegistryResponse {
@@ -189,7 +225,7 @@ impl AppCore {
                 })));
             }
 
-            let key = calc_key(&series, meta, &params);
+            let key = calc_key(&series, meta, &params, &window.range);
             let cached = self
                 .calc_cache
                 .lock()
@@ -480,8 +516,8 @@ fn resolve_window(
         range: RangeDto {
             requested_from: from_iso,
             requested_to: to_iso,
-            from: Some(actual_from),
-            to: Some(actual_to),
+            returned_from: Some(actual_from),
+            returned_to: Some(actual_to),
             bar_count,
             clamped,
         },
@@ -548,15 +584,27 @@ impl SeriesColumns {
     }
 }
 
+/// 缓存键 = 6 个原有维度（数据集版本、标的、周期、复权、指标 id、参数）+ DateRange，
+/// 共 7 维；DateRange 用规范化后的实际起止日参与哈希（未指定时记 `*`）。
+/// 不再保留旧六元组键：日期区间变化必须视为新的计算结果。
 fn calc_key(
     series: &CandleSeries,
     meta: &'static indicator_core::Meta,
     params: &Params,
+    range: &RangeDto,
 ) -> String {
     let params = serde_json::to_string(params).unwrap_or_default();
     format!(
-        "{}|{}|{}|{}|{}|{}|{}",
-        ENGINE_VERSION, series.dataset_id, series.security, series.timeframe, series.adj, meta.id, params
+        "v2|{}|{}|{}|{}|{}|{}|{}|{}~{}",
+        ENGINE_VERSION,
+        series.dataset_id,
+        series.security,
+        series.timeframe,
+        series.adj,
+        meta.id,
+        params,
+        range.returned_from.as_deref().unwrap_or("*"),
+        range.returned_to.as_deref().unwrap_or("*"),
     )
 }
 
@@ -653,7 +701,7 @@ mod tests {
         let s = series(Date::new(2024, 12, 20), 5);
         let w = resolve_window(&s, None, Some("2025-06-01")).unwrap();
         assert_eq!(w.end, 5);
-        assert_eq!(w.range.to.as_deref(), Some(s.candles.last().unwrap().date.as_str()));
+        assert_eq!(w.range.returned_to.as_deref(), Some(s.candles.last().unwrap().date.as_str()));
         assert!(w.range.clamped);
     }
 
@@ -690,5 +738,36 @@ mod tests {
         let w = resolve_window(&s, None, None).unwrap();
         assert_eq!((w.start, w.end), (0, 7));
         assert!(!w.range.clamped);
+    }
+
+    /// QA-S0 T-01：IPC 回参是 ISO 日期，不含任何下标字段。
+    #[test]
+    fn range_wire_format_is_dates_not_indexes() {
+        let s = series(Date::new(2024, 12, 20), 5);
+        let w = resolve_window(&s, Some("2024-12-20"), Some("2025-06-01")).unwrap();
+        let json = serde_json::to_value(&w.range).unwrap();
+        for key in ["requestedFrom", "requestedTo", "returnedFrom", "returnedTo", "barCount", "clamped"] {
+            assert!(json.get(key).is_some(), "缺少字段 {key}: {json}");
+        }
+        for key in ["from", "to", "startIndex", "endIndex", "start", "end"] {
+            assert!(json.get(key).is_none(), "不应出现下标/旧字段 {key}: {json}");
+        }
+        assert_eq!(json["requestedFrom"], "2024-12-20");
+        assert_eq!(json["returnedFrom"], "2024-12-20");
+    }
+
+    /// QA-S0-033 / S-02.06-02：缓存键必须是七元组（含 DateRange），区间变化即换键。
+    #[test]
+    fn cache_key_includes_date_range() {
+        let s = series(Date::new(2024, 12, 20), 10);
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let a = resolve_window(&s, Some("2024-12-20"), Some("2024-12-24")).unwrap();
+        let b = resolve_window(&s, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        let key_a = calc_key(&s, meta, &params, &a.range);
+        let key_b = calc_key(&s, meta, &params, &b.range);
+        assert_ne!(key_a, key_b, "区间变化必须产生不同缓存键");
+        assert!(key_a.contains("2024-12-24~2024-12-24") || key_a.contains("2024-12-20~2024-12-24"));
+        assert_eq!(key_a.matches('|').count(), 8, "v2 + 7 个维度 + 1 段 range");
     }
 }

@@ -66,6 +66,13 @@ impl AppError {
     }
 }
 
+impl From<data_store::state_db::DbError> for AppError {
+    fn from(err: data_store::state_db::DbError) -> Self {
+        let retryable = err.retryable();
+        AppError::new(ErrorCode::Internal, err.to_string()).retryable(retryable)
+    }
+}
+
 impl From<ProviderError> for AppError {
     fn from(err: ProviderError) -> Self {
         match err {

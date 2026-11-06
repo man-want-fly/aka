@@ -1,5 +1,5 @@
-use crate::meta::{Category, InputReq, Meta, OutputKind, OutputSpec, SpecStatus};
-use crate::param::{param_int, param_text, ParamSpec};
+use crate::meta::Meta;
+use crate::param::{param_int, param_text};
 use crate::view::{CalcError, Indicator, OhlcvView};
 use crate::Params;
 
@@ -28,46 +28,9 @@ static ALL: [&dyn Indicator; 2] = [&MA, &MACD];
 pub struct Ma;
 pub struct Macd;
 
-static MA_PARAMS: &[ParamSpec] = &[
-    ParamSpec::Int {
-        key: "period",
-        label: "周期",
-        min: 2,
-        max: 200,
-        default: 20,
-        step: 1,
-    },
-    ParamSpec::Enum {
-        key: "maType",
-        label: "均线类型",
-        variants: &["sma", "ema", "wma"],
-        default: "sma",
-    },
-];
-
-static MA_OUTPUTS: &[OutputSpec] = &[OutputSpec {
-    key: "ma",
-    label_zh: "MA",
-    kind: OutputKind::Line,
-    color: "var(--accent)",
-}];
-
-static MA_META: Meta = Meta {
-    id: MA_ID,
-    name_zh: "移动平均线",
-    name_en: "Moving Average",
-    category: Category::Trend,
-    params: MA_PARAMS,
-    outputs: MA_OUTPUTS,
-    inputs: InputReq::CLOSE,
-    spec_status: SpecStatus::ProductDefined,
-    engine_version: 1,
-    warmup: ma_warmup,
-};
-
 impl Indicator for Ma {
     fn meta(&self) -> &'static Meta {
-        &MA_META
+        crate::manifest::meta_for(MA_ID, ma_warmup)
     }
 
     fn calc(
@@ -124,71 +87,9 @@ fn ma_warmup(params: &Params) -> usize {
     param_int(params, "period").unwrap_or(20).max(2) as usize - 1
 }
 
-static MACD_PARAMS: &[ParamSpec] = &[
-    ParamSpec::Int {
-        key: "fast",
-        label: "快线 EMA",
-        min: 2,
-        max: 100,
-        default: 12,
-        step: 1,
-    },
-    ParamSpec::Int {
-        key: "slow",
-        label: "慢线 EMA",
-        min: 2,
-        max: 200,
-        default: 26,
-        step: 1,
-    },
-    ParamSpec::Int {
-        key: "signal",
-        label: "信号线",
-        min: 2,
-        max: 100,
-        default: 9,
-        step: 1,
-    },
-];
-
-static MACD_OUTPUTS: &[OutputSpec] = &[
-    OutputSpec {
-        key: "dif",
-        label_zh: "DIF",
-        kind: OutputKind::Line,
-        color: "var(--accent)",
-    },
-    OutputSpec {
-        key: "dea",
-        label_zh: "DEA",
-        kind: OutputKind::Line,
-        color: "var(--warn)",
-    },
-    OutputSpec {
-        key: "hist",
-        label_zh: "MACD 柱",
-        kind: OutputKind::Histogram,
-        color: "var(--rise)",
-    },
-];
-
-static MACD_META: Meta = Meta {
-    id: MACD_ID,
-    name_zh: "指数平滑异同移动平均线",
-    name_en: "MACD",
-    category: Category::Momentum,
-    params: MACD_PARAMS,
-    outputs: MACD_OUTPUTS,
-    inputs: InputReq::CLOSE,
-    // 产品口径固定“前 N 根用 SMA 作为首个 EMA 值”，骨架期先标 Partial
-    spec_status: SpecStatus::Partial,
-    engine_version: 1,
-    warmup: macd_warmup,
-};
-
 impl Indicator for Macd {
     fn meta(&self) -> &'static Meta {
-        &MACD_META
+        crate::manifest::meta_for(MACD_ID, macd_warmup)
     }
 
     fn calc(
