@@ -38,12 +38,12 @@ B3,动量/摆动,indicator,M05,顺势指标,CCI,动量,副,P0,完整,20,20,V03/T
 B3,动量/摆动,indicator,M06,指数平滑异同,MACD,动量,副,P0,完整,34,12/26/9,现有 MACD,0.5,柱=2×(DIF-DEA)；id 对齐
 B3,动量/摆动,indicator,M08,价格振荡器,PPO,动量,副,P0,完整,34,12/26 · 9,T02,0.6,百分比双线
 B3,动量/摆动,indicator,M09,变动率,ROC,动量,副,P0,完整,12,12,无,0.3,分母为零 NaN
-B3,动量/摆动,indicator,M10,动量,Momentum,动量,副,P0,完整,12,10,无,0.3,差值输出
+B3,动量/摆动,indicator,M10,动量,Momentum,动量,副,P0,完整,10,10,无,0.3,差值输出；warmup 原 12 为笔误
 B3,动量/摆动,indicator,M19,阿隆指标,Aroon,动量,副,P0,完整,25,25,T24,0.6,Up/Down 双线
-B3,动量/摆动,indicator,M20,涡旋指标,Vortex,动量,副,P0,完整,20,14,T24/V10,0.7,VI+/VI- 双线
+B3,动量/摆动,indicator,M20,涡旋指标,Vortex,动量,副,P0,完整,14,14,T24/V10,0.7,VI+/VI- 双线；warmup 原 20 为笔误
 B3,动量/摆动,indicator,M21,钱德动量,CMO,动量,副,P0,完整,14,14,B3-INFRA,0.5,±100 输出
-B3,动量/摆动,indicator,M24,质量指数,Mass Index,动量,副,P0,完整▲,30,9/25,T02,0.6,EMA 比累加
-B3,动量/摆动,indicator,M25,埃尔德脉冲,Elder Impulse,动量,副,P0,完整,34,12/26/9+EMA13,T02/V01,0.9,三色状态
+B3,动量/摆动,indicator,M24,质量指数,Mass Index,动量,副,P0,完整▲,40,9/25,T02,0.6,EMA 比累加；Q-02 裁定 40
+B3,动量/摆动,indicator,M25,埃尔德脉冲,Elder Impulse,动量,副,P0,完整,46,12/26/9+EMA13,T02/V01,0.9,三色状态；Q-03 裁定 46
 B3,动量/摆动,indicator,M26,窄幅日,NR7,动量,副,P0,完整,7,7,T24,0.3,布尔/0-1 输出
 B4,量能/统计,infra,,量能与统计底座,Volume/stat kernels,底座,-,-,-,,,单位守卫、滚动相关、基准对齐、测试,3.1,股/手单位断言；基准对齐
 B4,量能/统计,indicator,D01,能量潮,OBV,量能,副,P0,完整,2,无,无,0.4,首根基准；容差 1e-6

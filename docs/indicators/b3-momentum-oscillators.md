@@ -26,16 +26,15 @@
 - 参数：`period` 默认 14。首个有效值 `N = 14`。
 - 边界：`avg_loss == 0 → 100`；`avg_gain == 0 → 0`；两者均为 0（全程横盘）按前者取 100。
 
-### M02 KDJ（beta）
+### M02 KDJ
 
-- `RSV = (C - LLV(low,N)) / (HHV(high,N) - LLV(low,N)) × 100`。
+- `RSV = (C - LLV(low,N)) / (HHV(high,N) - LLV(low,N)) × 100`；零区间（`HHV=LLV`）取 `RSV=50`。
 - `K = ((k-1)×K[-1] + RSV)/k`，`D = ((d-1)×D[-1] + K)/d`，种子 `K[-1]=D[-1]=50`；
   `J = 3K - 2D`。
-- 参数：`period` 9、`k` 3、`d` 3。首个有效值 `period-1 = 8`（0 基；CSV 写作 9 为 1 基根数）。
-- **beta 原因（保留 beta）**：高低差为 0 时 RSV 取 50 是本产品约定；通达信（除零后沿用/取 0）、
-  同花顺与 TA-Lib（Stoch 不输出 J、平滑用 SMA）均不一致，且 KDJ 的种子 50 与首次平滑是否
-  需要额外预热没有统一公开公式可逐点核对，故**保留 beta**，待 BA 裁定（见
-  `docs/qa/aka-b3-numeric-evidence-v0.1.md` §5 Q-01）。
+- 参数：`period` 9、`k` 3、`d` 3。首个有效值 `period-1 = 8`（0 基；规划 CSV 写作 9 为 1 基根数）。
+- **已裁定（Q-01，2026-11-06）**：基准取**通达信**——零区间 `RSV=50`、种子 50/50、**无额外预热**、
+  输出 K/D/J。同花顺与 TA-Lib 的差异（Stoch 无 J、简单平均平滑）不采用。断言与理由见
+  [`b3-beta-rulings.md`](./b3-beta-rulings.md) §2；manifest 由开发转 `normal`。
 
 ### M04 Williams %R
 
@@ -52,12 +51,12 @@
 
 ## 动量类
 
-### M06 MACD（B1 已实现，beta 沿用）
+### M06 MACD（B1 已实现）
 
 - `DIF = EMA(fast) - EMA(slow)`；`DEA = EMA(signal)(DIF)`；柱 `= 2×(DIF - DEA)`。
 - 参数：12 / 26 / 9。首个有效值 `slow+signal-2 = 33`。
-- **beta 原因**：柱的 2× 系数按 A 股惯例实现，但 TradingView/TA-Lib 为 1×；B1 起标 beta，
-  本批不改状态，等待统一裁定。
+- **已裁定（Q-04，2026-11-06）**：柱的 2× 系数为 A 股主流画法，确认沿用 B1 裁定，不再论证；
+  TradingView/TA-Lib 的 1× 仅作备注。裁定见 [`b3-beta-rulings.md`](./b3-beta-rulings.md) §5。
 
 ### M08 PPO
 
@@ -76,6 +75,8 @@
 
 - `MOM = C - C[-N]`，单位为元。
 - 参数：`period` 默认 10。首个有效值 `N = 10`。
+- **笔误更正（2026-11-06）**：规划 CSV 的 `warmup=12` 为笔误（误抄 M09 ROC 的 12），正确值 **10**；
+  公式只有 `period` 一个参数，不存在第二个 12 周期。同步见 [`b3-beta-rulings.md`](./b3-beta-rulings.md) §7。
 
 ### M19 Aroon
 
@@ -88,6 +89,8 @@
 - `VI+ = Σ|H[i] - L[i-1]| / ΣTR`；`VI- = Σ|L[i] - H[i-1]| / ΣTR`，窗口 `N`。
 - `TR` 为真实波幅；默认 14，首个有效值 `N = 14`（需要前一根 L/H）。
 - 边界：`ΣTR == 0` 输出 `NaN`。
+- **笔误更正（2026-11-06）**：规划 CSV 的 `warmup=20` 为通用默认值残留，正确值 **14**（与窗口一致）；
+  公式只有 `period` 一个参数。同步见 [`b3-beta-rulings.md`](./b3-beta-rulings.md) §7。
 
 ### M21 CMO
 
@@ -96,25 +99,24 @@
 - 参数：`period` 默认 14。首个有效值 `N = 14`。
 - 边界：分母为 0（窗口全程无涨跌）输出 `NaN`。
 
-### M24 Mass Index（beta）
+### M24 Mass Index
 
 - `range = H - L`；`first = EMA9(range)`；`second = EMA9(first)`；
   `Mass = Σ(first/second, 25)`。
 - 参数：`ema` 9、`sum` 25。首个有效值 `2×(9-1)+25-1 = 40`。
-- **beta 原因（保留 beta）**：规划 CSV 的 warmup 写 30，与递推实算的首个有效值 40 不一致
-  （EMA 两次各需 8 根、25 根求和再需 24 根）。本实现按公式实算 40，**不自行改口径**，
-  待 BA 裁定是采用 CSV 的 30（需换 EMA 种子/窗口定义）还是修正 CSV（见
-  `docs/qa/aka-b3-numeric-evidence-v0.1.md` §5 Q-02）。
+- **已裁定（Q-02，2026-11-06）**：保留递推实算 **40**，改规划 CSV 与 PRD 的 `warmup=30` 为 **40**。
+  理由：`30` 需把首次 EMA 改为「从下标 0 无种子递推」，会连带推翻 T02 / M06 / M08 / M25 的已冻结基线。
+  断言见 [`b3-beta-rulings.md`](./b3-beta-rulings.md) §3。
 
-### M25 Elder Impulse（beta）
+### M25 Elder Impulse
 
 - `hist = 2×(DIF - DEA)`（与 M06 同源）；`impulse = EMA13(hist)`；
-  `state ∈ {-1,0,1}`：`hist>0 且 impulse 上行 → 1`、`hist<0 且 impulse 下行 → -1`、其余 `0`。
+  `state ∈ {+1,0,-1}`：`hist>0 且 impulse 上行 → +1`、`hist<0 且 impulse 下行 → -1`、其余 `0`。
 - 参数：12 / 26 / 9 / `ema` 13。首个有效值 `slow+signal+ema-2 = 46`
   （impulse 自 45 起，state 需前一根 impulse）。
-- **beta 原因（保留 beta）**：Elder 原版对「脉冲」取 MACD 柱的 EMA13，但柱的系数（1×/2×）、
-  三色边界（是否要求柱穿越零轴、是否用 EMA 斜率而非差分）在各平台不一致，故保留 beta，
-  待 BA 裁定（见 `docs/qa/aka-b3-numeric-evidence-v0.1.md` §5 Q-03）。
+- **已裁定（Q-03，2026-11-06）**：柱 **2×**、脉冲 **EMA13(柱)**、判定**先符号后差分**；
+  渲染色按本产品「红涨绿跌」：`+1` 红、`-1` 绿、`0` 蓝（与 Elder 原版「绿多红空」相反，口径页须写明）。
+  断言见 [`b3-beta-rulings.md`](./b3-beta-rulings.md) §4。
 
 ### M26 NR7
 
@@ -126,18 +128,21 @@
 
 | 项 | 位置 |
 | --- | --- |
-| Manifest | `app/manifest/indicators.json`（14 条 B3，含 3 条 beta） |
+| Manifest | `app/manifest/indicators.json`（14 条 B3，其中 M02 / M24 / M25 / M06 4 条 beta 已裁定，待开发转 `normal`） |
 | 黄金夹具 | `base_b3_momentum_seed42_520`（14 case）、`edge_b3_constant_ohlc`（14）、`edge_b3_insufficient`（14）、`edge_b3_first_bar`（14） |
 | 夹具生成 | `python3 crates/indicator-golden/fixtures/gen_reference.py` |
 | 性能记录 | `app/bench/baselines/macos-<arch>.json`（44 指标 × 520/2500，共 88 case） |
 | 单测 | `indicator-core::indicators::b3::tests`（预热/值域/0-1/常数/参数拒绝）+ 注册表 44 条 |
 | 数值证据 | `docs/qa/aka-b3-numeric-evidence-v0.1.md` |
 
-## beta 清单（不自行拍定）
+## beta 裁定的落点
 
-| 指标 | 待裁定问题 | 当前实现 |
+| 指标 | 原待裁定问题 | 裁定结果 |
 | --- | --- | --- |
-| M02 KDJ | 零区间 RSV 取值、种子与额外预热 | RSV=50，种子 50/50，无额外预热 |
-| M24 Mass Index | CSV warmup=30 与实算 40 冲突 | 按实算 40 |
-| M25 Elder Impulse | 柱系数、三色边界、脉冲对象 | 2× 柱 + EMA13(柱) + 差分斜率 |
-| M06 MACD | 柱 2× vs 1× | 2×（B1 起沿用） |
+| M02 KDJ | 零区间 RSV 取值、种子与额外预热 | 零区间 `RSV=50`、种子 50/50、无额外预热（Q-01，取通达信） |
+| M24 Mass Index | CSV warmup=30 与实算 40 冲突 | 保留实算 40，改 CSV / PRD 为 40（Q-02） |
+| M25 Elder Impulse | 柱系数、三色边界、脉冲对象 | 2× 柱 + `EMA13(柱)` + 先符号后差分；红多绿空蓝中性（Q-03） |
+| M06 MACD | 柱 2× vs 1× | 确认 2×，沿用 B1（Q-04） |
+
+> 四条均已定论，manifest 由开发统一转 `normal` / `manualComplete`；完整理由与可测断言见
+> [`b3-beta-rulings.md`](./b3-beta-rulings.md)。

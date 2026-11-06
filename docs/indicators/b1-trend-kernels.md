@@ -55,6 +55,7 @@
 - 窗口 `y_k = C_{t-N+1+k}`，`x_k = k`（`k=0..N-1`）
 - OLS：`slope = Sxy/Sxx`，`intercept = ȳ − slope·x̄`
 - `Forecast_t = intercept + slope·(N-1)`，即**当前根**的拟合值。
+- 实现与口径一致：取窗口末根 `x=N-1`，**不取下一根 `x=N`**；目录/口径文案不得写成 `a+b·N`（S2 复核发现目录页文案有误，已由开发修正）。
 - **自定口径**：不取下一根 `x=N`；此终点选择暂标 `beta`。
 - 首个有效值：`t=N-1`；`warmup=N-1`。
 
