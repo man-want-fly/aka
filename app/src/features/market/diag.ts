@@ -80,9 +80,17 @@ function inBoard(row: MarketSnapshotDto["rows"][number], board: string): boolean
  */
 export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
   const checks: Check[] = [];
+  // 取证套件中途卡住时没有最终 JSON，进度文件能指出停在哪一条（成功后会被最终报告覆盖）。
+  const progress = (stage: string) => {
+    void ipc
+      .diagWriteNamed("e01-market-progress.json", JSON.stringify({ stage, at: new Date().toISOString() }, null, 2))
+      .catch(() => undefined);
+  };
   const push = (id: string, ac: string, layer: Layer, passed: boolean, detail: string) => {
     checks.push({ id, ac, layer, passed, detail });
+    progress(`done:${id}`);
   };
+  progress("start");
 
   const startedAt = new Date().toISOString();
   let snapshot: MarketSnapshotDto | null = null;
@@ -433,12 +441,15 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
 
     // ---- 渲染层：字面「第 40 行」——真实滚动后点击，返回仍停在该行 ----
     // 创业板只有 17 行，滚不动；按字面 40 行只能在「全部」分区执行（120 行）。
+    progress("R-12:board");
     click(document.querySelector<HTMLElement>('[data-market-board="all"]'), "全部分区");
     await sleep(100);
+    progress("R-12:sort");
     if (sortDirOf("amount") !== "desc") {
       click(document.querySelector<HTMLElement>('[data-market-sort="amount"]'), "成交额列头");
       await sleep(100);
     }
+    progress("R-12:table");
     const allTable = await waitFor(() => document.querySelector<HTMLElement>("[data-market-table]"));
     allTable.scrollTop = 0;
     const allRows = rowEls();
@@ -447,6 +458,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
     const row40Code = row40.dataset.code;
     row40.scrollIntoView({ block: "start" });
     await sleep(100);
+    progress(`R-12:scrolled:${row40Code}`);
     const row40Scroll = allTable.scrollTop;
     const storedBefore = sessionStorage.getItem("aka.market.scroll");
     const tableView = allTable.getBoundingClientRect();
@@ -464,10 +476,15 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       }
       await sleep(60);
     }
+    progress(`R-12:clicked:${wbCode3}`);
     press(window, "Escape");
+    progress("R-12:escape");
     await waitFor(() => document.querySelector<HTMLElement>("[data-market-root]"));
+    progress("R-12:marketRoot");
     await waitFor(() => rowEls().length > 0);
+    progress("R-12:rows");
     const backAll = await waitFor(() => document.querySelector<HTMLElement>("[data-market-table]"));
+    progress("R-12:backTable");
     await sleep(120);
     const storedAfter = sessionStorage.getItem("aka.market.scroll");
     const backRow40 = document.querySelector<HTMLElement>('[data-market-row][data-selected="1"]');
@@ -535,10 +552,17 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
     if (picks.length < 3 || picks.some((pick) => !pick.code)) {
       throw new Error("列表不足 3 行，无法执行 50ms 连点场景");
     }
+    // 直接证伪信号：每次跳转都会改 hash 并触发 hashchange。合并窗口生效时整串只应有 1 次。
+    const hashEvents: string[] = [];
+    const onHash = () => hashEvents.push(window.location.hash);
+    window.addEventListener("hashchange", onHash);
     const clickTimes: number[] = [];
     for (const pick of picks) {
       clickTimes.push(performance.now());
       click(pick.el, `连点 ${pick.code}`);
+      // 三次点击间隔 ~35ms，总跨度 ~70ms：每一下都落在 50ms 合并窗口内，
+      // 若没有合并窗口，第一下就会立刻跳转（观测到中间标的即判红）。
+      if (pick !== picks[picks.length - 1]) await sleep(35);
     }
     const gaps = clickTimes.slice(1).map((time, index) => time - clickTimes[index]);
     if (!gaps.every((gap) => gap <= 50)) {
@@ -562,19 +586,24 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       }
       await sleep(8);
     }
+    window.removeEventListener("hashchange", onHash);
     const distinctObserved = [...new Set(observedCodes)];
     push(
       "R-13",
       "AC-01.01-04(补1)",
       "render",
       gaps.every((gap) => gap <= 50) &&
+        hashEvents.length === 1 &&
+        hashEvents[0].includes(expectedCode) &&
         distinctObserved.length === 1 &&
         distinctObserved[0] === expectedCode &&
         maxHeaderCount === 1 &&
         emptyFrames === 0,
       `连点间隔=${gaps.map((gap) => gap.toFixed(1)).join("/")}ms 目标=${picks
         .map((pick) => pick.code)
-        .join("→")} 展示=${distinctObserved.join(",")} 报价头元素=${maxHeaderCount} 空闪帧=${emptyFrames}`,
+        .join("→")} 展示=${distinctObserved.join(",")} hashchange=${hashEvents.join(
+        "→",
+      )} 报价头元素=${maxHeaderCount} 空闪帧=${emptyFrames}`,
     );
     press(window, "Escape");
     await waitFor(() => document.querySelector<HTMLElement>("[data-market-root]"));

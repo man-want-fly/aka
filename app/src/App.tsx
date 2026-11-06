@@ -58,11 +58,29 @@ export default function App() {
 
   // 取证落地页：release 性能线（P 线）必须直接进工作台，
   // 否则行情页会把 S2 套件锁掉（sessionStorage `aka.s2.diag.once`）。
+  // `market` 是反向：上一次取证把 hash 停在 #/workbench 时，行情页的 E-01 套件不会启动。
   useEffect(() => {
     if (!isTauriRuntime()) return;
     (async () => {
       try {
-        if ((await ipc.diagTarget()) !== "s2") return;
+        const target = await ipc.diagTarget();
+        // S-02.04-01 抽屉取证：直接进工作台；先占住 S2 的 once 位，避免 S2 套件抢跑。
+        if (target === "drawer") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.removeItem("aka.drawer.diag.done");
+          if (window.location.hash.startsWith("#/workbench")) return;
+          window.location.hash = "#/workbench";
+          setLocation({ route: "workbench", code: null });
+          return;
+        }
+        if (target === "market") {
+          sessionStorage.removeItem("aka.s2.diag.once");
+          if (window.location.hash.startsWith("#/market")) return;
+          window.location.hash = "#/market";
+          setLocation({ route: "market", code: null });
+          return;
+        }
+        if (target !== "s2") return;
         if (window.location.hash.startsWith("#/workbench")) return;
         window.location.hash = "#/workbench";
         setLocation({ route: "workbench", code: null });

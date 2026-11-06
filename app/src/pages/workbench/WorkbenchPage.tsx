@@ -5,6 +5,8 @@ import { IndicatorReadouts } from "../../components/IndicatorReadouts";
 import { ParamPanel } from "../../components/ParamPanel";
 import { SimBadge } from "../../components/SimBadge";
 import { Watchlist } from "../../components/Watchlist";
+import { IndicatorDrawer } from "../../features/workbench/IndicatorDrawer";
+import { runDrawerDiagnostics } from "../../features/workbench/drawerDiag";
 import {
   B2_OVERLAY_CHOICES,
   B1_OVERLAY_CHOICES,
@@ -92,6 +94,16 @@ export function WorkbenchPage({
   // B2 主图叠加与副图选择：纯客户端切换，指标实例已全量下发
   const [overlayIds, setOverlayIds] = useState<string[]>(DEFAULT_B2_OVERLAYS);
   const [subId, setSubId] = useState<string>(DEFAULT_SUB_ID);
+  // S-02.04-01 指标抽屉：Esc 先关抽屉，不能再触发行情返回
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerOpenRef = useRef(false);
+  drawerOpenRef.current = drawerOpen;
+  const drawerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  // S-02.04-01：关闭后焦点回到触发按钮，键盘用户不丢位置
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+    window.requestAnimationFrame(() => drawerTriggerRef.current?.focus());
+  }, []);
   const [bars, setBars] = useState<BarsResponse | null>(null);
   const [calc, setCalc] = useState<CalcResponse | null>(null);
   // 供 diag 逐根比对读取「当前渲染帧」的引擎结果（effect 闭包不会随后续 render 更新）
@@ -181,6 +193,7 @@ export function WorkbenchPage({
       const tag = target?.tagName ?? "";
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
       if (event.key !== "Escape") return;
+      if (drawerOpenRef.current) return; // 先由抽屉自己关，Esc 不穿透到返回行情
       event.preventDefault();
       onNavigate("market");
     };
@@ -358,6 +371,35 @@ export function WorkbenchPage({
       alive = false;
     };
   }, [securities, nextSample, drainSamples]);
+
+  // S-02.04-01 指标抽屉取证：AKA_DIAG_TARGET=drawer 时在 manifest 就绪后自跑一次
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest) return;
+    if (window.sessionStorage.getItem("aka.drawer.diag.done") === "1") return;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      const enabled = target === "drawer" ? await ipc.diagEnabled() : false;
+      if (!enabled || !alive) return;
+      window.sessionStorage.setItem("aka.drawer.diag.done", "1");
+      setDiagStatus("S-02.04-01 取证：运行中");
+      try {
+        const report = await runDrawerDiagnostics(manifest);
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-02.04-01 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_DRAWER_EVIDENCE__ = report;
+      } catch (err) {
+        if (!alive) return;
+        setDiagStatus(`S-02.04-01 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest]);
 
   const security = securities.find((item) => item.code === activeCode);
   const lastIndex = bars && bars.bars.length > 0 ? bars.bars.length - 1 : -1;
@@ -565,6 +607,17 @@ export function WorkbenchPage({
                 )}
               </div>
 
+              <button
+                type="button"
+                className="btn"
+                ref={drawerTriggerRef}
+                data-drawer-trigger="1"
+                aria-expanded={drawerOpen}
+                onClick={() => (drawerOpen ? closeDrawer() : setDrawerOpen(true))}
+              >
+                指标
+              </button>
+
               <span className="caption">主图叠加</span>
               <select
                 className="b2-select"
@@ -649,6 +702,22 @@ export function WorkbenchPage({
                 </div>
               )}
             </div>
+
+            {drawerOpen && (
+              <IndicatorDrawer
+                manifest={manifest}
+                loading={loading && !manifest}
+                error={manifest ? null : error}
+                onRetry={() => window.location.reload()}
+                overlayIds={overlayIds}
+                subId={subId}
+                onAddMain={(id) =>
+                  setOverlayIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+                }
+                onAddSub={(id) => setSubId(id)}
+                onClose={closeDrawer}
+              />
+            )}
           </main>
 
           <ParamPanel

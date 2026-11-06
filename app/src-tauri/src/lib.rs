@@ -51,6 +51,14 @@ pub fn run() {
                 None => core,
             };
             app.manage(AppState::new(core));
+            // 取证运行：窗口被遮挡时 WKWebView 会节流/挂起定时器，诊断会卡在 await 上。
+            // 只在 AKA_DIAG=1 时把窗口钉到最前，正常启动行为不受影响。
+            if std::env::var("AKA_DIAG").ok().as_deref() == Some("1") {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_always_on_top(true);
+                    let _ = window.set_focus();
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
