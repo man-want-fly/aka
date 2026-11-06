@@ -15,6 +15,11 @@
 > 2026-11-06 S2 实机取证批次：`TD-S0-04 / 06 / 07` 的真实 Tauri 窗口取证完成，三条改「已清偿」，
 > 证据见 [`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md)。
 >
+> 2026-11-06 QA 复核修正：`TD-S0-04` 原判据写 `1→12→120`、证据为 `1→12→60`，QA 判「判据未逐字满足」。
+> BA 已书面裁定修订判据为「当前数据集可算范围内的最大合法档位（当前 60）」，见
+> [`aka-td-s0-04-criterion-ruling-v0.1.md`](./aka-td-s0-04-criterion-ruling-v0.1.md)。
+> **开发已按裁定更新状态行（2026-11-06）：按修订判据判「已清偿」；B 组 `1→12→60` 承担计算证据，A 组仅承担请求数证据；数据扩到 ≥540 根后判据自动回到 120 端。**
+>
 > 关联文档：[S0 验收清单](./aka-s0-acceptance-checklist-v0.1.md)、[README](../../app/README.md)。
 
 ## 总览
@@ -24,7 +29,7 @@
 | TD-S0-01 | T-01（部分） | DateRange 主链路已通，但周/月聚合与 T-01 完整验收证据未做 | 1.0 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-02 | T-05（实物） | dataset manifest 只有内存契约，无 `data/sim`、`data/real` 实物与 sha256 | 0.8 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-03 | QA-S0-015 | 周线聚合未实现，无法做 ISO 周手算对拍 | 0.4 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
-| TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
+| TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（按 R-S0-04-01 修订判据；B 组 `1→12→60` 取证） |
 | TD-S0-05 | QA-S0-028 | 无 `compute.count` / `compute.skip` 埋点，5 实例去重计数无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-06 | QA-S0-029 | 无 `indicator.cold_ms` 埋点，冷缓存 30 次 P95 无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
 | TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
@@ -80,7 +85,11 @@
 - **为什么 S1 可以带病开工**：B1 正确性由黄金夹具证明，不以日志为证据。
 - **偿还工作量**：0.2 人日。
 - **偿还时点**：S2 开工前 3.5 人日清零。
-- **清零判据**：连键 1→12→120 后日志仅 1 条，含 `code/period/adj/indicatorId/paramsHash/datasetId`。
+- **清零判据（2026-11-06 BA 裁定 R-S0-04-01 修订）**：在当前数据集可算范围内取周期控件**最大合法档位**
+  （当前 `60`；`120` 因 TEMA 预热 `540 > 520` 不可算），以 40ms 间隔连键 `1→12→N`，静默 120ms 后
+  `requestsIssued=1`、`compute.count` 增量 `=1`，且日志含 `code/period/adj/indicatorId/paramsHash/datasetId/barCount`。
+  数据集扩容到 ≥540 根后，最大合法档位自动变为 `120`，按同一判据验 `1→12→120`。
+  裁定记录：[`aka-td-s0-04-criterion-ruling-v0.1.md`](./aka-td-s0-04-criterion-ruling-v0.1.md)。
 
 ### TD-S0-05 · QA-S0-028 批量计算计数
 
@@ -168,6 +177,8 @@
   （2021-01-01 → 2020-W53，2024-12-30 → 2025-W01）；Python 独立对拍 mismatch 0（见 TD-S0-01）。
 
 ### TD-S0-04 · QA-S0-022 参数防抖日志 → 已清偿
+
+- **证据分层（按 R-S0-04-01）**：A 组 `1→12→120` 只证明 `requestsIssued=1`（120 撞 TEMA 预热，`computeDelta=0` 不计入）；计算证据以 B 组 `1→12→60` 的 `computeDelta=1` 为准。
 
 - **已落地**：`app-core::telemetry` 的 `indicator.compute` JSONL（字段 `code/period/adj/indicatorId/paramsHash/cacheKey/datasetId/barCount`）；
   `ParamDebouncer`（`TYPICAL_INPUT_GAP_MS=40`、`DEFAULT_DEBOUNCE_QUIET_MS=120`）；

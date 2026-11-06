@@ -463,7 +463,7 @@
       "specStatus": "partial",
       "status": "beta",
       "unit": "元",
-      "notes": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向取首两根收盘涨跌、首根 SAR 取反向极值、AF 0.02/0.02/0.2；未与商业软件逐点对照。"
+      "notes": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家不一致，A 股无公开公式可逐点核对；本实现取 Wilder 推荐值，取得商业软件对照后再定。"
     },
     {
       "id": "T23",

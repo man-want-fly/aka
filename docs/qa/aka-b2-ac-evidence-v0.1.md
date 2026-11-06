@@ -16,31 +16,32 @@
 
 > 证据层级只标 `[数据层]`；B2 尚未进入工作台 UI，**不存在渲染层证据**，故不挂任何 `[渲染层]` AC。
 
-| id | 名称 | manifest | 黄金夹具（case 数） | bench 520 p95 / 2500 p95（ms） | AC 证据 | 状态 |
+| id | 名称 | manifest | 黄金夹具（case 数） | bench 520 p95 / 2500 p95（ms） | AC 证据（数据层） | 状态 |
 |---|---|---|---|---|---|---|
-| T08 | 均线包络 | `manualComplete` / 2 参数 | 4 | 0.004 / 0.033 | 数值层已具备；无卡 | beta 否 |
-| T09 | 布林带 | `manualComplete` / 2 参数 | 4 | 0.058 / 0.204 | 数值层已具备；无卡 | beta 否 |
-| T10 | 肯特纳通道 | `manualComplete` / 2 参数 | 4 | 0.029 / 0.138 | 数值层已具备；无卡 | beta 否 |
-| T11 | 唐奇安通道 | `manualComplete` / 1 参数 | 4 | 0.060 / 0.206 | 数值层已具备；无卡 | beta 否 |
-| T12 | ATR 通道 | `manualComplete` / 2 参数 | 4 | 0.032 / 0.040 | 数值层已具备；无卡 | beta 否 |
-| T13 | ATR 移动止损 | `manualComplete` / 2 参数 | 4 | 0.024 / 0.074 | 数值层已具备；卡 AC-03.05-13 | normal（R-01） |
-| T14 | 吊灯止损 | `manualComplete` / 2 参数 | 4 | 0.078 / 0.315 | 数值层已具备；无卡 | beta 否 |
-| T15 | 一目均衡表 | `manualComplete` / 4 参数 | 4 | 0.221 / 1.047 | 数值层已具备；卡 AC-03.05-17~19 | normal（R-02） |
-| T16 | 抛物线转向 | `partial` / 3 参数 | 3 | 0.005 / 0.043 | 数值层已具备；卡 AC-03.05-21~23 | **beta（R-03 保留）** |
-| T23 | 轴心点 | `manualComplete` / 0 参数 | 3 | 0.002 / 0.014 | 数值层已具备；卡 AC-03.05-25~27 | normal（R-04） |
-| T24 | 最高最低 | `manualComplete` / 1 参数 | 3 | 0.043 / 0.193 | 数值层已具备；卡 AC-03.05-03~04 | normal（R-05） |
-| V01 | 真实波幅均值 | `manualComplete` / 1 参数 | 4 | 0.027 / 0.055 | 数值层已具备；无卡 | beta 否 |
-| V02 | 归一化 ATR | `manualComplete` / 1 参数 | 4 | 0.024 / 0.084 | 数值层已具备；无卡 | beta 否 |
-| V03 | 标准差 | `manualComplete` / 1 参数 | 4 | 0.061 / 0.193 | 数值层已具备；无卡 | beta 否 |
-| V04 | 布林带宽 | `manualComplete` / 2 参数 | 4 | 0.060 / 0.285 | 数值层已具备；无卡 | beta 否 |
-| V05 | 布林 %B | `manualComplete` / 2 参数 | 4 | 0.058 / 0.305 | 数值层已具备；无卡 | beta 否 |
-| V07 | 溃疡指数 | `manualComplete` / 1 参数 | 4 | 0.058 / 0.179 | 数值层已具备；无卡 | beta 否 |
-| V08 | GAPO 跳空 | `manualComplete` / 1 参数 | 4 | 0.019 / 0.074 | 数值层已具备；卡 AC-03.05-33~34 | normal（R-06） |
-| V09 | 振幅 | `manualComplete` / 0 参数 | 3 | 0.002 / 0.006 | 数值层已具备；无卡 | beta 否 |
-| V10 | 真实波幅 | `manualComplete` / 0 参数 | 3 | 0.003 / 0.043 | 数值层已具备；无卡 | beta 否 |
+| T08 | 均线包络 | `manualComplete` / 2 参数 | 4 | 0.004 / 0.033 | AC-03.05-01、04 | normal |
+| T09 | 布林带 | `manualComplete` / 2 参数 | 4 | 0.058 / 0.204 | AC-03.05-02、04 | normal |
+| T10 | 肯特纳通道 | `manualComplete` / 2 参数 | 4 | 0.029 / 0.138 | AC-03.05-11、15 | normal |
+| T11 | 唐奇安通道 | `manualComplete` / 1 参数 | 4 | 0.060 / 0.206 | AC-03.05-03、04 | normal |
+| T12 | ATR 通道 | `manualComplete` / 2 参数 | 4 | 0.032 / 0.040 | AC-03.05-12、15 | normal |
+| T13 | ATR 移动止损 | `manualComplete` / 2 参数 | 4 | 0.024 / 0.074 | AC-03.05-13、15 | normal（R-01） |
+| T14 | 吊灯止损 | `manualComplete` / 2 参数 | 4 | 0.078 / 0.315 | AC-03.05-14、15 | normal |
+| T15 | 一目均衡表 | `manualComplete` / 4 参数 | 4 | 0.221 / 1.047 | AC-03.05-17~19 | normal（R-02） |
+| T16 | 抛物线转向 | `partial` / 3 参数 | 3 | 0.005 / 0.043 | AC-03.05-21~23 | **beta（R-03 保留）** |
+| T23 | 轴心点 | `manualComplete` / 0 参数 | 3 | 0.002 / 0.014 | AC-03.05-25、26 | normal（R-04） |
+| T24 | 最高最低 | `manualComplete` / 1 参数 | 4 | 0.043 / 0.193 | AC-03.05-03、04 | normal（R-05） |
+| V01 | 真实波幅均值 | `manualComplete` / 1 参数 | 4 | 0.027 / 0.055 | AC-03.05-07、09 | normal |
+| V02 | 归一化 ATR | `manualComplete` / 1 参数 | 4 | 0.024 / 0.084 | AC-03.05-08、09 | normal |
+| V03 | 标准差 | `manualComplete` / 1 参数 | 4 | 0.061 / 0.193 | AC-03.05-28 | normal |
+| V04 | 布林带宽 | `manualComplete` / 2 参数 | 4 | 0.060 / 0.285 | AC-03.05-29 | normal |
+| V05 | 布林 %B | `manualComplete` / 2 参数 | 4 | 0.058 / 0.305 | AC-03.05-30 | normal |
+| V07 | 溃疡指数 | `manualComplete` / 1 参数 | 4 | 0.058 / 0.179 | AC-03.05-32、34 | normal |
+| V08 | GAPO 跳空 | `manualComplete` / 1 参数 | 5 | 0.019 / 0.074 | AC-03.05-33、34 | normal（R-06，ATR14） |
+| V09 | 振幅 | `manualComplete` / 0 参数 | 4 | 0.002 / 0.006 | AC-03.05-06、09 | normal |
+| V10 | 真实波幅 | `manualComplete` / 0 参数 | 5 | 0.003 / 0.043 | AC-03.05-06、09 | normal |
 
 - 性能阈值：520 根 ≤1.0ms、2500 根 ≤8.0ms（`bench/baselines/macos-x86_64.json` `thresholds`）；20 个指标 × 2 档 = **40 项全部 `pass`**，最大者为 T15 的 1.047ms（2500 根，阈值 8.0ms）。
-- 黄金夹具合计 **76 个 case**（B2 部分），全过：`bench/reports/golden-report.json` 中 `base_b2_channel_seed42_520` 20、`edge_b2_constant_ohlc` 20、`edge_b2_first_bar` 20、`edge_b2_insufficient` 16。
+- 黄金夹具合计 **81 个 case**（B2 部分）：`base_b2_channel_seed42_520` 20、`edge_b2_constant_ohlc` 20、`edge_b2_first_bar` 20、`edge_b2_insufficient` 16、`edge_b2_below_min_window` 4、`base_b2` 内 V08 额外 1 条 period=14。
+- 渲染层：8 条 AC（AC-03.05-05 / 10 / 16 / 20 / 24 / 27 / 31 / 35）随「B2 接入 UI」单独取证，见 §7。
 
 ## 2. 黄金夹具细目（独立参考实现）
 
@@ -51,7 +52,8 @@
 | `base_b2_channel_seed42_520` | 520 | 20 | 每指标 1 条基线，逐点对拍 |
 | `edge_b2_constant_ohlc` | 40 | 20 | 常数 OHLC 退化（带宽 0、GAPO 0、止损不翻转等） |
 | `edge_b2_first_bar` | 1 | 20 | 首根 NaN / 首根即有效（V09） |
-| `edge_b2_insufficient` | 20 | 16 | 预热不足：T08–T15、T24、V01–V05、V07、V08（无预热要求的 T16/T23/V09/V10 不入本套件） |
+| `edge_b2_insufficient` | 20 | 16 | 预热不足：T08–T15、T24、V01–V05、V07、V08 |
+| `edge_b2_below_min_window` | 1 | 4 | 输入不足最小窗口：T16/T23 全 NaN、V10 NaN、V09 单根振幅有效 |
 
 容差冻结（`indicator-golden/src/lib.rs`）：价格类 `relative:1e-6`；无量纲/比率类（V02 V04 V05 V07 V08）`absolute:1e-4`；T24 原始极值直取 `absolute:1e-9`（只允许手算夹具或 T24 收紧到 1e-9，禁止放宽）。
 
@@ -61,9 +63,9 @@
 
 | 项 | 现状 |
 |---|---|
-| B2 是否有卡 | **有**。BA 已补 8 张卡：`S-03.05-01` T24、`-02` T23、`-03` T13、`-04` T15、`-05` T16、`-06` T14、`-07` T10/T12、`-08` T08/T09/T11；加 `V01-V10` 汇总卡，覆盖 B2 全部 20 个指标 |
+| B2 是否有卡 | **有**（已入库）。8 张卡覆盖 20 个指标：`S-03.05-01` T08/T09/T11/T24（AC 01–05）、`-02` V01/V02/V09/V10（06–10）、`-03` T10/T12/T13/T14（11–16）、`-04` T15（17–20）、`-05` T16（21–24）、`-06` T23（25–27）、`-07` V03/V04/V05（28–31）、`-08` V07/V08（32–35） |
 | AC 挂接 | 按卡内 `AC-03.05-xx` 逐条挂接；数据层 AC 由黄金夹具 + 单测证明，渲染层 AC 随 UI 接入单独取证，不以「数值层已具备」冒充 |
-| 未覆盖项 | V01–V05、V07、V09、V10 的独立 AC 仍在 `S-03.05-08` 汇总卡内，未拆细；如需单指标 AC，待 BA 再拆 |
+| 未覆盖项 | 无未挂接指标；8 条渲染层 AC 在接入 UI 前保持「未做」 |
 | 可否结项 | **不可**。开发方不对 B2 下任何结项结论 |
 
 ## 4. beta 口径裁定（5 转 normal，1 保留）
