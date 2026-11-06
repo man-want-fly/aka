@@ -26,7 +26,7 @@ export const B1_FORMULAS: Record<string, CatalogFormula> = {
     tolerance: "价格口径 · relative 1e-6",
   },
   T19: {
-    formula: "OLS 拟合 y = a + b·x（x=0…N−1），Forecast = a + b·N（下一根预测值）。",
+    formula: "OLS 拟合 y = a + b·x（x=0…N−1），Forecast = a + b·(N−1)（当前根拟合值，不外推下一根）。",
     tolerance: "价格口径 · relative 1e-6",
   },
   T20: {

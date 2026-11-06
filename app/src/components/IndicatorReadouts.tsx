@@ -77,7 +77,7 @@ export function IndicatorReadouts({ series, barCount }: Props) {
               data-unit="无量纲"
               style={{ color: r2.outputs[0]?.color }}
             >
-              R² {latest(r2.outputs[0]?.values)?.toFixed(4) ?? "—"}
+              R² {latest(r2.outputs[0]?.values)?.toFixed(2) ?? "—"}
             </span>
             <span className="caption">无量纲</span>
             <Sparkline

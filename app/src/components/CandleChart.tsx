@@ -214,7 +214,7 @@ export function CandleChart({ bars, series, windowSize }: Props) {
         {view.visible.map((bar, index) => {
           const x = view.xOf(index);
           const rising = bar.close >= bar.open;
-          const color = rising ? "var(--rise)" : "var(--fall)";
+          const color = rising ? "var(--pos)" : "var(--neg)";
           const bodyTop = view.yOfPrice(Math.max(bar.open, bar.close));
           const bodyBottom = view.yOfPrice(Math.min(bar.open, bar.close));
           const bodyHeight = Math.max(1, bodyBottom - bodyTop);
@@ -229,6 +229,7 @@ export function CandleChart({ bars, series, windowSize }: Props) {
                 strokeWidth={0.9}
               />
               <rect
+                data-candle={rising ? "up" : "down"}
                 x={x - bodyWidth / 2}
                 y={bodyTop}
                 width={bodyWidth}
@@ -276,7 +277,7 @@ export function CandleChart({ bars, series, windowSize }: Props) {
               y={VOL_BOTTOM - height}
               width={bodyWidth}
               height={height}
-              fill={rising ? "var(--rise)" : "var(--fall)"}
+              fill={rising ? "var(--pos)" : "var(--neg)"}
               opacity={0.55}
             />
           );
@@ -287,23 +288,26 @@ export function CandleChart({ bars, series, windowSize }: Props) {
         <text x={RIGHT + 8} y={MACD_TOP + 10} fontSize={9.5} fill="var(--faint)" className="mono">
           MACD
         </text>
-        {view.hist.map((value, index) => {
-          if (value === null) return null;
-          const y = view.yOfMacd(value);
-          const top = Math.min(y, zeroY);
-          const height = Math.max(1, Math.abs(y - zeroY));
-          return (
-            <rect
-              key={`hist-${index}`}
-              x={view.xOf(index) - bodyWidth / 2}
-              y={top}
-              width={bodyWidth}
-              height={height}
-              fill={value >= 0 ? "var(--rise)" : "var(--fall)"}
-              opacity={0.42}
-            />
-          );
-        })}
+        <g data-macd="hist">
+          {view.hist.map((value, index) => {
+            if (value === null) return null;
+            const y = view.yOfMacd(value);
+            const top = Math.min(y, zeroY);
+            const height = Math.max(1, Math.abs(y - zeroY));
+            return (
+              <rect
+                key={`hist-${index}`}
+                data-hist={value >= 0 ? "pos" : "neg"}
+                x={view.xOf(index) - bodyWidth / 2}
+                y={top}
+                width={bodyWidth}
+                height={height}
+                fill={value >= 0 ? "var(--pos)" : "var(--neg)"}
+                opacity={0.42}
+              />
+            );
+          })}
+        </g>
         <path
           data-macd="dif"
           d={pathFor(view.dif, view.xOf, view.yOfMacd)}
@@ -391,8 +395,12 @@ export function CandleChart({ bars, series, windowSize }: Props) {
                 {line.unit ? ` ${line.unit}` : ""}
               </span>
             ))}
-            <span style={{ color: hoveredChg >= 0 ? "var(--rise)" : "var(--fall)" }}>
-              {formatPct(hoveredChg)}
+            <span
+              data-readout="chg"
+              data-sign={hoveredChg >= 0 ? "pos" : "neg"}
+              style={{ color: hoveredChg >= 0 ? "var(--pos)" : "var(--neg)" }}
+            >
+              {hoveredChg >= 0 ? "▲" : "▼"} {formatPct(hoveredChg)}
             </span>
           </>
         )}

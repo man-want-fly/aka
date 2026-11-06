@@ -63,3 +63,9 @@ html[data-colormode="greenUp"] {
   --rise-soft: var(--down-soft);
   --fall-soft: var(--up-soft);
 }
+
+/* 涨跌语义别名：图表/读数层统一用 --pos / --neg，配色仍由上面的 colormode 决定 */
+:root {
+  --pos: var(--rise);
+  --neg: var(--fall);
+}

@@ -104,6 +104,18 @@ export function nearestRankP95(values: number[]): number | null {
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
+/** 把 CSS 自定义属性解析成浏览器最终颜色（rgb/rgba 字符串），用于配色断言。 */
+function resolveColor(variable: string): string {
+  const probe = document.createElement("span");
+  probe.style.color = `var(${variable})`;
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  document.body.appendChild(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+}
+
 /** 渲染层证据：直接读真实 DOM（Tauri WebView 内），不依赖截图权限。 */
 async function collectRenderChecks(): Promise<Record<string, unknown>> {
   const attrs = (selector: string, name: string) =>
@@ -123,6 +135,7 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
   let maEntries: Array<{ id: string; value: string; unit: string; text: string }> = [];
   let hoverIndex = "";
   let hoverError: string | null = null;
+  let colorSamples: Record<string, string> = {};
   const svg = document.querySelector<SVGSVGElement>("[data-chart='candle']");
   if (svg) {
     try {
@@ -148,6 +161,23 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
           text: element.textContent?.trim() ?? "",
         }),
       );
+      // 配色三重编码：颜色（--pos/--neg）+ 箭头（▲/▼）+ 正负号
+      const upCandle = document.querySelector<SVGElement>("[data-candle='up']");
+      const downCandle = document.querySelector<SVGElement>("[data-candle='down']");
+      const histPos = document.querySelector<SVGElement>("[data-hist='pos']");
+      const histNeg = document.querySelector<SVGElement>("[data-hist='neg']");
+      const chg = document.querySelector<HTMLElement>("[data-readout='chg']");
+      colorSamples = {
+        posToken: resolveColor("--pos"),
+        negToken: resolveColor("--neg"),
+        upCandleStroke: upCandle ? getComputedStyle(upCandle).stroke : "",
+        downCandleStroke: downCandle ? getComputedStyle(downCandle).stroke : "",
+        histPosFill: histPos ? getComputedStyle(histPos).fill : "",
+        histNegFill: histNeg ? getComputedStyle(histNeg).fill : "",
+        chgColor: chg ? getComputedStyle(chg).color : "",
+        chgSign: chg?.getAttribute("data-sign") ?? "",
+        chgText: chg?.textContent?.trim() ?? "",
+      };
       svg.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
       await sleep(80);
     } catch (err) {
@@ -159,8 +189,24 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
     document.querySelectorAll("[data-readout='T21-r2'] [data-unit], [data-readout^='E13-'] [data-unit]"),
   ).map((element) => element.getAttribute("data-unit") ?? "");
   const decimalsOk = maEntries.every((entry) => /\d[.,]\d{2}/.test(entry.text));
+  const t21Text = document.querySelector("[data-readout='T21-r2']")?.textContent?.trim() ?? "";
+  const t21TwoDecimals = /R² [-+]?\d+\.\d{2}(?!\d)/.test(t21Text);
   const overlayCount = overlays.length;
   const macdCount = macd.length;
+  const histCount = document.querySelectorAll("[data-hist]").length;
+  const posColor = colorSamples.posToken;
+  const negColor = colorSamples.negToken;
+  const colorOk =
+    posColor !== "" &&
+    negColor !== "" &&
+    colorSamples.upCandleStroke === posColor &&
+    colorSamples.downCandleStroke === negColor &&
+    colorSamples.histPosFill === posColor &&
+    colorSamples.histNegFill === negColor &&
+    colorSamples.chgSign !== "" &&
+    colorSamples.chgColor === (colorSamples.chgSign === "pos" ? posColor : negColor) &&
+    /^[▲▼]/.test(colorSamples.chgText) &&
+    /^[▲]\s*\+/.test(colorSamples.chgText) === (colorSamples.chgSign === "pos");
   const statisticalCount = statistical.length;
   return {
     chartPresent: Boolean(svg),
@@ -168,9 +214,14 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
     overlayCount,
     macd,
     macdCount,
+    macdHistCount: histCount,
+    colorSamples,
+    colorOk,
     statisticalReadouts: statistical,
     statisticalReadoutCount: statisticalCount,
     statisticalUnits: unitLabels,
+    t21Text,
+    t21TwoDecimals,
     readoutHost,
     hoverIndex,
     maTooltipCount: tooltipBefore,
@@ -180,9 +231,12 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
     ok:
       Boolean(svg) &&
       overlayCount >= 8 &&
-      macdCount === 2 &&
+      macdCount === 3 &&
+      histCount >= 2 &&
+      colorOk &&
       statisticalCount >= 4 &&
       unitLabels.length >= 4 &&
+      t21TwoDecimals &&
       tooltipBefore >= 8 &&
       hoverIndex !== "" &&
       decimalsOk &&
@@ -340,7 +394,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
 
   // ---- 4. D/W/M 周期切换 ----
   // W 走完整 UI 链路（行情 + 指标）；M 在当前模拟数据集（520 根日线≈24 月）下
-  // 11 个 B1 指标都过不了预热阈值，因此 M 只取行情层聚合结果，并如实登记。
+  // 按 warmup+1 门：T02/T04/T05/M06 不可算，其余 7 项可算，故 M 只取行情层聚合，并如实登记。
   hooks.setPhase("cold");
   const timeframeSamples: Array<DiagSample & { timeframe: TimeframeCode }> = [];
   for (const tf of ["W", "D"] as TimeframeCode[]) {
@@ -481,7 +535,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
         datasetId: item.datasetId,
       })),
       monthlyNote:
-        "当前模拟数据集仅 520 根日线（≈24 个月），M 周期下 11 个 B1 指标均未达预热阈值，只取证到行情层聚合",
+        "当前模拟数据集仅 520 根日线（≈24 个月）；M 周期按 warmup+1 门：T02/T04/T05/M06 共 4 项不可算，T01/T03/T19/T20/T21/T22/E13 共 7 项可算；本次 M 只取证到行情层聚合",
     },
     verification: {
       renderLayer,
