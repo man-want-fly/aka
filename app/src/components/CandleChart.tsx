@@ -401,7 +401,15 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
                       cx={view.xOf(index)}
                       cy={view.yOfSub(value)}
                       r={1.8}
-                      fill={line.color}
+                      fill={
+                        view.subId === "M25" && line.key === "state"
+                          ? value > 0
+                            ? "var(--rise)"
+                            : value < 0
+                              ? "var(--fall)"
+                              : "#3b82f6"
+                          : line.color
+                      }
                     />
                   ) : null,
                 )}

@@ -521,6 +521,19 @@ async function collectB3RenderChecks(): Promise<Record<string, unknown>> {
       readouts.every((entry) =>
         entry.value !== "" ? Number.isFinite(Number(entry.value)) : entry.text.includes("—"),
       );
+    // Q-03：M25 state 必须按值三色（+1 红 / −1 绿 / 0 蓝），不得回落到 manifest 默认灰
+    let triColor: Record<string, unknown> | null = null;
+    if (id === "M25") {
+      const fills = Array.from(
+        document.querySelectorAll<SVGElement>("[data-sub='M25'] circle"),
+      ).map((circle) => getComputedStyle(circle).fill);
+      const unique = Array.from(new Set(fills));
+      triColor = {
+        fillCount: fills.length,
+        unique,
+        ok: unique.length >= 2 && unique.length <= 3 && !unique.includes("rgb(148, 163, 184)"),
+      };
+    }
     cards.push({
       id,
       nodes: nodes.length,
@@ -529,7 +542,12 @@ async function collectB3RenderChecks(): Promise<Record<string, unknown>> {
       paints,
       readouts: readouts.length,
       readoutOk,
-      ok: nodes.length === expect[id] && paintOk && readoutOk,
+      triColor,
+      ok:
+        nodes.length === expect[id] &&
+        paintOk &&
+        readoutOk &&
+        (triColor ? Boolean(triColor.ok) : true),
     });
   }
 

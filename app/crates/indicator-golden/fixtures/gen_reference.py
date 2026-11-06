@@ -632,10 +632,9 @@ def elder_impulse(closes, fast, slow, signal, ema_period):
     for i in range(1, len(closes)):
         if impulse[i] is None or impulse[i - 1] is None or hist[i] is None:
             continue
-        rising = impulse[i] > impulse[i - 1]
-        if hist[i] > 0.0 and rising:
+        if hist[i] > 0.0 and impulse[i] > impulse[i - 1]:
             state[i] = 1.0
-        elif hist[i] < 0.0 and not rising:
+        elif hist[i] < 0.0 and impulse[i] < impulse[i - 1]:
             state[i] = -1.0
         else:
             state[i] = 0.0

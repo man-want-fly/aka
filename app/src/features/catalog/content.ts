@@ -60,8 +60,8 @@ export const B3_FORMULAS: Record<string, CatalogFormula> = {
   },
   M02: {
     formula:
-      "RSV = (C − LLV(L,N))/(HHV(H,N) − LLV(L,N))×100；K = ((k−1)·K₋₁ + RSV)/k、D = ((d−1)·D₋₁ + K)/d，种子 K₀=D₀=50；J = 3K − 2D。N=9、k=d=3，首值下标 8。高低差为 0 时 RSV 取 50（beta 待裁定）。",
-    tolerance: "百分比振荡 · absolute 1e-4（beta）",
+      "RSV = (C − LLV(L,N))/(HHV(H,N) − LLV(L,N))×100；K = ((k−1)·K₋₁ + RSV)/k、D = ((d−1)·D₋₁ + K)/d，种子 K₀=D₀=50；J = 3K − 2D。N=9、k=d=3，首值下标 8。零区间 RSV=50、无额外预热；Q-01 已裁定（通达信基准）。",
+    tolerance: "百分比振荡 · absolute 1e-4",
   },
   M04: {
     formula:
@@ -103,13 +103,13 @@ export const B3_FORMULAS: Record<string, CatalogFormula> = {
   },
   M24: {
     formula:
-      "Mass = Σ[EMA9(H−L)/EMA9(EMA9(H−L))]，求和 25 根。首值下标 40 = 2×(9−1)+25−1。CSV 声明 warmup=30 与递推实算不一致（beta 待裁定）。",
-    tolerance: "无量纲比值 · relative 1e-6（beta）",
+      "Mass = Σ[EMA9(H−L)/EMA9(EMA9(H−L))]，求和 25 根。首值下标 40 = 2×(9−1)+25−1；warmup 40（CSV/PRD 原 30 为笔误）；Q-02 已裁定保留 40。",
+    tolerance: "无量纲比值 · relative 1e-6",
   },
   M25: {
     formula:
-      "脉冲线 = EMA13(2×(DIF−DEA))；状态 state ∈ {−1,0,1}：柱>0 且脉冲上行 → 1，柱<0 且脉冲下行 → −1，其余 0。默认 12/26/9/13，首值下标 46（state 需前一根脉冲）。三色规则与 EMA 对象存在多种实现（beta 待裁定）。",
-    tolerance: "副图 · absolute 1e-4（beta）",
+      "脉冲线 = EMA13(2×(DIF−DEA))；状态 state ∈ {−1,0,1}：柱>0 且脉冲严格上行 → +1，柱<0 且脉冲严格下行 → −1，其余 0。渲染色 +1 红 / −1 绿 / 0 蓝，与 Elder 原版「绿多红空」相反（本产品红涨绿跌）。默认 12/26/9/13，首值下标 46（state 需前一根脉冲）。Q-03 已裁定。",
+    tolerance: "副图 · absolute 1e-4",
   },
   M26: {
     formula: "range = H − L；当根振幅为近 7 根最小 → 1，否则 0。首值下标 6。",

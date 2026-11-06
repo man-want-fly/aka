@@ -128,7 +128,7 @@
 
 | 项 | 位置 |
 | --- | --- |
-| Manifest | `app/manifest/indicators.json`（14 条 B3，其中 M02 / M24 / M25 / M06 4 条 beta 已裁定，待开发转 `normal`） |
+| Manifest | `app/manifest/indicators.json`（14 条 B3，M02 / M24 / M25 / M06 已转 `normal` + `manualComplete`） |
 | 黄金夹具 | `base_b3_momentum_seed42_520`（14 case）、`edge_b3_constant_ohlc`（14）、`edge_b3_insufficient`（14）、`edge_b3_first_bar`（14） |
 | 夹具生成 | `python3 crates/indicator-golden/fixtures/gen_reference.py` |
 | 性能记录 | `app/bench/baselines/macos-<arch>.json`（44 指标 × 520/2500，共 88 case） |
@@ -144,5 +144,8 @@
 | M25 Elder Impulse | 柱系数、三色边界、脉冲对象 | 2× 柱 + `EMA13(柱)` + 先符号后差分；红多绿空蓝中性（Q-03） |
 | M06 MACD | 柱 2× vs 1× | 确认 2×，沿用 B1（Q-04） |
 
-> 四条均已定论，manifest 由开发统一转 `normal` / `manualComplete`；完整理由与可测断言见
-> [`b3-beta-rulings.md`](./b3-beta-rulings.md)。
+> 四条均已定论并落地：manifest 已转 `normal` / `manualComplete`，单测按裁定断言补齐。
+> 裁定表有两处手算与递推式不一致，已在实现与单测中按递推式实算修正并回报 BA：
+> ① Q-01-B 中 `(2×50+100)/3 = 66.6667`（不是 83.3333），D/J 随之；② 线性上涨时 MACD 柱收敛到 0，
+> 不满足 Q-03-A 的「hist>0」，改用指数上涨序列验证 +1，并对零附近残差按价格量级阈值判中性。
+> 完整理由与可测断言见 [`b3-beta-rulings.md`](./b3-beta-rulings.md)。

@@ -245,10 +245,10 @@
       ],
       "formulaRef": "docs/indicators/b1-trend-kernels.md#m06-macd",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "元",
-      "notes": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)；旧 id «macd» 保留 alias 一版。"
+      "notes": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)（A 股主流，Q-04 确认沿用 B1）；旧 id «macd» 保留 alias 一版。"
     },
     {
       "id": "T08",
@@ -736,10 +736,10 @@
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m02-kdj",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "%",
-      "notes": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100；K/D 以 50/50 为种子按 (N-1)/N 权重递推，J=3K-2D；首根有效值 8（0-based）。高低差为 0 时 RSV 取 50——beta 待裁定。"
+      "notes": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100；K/D 以 50/50 为种子按 (N-1)/N 权重递推，J=3K-2D；首根有效值 8（0-based）。零区间 RSV=50、种子 K=D=50、无额外预热、首值下标 8；Q-01 已裁定。"
     },
     {
       "id": "M04",
@@ -931,10 +931,10 @@
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m24-mass-index",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "比值",
-      "notes": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根；首根有效值 40=(9-1)×2+25-1。CSV 声明 warmup=30 与递推实算不一致——beta 待裁定。"
+      "notes": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根；首值下标 40；warmup 40（CSV/PRD 原 30 为笔误）；Q-02 已裁定。"
     },
     {
       "id": "M25",
@@ -956,10 +956,10 @@
       ],
       "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m25-elder-impulse",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "无量纲",
-      "notes": "impulse=EMA13(2×(DIF-DEA))；state∈{-1,0,1}：柱>0 且脉冲上行→1，柱<0 且下行→-1，其余 0；首根有效值 46（impulse 起 45，state 需前一根 impulse）。三色规则与 EMA 对象存在多种实现——beta 待裁定。"
+      "notes": "柱=2×(DIF-DEA)（复用 M06 口径）；脉冲=EMA13(柱)；状态 {+1,0,-1}：柱>0 且脉冲严格上行→+1，柱<0 且脉冲严格下行→-1，其余 0；渲染色 +1 红/−1 绿/0 蓝（与 Elder 原版相反）；首值 46；Q-03 已裁定。"
     },
     {
       "id": "M26",

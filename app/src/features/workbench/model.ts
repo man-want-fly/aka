@@ -45,10 +45,10 @@ export const B2_SUB_CHOICES: Array<{ id: string; label: string }> = [
   { id: "V10", label: "V10 TR" },
 ];
 
-/** B3 副图候选（13 个动量/摆动指标；M06 已在 B2 副图清单）。 */
+/** B3 副图候选（13 个动量/摆动指标；M06 已在 B2 副图清单）。Q-01~Q-04 已裁定，均不再标 beta。 */
 export const B3_SUB_CHOICES: Array<{ id: string; label: string }> = [
   { id: "M01", label: "M01 RSI" },
-  { id: "M02", label: "M02 KDJ（beta）" },
+  { id: "M02", label: "M02 KDJ" },
   { id: "M04", label: "M04 %R" },
   { id: "M05", label: "M05 CCI" },
   { id: "M08", label: "M08 PPO" },
@@ -57,8 +57,8 @@ export const B3_SUB_CHOICES: Array<{ id: string; label: string }> = [
   { id: "M19", label: "M19 Aroon" },
   { id: "M20", label: "M20 Vortex" },
   { id: "M21", label: "M21 CMO" },
-  { id: "M24", label: "M24 Mass Index（beta）" },
-  { id: "M25", label: "M25 Elder Impulse（beta）" },
+  { id: "M24", label: "M24 Mass Index" },
+  { id: "M25", label: "M25 Elder Impulse" },
   { id: "M26", label: "M26 NR7" },
 ];
 

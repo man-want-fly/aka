@@ -553,10 +553,11 @@ impl Indicator for ElderImpulse {
             if !impulse[i].is_finite() || !impulse[i - 1].is_finite() || !hist[i].is_finite() {
                 continue;
             }
-            let rising = impulse[i] > impulse[i - 1];
-            let state = if hist[i] > 0.0 && rising {
+            // 线性行情下 DIF/DEA 收敛到同一仿射函数，柱只剩浮点残差；按价格量级的相对阈值判零，避免噪声触发 ±1
+            let eps = 1e-9 * view.close[i].abs().max(1.0);
+            let state = if hist[i] > eps && impulse[i] > impulse[i - 1] {
                 1.0
-            } else if hist[i] < 0.0 && !rising {
+            } else if hist[i] < -eps && impulse[i] < impulse[i - 1] {
                 -1.0
             } else {
                 0.0
@@ -598,10 +599,6 @@ impl Indicator for Nr7 {
         }
         Ok(())
     }
-}
-
-fn warmup_period(params: &Params) -> usize {
-    period_of(params, 20)
 }
 
 fn warmup_period_minus_one(params: &Params) -> usize {
@@ -750,5 +747,105 @@ mod tests {
         params.insert("fast".to_string(), crate::ParamValue::Int(30));
         let mut out = vec![vec![0.0; 520]; 2];
         assert!(indicator.calc(&view, &params, &mut out).is_err());
+    }
+
+    fn calc_ohlc(id: &str, high: &[f64], low: &[f64], close: &[f64], params: &Params) -> Vec<Vec<f64>> {
+        let view = OhlcvView::new(close, high, low, close, close, close);
+        let indicator = crate::lookup(id).unwrap();
+        let mut out = vec![vec![0.0; close.len()]; indicator.meta().outputs.len()];
+        indicator.calc(&view, params, &mut out).unwrap();
+        out
+    }
+
+    /// Q-01：零区间 RSV=50、种子 50、无额外预热（首值下标 8）、K/D/J 三线。
+    #[test]
+    fn kdj_rulings_q01() {
+        let flat = vec![10.0; 9];
+        let out = calc_ohlc(M02_ID, &flat, &flat, &flat, &Params::new());
+        assert!(out.iter().all(|column| column[..8].iter().all(|value| value.is_nan())));
+        assert!((out[0][8] - 50.0).abs() <= 1e-9);
+        assert!((out[1][8] - 50.0).abs() <= 1e-9);
+        assert!((out[2][8] - 50.0).abs() <= 1e-9);
+
+        let close: Vec<f64> = (0..30).map(|i| 10.0 + i as f64).collect();
+        // 裁定表按 RSV=100 手算 K/D/J：H=L=C 时窗口高低差恰为 100%，C±1 会得到 RSV=90
+        let out = calc_ohlc(M02_ID, &close, &close, &close, &Params::new());
+        assert!(out.iter().all(|column| column[7].is_nan()));
+        // 按裁定给的递推式 (2×50+100)/3 实算为 66.6667；裁定表写的 83.3333/77.7778 手算有误（已回报 BA）
+        assert!((out[0][8] - 66.6667).abs() <= 1e-4);
+        assert!((out[1][8] - 55.5556).abs() <= 1e-4);
+        assert!((out[2][8] - 88.8889).abs() <= 1e-4);
+
+        let mut params = Params::new();
+        params.insert("k".to_string(), crate::ParamValue::Int(2));
+        params.insert("d".to_string(), crate::ParamValue::Int(2));
+        let out = calc_ohlc(M02_ID, &close, &close, &close, &params);
+        assert!(out[0][..8].iter().all(|value| value.is_nan()));
+        assert!((out[0][8] - 75.0).abs() <= 1e-9);
+        assert!((out[1][8] - 62.5).abs() <= 1e-9);
+    }
+
+    /// Q-02：Mass 首值下标 40；range 恒 2 时 Mass=25；range=0 时 NaN。
+    #[test]
+    fn mass_index_rulings_q02() {
+        let high = vec![11.0; 60];
+        let low = vec![9.0; 60];
+        let close = vec![10.0; 60];
+        let out = calc_ohlc(M24_ID, &high, &low, &close, &Params::new());
+        assert!(out[0][..40].iter().all(|value| value.is_nan()));
+        assert!((out[0][40] - 25.0).abs() <= 1e-9);
+        assert!((out[0][59] - 25.0).abs() <= 1e-9);
+
+        let flat = vec![10.0; 60];
+        let out = calc_ohlc(M24_ID, &flat, &flat, &flat, &Params::new());
+        assert!(out[0].iter().all(|value| value.is_nan()));
+    }
+
+    /// Q-03：柱 2×、先符号后差分、等值取 0；常数序列不出 ±1。
+    #[test]
+    fn elder_impulse_rulings_q03() {
+        // 线性上涨时 DIF/DEA 收敛，柱趋近 0，无法满足「hist>0 且脉冲上行」；用指数上涨构造持续正柱
+        let close: Vec<f64> = (0..60).map(|i| 10.0 * 1.01f64.powi(i)).collect();
+        let high: Vec<f64> = close.iter().map(|value| value + 1.0).collect();
+        let low: Vec<f64> = close.iter().map(|value| value - 1.0).collect();
+        let out = calc_ohlc(M25_ID, &high, &low, &close, &Params::new());
+        assert!(out[0][..45].iter().all(|value| value.is_nan()));
+        assert!(out[1][45].is_nan());
+        assert!(out[1][46..].iter().all(|value| *value == 1.0));
+        let (_, _, hist) = macd_columns(
+            &OhlcvView::new(&close, &high, &low, &close, &close, &close),
+            12,
+            26,
+            9,
+        );
+        assert!(hist[33..].iter().all(|value| *value > 0.0));
+
+        let flat = vec![10.0; 60];
+        let out = calc_ohlc(M25_ID, &flat, &flat, &flat, &Params::new());
+        assert!(out[1][46..].iter().all(|value| *value == 0.0));
+    }
+
+    /// Q-04：M06 柱 = 2×(DIF−DEA)，与 M25 复用的柱逐根一致。
+    #[test]
+    fn macd_hist_is_double_dif_minus_dea() {
+        let (high, low, close, _) = sample(40);
+        let out = run("M06", 40);
+        for i in 0..40 {
+            if out[2][i].is_finite() {
+                assert!((out[2][i] - 2.0 * (out[0][i] - out[1][i])).abs() <= 1e-9);
+            }
+        }
+        let (_, _, hist) = macd_columns(
+            &OhlcvView::new(&close, &high, &low, &close, &close, &close),
+            12,
+            26,
+            9,
+        );
+        for i in 0..40 {
+            assert!(hist[i].is_nan() == out[2][i].is_nan());
+            if hist[i].is_finite() {
+                assert!((hist[i] - out[2][i]).abs() <= 1e-9);
+            }
+        }
     }
 }
