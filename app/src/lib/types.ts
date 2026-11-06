@@ -107,6 +107,8 @@ export interface ManifestIndicatorDto {
   nameEn: string;
   abbr: string;
   pinyinInitials: string;
+  /** 中文名全拼，用于 `junxian` 这类整词拼音搜索 */
+  pinyinFull: string;
   category: Category;
   inputs: InputsDto;
   params: ManifestParam[];
@@ -122,6 +124,12 @@ export interface ManifestIndicatorDto {
   formulaSummary: string;
   priority: "P0" | "P1";
   warmupBars: number;
+  /** PRD 附录 A 完备度：完整 / 部分 / beta */
+  completeness: "完整" | "部分" | "beta";
+  /** 本产品补全口径（T03、M24、F04、F10、F12、F16） */
+  isCompletion: boolean;
+  /** PRD 附录 A 的默认参数展示文本（如 `12 / 26 / 9`） */
+  defaultParamsText: string;
 }
 
 /** 指标目录的单一事实来源；前端指标列表一律由它生成。 */

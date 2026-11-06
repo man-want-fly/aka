@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { StateCard } from "../../components/StateCard";
+import { Highlight, PANEL_LABEL, searchIndicators } from "../indicators/search";
 import { MAX_MAIN_OVERLAYS, MAX_SUBPLOTS } from "./model";
 import type { AppError, Category, ManifestIndicatorDto, ManifestResponse } from "../../lib/types";
 
@@ -12,65 +13,7 @@ const CATEGORY_LABELS: Array<{ key: Category; label: string }> = [
   { key: "breadth", label: "广度" },
 ];
 
-const PANEL_LABEL: Record<string, string> = { 主: "主图", 副: "副图" };
-
 const panelKey = (item: ManifestIndicatorDto) => (item.panel === "主" ? "main" : "sub");
-
-/** 有序子序列匹配：`md` → `MACD`（M…D），用于缩写/英文/拼音首字母的模糊命中。 */
-const isSubsequence = (needle: string, hay: string) => {
-  let index = 0;
-  for (const char of hay) {
-    if (char === needle[index]) index += 1;
-    if (index === needle.length) return true;
-  }
-  return needle.length === 0;
-};
-
-/**
- * 返回命中强度：0 未命中，1 子序列，2 子串，3 前缀，4 完全相等。
- * 名称（中文/英文）只做子串与前缀；缩写/拼音首字母额外允许子序列，
- * 但子序列只在「无空格且不超过 6 个字符」的短代号上生效——
- * 否则 `MACD` 会通过 m→a→c→d 误命中长英文名（如 Performance Spread）。
- */
-const matchRank = (item: ManifestIndicatorDto, rawQuery: string) => {
-  const query = rawQuery.trim().toLowerCase();
-  if (!query) return 0;
-  const loose = [item.abbr, item.nameEn, item.pinyinInitials, ...(item.aliases ?? [])];
-  const tight = [item.nameZh, item.nameEn, ...(item.aliases ?? [])];
-  let best = 0;
-  for (const field of loose) {
-    const text = field.toLowerCase();
-    if (!text) continue;
-    if (text === query) best = Math.max(best, 4);
-    else if (text.startsWith(query)) best = Math.max(best, 3);
-    else if (text.includes(query)) best = Math.max(best, 2);
-    else if (!text.includes(" ") && text.length <= 6 && isSubsequence(query, text)) {
-      best = Math.max(best, 1);
-    }
-  }
-  for (const field of tight) {
-    const text = field.toLowerCase();
-    if (!text) continue;
-    if (text.startsWith(query)) best = Math.max(best, 3);
-    else if (text.includes(query)) best = Math.max(best, 2);
-  }
-  return best;
-};
-
-/** 命中片段高亮（只对子串/前缀命中生效，子序列命中不强标）。 */
-function Highlight({ text, query }: { text: string; query: string }) {
-  const needle = query.trim();
-  if (!needle) return <>{text}</>;
-  const at = text.toLowerCase().indexOf(needle.toLowerCase());
-  if (at < 0) return <>{text}</>;
-  return (
-    <>
-      {text.slice(0, at)}
-      <mark>{text.slice(at, at + needle.length)}</mark>
-      {text.slice(at + needle.length)}
-    </>
-  );
-}
 
 export interface IndicatorDrawerProps {
   manifest: ManifestResponse | null;
@@ -139,16 +82,11 @@ export function IndicatorDrawer({
 
   const list = useMemo(() => {
     const text = debounced.trim();
-    if (text) {
-      return items
-        .map((item) => ({ item, rank: matchRank(item, text) }))
-        .filter((entry) => entry.rank > 0)
-        .sort((a, b) => b.rank - a.rank || a.item.nameZh.localeCompare(b.item.nameZh, "zh-Hans-CN"))
-        .map((entry) => entry.item);
-    }
+    if (text) return searchIndicators(items, text);
     return items
       .filter((item) => item.category === category)
-      .sort((a, b) => a.nameZh.localeCompare(b.nameZh, "zh-Hans-CN"));
+      .slice()
+      .sort((a, b) => a.id.localeCompare(b.id));
   }, [items, category, debounced]);
 
   const pick = (item: ManifestIndicatorDto) => {
@@ -323,7 +261,9 @@ export function IndicatorDrawer({
                         <span>{PANEL_LABEL[item.panel] ?? item.panel}</span>
                         {item.priority === "P1" && <span className="tag tag--warn">P1</span>}
                         {planned && <span className="tag tag--muted">规划中</span>}
-                        {item.status === "beta" && <span className="tag tag--beta">BETA</span>}
+                        {item.completeness === "beta" && (
+                          <span className="tag tag--beta">BETA</span>
+                        )}
                         {params && (
                           <span className="mono ind-row__params" data-drawer-param-text="1">
                             {params}
@@ -357,8 +297,8 @@ export function IndicatorDrawer({
         )}
       </div>
 
-      <footer className="ind-drawer__foot caption">
-        目录 105 条 · 由 manifest 单一事实来源生成 · Esc 关闭
+      <footer className="ind-drawer__foot caption" data-drawer-total={items.length}>
+        目录 {items.length} 条 · 由 manifest 单一事实来源生成 · Esc 关闭
       </footer>
     </aside>
   );

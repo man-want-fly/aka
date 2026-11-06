@@ -60,6 +60,9 @@ pub struct ManifestIndicator {
     /// 中文名拼音首字母（如 `kdj`），用于拼音搜索
     #[serde(default)]
     pub pinyin_initials: String,
+    /// 中文名全拼（如 `suijizhibiao`），用于 `junxian` 这类整词拼音搜索
+    #[serde(default)]
+    pub pinyin_full: String,
     /// 面板归属：`主` / `副`
     #[serde(default)]
     pub panel: String,
@@ -72,6 +75,15 @@ pub struct ManifestIndicator {
     /// PRD 附录 A 的预热根数（文档用途，实际以 `warmup` 纯函数为准）
     #[serde(default)]
     pub warmup_bars: usize,
+    /// PRD 附录 A 完备度：`完整` / `部分` / `beta`
+    #[serde(default)]
+    pub completeness: String,
+    /// 是否是本产品补全口径（T03/M24/F04/F10/F12/F16）
+    #[serde(default)]
+    pub is_completion: bool,
+    /// PRD 附录 A 的默认参数展示文本（如 `12 / 26 / 9`），目录行内摘要用
+    #[serde(default)]
+    pub default_params_text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -328,6 +340,16 @@ mod tests {
             assert!(item.panel == "主" || item.panel == "副", "{} 面板非法：{}", item.id, item.panel);
             assert!(!item.formula_summary.is_empty(), "{} 缺公式摘要", item.id);
             assert!(item.priority == "P0" || item.priority == "P1", "{} 优先级非法", item.id);
+            assert!(
+                matches!(item.completeness.as_str(), "完整" | "部分" | "beta"),
+                "{} 完备度非法：{}",
+                item.id,
+                item.completeness
+            );
+            // 已实现指标的默认参数由 params 派生；规划项才需要 PRD 文本兜底
+            if item.status == "planned" {
+                assert!(!item.default_params_text.is_empty(), "{} 缺默认参数文本", item.id);
+            }
         }
         assert_eq!(
             counts,

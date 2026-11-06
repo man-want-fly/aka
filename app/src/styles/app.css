@@ -1334,3 +1334,153 @@ mark {
   color: inherit;
   border-radius: 2px;
 }
+
+/* P3 指标目录（S-03.01-01）：左列表按分类懒挂载，右栏为单条口径详情 */
+.catalog-page {
+  display: grid;
+  grid-template-columns: minmax(360px, 460px) 1fr;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.catalog-list {
+  border-right: 1px solid var(--line);
+  padding: 16px 12px;
+  overflow: auto;
+  min-height: 0;
+}
+
+.catalog-detail {
+  min-height: 0;
+}
+
+.catalog-cat {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.catalog-cat:hover {
+  background: var(--surface2);
+}
+
+.catalog-cat__count {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.catalog-rows {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.catalog-row {
+  border: 1px solid transparent;
+  border-radius: var(--r2);
+}
+
+.catalog-row:hover {
+  background: var(--surface2);
+  border-color: var(--line);
+}
+
+.catalog-row--planned {
+  opacity: 0.55;
+}
+
+.catalog-row__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+}
+
+.catalog-row__select {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.catalog-row__id {
+  flex: none;
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.catalog-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.catalog-row__abbr {
+  flex: none;
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.catalog-row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.catalog-row__toggle {
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.catalog-row__toggle:hover {
+  color: var(--text);
+}
+
+.catalog-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.catalog-summary dt {
+  margin-bottom: 2px;
+  color: var(--faint);
+  font-size: 10px;
+}
+
+.catalog-summary dd {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.tag--accent {
+  border-color: var(--accent);
+  color: var(--accent);
+}

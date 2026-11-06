@@ -53,7 +53,11 @@
       "panel": "主",
       "formulaSummary": "N 日算术平均",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "jiandanyidongpingjunxian"
     },
     {
       "id": "T02",
@@ -95,7 +99,11 @@
       "panel": "主",
       "formulaSummary": "前 N 根 SMA 作种子，α=2/(N+1) 递推",
       "priority": "P0",
-      "warmupBars": 60
+      "warmupBars": 60,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "zhishuyidongpingjunxian"
     },
     {
       "id": "T03",
@@ -137,7 +145,11 @@
       "panel": "主",
       "formulaSummary": "权重 1..N，最新一根权重最大",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": true,
+      "defaultParamsText": "",
+      "pinyinFull": "jiaquanyidongpingjunxian"
     },
     {
       "id": "T04",
@@ -179,7 +191,11 @@
       "panel": "主",
       "formulaSummary": "DEMA=2·E1-E2，E2=EMA(E1,N)",
       "priority": "P0",
-      "warmupBars": 60
+      "warmupBars": 60,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "shuangchongzhishuyidongpingjunxian"
     },
     {
       "id": "T05",
@@ -221,7 +237,11 @@
       "panel": "主",
       "formulaSummary": "TEMA=3·E1-3·E2+E3",
       "priority": "P0",
-      "warmupBars": 90
+      "warmupBars": 90,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "sanchongzhishuyidongpingjunxian"
     },
     {
       "id": "T06",
@@ -253,9 +273,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 40
+      "notes": "规划中（未上线）：默认参数 N=20 · √N 取整（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "HMA：默认参数 N=20 · √N 取整；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 40,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "N=20 · √N 取整",
+      "pinyinFull": "heerjunxian"
     },
     {
       "id": "T07",
@@ -287,9 +311,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 40
+      "notes": "规划中（未上线）：默认参数 10 / 2 / 30（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "KAMA：默认参数 10 / 2 / 30；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 40,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "10 / 2 / 30",
+      "pinyinFull": "zishiyingjunxian"
     },
     {
       "id": "T08",
@@ -353,7 +381,11 @@
       "panel": "主",
       "formulaSummary": "中轨=SMA(close,N)",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "junxianbaoluo"
     },
     {
       "id": "T09",
@@ -416,7 +448,11 @@
       "panel": "主",
       "formulaSummary": "中轨=SMA(close,N)",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "bulindai"
     },
     {
       "id": "T10",
@@ -481,7 +517,11 @@
       "panel": "主",
       "formulaSummary": "中轨=EMA(close,N)",
       "priority": "P0",
-      "warmupBars": 40
+      "warmupBars": 40,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "kentenatongdao"
     },
     {
       "id": "T11",
@@ -530,7 +570,11 @@
       "panel": "主",
       "formulaSummary": "上轨=近 N 根最高价",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "tangqiantongdao"
     },
     {
       "id": "T12",
@@ -595,7 +639,11 @@
       "panel": "主",
       "formulaSummary": "中轨=SMA(close,N)",
       "priority": "P0",
-      "warmupBars": 60
+      "warmupBars": 60,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "tongdao"
     },
     {
       "id": "T13",
@@ -654,7 +702,11 @@
       "panel": "主",
       "formulaSummary": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空",
       "priority": "P0",
-      "warmupBars": 40
+      "warmupBars": 40,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "yidongzhisun"
     },
     {
       "id": "T14",
@@ -713,7 +765,11 @@
       "panel": "主",
       "formulaSummary": "多头=HHV(high,N)-k×ATR(N)",
       "priority": "P0",
-      "warmupBars": 40
+      "warmupBars": 40,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "diaodengzhisun"
     },
     {
       "id": "T15",
@@ -808,7 +864,11 @@
       "panel": "主",
       "formulaSummary": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2",
       "priority": "P0",
-      "warmupBars": 90
+      "warmupBars": 90,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "yimujunhengbiao"
     },
     {
       "id": "T16",
@@ -870,7 +930,11 @@
       "panel": "主",
       "formulaSummary": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家不一致，A 股无公开公式可逐点核对",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "paowuxianzhuanxiang"
     },
     {
       "id": "T17",
@@ -902,9 +966,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 60
+      "notes": "规划中（未上线）：默认参数 13/8/5 · 位移 8（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Alligator：默认参数 13/8/5 · 位移 8；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 60,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "13/8/5 · 位移 8",
+      "pinyinFull": "eyuxian"
     },
     {
       "id": "T18",
@@ -936,9 +1004,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 12
+      "notes": "规划中（未上线）：默认参数 阈值 5%（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "ZigZag：默认参数 阈值 5%；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 12,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "阈值 5%",
+      "pinyinFull": "zhizizhuanxiang"
     },
     {
       "id": "T19",
@@ -980,7 +1052,11 @@
       "panel": "主",
       "formulaSummary": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "xianxinghuiguiyuce"
     },
     {
       "id": "T20",
@@ -1022,7 +1098,11 @@
       "panel": "主",
       "formulaSummary": "窗口首根（x=0）的拟合值，等于 intercept",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "xianxinghuiguijieju"
     },
     {
       "id": "T21",
@@ -1064,7 +1144,11 @@
       "panel": "主",
       "formulaSummary": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "xianxinghuigui"
     },
     {
       "id": "T22",
@@ -1106,7 +1190,11 @@
       "panel": "主",
       "formulaSummary": "窗口内每根 K 线的价格变化量（元/根）",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "xianxinghuiguixielv"
     },
     {
       "id": "T23",
@@ -1152,7 +1240,11 @@
       "panel": "主",
       "formulaSummary": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根",
       "priority": "P0",
-      "warmupBars": 1
+      "warmupBars": 1,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "zhouxindian"
     },
     {
       "id": "T24",
@@ -1201,7 +1293,11 @@
       "panel": "主",
       "formulaSummary": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": true,
+      "defaultParamsText": "",
+      "pinyinFull": "zuigaozuidi"
     },
     {
       "id": "M01",
@@ -1243,7 +1339,11 @@
       "panel": "副",
       "formulaSummary": "Wilder 平滑涨幅/跌幅，RSI=100-100/(1+RS)",
       "priority": "P0",
-      "warmupBars": 14
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "xiangduiqiangruozhishu"
     },
     {
       "id": "M02",
@@ -1317,7 +1417,11 @@
       "panel": "副",
       "formulaSummary": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100",
       "priority": "P0",
-      "warmupBars": 9
+      "warmupBars": 9,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "suijizhibiao"
     },
     {
       "id": "M03",
@@ -1349,9 +1453,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 28
+      "notes": "规划中（未上线）：默认参数 14 · 14 · 3/3（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "StochRSI：默认参数 14 · 14 · 3/3；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 28,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "14 · 14 · 3/3",
+      "pinyinFull": "suiji"
     },
     {
       "id": "M04",
@@ -1395,7 +1503,11 @@
       "panel": "副",
       "formulaSummary": "%R=(HHV(H,N)-C)/(HHV(H,N)-LLV(L,N))×-100，值域 [-100,0]",
       "priority": "P0",
-      "warmupBars": 14
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "weilianzhibiao"
     },
     {
       "id": "M05",
@@ -1439,7 +1551,11 @@
       "panel": "副",
       "formulaSummary": "TP=(H+L+C)/3",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "shunshizhibiao"
     },
     {
       "id": "M06",
@@ -1513,7 +1629,11 @@
       "panel": "副",
       "formulaSummary": "DIF=EMA(fast)-EMA(slow)",
       "priority": "P0",
-      "warmupBars": 34
+      "warmupBars": 34,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "zhishupinghuayitongyidongpingjunxian"
     },
     {
       "id": "M07",
@@ -1543,9 +1663,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 34
+      "notes": "规划中（未上线）：默认参数 12/26/9 · ATR 14（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "MACD-V：默认参数 12/26/9 · ATR 14；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 34,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "12/26/9 · ATR 14",
+      "pinyinFull": "guiyihua"
     },
     {
       "id": "M08",
@@ -1611,7 +1735,11 @@
       "panel": "副",
       "formulaSummary": "PPO=(EMA(fast)-EMA(slow))/EMA(slow)×100",
       "priority": "P0",
-      "warmupBars": 34
+      "warmupBars": 34,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "baifenbijiagezhendangqi"
     },
     {
       "id": "M09",
@@ -1653,7 +1781,11 @@
       "panel": "副",
       "formulaSummary": "ROC=(C-C[-N])/C[-N]×100",
       "priority": "P0",
-      "warmupBars": 12
+      "warmupBars": 12,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "biandonglv"
     },
     {
       "id": "M10",
@@ -1695,7 +1827,11 @@
       "panel": "副",
       "formulaSummary": "MOM=C-C[-N]，差额单位元",
       "priority": "P0",
-      "warmupBars": 10
+      "warmupBars": 10,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "dongliang"
     },
     {
       "id": "M11",
@@ -1727,9 +1863,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 45
+      "notes": "规划中（未上线）：默认参数 12 · 9（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "TRIX：默认参数 12 · 9；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 45,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "12 · 9",
+      "pinyinFull": "sanchongzhishupinghua"
     },
     {
       "id": "M12",
@@ -1761,9 +1901,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 20（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "DPO：默认参数 20；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 20,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "20",
+      "pinyinFull": "ququshijiage"
     },
     {
       "id": "M13",
@@ -1795,9 +1939,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 40
+      "notes": "规划中（未上线）：默认参数 35 / 20 / 10（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "PMO：默认参数 35 / 20 / 10；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 40,
+      "completeness": "beta",
+      "isCompletion": false,
+      "defaultParamsText": "35 / 20 / 10",
+      "pinyinFull": "jiagedongliangzhendang"
     },
     {
       "id": "M14",
@@ -1829,9 +1977,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 30
+      "notes": "规划中（未上线）：默认参数 14 / 11 / 10（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Coppock：默认参数 14 / 11 / 10；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 30,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "14 / 11 / 10",
+      "pinyinFull": "kebokequxian"
     },
     {
       "id": "M15",
@@ -1863,9 +2015,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 40
+      "notes": "规划中（未上线）：默认参数 10/15/20/30（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "KST：默认参数 10/15/20/30；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 40,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "10/15/20/30",
+      "pinyinFull": "zhishijiezou"
     },
     {
       "id": "M16",
@@ -1897,9 +2053,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 30
+      "notes": "规划中（未上线）：默认参数 7 / 14 / 28（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Ultimate：默认参数 7 / 14 / 28；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 30,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "7 / 14 / 28",
+      "pinyinFull": "zhongjizhendang"
     },
     {
       "id": "M17",
@@ -1931,9 +2091,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 40
+      "notes": "规划中（未上线）：默认参数 25 / 13（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "TSI：默认参数 25 / 13；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 40,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "25 / 13",
+      "pinyinFull": "zhenshiqiangdu"
     },
     {
       "id": "M18",
@@ -1965,9 +2129,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 10
+      "notes": "规划中（未上线）：默认参数 3 / 2 / 100（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "ConnorsRSI：默认参数 3 / 2 / 100；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 10,
+      "completeness": "beta",
+      "isCompletion": false,
+      "defaultParamsText": "3 / 2 / 100",
+      "pinyinFull": "kangnasi"
     },
     {
       "id": "M19",
@@ -2017,7 +2185,11 @@
       "panel": "副",
       "formulaSummary": "Up=100×(N-距最高价根数)/N，Down 同理取最低价",
       "priority": "P0",
-      "warmupBars": 25
+      "warmupBars": 25,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "alongzhibiao"
     },
     {
       "id": "M20",
@@ -2067,7 +2239,11 @@
       "panel": "副",
       "formulaSummary": "VI+=Σ|H_i-L_{i-1}|/ΣTR，VI-=Σ|L_i-H_{i-1}|/ΣTR，窗口 N",
       "priority": "P0",
-      "warmupBars": 14
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "woxuanzhibiao"
     },
     {
       "id": "M21",
@@ -2109,7 +2285,11 @@
       "panel": "副",
       "formulaSummary": "CMO=100×(Σ涨幅-Σ跌幅)/(Σ涨幅+Σ跌幅)，窗口 N",
       "priority": "P0",
-      "warmupBars": 14
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "qiandedongliangbaidongzhibiao"
     },
     {
       "id": "M22",
@@ -2141,9 +2321,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "CMB：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 20,
+      "completeness": "beta",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "zonghedongliang"
     },
     {
       "id": "M23",
@@ -2175,9 +2359,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 30
+      "notes": "规划中（未上线）：默认参数 6 框架（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Chande Trend：默认参数 6 框架；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 30,
+      "completeness": "beta",
+      "isCompletion": false,
+      "defaultParamsText": "6 框架",
+      "pinyinFull": "qiandequshiji"
     },
     {
       "id": "M24",
@@ -2230,7 +2418,11 @@
       "panel": "副",
       "formulaSummary": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根",
       "priority": "P0",
-      "warmupBars": 40
+      "warmupBars": 40,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "zhiliangzhishu"
     },
     {
       "id": "M25",
@@ -2305,7 +2497,11 @@
       "panel": "副",
       "formulaSummary": "eps_i=1e-9×max(abs(C[i]),1.0)（按当根收盘价，非全局常数）",
       "priority": "P0",
-      "warmupBars": 46
+      "warmupBars": 46,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "aierdemaichong"
     },
     {
       "id": "M26",
@@ -2349,7 +2545,11 @@
       "panel": "副",
       "formulaSummary": "range=H-L",
       "priority": "P0",
-      "warmupBars": 7
+      "warmupBars": 7,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "zhaifu"
     },
     {
       "id": "V01",
@@ -2393,7 +2593,11 @@
       "panel": "副",
       "formulaSummary": "TR 首根 NaN",
       "priority": "P0",
-      "warmupBars": 14
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "zhenshibofujunzhi"
     },
     {
       "id": "V02",
@@ -2437,7 +2641,11 @@
       "panel": "副",
       "formulaSummary": "ATRP=ATR/收盘，无量纲比值（非百分数）",
       "priority": "P0",
-      "warmupBars": 14
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "guiyihua"
     },
     {
       "id": "V03",
@@ -2479,7 +2687,11 @@
       "panel": "副",
       "formulaSummary": "样本标准差（ddof=1）",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "biaozhuncha"
     },
     {
       "id": "V04",
@@ -2530,7 +2742,11 @@
       "panel": "副",
       "formulaSummary": "带宽=(上轨-下轨)/中轨=2kσ/SMA",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "bulindaikuan"
     },
     {
       "id": "V05",
@@ -2581,7 +2797,11 @@
       "panel": "副",
       "formulaSummary": "%B=(C-下轨)/(上轨-下轨)",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "bulin"
     },
     {
       "id": "V06",
@@ -2613,9 +2833,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 50
+      "notes": "规划中（未上线）：默认参数 20/20 · 2σ/1.5ATR（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "TTM Squeeze：默认参数 20/20 · 2σ/1.5ATR；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 50,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "20/20 · 2σ/1.5ATR",
+      "pinyinFull": "jiya"
     },
     {
       "id": "V07",
@@ -2657,7 +2881,11 @@
       "panel": "副",
       "formulaSummary": "回撤=(C-窗口峰值)/窗口峰值×100",
       "priority": "P0",
-      "warmupBars": 14
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "kuiyangzhishu"
     },
     {
       "id": "V08",
@@ -2702,7 +2930,11 @@
       "panel": "副",
       "formulaSummary": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向",
       "priority": "P0",
-      "warmupBars": 20
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "tiaokong"
     },
     {
       "id": "V09",
@@ -2735,7 +2967,11 @@
       "panel": "副",
       "formulaSummary": "单根 H-L（元），首根即有效",
       "priority": "P0",
-      "warmupBars": 2
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "zhenfu"
     },
     {
       "id": "V10",
@@ -2769,7 +3005,11 @@
       "panel": "副",
       "formulaSummary": "TR=max(H-L, |H-PC|, |L-PC|)",
       "priority": "P0",
-      "warmupBars": 2
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "zhenshibofu"
     },
     {
       "id": "D01",
@@ -2801,9 +3041,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "OBV：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "nengliangchao"
     },
     {
       "id": "D02",
@@ -2833,9 +3077,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "A/D Line：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "leijipaifaxian"
     },
     {
       "id": "D03",
@@ -2867,9 +3115,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 20（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "CMF：默认参数 20；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "20",
+      "pinyinFull": "qiandezijinliu"
     },
     {
       "id": "D04",
@@ -2901,9 +3153,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 3 / 10（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Chaikin Osc：默认参数 3 / 10；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "3 / 10",
+      "pinyinFull": "caijinzhendang"
     },
     {
       "id": "D05",
@@ -2935,9 +3191,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 14
+      "notes": "规划中（未上线）：默认参数 14（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "MFI：默认参数 14；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "14",
+      "pinyinFull": "zijinliuliang"
     },
     {
       "id": "D06",
@@ -2969,9 +3229,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 14
+      "notes": "规划中（未上线）：默认参数 13 · EMA（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Force Index：默认参数 13 · EMA；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 14,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "13 · EMA",
+      "pinyinFull": "liduzhishu"
     },
     {
       "id": "D07",
@@ -3003,9 +3267,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 14
+      "notes": "规划中（未上线）：默认参数 14（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "EOM：默认参数 14；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 14,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "14",
+      "pinyinFull": "jianyibodong"
     },
     {
       "id": "D08",
@@ -3037,9 +3305,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "NVI：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 2,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "fuliangzhibiao"
     },
     {
       "id": "D09",
@@ -3071,9 +3343,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "PVI：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 2,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "zhengliangzhibiao"
     },
     {
       "id": "D10",
@@ -3105,9 +3381,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 34
+      "notes": "规划中（未上线）：默认参数 12 / 26 · 9（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "PVO：默认参数 12 / 26 · 9；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 34,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "12 / 26 · 9",
+      "pinyinFull": "liangnengzhendang"
     },
     {
       "id": "D11",
@@ -3139,9 +3419,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 5
+      "notes": "规划中（未上线）：默认参数 5（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "RVOL：默认参数 5；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 5,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "5",
+      "pinyinFull": "liangbi"
     },
     {
       "id": "D12",
@@ -3173,9 +3457,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "BOP：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "duokongliliang"
     },
     {
       "id": "D13",
@@ -3207,9 +3495,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 累计（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "VWAP：默认参数 累计；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "累计",
+      "pinyinFull": "chengjiaoliangjiaquanjia"
     },
     {
       "id": "D14",
@@ -3241,9 +3533,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 锚点（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Anchored VWAP：默认参数 锚点；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "锚点",
+      "pinyinFull": "maoding"
     },
     {
       "id": "D15",
@@ -3275,9 +3571,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 60
+      "notes": "规划中（未上线）：默认参数 分箱 60（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Volume Profile：默认参数 分箱 60；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 60,
+      "completeness": "beta",
+      "isCompletion": false,
+      "defaultParamsText": "分箱 60",
+      "pinyinFull": "choumafenbu"
     },
     {
       "id": "E01",
@@ -3309,9 +3609,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 基准 沪深300（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Price Relative：默认参数 基准 沪深300；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "基准 沪深300",
+      "pinyinFull": "jiagexiangduiqiangdu"
     },
     {
       "id": "E02",
@@ -3343,9 +3647,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 60
+      "notes": "规划中（未上线）：默认参数 60 · 横截面（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "RS Percentile：默认参数 60 · 横截面；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 60,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "60 · 横截面",
+      "pinyinFull": "fenwei"
     },
     {
       "id": "E03",
@@ -3377,9 +3685,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 60
+      "notes": "规划中（未上线）：默认参数 自建等权（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "SCTR：默认参数 自建等权；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 60,
+      "completeness": "beta",
+      "isCompletion": false,
+      "defaultParamsText": "自建等权",
+      "pinyinFull": "pingfen"
     },
     {
       "id": "E04",
@@ -3411,9 +3723,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "RRG Ratio：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 20,
+      "completeness": "beta",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": ""
     },
     {
       "id": "E05",
@@ -3445,9 +3761,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "RRG Momentum：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 20,
+      "completeness": "beta",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "dongliang"
     },
     {
       "id": "E06",
@@ -3479,9 +3799,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 20（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Performance Spread：默认参数 20；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "20",
+      "pinyinFull": "shouyicha"
     },
     {
       "id": "E07",
@@ -3513,9 +3837,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 60
+      "notes": "规划中（未上线）：默认参数 60（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Correlation：默认参数 60；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 60,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "60",
+      "pinyinFull": "xiangguanxishu"
     },
     {
       "id": "E08",
@@ -3547,9 +3875,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Median Price：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "zhongweijia"
     },
     {
       "id": "E09",
@@ -3581,9 +3913,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Typical Price：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "dianxingjia"
     },
     {
       "id": "E10",
@@ -3615,9 +3951,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Weighted Close：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "jiaquanshoupan"
     },
     {
       "id": "E11",
@@ -3649,9 +3989,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 20（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Distance From High：默认参数 20；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "20",
+      "pinyinFull": "jugaodian"
     },
     {
       "id": "E12",
@@ -3683,9 +4027,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 20（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Distance From Low：默认参数 20；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "20",
+      "pinyinFull": "judidian"
     },
     {
       "id": "E13",
@@ -3757,7 +4105,11 @@
       "panel": "副",
       "formulaSummary": "BIAS=(C-SMA_N)/SMA_N×100%",
       "priority": "P0",
-      "warmupBars": 6
+      "warmupBars": 6,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "",
+      "pinyinFull": "guaililv"
     },
     {
       "id": "E14",
@@ -3789,9 +4141,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 250
+      "notes": "规划中（未上线）：默认参数 12 月（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Seasonality：默认参数 12 月；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 250,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "12 月",
+      "pinyinFull": "jijiexiaoying"
     },
     {
       "id": "F01",
@@ -3823,9 +4179,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 样本池 N（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "ADL：默认参数 样本池 N；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "样本池 N",
+      "pinyinFull": "zhangdiexian"
     },
     {
       "id": "F02",
@@ -3857,9 +4217,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 样本池 N（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "AD Percent：默认参数 样本池 N；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "样本池 N",
+      "pinyinFull": "zhangdiebilv"
     },
     {
       "id": "F03",
@@ -3891,9 +4255,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 样本池 N（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "AD Volume：默认参数 样本池 N；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "样本池 N",
+      "pinyinFull": "zhangdieliangxian"
     },
     {
       "id": "F04",
@@ -3923,9 +4291,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 样本池 N（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "AD Volume %：默认参数 样本池 N；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": true,
+      "defaultParamsText": "样本池 N",
+      "pinyinFull": "zhangdieliangzhanbi"
     },
     {
       "id": "F05",
@@ -3957,9 +4329,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 39
+      "notes": "规划中（未上线）：默认参数 19 / 39（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "McClellan Osc：默认参数 19 / 39；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 39,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "19 / 39",
+      "pinyinFull": "maikelailunzhendang"
     },
     {
       "id": "F06",
@@ -3991,9 +4367,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 39
+      "notes": "规划中（未上线）：默认参数 19 / 39（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "McClellan Sum：默认参数 19 / 39；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 39,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "19 / 39",
+      "pinyinFull": "maikelailunleiji"
     },
     {
       "id": "F07",
@@ -4025,9 +4405,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 20
+      "notes": "规划中（未上线）：默认参数 20 / 60（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "BPI：默认参数 20 / 60；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 20,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "20 / 60",
+      "pinyinFull": "zhanshangjunxianzhanbi"
     },
     {
       "id": "F08",
@@ -4057,9 +4441,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 250
+      "notes": "规划中（未上线）：默认参数 250（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "High-Low Index：默认参数 250；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 250,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "250",
+      "pinyinFull": "xingaoxindizhishu"
     },
     {
       "id": "F09",
@@ -4089,9 +4477,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 250
+      "notes": "规划中（未上线）：默认参数 250（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "High-Low %：默认参数 250；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 250,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "250",
+      "pinyinFull": "xingaoxindizhanbi"
     },
     {
       "id": "F10",
@@ -4123,9 +4515,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 250
+      "notes": "规划中（未上线）：默认参数 250（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Net New Highs：默认参数 250；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 250,
+      "completeness": "完整",
+      "isCompletion": true,
+      "defaultParamsText": "250",
+      "pinyinFull": "jingxingaojiashu"
     },
     {
       "id": "F11",
@@ -4157,9 +4553,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 60
+      "notes": "规划中（未上线）：默认参数 20 / 60（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Percent Above MA：默认参数 20 / 60；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 60,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "20 / 60",
+      "pinyinFull": "zhanshangzhanbi"
     },
     {
       "id": "F12",
@@ -4189,9 +4589,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 250
+      "notes": "规划中（未上线）：默认参数 250（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Record High %：默认参数 250；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 250,
+      "completeness": "完整",
+      "isCompletion": true,
+      "defaultParamsText": "250",
+      "pinyinFull": "lishixingaozhanbi"
     },
     {
       "id": "F13",
@@ -4223,9 +4627,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 样本池 N（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "TRIN：默认参数 样本池 N；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "样本池 N",
+      "pinyinFull": "zhishu"
     },
     {
       "id": "F14",
@@ -4257,9 +4665,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 30
+      "notes": "规划中（未上线）：默认参数 —（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Pring Diffusion：口径待《技术指标全能手册》核定（无默认参数）",
+      "warmupBars": 30,
+      "completeness": "部分",
+      "isCompletion": false,
+      "defaultParamsText": "—",
+      "pinyinFull": "pulinkuosan"
     },
     {
       "id": "F15",
@@ -4291,9 +4703,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 2
+      "notes": "规划中（未上线）：默认参数 样本池 N · A 股特有（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Limit Ratio：默认参数 样本池 N · A 股特有；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 2,
+      "completeness": "完整",
+      "isCompletion": false,
+      "defaultParamsText": "样本池 N · A 股特有",
+      "pinyinFull": "zhangdietingjiashubi"
     },
     {
       "id": "F16",
@@ -4325,9 +4741,13 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：口径与默认参数以 PRD 附录 A 为准。",
-      "formulaSummary": "规划中，公式与参数待实现",
-      "warmupBars": 10
+      "notes": "规划中（未上线）：默认参数 10（PRD 附录 A）；公式口径待《技术指标全能手册》核定，由 BA 拍板。",
+      "formulaSummary": "Breadth Thrust：默认参数 10；公式口径待《技术指标全能手册》核定",
+      "warmupBars": 10,
+      "completeness": "完整",
+      "isCompletion": true,
+      "defaultParamsText": "10",
+      "pinyinFull": "guangdutupo"
     }
   ]
 }

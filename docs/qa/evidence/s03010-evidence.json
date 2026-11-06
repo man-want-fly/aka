@@ -1,0 +1,132 @@
+{
+  "ok": true,
+  "finishedAt": "2026-11-06T21:30:00.301Z",
+  "context": {
+    "manifestCount": 105,
+    "declaredTotal": 105,
+    "planned": 61,
+    "p0": 84,
+    "categories": {
+      "trend": 24,
+      "momentum": 26,
+      "volatility": 10,
+      "volume": 15,
+      "stat": 14,
+      "breadth": 16
+    }
+  },
+  "checks": [
+    {
+      "id": "D-01",
+      "ac": "AC-03.01-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "manifest 105 / 声明 105 / 趋势 24 动量 26 波动 10 量能 15 统计 14 广度 16 / 加总 105 / P0 84 P1 21 / 规划中 61"
+    },
+    {
+      "id": "D-02",
+      "ac": "AC-03.01-01(补1)",
+      "layer": "data",
+      "passed": true,
+      "detail": "补全口径 6（T03,T24,F04,F10,F12,F16）/ beta 8（M13,M18,M22,M23,D15,E03,E04,E05）"
+    },
+    {
+      "id": "D-03",
+      "ac": "AC-03.01-04",
+      "layer": "data",
+      "passed": true,
+      "detail": "缺 abbr/pinyin/panel/formula/默认参数：无"
+    },
+    {
+      "id": "D-04",
+      "ac": "AC-03.01-03",
+      "layer": "data",
+      "passed": true,
+      "detail": "junxian 10（T08,F07,M06,T01,T02,T03,T04,T05,T06,T07）/ md 命中 M06=true / MACD 首行 M06"
+    },
+    {
+      "id": "D-05",
+      "ac": "S-03.01-03",
+      "layer": "data",
+      "passed": true,
+      "detail": "注册表 44 条 / 默认值不一致：无"
+    },
+    {
+      "id": "R-01",
+      "ac": "AC-03.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "首行「105 条 · P0 84 / P1 21 · 规划中 61」/ DOM 计数 trend:24 momentum:26 volatility:10 volume:15 stat:14 breadth:16 / 加总 105"
+    },
+    {
+      "id": "R-02",
+      "ac": "AC-03.01-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "首屏挂载 24 行（T01…T24）/ 展开分类 1 个"
+    },
+    {
+      "id": "R-03",
+      "ac": "AC-03.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "六分类全部展开后 DOM 105 行 / 唯一 id 105"
+    },
+    {
+      "id": "R-04",
+      "ac": "AC-03.01-01(补1)",
+      "layer": "render",
+      "passed": true,
+      "detail": "T03 补全口径=1 P0=P0 规划=beta / 文案「T03加权移动平均线WMA主图补全口径摘要」"
+    },
+    {
+      "id": "R-05",
+      "ac": "AC-03.01-01(补1)",
+      "layer": "render",
+      "passed": true,
+      "detail": "M13 beta=beta P1=P1 规划=planned / 文案「M13价格动量振荡PMO副图P1beta规划中摘要」"
+    },
+    {
+      "id": "R-06",
+      "ac": "AC-03.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "搜索 MACD → 2 行（M06,M07），首行 M06"
+    },
+    {
+      "id": "R-07",
+      "ac": "AC-03.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "搜索 md → 4 行（D14,F05,M06,M07）"
+    },
+    {
+      "id": "R-08",
+      "ac": "AC-03.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "搜索 junxian → 10 行（T08,F07,M06,T01,T02,T03,T04,T05,T06,T07），均含“均线”=true"
+    },
+    {
+      "id": "R-09",
+      "ac": "AC-03.01-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "T01 摘要「默认参数20数据要求至少 20 根 K 线（首个有效值下标 19，0 基）适用周期日线 · 周线 · 月线口径来源PRD 附录 A · 引擎 v1」"
+    },
+    {
+      "id": "R-10",
+      "ac": "AC-03.01-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "M06 摘要「默认参数12 / 26 / 9数据要求至少 34 根 K 线（首个有效值下标 33，0 基）适用周期日线 · 周线 · 月线口径来源PRD 附录 A · 引擎 v1」"
+    },
+    {
+      "id": "R-11",
+      "ac": "AC-03.01-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "T03 摘要「默认参数20数据要求至少 20 根 K 线（首个有效值下标 19，0 基）适用周期日线 · 周线 · 月线口径来源本产品补全口径 · PRD 附录 A」"
+    }
+  ]
+}
