@@ -1,0 +1,118 @@
+{
+  "suite": "E-01 market",
+  "startedAt": "2026-11-06T18:17:41.451Z",
+  "finishedAt": "2026-11-06T18:17:42.994Z",
+  "ok": true,
+  "checks": [
+    {
+      "id": "D-01",
+      "ac": "AC-01.01-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "rows=120 sampleCount=120 dataDate=2024-12-27"
+    },
+    {
+      "id": "D-02",
+      "ac": "AC-01.01-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "全部=120 沪=48 深=46 创=17 科=9"
+    },
+    {
+      "id": "D-03",
+      "ac": "AC-01.01-01(补2)",
+      "layer": "data",
+      "passed": true,
+      "detail": "前 4 行成交额：399001=143054788399833.62 / 000001=19131215562958.02 / 399006=7175438595817.98 / 600519=182829114055.87"
+    },
+    {
+      "id": "R-01",
+      "ac": "AC-01.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "页头=\"样本 120 只 · 2024-12-27 收盘\" 徽标=\"SIM · 模拟数据\""
+    },
+    {
+      "id": "R-02",
+      "ac": "AC-01.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "DOM 行数=120 全文档=120 去重=120 页脚=\"当前 120 行\" 重复= 前3=399001.SZ[1430547.88 亿元] / 000001.SH[191312.16 亿元] / 399006.SZ[71754.39 亿元] 子节点=HEAD:-:no-attr | ROW:399001.SZ:attr | ROW:000001.SH:attr | ROW:399006.SZ:attr 序列=399001.SZ,000001.SH,399006.SZ,600519.SH,002594.SZ,601029.SH,601018.SH,601014.SH,002138.SZ,002128.SZ,300112.SZ,601033.SH 数据重复=0"
+    },
+    {
+      "id": "R-03",
+      "ac": "AC-01.01-01(补1)",
+      "layer": "render",
+      "passed": true,
+      "detail": "符号异常=0 停牌异常=0 "
+    },
+    {
+      "id": "R-04",
+      "ac": "AC-01.01-01(补2)",
+      "layer": "render",
+      "passed": true,
+      "detail": "DOM 前 4 行成交额=143054788399833.62 / 19131215562958.02 / 7175438595817.98 / 182829114055.87"
+    },
+    {
+      "id": "R-05",
+      "ac": "AC-01.01-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "DOM={\"all\":120,\"sh\":48,\"sz\":46,\"chinext\":17,\"star\":9} data={\"all\":120,\"sh\":48,\"sz\":46,\"chinext\":17,\"star\":9}"
+    },
+    {
+      "id": "R-06",
+      "ac": "AC-01.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "方向=asc 首行 399001.SZ→002134.SZ"
+    },
+    {
+      "id": "R-07",
+      "ac": "AC-01.01-03(补2)",
+      "layer": "render",
+      "passed": true,
+      "detail": "空值 3 行；尾部代码=000001.SH,399001.SZ,399006.SZ"
+    },
+    {
+      "id": "R-08",
+      "ac": "AC-01.01-03(补1)",
+      "layer": "render",
+      "passed": true,
+      "detail": "state.db={\"board\":\"chinext\",\"columns\":[\"code\",\"name\",\"lastPrice\",\"changePct\",\"changeAbs\",\"amount\",\"turnoverPct\"],\"sortDir\":\"desc\",\"sortKey\":\"turnoverPct\"} 当前分区行数=17"
+    },
+    {
+      "id": "R-09",
+      "ac": "AC-02.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "报价头=宁德时代 / 300750.SZ hash=#/workbench/300750.SZ"
+    },
+    {
+      "id": "R-10",
+      "ac": "AC-01.01-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "分区=chinext 排序=desc 隐藏列=已隐藏 选中=300750.SZ 滚动差=0px"
+    },
+    {
+      "id": "R-11",
+      "ac": "AC-01.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "↑↓ 300750.SZ→300111.SZ Enter 进入=300111.SZ"
+    }
+  ],
+  "context": {
+    "snapshotRows": 120,
+    "sampleCount": 120,
+    "dataDate": "2024-12-27",
+    "boardCounts": {
+      "all": 120,
+      "sh": 48,
+      "sz": 46,
+      "chinext": 17,
+      "star": 9
+    }
+  }
+}
