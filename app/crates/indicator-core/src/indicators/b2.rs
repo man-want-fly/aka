@@ -3,9 +3,8 @@
 //! 本文件是 B2 的 append-only 注册模块：不改动 B1 内核 API，只追加指标结构与
 //! `warmup` 纯函数。所有公式细节见 `docs/indicators/b2-channel-volatility.md`。
 //!
-//! 口径标记：
-//! - `beta`：T13（状态机的翻空/翻多阈值）、T15（位移的 NaN 对齐）、T16（PSAR 初始化）、
-//!   T23（日/周由图表周期决定，不设参数）、T24（规划标「完整▲」）、V08（GAPO 跳空口径）。
+//! 口径标记：六条原 `beta`（T13/T15/T16/T23/T24/V08）已由 `docs/indicators/b2-beta-rulings.md`
+//! 的 R-01 ~ R-06 裁定；其中 5 条转 `manualComplete`，T16 按 R-03 保留 beta。
 
 use crate::kernels::{
     ema, rolling_max, rolling_min, rolling_std, sma, true_range, wilder_of_valid,
@@ -213,7 +212,7 @@ impl Indicator for AtrBands {
 
 /// T13 ATR 移动止损：多空状态机，未激活一侧输出 `NaN`。
 ///
-/// 状态定义（beta）：首根有效 ATR 处按 `close >= prev_close` 定为多头，止损 =
+/// 状态定义（裁定 R-01）：首根有效 ATR 处按 `close >= prev_close` 定为多头，止损 =
 /// `close - k*ATR`；收盘跌破前值止损时翻空并把空头止损设为 `close + k*ATR`；
 /// 反之翻多。已冻结的一侧沿用旧值，避免线条跳变。
 pub struct AtrTrail;
@@ -375,7 +374,7 @@ fn midline(view: &OhlcvView<'_>, period: usize) -> Vec<f64> {
     out
 }
 
-/// T16 抛物线转向（Wilder PSAR）。beta：初始方向与首根 SAR 取上一根极值。
+/// T16 抛物线转向（Wilder PSAR）。裁定 R-03：初始方向取首两根收盘涨跌，首根 SAR 取反向极值。
 pub struct Psar;
 
 impl Indicator for Psar {
@@ -436,7 +435,7 @@ impl Indicator for Psar {
 
 /// T23 轴心点：由上一根 H/L/C 推导 P / R1 / S1。
 ///
-/// beta：日/周口径由图表周期（D/W）决定，指标本身不设 `basis` 参数；
+/// 裁定 R-04：日/周口径由图表周期（D/W/M）决定，指标本身不设 `basis` 参数；
 /// 周线图上即得到周轴心点。
 pub struct Pivot;
 
@@ -629,7 +628,7 @@ impl Indicator for Ulcer {
 
 /// V08 GAPO：跳空相对 ATR 的百分比。
 ///
-/// beta：规划仅写「跳空持续口径」，本实现取 `(open - prev_close) / ATR * 100`。
+/// 裁定 R-06：`(open - prev_close) / ATR(period) * 100`（默认 14），保留正负号，不筛同向跳空。
 pub struct Gapo;
 
 impl Indicator for Gapo {
@@ -640,7 +639,7 @@ impl Indicator for Gapo {
     fn calc(&self, view: &OhlcvView<'_>, params: &Params, out: &mut [Vec<f64>]) -> Result<(), CalcError> {
         ensure_shape(view, out, 1, V08_ID)?;
         out[0].fill(f64::NAN);
-        let period = period_of(params, 20);
+        let period = period_of(params, 14);
         let atr = atr_series(view, period);
         for i in 1..view.len() {
             let previous = view.close[i - 1];

@@ -586,6 +586,7 @@ def b2_cases(data):
         case("V05", {"period": 20, "mult": 2.0}, ["percentB"], {"percentB": percent_b(c, 20, 2.0)}),
         case("V07", {"period": 14}, ["ulcer"], {"ulcer": ulcer(c, 14)}),
         case("V08", {"period": 20}, ["gapo"], {"gapo": gapo(o, c, h, l, 20)}),
+        case("V08", {"period": 14}, ["gapo"], {"gapo": gapo(o, c, h, l, 14)}),
         case("V09", {}, ["amplitude"], {"amplitude": amplitude(h, l)}),
         case("V10", {}, ["tr"], {"tr": true_range(h, l, c)}),
     ]

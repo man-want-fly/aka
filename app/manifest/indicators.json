@@ -386,10 +386,10 @@
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t13-atr-trail",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "元",
-      "notes": "多空状态机：多头止损=max(前值, C-k×ATR)，C 跌破前值翻空；空头对称。翻空阈值口径为自定，暂标 beta；未激活一侧 NaN。"
+      "notes": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空；翻空当根冻结旧值，空头止损重置为 C+k×ATR。未激活一侧 NaN。"
     },
     {
       "id": "T14",
@@ -437,10 +437,10 @@
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t15-ichimoku",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "元",
-      "notes": "转换/基准=(HHV+LLV)/2；先行带 A/B 向未来位移 D 根；迟行线向后位移 D 根；未来段输出 NaN。位移的尾部对齐口径待人工校对，暂标 beta。"
+      "notes": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2；先行带 A/B 右移 D 根，末尾 D 根留白；迟行线取 D 根前收盘，前 D 根留白。"
     },
     {
       "id": "T16",
@@ -463,7 +463,7 @@
       "specStatus": "partial",
       "status": "beta",
       "unit": "元",
-      "notes": "Wilder 抛物线转向；首根有效值第 2 根。初始方向与首根 SAR 取值口径为自定，暂标 beta。"
+      "notes": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向取首两根收盘涨跌、首根 SAR 取反向极值、AF 0.02/0.02/0.2；未与商业软件逐点对照。"
     },
     {
       "id": "T23",
@@ -481,10 +481,10 @@
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t23-pivot",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "元",
-      "notes": "P=(H+L+C)/3，R1=2P-L，S1=2P-H，取上一根；日/周口径由图表周期 D/W 决定，指标不设参数；该映射待人工校对，暂标 beta。"
+      "notes": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根；日/周/月由图表周期决定，不设参数；只输出 P/R1/S1。"
     },
     {
       "id": "T24",
@@ -503,10 +503,10 @@
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#t24-hhvllv",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "元",
-      "notes": "近 N 根最高价/最低价，原始值直取；首根有效值 N-1。规划标「完整▲」，边界说明待补，暂标 beta。"
+      "notes": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出；首根有效值 N-1。"
     },
     {
       "id": "V01",
@@ -645,17 +645,17 @@
       "category": "volatility",
       "inputs": { "open": true, "high": true, "low": true, "close": true },
       "params": [
-        { "kind": "int", "key": "period", "label": "ATR 周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+        { "kind": "int", "key": "period", "label": "ATR 周期", "min": 2, "max": 200, "default": 14, "step": 1 }
       ],
       "outputs": [
         { "key": "gapo", "labelZh": "GAPO", "kind": "line", "color": "#f59e0b" }
       ],
       "formulaRef": "docs/indicators/b2-channel-volatility.md#v08-gapo",
       "version": 1,
-      "specStatus": "partial",
-      "status": "beta",
+      "specStatus": "manualComplete",
+      "status": "normal",
       "unit": "%",
-      "notes": "GAPO=(Open-前收)/ATR×100；规划仅写「跳空持续口径」，ATR 归一化与正负号为自定，暂标 beta。"
+      "notes": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向；ATR 未就绪或 ATR=0 时 NaN；首值第 15 根。"
     },
     {
       "id": "V09",
