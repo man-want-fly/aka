@@ -73,6 +73,35 @@ export default function App() {
           setLocation({ route: "workbench", code: null });
           return;
         }
+        // S-03.01-01 指标目录取证：直接进目录页，并占住 S2/抽屉的 once 位。
+        if (target === "catalog") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          if (window.location.hash.startsWith("#/catalog")) return;
+          window.location.hash = "#/catalog";
+          setLocation({ route: "catalog", code: null });
+          return;
+        }
+        // S-02.05-02 恢复默认取证：进工作台，占住其它套件的 once 位。
+        if (target === "s205") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          if (window.location.hash.startsWith("#/workbench")) return;
+          window.location.hash = "#/workbench";
+          setLocation({ route: "workbench", code: null });
+          return;
+        }
+        // AC-02.04-01 跨页核对：先到工作台打开抽屉，再去指标目录比对计数。
+        if (target === "xpage") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          if (window.location.hash.startsWith("#/workbench")) return;
+          window.location.hash = "#/workbench";
+          setLocation({ route: "workbench", code: null });
+          return;
+        }
         if (target === "market") {
           sessionStorage.removeItem("aka.s2.diag.once");
           if (window.location.hash.startsWith("#/market")) return;

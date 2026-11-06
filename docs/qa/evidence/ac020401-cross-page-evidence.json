@@ -1,0 +1,88 @@
+{
+  "ok": true,
+  "finishedAt": "2026-11-06T21:33:54.727Z",
+  "context": {
+    "drawerTotal": 105,
+    "catalogTotal": 105,
+    "drawerCategories": [
+      {
+        "key": "trend",
+        "count": 24,
+        "text": "趋势24"
+      },
+      {
+        "key": "momentum",
+        "count": 26,
+        "text": "动量26"
+      },
+      {
+        "key": "volatility",
+        "count": 10,
+        "text": "波动10"
+      },
+      {
+        "key": "volume",
+        "count": 15,
+        "text": "量能15"
+      },
+      {
+        "key": "stat",
+        "count": 14,
+        "text": "统计14"
+      },
+      {
+        "key": "breadth",
+        "count": 16,
+        "text": "广度16"
+      }
+    ],
+    "catalogCategories": [
+      {
+        "key": "trend",
+        "count": 24,
+        "text": "趋势24T01简单移动平均线SMA主图摘要T02指数移动平均线EMA主图摘要T03加权移动平均线WMA主图补全口径摘要T04双重指数移动平均线DEMA主图摘要T05三重指数移动平均线TEMA主图摘要T06赫尔均线HMA主图P1规划中摘要T07自适应均线KAMA主图规划中摘要T08均线包络Envelopes主图摘要T09布林带BOLL主图摘要T10肯特纳通道Keltner主图摘要T11唐奇安通道Donchian主图摘要T12ATR通道ATRBands主图摘要T13ATR移动止损ATRTrail主图摘要T14吊灯止损Chandelier主图摘要T15一目均衡表Ichimoku主图摘要T16抛物线转向PSAR主图摘要T17鳄鱼线Alligator主图P1规划中摘要T18之字转向ZigZag主图P1规划中摘要T19线性回归预测LinRegForecast主图摘要T20线性回归截距LinRegIntercept主图摘要T21线性回归R²LinRegR²主图摘要T22线性回归斜率Slope主图摘要T23轴心点PivotPoints主图摘要T24最高最低HHV/LLV主图补全口径摘要"
+      },
+      {
+        "key": "momentum",
+        "count": 26,
+        "text": "动量26"
+      },
+      {
+        "key": "volatility",
+        "count": 10,
+        "text": "波动10"
+      },
+      {
+        "key": "volume",
+        "count": 15,
+        "text": "量能15"
+      },
+      {
+        "key": "stat",
+        "count": 14,
+        "text": "统计14"
+      },
+      {
+        "key": "breadth",
+        "count": 16,
+        "text": "广度16"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "X-01",
+      "ac": "AC-02.04-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "抽屉 trend:24 momentum:26 volatility:10 volume:15 stat:14 breadth:16 / 目录 trend:24 momentum:26 volatility:10 volume:15 stat:14 breadth:16 / 不一致 无"
+    },
+    {
+      "id": "X-02",
+      "ac": "AC-02.04-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "抽屉可见文本 趋势24|动量26|波动10|量能15|统计14|广度16 / 目录可见文本 趋势24T01简单移动平均线SMA主图摘要T02指数移动平均线EMA主图摘要T03加权移动平均线WMA主图补全口径摘要T04双重指数移动平均线DEMA主图摘要T05三重指数移动平均线TEMA主图摘要T06赫尔均线HMA主图P1规划中摘要T07自适应均线KAMA主图规划中摘要T08均线包络Envelopes主图摘要T09布林带BOLL主图摘要T10肯特纳通道Keltner主图摘要T11唐奇安通道Donchian主图摘要T12ATR通道ATRBands主图摘要T13ATR移动止损ATRTrail主图摘要T14吊灯止损Chandelier主图摘要T15一目均衡表Ichimoku主图摘要T16抛物线转向PSAR主图摘要T17鳄鱼线Alligator主图P1规划中摘要T18之字转向ZigZag主图P1规划中摘要T19线性回归预测LinRegForecast主图摘要T20线性回归截距LinRegIntercept主图摘要T21线性回归R²LinRegR²主图摘要T22线性回归斜率Slope主图摘要T23轴心点PivotPoints主图摘要T24最高最低HHV/LLV主图补全口径摘要|动量26|波动10|量能15|统计14|广度16 / 不含计数 无"
+    }
+  ]
+}

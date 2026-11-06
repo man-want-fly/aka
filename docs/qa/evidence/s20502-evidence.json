@@ -1,0 +1,63 @@
+{
+  "ok": true,
+  "finishedAt": "2026-11-06T21:32:24.907Z",
+  "context": {
+    "defaults": {
+      "maPeriod": 20,
+      "maType": "sma",
+      "fast": 12,
+      "slow": 26,
+      "signal": 9
+    },
+    "registryDefaults": {
+      "fast": 12,
+      "slow": 26,
+      "signal": 9
+    },
+    "restartDefault": "sessionStorage 为会话级；应用重启后回到 manifest 默认（本轮未物理重启验证）"
+  },
+  "checks": [
+    {
+      "id": "D-01",
+      "ac": "S-03.01-03 / S-02.05-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "注册表 M06 12/26/9 · 页面默认 12/26/9"
+    },
+    {
+      "id": "R-01",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "初始 12/26/9 · 恢复按钮 disabled=true · title=当前即为默认参数"
+    },
+    {
+      "id": "R-02",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "改参数后恢复按钮 disabled=false"
+    },
+    {
+      "id": "R-03",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "应用 10/22/8 后副图标题含 MACD(10,22,8)=true"
+    },
+    {
+      "id": "R-04",
+      "ac": "S-02.05-02 会话记忆",
+      "layer": "render",
+      "passed": true,
+      "detail": "切页回来 10/22/8 · sessionStorage 10/22/8"
+    },
+    {
+      "id": "R-05",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "恢复后 12/26/9 · 标题含默认=true · 按钮 disabled=true · sessionStorage 12/26/9 · 提示=true"
+    }
+  ]
+}

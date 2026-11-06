@@ -17,7 +17,11 @@ import {
   MAX_MAIN_OVERLAYS,
   MAX_SUBPLOTS,
   buildInstances,
+  defaultsFromIndicators,
   localCheck,
+  readSessionParams,
+  sameParams,
+  writeSessionParams,
   type WorkbenchParams,
 } from "../../features/workbench/model";
 import {
@@ -27,6 +31,8 @@ import {
   type DiagSample,
   type TimeframeCode,
 } from "../../features/workbench/diag";
+import { runS205Diagnostics } from "../../features/workbench/s205Diag";
+import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type {
   AppError,
@@ -93,6 +99,18 @@ export function WorkbenchPage({
   const [dateTo, setDateTo] = useState("");
   const [params, setParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
   const [appliedParams, setAppliedParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
+  const defaultParams = useMemo(
+    () => (manifest ? defaultsFromIndicators(manifest.indicators) : DEFAULT_PARAMS),
+    [manifest],
+  );
+
+  // S-02.05-02 会话记忆：同一会话内切页/切标的保留参数；重启回到 manifest 默认值
+  useEffect(() => {
+    const stored = readSessionParams();
+    if (!stored) return;
+    setParams(stored);
+    setAppliedParams(stored);
+  }, []);
   // B2 主图叠加与副图选择：纯客户端切换，指标实例已全量下发
   const [overlayIds, setOverlayIds] = useState<string[]>(DEFAULT_B2_OVERLAYS);
   const [subIds, setSubIds] = useState<string[]>([DEFAULT_SUB_ID]);
@@ -403,6 +421,49 @@ export function WorkbenchPage({
     };
   }, [manifest]);
 
+  // S-02.05-02 恢复默认取证：AKA_DIAG_TARGET=s205 时在注册表/标的就绪后自跑一次
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (window.sessionStorage.getItem("aka.s205.diag.done") === "1") return;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s205" || !alive) return;
+      window.sessionStorage.setItem("aka.s205.diag.done", "1");
+      setDiagStatus("S-02.05-02 取证：运行中");
+      try {
+        const report = await runS205Diagnostics({ registry, defaults: defaultParams });
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-02.05-02 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_S205_EVIDENCE__ = report;
+      } catch (err) {
+        setDiagStatus(`S-02.05-02 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, registry, securities, defaultParams]);
+
+  // AC-02.04-01 跨页核对：抽屉分类计数 vs 指标目录分类计数（比较两页各自渲染结果）
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest) return;
+    if (window.sessionStorage.getItem("aka.xpage.diag.done") === "1") return;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "xpage") return;
+      window.sessionStorage.setItem("aka.xpage.diag.done", "1");
+      try {
+        await runCrossPageCountDiagnostics();
+      } catch (err) {
+        console.error("[xpage.diag]", describeError(err).message);
+      }
+    })();
+  }, [manifest]);
+
   // 副图面板标题按当前参数口径生成（AC-02.04-03：标题必须是 MACD(12,26,9) 这种形态）
   const subLabels = useMemo(() => {
     const labels: Record<string, string> = {};
@@ -431,6 +492,14 @@ export function WorkbenchPage({
     }
     setError(null);
     setAppliedParams({ ...params });
+    writeSessionParams(params);
+  };
+
+  const handleRestoreDefaults = () => {
+    setError(null);
+    setParams(defaultParams);
+    setAppliedParams(defaultParams);
+    writeSessionParams(defaultParams);
   };
 
   return (
@@ -756,6 +825,8 @@ export function WorkbenchPage({
             params={params}
             onChange={setParams}
             onApply={handleApply}
+            onRestore={handleRestoreDefaults}
+            isDefault={sameParams(params, defaultParams)}
             busy={loading}
             error={error?.code === "PARAM_OUT_OF_RANGE" || error?.code === "INVALID_ARGUMENT" ? error.message : null}
             computedMs={calc?.computedMs ?? null}

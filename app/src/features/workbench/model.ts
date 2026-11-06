@@ -1,4 +1,5 @@
-import type { InstanceRequest } from "../../lib/types";
+import manifestJson from "../../../manifest/indicators.json";
+import type { InstanceRequest, ParamSpec } from "../../lib/types";
 
 export interface WorkbenchParams {
   maPeriod: number;
@@ -8,13 +9,72 @@ export interface WorkbenchParams {
   signal: number;
 }
 
-export const DEFAULT_PARAMS: WorkbenchParams = {
-  maPeriod: 20,
-  maType: "sma",
-  fast: 12,
-  slow: 26,
-  signal: 9,
-};
+const PARAMS_STORAGE_KEY = "aka.workbench.params.v1";
+
+/** 默认参数只从 manifest 的 ParamSpec 读取，前端不再保存第二份数字。 */
+export function defaultsFromIndicators(
+  indicators: Array<{ id: string; params: ParamSpec[] }>,
+): WorkbenchParams {
+  const intDefault = (id: string, key: string) => {
+    const param = indicators.find((item) => item.id === id)?.params.find((spec) => spec.key === key);
+    if (!param || param.kind !== "int") {
+      throw new Error(`manifest 缺少 ${id}.${key} 的整数默认值`);
+    }
+    return param.default;
+  };
+  return {
+    maPeriod: intDefault("T01", "period"),
+    maType: "sma",
+    fast: intDefault("M06", "fast"),
+    slow: intDefault("M06", "slow"),
+    signal: intDefault("M06", "signal"),
+  };
+}
+
+export const DEFAULT_PARAMS: WorkbenchParams = defaultsFromIndicators(
+  manifestJson.indicators as Array<{ id: string; params: ParamSpec[] }>,
+);
+
+const isInt = (value: unknown): value is number => Number.isInteger(value);
+
+/** 会话记忆：只存在于当前应用会话，重启回到 manifest 默认值。 */
+export function readSessionParams(): WorkbenchParams | null {
+  try {
+    const raw = window.sessionStorage.getItem(PARAMS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<WorkbenchParams>;
+    if (
+      !isInt(parsed.maPeriod) ||
+      !isInt(parsed.fast) ||
+      !isInt(parsed.slow) ||
+      !isInt(parsed.signal) ||
+      !["sma", "ema", "wma"].includes(parsed.maType ?? "")
+    ) {
+      return null;
+    }
+    return parsed as WorkbenchParams;
+  } catch {
+    return null;
+  }
+}
+
+export function writeSessionParams(params: WorkbenchParams) {
+  try {
+    window.sessionStorage.setItem(PARAMS_STORAGE_KEY, JSON.stringify(params));
+  } catch {
+    // 存储不可用时退化为仅内存态，不影响参数应用
+  }
+}
+
+export function sameParams(a: WorkbenchParams, b: WorkbenchParams) {
+  return (
+    a.maPeriod === b.maPeriod &&
+    a.maType === b.maType &&
+    a.fast === b.fast &&
+    a.slow === b.slow &&
+    a.signal === b.signal
+  );
+}
 
 /** B2 主图叠加候选（11 个面板=主图的指标）。 */
 export const B2_OVERLAY_CHOICES: Array<{ id: string; label: string }> = [

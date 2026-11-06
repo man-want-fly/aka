@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ParamSpec, RegistryResponse } from "../lib/types";
 import type { WorkbenchParams } from "../features/workbench/model";
 import { formatComputedMs } from "../lib/format";
@@ -7,6 +8,8 @@ interface Props {
   params: WorkbenchParams;
   onChange: (next: WorkbenchParams) => void;
   onApply: () => void;
+  onRestore: () => void;
+  isDefault: boolean;
   busy: boolean;
   error: string | null;
   computedMs: number | null;
@@ -31,11 +34,14 @@ export function ParamPanel({
   params,
   onChange,
   onApply,
+  onRestore,
+  isDefault,
   busy,
   error,
   computedMs,
   cacheHit,
 }: Props) {
+  const [restoreNotice, setRestoreNotice] = useState(false);
   const maPeriodSpec = findSpec(registry, "T01", "period");
   const maTypeSpec = findSpec(registry, "T01", "maType");
   const fastSpec = findSpec(registry, "M06", "fast");
@@ -151,6 +157,26 @@ export function ParamPanel({
       <button type="button" className="btn primary" onClick={onApply} disabled={busy}>
         {busy ? "计算中…" : "应用参数"}
       </button>
+      <button
+        type="button"
+        className="btn"
+        data-param-restore="1"
+        onClick={() => {
+          onRestore();
+          setRestoreNotice(true);
+          window.setTimeout(() => setRestoreNotice(false), 2000);
+        }}
+        disabled={busy || isDefault}
+        title={isDefault ? "当前即为默认参数" : "恢复为 manifest 默认参数"}
+        aria-disabled={busy || isDefault}
+      >
+        恢复默认
+      </button>
+      {restoreNotice && (
+        <div className="caption" data-param-restored="1" role="status">
+          ✓ 已恢复默认参数
+        </div>
+      )}
 
       {error && <div className="error-box">{error}</div>}
 
