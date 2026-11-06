@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../app/AppShell";
-import { B1_FORMULAS } from "../../features/catalog/content";
+import { B1_FORMULAS, B2_FORMULAS } from "../../features/catalog/content";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { AppError, ManifestResponse, RegistryResponse } from "../../lib/types";
 
@@ -8,7 +8,9 @@ interface Props {
   onNavigate: (key: "workbench" | "catalog") => void;
 }
 
-/** P4 指标口径页：B1 已实现的 11 个指标，四段结构可查可用。 */
+const FORMULAS = { ...B1_FORMULAS, ...B2_FORMULAS };
+
+/** P4 指标口径页：B1 11 个 + B2 20 个，四段结构可查可用。 */
 export function CatalogPage({ onNavigate }: Props) {
   const [registry, setRegistry] = useState<RegistryResponse | null>(null);
   const [manifest, setManifest] = useState<ManifestResponse | null>(null);
@@ -30,9 +32,11 @@ export function CatalogPage({ onNavigate }: Props) {
   }, []);
 
   const implemented = useMemo(() => {
-    const b1Ids = Object.keys(B1_FORMULAS);
+    const implementedIds = Object.keys(FORMULAS);
     const list =
-      registry?.indicators.filter((item) => item.implemented && b1Ids.includes(item.id)) ?? [];
+      registry?.indicators.filter(
+        (item) => item.implemented && implementedIds.includes(item.id),
+      ) ?? [];
     const keyword = query.trim().toUpperCase();
     if (!keyword) return list;
     return list.filter(
@@ -45,7 +49,7 @@ export function CatalogPage({ onNavigate }: Props) {
 
   const active = implemented.find((item) => item.id === activeId) ?? implemented[0];
   const manifestItem = manifest?.indicators.find((item) => item.id === active?.id);
-  const formula = active ? B1_FORMULAS[active.id] : undefined;
+  const formula = active ? FORMULAS[active.id] : undefined;
 
   return (
     <AppShell active="catalog" onNavigate={onNavigate}>
@@ -56,7 +60,7 @@ export function CatalogPage({ onNavigate }: Props) {
         >
           <h1 style={{ fontSize: 18, margin: "0 0 4px" }}>指标口径</h1>
           <div className="caption" style={{ marginBottom: 12 }}>
-            B1 已实现 {implemented.length} / 本批仅收 B1 11 个；B2 口径页待 BA 排期
+            B1 11 个 + B2 20 个 · 当前匹配 {implemented.length} / 共 31 条
           </div>
           <input
             type="search"

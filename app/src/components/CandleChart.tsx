@@ -6,6 +6,12 @@ interface Props {
   bars: BarDto[];
   series: SeriesDto[];
   windowSize: number;
+  /** B2 主图叠加所选指标（B1 的 8 条图线始终保留） */
+  overlayIds: string[];
+  /** 副图指标 id：M06 或 V01–V10 */
+  subId: string;
+  /** 指标单位（来自 manifest，避免前端二次维护） */
+  units: Record<string, string>;
 }
 
 const W = 1000;
@@ -16,9 +22,18 @@ const PRICE_TOP = 12;
 const PRICE_BOTTOM = 300;
 const VOL_TOP = 316;
 const VOL_BOTTOM = 376;
+/** 副图区（原 MACD 区，现按所选副图指标复用） */
 const MACD_TOP = 394;
 const MACD_BOTTOM = 522;
 const DATE_Y = 546;
+
+const B1_OVERLAY_IDS = ["T01", "T02", "T03", "T04", "T05", "T19", "T20", "T22"];
+
+function digitsForUnit(unit: string): number {
+  if (unit === "无量纲") return 4;
+  if (unit === "%") return 2;
+  return 2;
+}
 
 function pathFor(
   values: (number | null)[],
@@ -38,7 +53,7 @@ function pathFor(
   return path.trim();
 }
 
-export function CandleChart({ bars, series, windowSize }: Props) {
+export function CandleChart({ bars, series, windowSize, overlayIds, subId, units }: Props) {
   const [hover, setHover] = useState<number | null>(null);
 
   const view = useMemo(() => {
@@ -47,55 +62,71 @@ export function CandleChart({ bars, series, windowSize }: Props) {
     const start = bars.length - count;
     const visible = bars.slice(start);
 
-    const overlayIds = ["T01", "T02", "T03", "T04", "T05", "T19", "T20", "T22"];
-    const overlayUnits: Record<string, string> = {
-      T01: "元",
-      T02: "元",
-      T03: "元",
-      T04: "元",
-      T05: "元",
-      T19: "元",
-      T20: "元",
-      T22: "元/根",
-    };
+    // 主图叠加：B1 的 8 条固定 + B2 所选（多输出指标逐条展开）
     const seen = new Set<string>();
-    const overlays = series
-      .filter((item) => overlayIds.includes(item.indicatorId))
-      .filter((item) => (seen.has(item.indicatorId) ? false : seen.add(item.indicatorId) && true))
-      .map((item) => ({
-        id: item.instanceId,
-        indicatorId: item.indicatorId,
-        label: item.outputs[0]?.labelZh ?? item.indicatorId,
-        unit: overlayUnits[item.indicatorId] ?? "",
-        color: item.outputs[0]?.color ?? "var(--warn)",
-        values: item.outputs[0]?.values.slice(start) ?? [],
-      }));
-    const macd = series.find((item) => item.indicatorId === "M06");
-    const macdOutput = (key: string) =>
-      macd?.outputs.find((item) => item.key === key)?.values.slice(start) ?? [];
-    const dif = macdOutput("dif");
-    const dea = macdOutput("dea");
-    const hist = macdOutput("hist");
+    const overlayLines: Array<{
+      id: string;
+      indicatorId: string;
+      key: string;
+      label: string;
+      unit: string;
+      color: string;
+      kind: string;
+      values: (number | null)[];
+    }> = [];
+    [...B1_OVERLAY_IDS, ...overlayIds].forEach((indicatorId) => {
+      if (seen.has(indicatorId)) return;
+      const item = series.find((entry) => entry.indicatorId === indicatorId);
+      if (!item) return;
+      seen.add(indicatorId);
+      item.outputs.forEach((output) => {
+        overlayLines.push({
+          id: `${indicatorId}-${output.key}`,
+          indicatorId,
+          key: output.key,
+          label: output.labelZh,
+          unit: units[indicatorId] ?? "",
+          color: output.color,
+          kind: output.kind,
+          values: output.values.slice(start),
+        });
+      });
+    });
+
+    // 副图：M06 或任一 B2 波动指标
+    const sub = series.find((item) => item.indicatorId === subId);
+    const subLines = (sub?.outputs ?? []).map((output) => ({
+      key: output.key,
+      label: output.labelZh,
+      kind: output.kind,
+      color: output.color,
+      values: output.values.slice(start),
+    }));
+    const subUnit = units[subId] ?? "";
 
     let priceMin = Infinity;
     let priceMax = -Infinity;
     let volMax = 0;
-    let macdAbs = 0;
+    let subMin = Infinity;
+    let subMax = -Infinity;
 
     visible.forEach((bar, index) => {
       priceMin = Math.min(priceMin, bar.low);
       priceMax = Math.max(priceMax, bar.high);
       volMax = Math.max(volMax, bar.volume);
-      overlays.forEach((line) => {
+      overlayLines.forEach((line) => {
         const value = line.values[index];
         if (value !== null && value !== undefined && Number.isFinite(value)) {
           priceMin = Math.min(priceMin, value);
           priceMax = Math.max(priceMax, value);
         }
       });
-      [dif[index], dea[index], hist[index]].forEach((value) => {
-        if (value !== null && value !== undefined) {
-          macdAbs = Math.max(macdAbs, Math.abs(value));
+    });
+    subLines.forEach((line) => {
+      line.values.forEach((value) => {
+        if (value !== null && value !== undefined && Number.isFinite(value)) {
+          subMin = Math.min(subMin, value);
+          subMax = Math.max(subMax, value);
         }
       });
     });
@@ -105,13 +136,29 @@ export function CandleChart({ bars, series, windowSize }: Props) {
     priceMin -= pad;
     priceMax += pad;
 
+    // 副图量程：跨零时对称（MACD 口径），否则按 min~max 留白
+    const subSpansZero = Number.isFinite(subMin) && Number.isFinite(subMax) && subMin <= 0 && subMax >= 0;
+    let subLo: number;
+    let subHi: number;
+    if (!Number.isFinite(subMin) || !Number.isFinite(subMax)) {
+      subLo = -1;
+      subHi = 1;
+    } else if (subSpansZero) {
+      const extent = Math.max(Math.abs(subMin), Math.abs(subMax), 1e-9);
+      subLo = -extent;
+      subHi = extent;
+    } else {
+      const subPad = Math.max((subMax - subMin) * 0.08, Math.abs(subMax) * 0.04, 1e-6);
+      subLo = subMin - subPad;
+      subHi = subMax + subPad;
+    }
+
     const step = (RIGHT - LEFT) / count;
     const xOf = (index: number) => LEFT + index * step + step / 2;
     const yOfPrice = (value: number) =>
       PRICE_BOTTOM - ((value - priceMin) / (priceMax - priceMin)) * (PRICE_BOTTOM - PRICE_TOP);
-    const yOfMacd = (value: number) =>
-      (MACD_TOP + MACD_BOTTOM) / 2 -
-      (value / (macdAbs || 1)) * ((MACD_BOTTOM - MACD_TOP) / 2);
+    const yOfSub = (value: number) =>
+      MACD_BOTTOM - ((value - subLo) / (subHi - subLo)) * (MACD_BOTTOM - MACD_TOP);
 
     const priceTicks = Array.from({ length: 5 }, (_, i) => {
       const value = priceMin + ((priceMax - priceMin) * i) / 4;
@@ -129,19 +176,17 @@ export function CandleChart({ bars, series, windowSize }: Props) {
       step,
       xOf,
       yOfPrice,
-      yOfMacd,
+      yOfSub,
       priceTicks,
       dateTicks,
-      overlays,
-      dif,
-      dea,
-      hist,
-      difColor: "#4FA3C7",
-      deaColor: "#D9A340",
+      overlayLines,
+      subLines,
+      subId,
+      subUnit,
+      subSpansZero,
       volMax,
-      macdAbs,
     };
-  }, [bars, series, windowSize]);
+  }, [bars, series, windowSize, overlayIds, subId, units]);
 
   if (!view) {
     return (
@@ -243,18 +288,39 @@ export function CandleChart({ bars, series, windowSize }: Props) {
           );
         })}
 
-        {/* 指标叠加层：T01–T05 / T19 / T20 / T22 */}
-        {view.overlays.map((line) => (
-          <path
-            key={`overlay-${line.id}`}
-            data-overlay={line.indicatorId}
-            d={pathFor(line.values, view.xOf, view.yOfPrice)}
-            fill="none"
-            stroke={line.color}
-            strokeWidth={1.3}
-            opacity={0.92}
-          />
-        ))}
+        {/* 指标叠加层：B1 的 8 条 + B2 所选 */}
+        {view.overlayLines.map((line) =>
+          line.kind === "dot" ? (
+            <g
+              key={`overlay-${line.id}`}
+              data-overlay={line.indicatorId}
+              data-overlay-key={line.key}
+            >
+              {line.values.map((value, index) =>
+                value !== null && Number.isFinite(value) ? (
+                  <circle
+                    key={`dot-${index}`}
+                    cx={view.xOf(index)}
+                    cy={view.yOfPrice(value)}
+                    r={2.2}
+                    fill={line.color}
+                  />
+                ) : null,
+              )}
+            </g>
+          ) : (
+            <path
+              key={`overlay-${line.id}`}
+              data-overlay={line.indicatorId}
+              data-overlay-key={line.key}
+              d={pathFor(line.values, view.xOf, view.yOfPrice)}
+              fill="none"
+              stroke={line.color}
+              strokeWidth={1.3}
+              opacity={0.92}
+            />
+          ),
+        )}
 
         {/* 成交量 */}
         <line
@@ -284,45 +350,77 @@ export function CandleChart({ bars, series, windowSize }: Props) {
           );
         })}
 
-        {/* MACD */}
-        <line x1={LEFT} x2={RIGHT} y1={zeroY} y2={zeroY} stroke="var(--line2)" strokeWidth={0.7} />
+        {/* 副图：M06 或 B2 波动指标（线性/柱状/散点按 output.kind 渲染） */}
+        {view.subSpansZero && (
+          <line x1={LEFT} x2={RIGHT} y1={zeroY} y2={zeroY} stroke="var(--line2)" strokeWidth={0.7} />
+        )}
         <text x={RIGHT + 8} y={MACD_TOP + 10} fontSize={9.5} fill="var(--faint)" className="mono">
-          MACD
+          {view.subId}
         </text>
-        <g data-macd="hist">
-          {view.hist.map((value, index) => {
-            if (value === null) return null;
-            const y = view.yOfMacd(value);
-            const top = Math.min(y, zeroY);
-            const height = Math.max(1, Math.abs(y - zeroY));
+        {view.subLines.map((line) => {
+          const isMacd = view.subId === "M06";
+          if (line.kind === "histogram") {
             return (
-              <rect
-                key={`hist-${index}`}
-                data-hist={value >= 0 ? "pos" : "neg"}
-                x={view.xOf(index) - bodyWidth / 2}
-                y={top}
-                width={bodyWidth}
-                height={height}
-                fill={value >= 0 ? "var(--pos)" : "var(--neg)"}
-                opacity={0.42}
-              />
+              <g
+                key={`sub-${line.key}`}
+                data-macd={isMacd ? "hist" : undefined}
+                data-sub-hist={isMacd ? undefined : view.subId}
+              >
+                {line.values.map((value, index) => {
+                  if (value === null || !Number.isFinite(value)) return null;
+                  const y = view.yOfSub(value);
+                  const top = Math.min(y, zeroY);
+                  const height = Math.max(1, Math.abs(y - zeroY));
+                  return (
+                    <rect
+                      key={`hist-${index}`}
+                      data-hist={value >= 0 ? "pos" : "neg"}
+                      x={view.xOf(index) - bodyWidth / 2}
+                      y={top}
+                      width={bodyWidth}
+                      height={height}
+                      fill={value >= 0 ? "var(--pos)" : "var(--neg)"}
+                      opacity={0.42}
+                    />
+                  );
+                })}
+              </g>
             );
-          })}
-        </g>
-        <path
-          data-macd="dif"
-          d={pathFor(view.dif, view.xOf, view.yOfMacd)}
-          fill="none"
-          stroke={view.difColor}
-          strokeWidth={1.3}
-        />
-        <path
-          data-macd="dea"
-          d={pathFor(view.dea, view.xOf, view.yOfMacd)}
-          fill="none"
-          stroke={view.deaColor}
-          strokeWidth={1.3}
-        />
+          }
+          if (line.kind === "dot") {
+            return (
+              <g
+                key={`sub-${line.key}`}
+                data-sub={isMacd ? undefined : view.subId}
+                data-sub-key={line.key}
+              >
+                {line.values.map((value, index) =>
+                  value !== null && Number.isFinite(value) ? (
+                    <circle
+                      key={`sub-dot-${index}`}
+                      cx={view.xOf(index)}
+                      cy={view.yOfSub(value)}
+                      r={1.8}
+                      fill={line.color}
+                    />
+                  ) : null,
+                )}
+              </g>
+            );
+          }
+          return (
+            <path
+              key={`sub-${line.key}`}
+              data-macd={isMacd ? line.key : undefined}
+              data-sub={isMacd ? undefined : view.subId}
+              data-sub-key={line.key}
+              d={pathFor(line.values, view.xOf, view.yOfSub)}
+              fill="none"
+              stroke={line.color}
+              strokeWidth={1.3}
+            />
+          );
+        })}
 
         {/* 日期刻度 */}
         {view.dateTicks.map((tick) => (
@@ -341,17 +439,14 @@ export function CandleChart({ bars, series, windowSize }: Props) {
 
         {/* 图例 */}
         <g className="mono" fontSize={9.5}>
-          <text x={RIGHT - 210} y={24} fill="var(--muted)">
-            T01–T05 · T19/T20/T22
+          <text x={RIGHT - 300} y={24} fill="var(--muted)">
+            T01–T05 · T19/T20/T22{overlayIds.length > 0 ? ` · B2 ×${overlayIds.length}` : ""}
           </text>
-          <text x={RIGHT - 100} y={24} fill={view.difColor}>
-            DIF
+          <text x={RIGHT - 100} y={24} fill="var(--muted)">
+            {view.subId}
           </text>
-          <text x={RIGHT - 62} y={24} fill={view.deaColor}>
-            DEA
-          </text>
-          <text x={RIGHT - 8} y={24} fill="var(--muted)" textAnchor="end">
-            HIST
+          <text x={RIGHT - 8} y={24} fill="var(--faint)" textAnchor="end">
+            {view.subLines.map((line) => line.label).join(" / ")}
           </text>
         </g>
 
@@ -384,18 +479,41 @@ export function CandleChart({ bars, series, windowSize }: Props) {
             <span>收 {formatPrice(hovered.close)}</span>
             <span>量 {formatVolume(hovered.volume)}</span>
             <span>额 {formatAmount(hovered.amount)}</span>
-            {view.overlays.map((line) => (
-              <span
-                key={`readout-${line.id}`}
-                data-readout={`ma-${line.indicatorId}`}
-                data-value={line.values[hover] ?? ""}
-                data-unit={line.unit}
-                style={{ color: line.color }}
-              >
-                {line.indicatorId} {formatPrice(line.values[hover] ?? Number.NaN)}
-                {line.unit ? ` ${line.unit}` : ""}
-              </span>
-            ))}
+            {view.overlayLines.map((line) => {
+              const isB1 = B1_OVERLAY_IDS.includes(line.indicatorId);
+              const value = line.values[hover];
+              return (
+                <span
+                  key={`readout-${line.id}`}
+                  data-readout={
+                    isB1 ? `ma-${line.indicatorId}` : `ov-${line.indicatorId}-${line.key}`
+                  }
+                  data-value={value ?? ""}
+                  data-unit={line.unit}
+                  style={{ color: line.color }}
+                >
+                  {isB1 ? line.indicatorId : `${line.indicatorId}·${line.key}`}{" "}
+                  {formatPrice(value ?? Number.NaN)}
+                  {line.unit ? ` ${line.unit}` : ""}
+                </span>
+              );
+            })}
+            {view.subLines.map((line) => {
+              const value = line.values[hover];
+              return (
+                <span
+                  key={`readout-sub-${line.key}`}
+                  data-readout={`sub-${view.subId}-${line.key}`}
+                  data-sub-readout={view.subId}
+                  data-value={value ?? ""}
+                  data-unit={view.subUnit}
+                  style={{ color: line.color }}
+                >
+                  {line.label} {formatPrice(value ?? Number.NaN, digitsForUnit(view.subUnit))}
+                  {view.subUnit ? ` ${view.subUnit}` : ""}
+                </span>
+              );
+            })}
             <span
               data-readout="chg"
               data-sign={hoveredChg >= 0 ? "pos" : "neg"}

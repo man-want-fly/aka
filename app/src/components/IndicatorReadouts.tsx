@@ -3,6 +3,12 @@ import type { SeriesDto } from "../lib/types";
 interface Props {
   series: SeriesDto[];
   barCount: number;
+  /** B2 主图叠加所选指标 */
+  overlayIds: string[];
+  /** 副图指标 id（M06 或 V01–V10） */
+  subId: string;
+  /** manifest 单位表 */
+  units: Record<string, string>;
 }
 
 const E13_LABELS: Record<string, string> = {
@@ -44,11 +50,15 @@ function Sparkline({
   );
 }
 
-/** TD-B1-02 渲染层证据：R² 与 BIAS 三线以最新值 + 迷你走势呈现。 */
-export function IndicatorReadouts({ series, barCount }: Props) {
+/** TD-B1-02 渲染层证据：R² 与 BIAS 三线以最新值 + 迷你走势呈现；B2 追加叠加/副图读数同步。 */
+export function IndicatorReadouts({ series, barCount, overlayIds, subId, units }: Props) {
   const r2 = series.find((item) => item.indicatorId === "T21");
   const bias = series.find((item) => item.indicatorId === "E13");
-  if (!r2 && !bias) return null;
+  const b2Overlays = [...new Set(overlayIds)]
+    .map((id) => series.find((item) => item.indicatorId === id))
+    .filter((item): item is SeriesDto => Boolean(item));
+  const b2Sub = series.find((item) => item.indicatorId === subId);
+  if (!r2 && !bias && b2Overlays.length === 0 && !b2Sub) return null;
 
   const latest = (values: (number | null)[] | undefined) => {
     if (!values) return null;
@@ -111,6 +121,55 @@ export function IndicatorReadouts({ series, barCount }: Props) {
       {barCount < 60 && (
         <div className="caption" data-readout="warmup-hint" style={{ marginTop: 4 }}>
           EMA / DEMA / TEMA 需要至少 59 根有效收盘价（3×N-1），当前 {barCount} 根，灰色段为预热缺失。
+        </div>
+      )}
+
+      {(b2Overlays.length > 0 || b2Sub) && (
+        <div
+          data-verification="b2-render-layer"
+          style={{ marginTop: 8, borderTop: "1px dashed var(--line)", paddingTop: 6 }}
+        >
+          <div className="caption" style={{ marginBottom: 4 }}>
+            B2 读数同步 · 叠加 {overlayIds.join(" / ") || "无"} · 副图 {subId}
+          </div>
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
+            {b2Overlays.flatMap((item) =>
+              item.outputs.map((output) => {
+                const value = latest(output.values);
+                const unit = units[item.indicatorId] ?? "";
+                return (
+                  <span
+                    key={`b2-ov-${item.indicatorId}-${output.key}`}
+                    className="mono"
+                    data-readout={`b2-overlay-${item.indicatorId}-${output.key}`}
+                    data-value={value ?? ""}
+                    data-unit={unit}
+                    style={{ color: output.color, fontSize: 11 }}
+                  >
+                    {item.indicatorId}·{output.key} {value === null ? "—" : value.toFixed(2)}
+                    {unit ? ` ${unit}` : ""}
+                  </span>
+                );
+              }),
+            )}
+            {b2Sub?.outputs.map((output) => {
+              const value = latest(output.values);
+              const unit = units[b2Sub.indicatorId] ?? "";
+              return (
+                <span
+                  key={`b2-sub-${b2Sub.indicatorId}-${output.key}`}
+                  className="mono"
+                  data-readout={`b2-sub-${b2Sub.indicatorId}-${output.key}`}
+                  data-value={value ?? ""}
+                  data-unit={unit}
+                  style={{ color: output.color, fontSize: 11 }}
+                >
+                  {b2Sub.indicatorId}·{output.key} {value === null ? "—" : value.toFixed(2)}
+                  {unit ? ` ${unit}` : ""}
+                </span>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

@@ -295,7 +295,7 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
     itemCount: items.length,
     sections,
     betaCount,
-    ok: rootPresent && items.length === 11 && sections.length === 4,
+    ok: rootPresent && items.length === 31 && sections.length === 4,
   };
 }
 

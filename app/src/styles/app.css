@@ -414,6 +414,22 @@ select {
   flex: 1;
 }
 
+/* B2 叠加 / 副图选择：原生 select，保持工具栏紧凑 */
+.b2-select {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text2);
+  background: var(--surface2);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  padding: 2px 4px;
+  max-width: 148px;
+}
+
+.b2-select[multiple] {
+  min-width: 132px;
+}
+
 .date-range {
   display: flex;
   align-items: center;
@@ -474,7 +490,9 @@ select {
   top: 6px;
   left: 10px;
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  max-width: calc(100% - 20px);
   padding: 4px 8px;
   background: color-mix(in srgb, var(--surface) 82%, transparent);
   border: 1px solid var(--line);

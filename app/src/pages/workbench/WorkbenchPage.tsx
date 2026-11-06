@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "../../app/AppShell";
 import { CandleChart } from "../../components/CandleChart";
 import { IndicatorReadouts } from "../../components/IndicatorReadouts";
@@ -6,7 +6,11 @@ import { ParamPanel } from "../../components/ParamPanel";
 import { SimBadge } from "../../components/SimBadge";
 import { Watchlist } from "../../components/Watchlist";
 import {
+  B2_OVERLAY_CHOICES,
+  B2_SUB_CHOICES,
+  DEFAULT_B2_OVERLAYS,
   DEFAULT_PARAMS,
+  DEFAULT_SUB_ID,
   buildInstances,
   localCheck,
   type WorkbenchParams,
@@ -66,6 +70,13 @@ export function WorkbenchPage({
   const [securities, setSecurities] = useState<SecurityDto[]>([]);
   const [registry, setRegistry] = useState<RegistryResponse | null>(null);
   const [manifest, setManifest] = useState<ManifestResponse | null>(null);
+  const units = useMemo(
+    () =>
+      Object.fromEntries(
+        (manifest?.indicators ?? []).map((item) => [item.id, item.unit]),
+      ) as Record<string, string>,
+    [manifest],
+  );
   const [activeCode, setActiveCode] = useState("300750.SZ");
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">("qfq");
   const [timeframe, setTimeframe] = useState<TimeframeCode>("D");
@@ -74,6 +85,9 @@ export function WorkbenchPage({
   const [dateTo, setDateTo] = useState("");
   const [params, setParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
   const [appliedParams, setAppliedParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
+  // B2 主图叠加与副图选择：纯客户端切换，指标实例已全量下发
+  const [overlayIds, setOverlayIds] = useState<string[]>(DEFAULT_B2_OVERLAYS);
+  const [subId, setSubId] = useState<string>(DEFAULT_SUB_ID);
   const [bars, setBars] = useState<BarsResponse | null>(null);
   const [calc, setCalc] = useState<CalcResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -492,6 +506,42 @@ export function WorkbenchPage({
                 )}
               </div>
 
+              <span className="caption">B2 叠加</span>
+              <select
+                className="b2-select"
+                aria-label="B2 主图叠加"
+                data-b2-overlay-select="1"
+                multiple
+                size={3}
+                value={overlayIds}
+                onChange={(event) =>
+                  setOverlayIds(
+                    Array.from(event.target.selectedOptions, (option) => option.value),
+                  )
+                }
+              >
+                {B2_OVERLAY_CHOICES.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+
+              <span className="caption">副图</span>
+              <select
+                className="b2-select"
+                aria-label="副图指标"
+                data-b2-sub-select="1"
+                value={subId}
+                onChange={(event) => setSubId(event.target.value)}
+              >
+                {B2_SUB_CHOICES.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+
               <div className="grow" />
               <span className="engine-note">
                 按需计算 · {loading ? "更新中" : calc?.cacheHit ? "缓存命中" : "已计算"} ·{" "}
@@ -504,8 +554,21 @@ export function WorkbenchPage({
             <div className="chart-card">
               {bars ? (
                 <>
-                  <CandleChart bars={bars.bars} series={calc?.series ?? []} windowSize={range} />
-                  <IndicatorReadouts series={calc?.series ?? []} barCount={bars.bars.length} />
+                  <CandleChart
+                    bars={bars.bars}
+                    series={calc?.series ?? []}
+                    windowSize={range}
+                    overlayIds={overlayIds}
+                    subId={subId}
+                    units={units}
+                  />
+                  <IndicatorReadouts
+                    series={calc?.series ?? []}
+                    barCount={bars.bars.length}
+                    overlayIds={overlayIds}
+                    subId={subId}
+                    units={units}
+                  />
                 </>
               ) : (
                 <div className="empty">

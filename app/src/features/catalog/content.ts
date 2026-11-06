@@ -50,3 +50,96 @@ export const B1_FORMULAS: Record<string, CatalogFormula> = {
     tolerance: "副图 · absolute 1e-4",
   },
 };
+
+/** B2 通道/波动 20 条口径（正文与 docs/indicators/b2-channel-volatility.md 同源）。 */
+export const B2_FORMULAS: Record<string, CatalogFormula> = {
+  T08: {
+    formula:
+      "中轨 = SMA(C, N)；上轨 = 中轨×(1+pct/100)；下轨 = 中轨×(1−pct/100)。N=20、pct=2.5，首值下标 N−1。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T09: {
+    formula:
+      "中轨 = SMA(C, N)；σ 为样本标准差（ddof=1）；上/下轨 = 中轨 ± kσ。N=20、k=2.0，首值下标 N−1。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T10: {
+    formula:
+      "中轨 = EMA(C, N)；ATR(N) 为 Wilder 平滑；上/下轨 = 中轨 ± k×ATR。N=20、k=2.0，首值下标 N；ATR 未就绪时中轨同步 NaN。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T11: {
+    formula: "上轨 = 近 N 根最高价 HHV(high, N)；下轨 = 近 N 根最低价 LLV(low, N)，不做平滑。N=20，首值下标 N−1。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T12: {
+    formula:
+      "中轨 = SMA(C, N)；上/下轨 = 中轨 ± k×ATR(N)（Wilder）。N=20、k=2.0，首值下标 N。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T13: {
+    formula:
+      "ATR(14)、k=3.5。多头止损 = max(前值, C−k×ATR)，收盘跌破前值翻空；空头止损 = min(前值, C+k×ATR)，收盘升破翻多。翻向当根冻结旧止损值，未激活一侧 NaN。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T14: {
+    formula:
+      "多头 = HHV(high, N) − k×ATR(N)；空头 = LLV(low, N) + k×ATR(N)。N=22、k=3.0，首值下标 N。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T15: {
+    formula:
+      "转换线 = (HHV9+LLV9)/2；基准线 = (HHV26+LLV26)/2；先行带 A = (转换+基准)/2、B = (HHV52+LLV52)/2，向未来位移 26 根；迟行线 = C 向过去位移 26 根。首值下标 77，位移后末尾 26 根为 NaN（不回填未来值）。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T16: {
+    formula:
+      "SAR = prev_SAR + AF×(EP−prev_SAR)，按前两根极值夹逼；反转时 SAR = EP、EP 取当根极值、AF 重置为 0.02，否则 AF = min(AF+0.02, 0.2)。首值下标 1。",
+    tolerance: "价格口径 · relative 1e-6（beta，口径待三家对照）",
+  },
+  T23: {
+    formula: "P = (H+L+C)/3；R1 = 2P−L；S1 = 2P−H，H/L/C 取上一根。无参数，首值下标 1；只输出 P/R1/S1。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  T24: {
+    formula: "HHV = max(high[i−N+1 … i])；LLV = min(low[i−N+1 … i])，窗口含当前根，原始值直取。N=20，首值下标 N−1。",
+    tolerance: "原始窗口最值 · absolute 1e-9",
+  },
+  V01: {
+    formula:
+      "TR[0]=NaN；TR[i]=max(H−L, |H−PC|, |L−PC|)；ATR 为 TR 的 Wilder 平滑，种子 = 前 N 个有效 TR 的算术均值。N=14，首值下标 N。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  V02: {
+    formula: "ATRP = ATR(N)/C，无量纲比值（不是百分数）；C=0 时 NaN。N=14。",
+    tolerance: "无量纲 · absolute 1e-4",
+  },
+  V03: {
+    formula: "σ = sqrt(Σ(C−C̄)²/(N−1))，样本标准差 ddof=1。N=20，首值下标 N−1。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  V04: {
+    formula: "带宽 = (上轨−下轨)/中轨 = 2kσ/SMA(C, N)，无量纲比值；中轨为 0 时 NaN。N=20、k=2.0。",
+    tolerance: "无量纲 · absolute 1e-4",
+  },
+  V05: {
+    formula: "%B = (C−下轨)/(上轨−下轨)；零带宽（σ=0）输出 NaN。N=20、k=2.0。",
+    tolerance: "无量纲 · absolute 1e-4",
+  },
+  V07: {
+    formula: "窗口 N 内 回撤 = (C−窗口峰值)/窗口峰值×100；UI = sqrt(mean(回撤²))。N=14，峰值 ≤0 时 NaN。",
+    tolerance: "无量纲 · absolute 1e-4",
+  },
+  V08: {
+    formula: "GAPO = (Open − 前收)/ATR(N)×100，ATR 周期 14；保留正负号、不按同向筛选。",
+    tolerance: "百分比 · absolute 1e-4",
+  },
+  V09: {
+    formula: "振幅 = High − Low（元），单根直接输出，首根即有效。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  V10: {
+    formula: "TR[0]=NaN；TR[i]=max(H−L, |H−PC|, |L−PC|)，单根直接输出。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+};
