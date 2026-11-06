@@ -170,6 +170,68 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
       return { index, x: xOf(index) };
     });
 
+    // T13 翻转根标记：新激活侧当根有值、旧激活侧上一根有值，即在 xOf 处打点
+    const t13 = series.find((item) => item.indicatorId === "T13");
+    const t13Flips: Array<{ x: number; y: number }> = [];
+    if (t13) {
+      const isFinite = (value: number | null | undefined): value is number =>
+        value !== null && value !== undefined && Number.isFinite(value);
+      const long = t13.outputs.find((output) => output.key === "long")?.values ?? [];
+      const short = t13.outputs.find((output) => output.key === "short")?.values ?? [];
+      for (let i = Math.max(1, start); i < bars.length; i += 1) {
+        const longNow = long[i];
+        const shortPrev = short[i - 1];
+        const shortNow = short[i];
+        const longPrev = long[i - 1];
+        if (isFinite(longNow) && isFinite(shortPrev)) {
+          t13Flips.push({ x: xOf(i - start), y: yOfPrice(longNow) });
+        } else if (isFinite(shortNow) && isFinite(longPrev)) {
+          t13Flips.push({ x: xOf(i - start), y: yOfPrice(shortNow) });
+        }
+      }
+    }
+
+    // T15 云带：先行带 A/B 之间的填充，按 A≥B（多，红）/ A<B（空，绿）分段着色
+    const t15 = series.find((item) => item.indicatorId === "T15");
+    const cloudBands: Array<{ sign: "pos" | "neg"; d: string }> = [];
+    if (t15) {
+      const a = t15.outputs.find((output) => output.key === "senkouA")?.values ?? [];
+      const b = t15.outputs.find((output) => output.key === "senkouB")?.values ?? [];
+      const okAt = (index: number) => {
+        const av = a[index];
+        const bv = b[index];
+        return (
+          av !== null && av !== undefined && Number.isFinite(av) &&
+          bv !== null && bv !== undefined && Number.isFinite(bv)
+        );
+      };
+      let i = Math.max(0, start);
+      while (i < bars.length) {
+        if (!okAt(i)) {
+          i += 1;
+          continue;
+        }
+        const sign = (a[i] as number) >= (b[i] as number) ? "pos" : "neg";
+        let j = i;
+        while (
+          j + 1 < bars.length &&
+          okAt(j + 1) &&
+          (((a[j + 1] as number) >= (b[j + 1] as number)) === (sign === "pos"))
+        ) {
+          j += 1;
+        }
+        const points: string[] = [];
+        for (let k = i; k <= j; k += 1) {
+          points.push(`${xOf(k - start)},${yOfPrice(a[k] as number)}`);
+        }
+        for (let k = j; k >= i; k -= 1) {
+          points.push(`${xOf(k - start)},${yOfPrice(b[k] as number)}`);
+        }
+        cloudBands.push({ sign, d: `M${points.join(" L")} Z` });
+        i = j + 1;
+      }
+    }
+
     return {
       count,
       visible,
@@ -185,6 +247,8 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
       subUnit,
       subSpansZero,
       volMax,
+      t13Flips,
+      cloudBands,
     };
   }, [bars, series, windowSize, overlayIds, subId, units]);
 
@@ -288,6 +352,19 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
           );
         })}
 
+        {/* T15 云带填充：A≥B 红 / B>A 绿（半透明，压在线下） */}
+        {view.cloudBands.map((band, index) => (
+          <path
+            key={`cloud-${index}`}
+            data-cloud="T15"
+            data-cloud-sign={band.sign}
+            d={band.d}
+            fill={band.sign === "pos" ? "var(--rise)" : "var(--fall)"}
+            opacity={0.12}
+            stroke="none"
+          />
+        ))}
+
         {/* 指标叠加层：B1 的 8 条 + B2 所选 */}
         {view.overlayLines.map((line) =>
           line.kind === "dot" ? (
@@ -296,29 +373,96 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
               data-overlay={line.indicatorId}
               data-overlay-key={line.key}
             >
-              {line.values.map((value, index) =>
-                value !== null && Number.isFinite(value) ? (
-                  <circle
-                    key={`dot-${index}`}
-                    cx={view.xOf(index)}
-                    cy={view.yOfPrice(value)}
-                    r={2.2}
-                    fill={line.color}
-                  />
-                ) : null,
-              )}
+              {(() => {
+                if (line.indicatorId !== "T16") {
+                  return line.values.map((value, index) =>
+                    value !== null && Number.isFinite(value) ? (
+                      <circle
+                        key={`dot-${index}`}
+                        cx={view.xOf(index)}
+                        cy={view.yOfPrice(value)}
+                        r={2.2}
+                        fill={line.color}
+                      />
+                    ) : null,
+                  );
+                }
+                // T16：SAR 在收盘价下方视为多头（红），上方视为空头（绿）；方向翻转根补箭头
+                const dirs = line.values.map((value, index) =>
+                  value !== null && Number.isFinite(value)
+                    ? value <= view.visible[index].close
+                      ? 1
+                      : -1
+                    : 0,
+                );
+                const prevDir = (index: number) => {
+                  for (let i = index - 1; i >= 0; i -= 1) if (dirs[i] !== 0) return dirs[i];
+                  return 0;
+                };
+                return (
+                  <>
+                    {line.values.map((value, index) =>
+                      value !== null && Number.isFinite(value) ? (
+                        <circle
+                          key={`dot-${index}`}
+                          cx={view.xOf(index)}
+                          cy={view.yOfPrice(value)}
+                          r={2.2}
+                          fill={dirs[index] > 0 ? "var(--rise)" : "var(--fall)"}
+                        />
+                      ) : null,
+                    )}
+                    {line.values.map((value, index) => {
+                      if (value === null || !Number.isFinite(value)) return null;
+                      const prev = prevDir(index);
+                      if (dirs[index] === 0 || prev === 0 || prev === dirs[index]) return null;
+                      const x = view.xOf(index);
+                      const y = view.yOfPrice(value);
+                      const d =
+                        dirs[index] > 0
+                          ? `M${x - 2.6} ${y + 5} L${x + 2.6} ${y + 5} L${x} ${y}`
+                          : `M${x - 2.6} ${y - 5} L${x + 2.6} ${y - 5} L${x} ${y}`;
+                      return (
+                        <path
+                          key={`arrow-${index}`}
+                          data-flip="T16"
+                          data-flip-dir={dirs[index] > 0 ? "up" : "down"}
+                          d={d}
+                          fill={dirs[index] > 0 ? "var(--rise)" : "var(--fall)"}
+                        />
+                      );
+                    })}
+                  </>
+                );
+              })()}
             </g>
           ) : (
-            <path
-              key={`overlay-${line.id}`}
-              data-overlay={line.indicatorId}
-              data-overlay-key={line.key}
-              d={pathFor(line.values, view.xOf, view.yOfPrice)}
-              fill="none"
-              stroke={line.color}
-              strokeWidth={1.3}
-              opacity={0.92}
-            />
+            <g key={`overlay-${line.id}`}>
+              <path
+                data-overlay={line.indicatorId}
+                data-overlay-key={line.key}
+                d={pathFor(line.values, view.xOf, view.yOfPrice)}
+                fill="none"
+                stroke={line.color}
+                strokeWidth={1.3}
+                opacity={0.92}
+                strokeDasharray={
+                  line.indicatorId === "T09" && line.key === "middle" ? "4 3" : undefined
+                }
+              />
+              {line.indicatorId === "T13" && line.key === "long"
+                ? view.t13Flips.map((point, index) => (
+                    <circle
+                      key={`flip-${index}`}
+                      data-flip="T13"
+                      cx={point.x}
+                      cy={point.y}
+                      r={2.8}
+                      fill="var(--accent)"
+                    />
+                  ))
+                : null}
+            </g>
           ),
         )}
 
@@ -352,7 +496,15 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
 
         {/* 副图：M06 或 B2 波动指标（线性/柱状/散点按 output.kind 渲染） */}
         {view.subSpansZero && (
-          <line x1={LEFT} x2={RIGHT} y1={zeroY} y2={zeroY} stroke="var(--line2)" strokeWidth={0.7} />
+          <line
+            data-sub-zero="1"
+            x1={LEFT}
+            x2={RIGHT}
+            y1={zeroY}
+            y2={zeroY}
+            stroke="var(--line2)"
+            strokeWidth={0.7}
+          />
         )}
         <text x={RIGHT + 8} y={MACD_TOP + 10} fontSize={9.5} fill="var(--faint)" className="mono">
           {view.subId}
@@ -416,6 +568,33 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
               </g>
             );
           }
+          // V08 Gapo 需正负分色：按符号拆成两条路径，各自只保留同号点
+          if (view.subId === "V08" && line.key === "gapo") {
+            const splitBySign = (positive: boolean) =>
+              line.values.map((value) =>
+                value !== null && Number.isFinite(value) && (positive ? value > 0 : value < 0)
+                  ? value
+                  : null,
+              );
+            return (
+              <g key={`sub-${line.key}`} data-sub={view.subId} data-sub-key={line.key}>
+                <path
+                  data-sub-sign="pos"
+                  d={pathFor(splitBySign(true), view.xOf, view.yOfSub)}
+                  fill="none"
+                  stroke="var(--pos)"
+                  strokeWidth={1.3}
+                />
+                <path
+                  data-sub-sign="neg"
+                  d={pathFor(splitBySign(false), view.xOf, view.yOfSub)}
+                  fill="none"
+                  stroke="var(--neg)"
+                  strokeWidth={1.3}
+                />
+              </g>
+            );
+          }
           return (
             <path
               key={`sub-${line.key}`}
@@ -448,7 +627,7 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
         {/* 图例 */}
         <g className="mono" fontSize={9.5}>
           <text x={RIGHT - 300} y={24} fill="var(--muted)">
-            T01–T05 · T19/T20/T22{overlayIds.length > 0 ? ` · B2 ×${overlayIds.length}` : ""}
+            T01–T05 · T19/T20/T22{overlayIds.length > 0 ? ` · B2: ${overlayIds.join("/")}` : ""}
           </text>
           <text x={RIGHT - 100} y={24} fill="var(--muted)">
             {view.subId}
@@ -456,6 +635,20 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subId, units
           <text x={RIGHT - 8} y={24} fill="var(--faint)" textAnchor="end">
             {view.subLines.map((line) => line.label).join(" / ")}
           </text>
+          {view.overlayLines
+            .filter((line) => overlayIds.includes(line.indicatorId))
+            .map((line, index) => (
+              <text
+                key={`legend-${line.id}`}
+                data-legend-line={`${line.indicatorId}.${line.key}`}
+                x={RIGHT - 300}
+                y={38 + index * 11}
+                fill={line.color}
+                fontSize={9}
+              >
+                {line.label}
+              </text>
+            ))}
         </g>
 
         {/* 十字光标 */}

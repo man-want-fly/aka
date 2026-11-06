@@ -310,6 +310,7 @@ export function WorkbenchPage({
             calc: calcRef.current,
             barsLength: barsRef.current?.bars.length ?? 0,
             windowSize: rangeRef.current,
+            barsClose: (barsRef.current?.bars ?? []).map((bar) => bar.close),
           }),
         });
         if (!alive) return;
