@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |---|---|
 | 裁定编号 | R-S0-04-01 |
-| 版本 / 日期 | v0.1 / 2026-11-06 |
+| 版本 / 日期 | v0.2 / 2026-11-07（判据未变，仅同步示例数字与来源批次） |
 | 角色 | BA（业务分析） |
 | 触发 | QA 复核 `docs/qa/aka-s2-qa-report-v0.1.md` §3.2：判据写 `1→12→120`，证据用 `1→12→60`，判「判据未逐字满足，退回部分清偿」 |
 | 裁定 | **选 (A)：修订判据**，不保留原 120 端值 |
@@ -17,7 +17,12 @@
 - 原判据：`连键 1→12→120 后日志仅 1 条，含 code/period/adj/indicatorId/paramsHash/datasetId`。
 - 物理限制：TEMA 建议预热 `4.5N`，`N=120` 需 `540` 根；当前模拟数据集固定 `520` 根日线。
 - 实测 A 组（`1→12→120`）：`requestsIssued=1`、`computeDelta=0`，请求在预热阶段返回 `INSUFFICIENT_DATA`。
-- 实测 B 组（`1→12→60`）：`requestsIssued=1`、`computeDelta=1`、`barCount=520`、`totalMs=18`。
+- 实测 B 组（`1→12→60`）：`requestsIssued=1`、`computeDelta=1`、`barCount=520`、`totalMs=32`、`seriesHash=c84fa833`。
+- 数据来源批次（本裁定示例值的唯一口径）：`s2-evidence.json`（`generatedAt=2026-11-06T16:50:18.641Z`，与 `TD-S0-07` 的 30 样本重跑同一次 diag）
+  - `indicator.compute` @ `tsMs=1793983776257`（`T05 period=60`，`300750.SZ D qfq`，520 根）→ `computeMs=0.014795`；
+  - `compute.count` @ `tsMs=1793983776258` → `count=5 / instances=50 / skip=6 / cacheHit=false`；
+  - `debounce.burst60.samples[0]` → `barsMs=17 / calcMs=24 / totalMs=32 / seriesHash=c84fa833 / seriesPoints=39182`。
+  - 旧批次（`a212660` / `7ded2bc`）的 `count=12`、`totalMs=18` 与本节无关，**已作废**，不得再引用。
 - 周期控件只有 `12 / 60 / 120` 三档（`WorkbenchPage.tsx` 第 48–51 行），`60` 是当前数据集下的最大合法档位。
 
 ## 2. 裁定：选 (A)
@@ -44,11 +49,14 @@
 | 判据子项 | 证据 | 结论 |
 |---|---|---|
 | ① 只发一次请求 | A 组 `requestsIssued=1`；B 组 `requestsIssued=1` | 满足 |
-| ② 只发起一个计算批次 | B 组 `computeDelta=1`（事件 `count=12`，本批实算 12 个实例）；A 组 `computeDelta=0`（因不可算，不计入） | 满足 |
+| ② 只发起一个计算批次 | B 组 `computeDelta=1`：`compute.count` 事件只增 1 次（@ `tsMs=1793983776258`）；该事件 `count=5 / instances=50 / skip=6 / cacheHit=false`——一条 `calc` 请求含 50 个实例，5 个实算、6 个重复键跳过、其余命中，`count` 是本批**实算**数而非实例总数。A 组 `computeDelta=0`（因不可算，不计入） | 满足 |
 | ③ 日志字段完整 | `s2-evidence.json` `debounce.burst60.computeEvent` 事件原文：`indicatorId/paramsHash/cacheKey/security/timeframe/adj/datasetId/datasetGeneration/barCount` | 满足 |
 | ④ 边界档位 | `60` 为当前数据集下唯一可算的最大档位（`12/60/120` 中 `120` 不可算） | 满足 |
 
 结论：**按修订后判据，`TD-S0-04` 可判「已清偿」**；该结论由 QA 复核签认，本文只提供判据裁定。
+
+> 本表引用值均取自 §1 声明的同一批次（`s2-evidence.json`，`generatedAt=2026-11-06T16:50:18.641Z`）；
+> 旧批次的 `count=12` / `totalMs=18` 已作废。若后续重跑 diag，本节 `tsMs`、`count/instances/skip`、`totalMs`、`seriesHash` 需与证据文件同步更新，只改一半视为未同步。
 
 ## 4. 开发动作（据此改状态）
 
@@ -56,7 +64,7 @@
    - `TD-S0-04` 的「清零判据」改为 §2 新判据，并注明「裁定 R-S0-04-01」；
    - 明细段补一句「按修订判据，A 组仅证明请求数为 1，计算证据以 B 组 `computeDelta=1` 为准」；
    - 状态行由 `部分清偿` 改 `已清偿`（由开发执行，本文不改状态行）。
-2. 汇报口径统一为：「连键 `1→12→60`（当前最大合法档位）只发 1 次请求、只发起 1 个计算批次（本批 12 个实例）」；
+2. 汇报口径统一为：「连键 `1→12→60`（当前最大合法档位）只发 1 次请求、只发起 1 个计算批次（本批 50 个实例：5 实算 / 6 重复键 skip / 其余命中）」；
    不得再写「`1→12→120` 已达成」，也不得把批次计数说成「只算 1 个实例」。
 3. 数据集扩到 `≥540` 根后，按新判据自动改测 `1→12→120`，无需再次裁定。
 
@@ -65,3 +73,4 @@
 | 版本 | 日期 | 变更 |
 |---|---|---|
 | v0.1 | 2026-11-06 | 首次裁定：选 (A)，判据改为「当前最大合法档位（60）」；给出理由、证据挂接与开发动作 |
+| v0.2 | 2026-11-07 | 判据不变，仅同步示例数字与来源批次：§1/§3/§4 的 `count=12`、`totalMs=18` → `count=5 / instances=50 / skip=6`、`totalMs=32`、`seriesHash=c84fa833`、`computeMs=0.014795`（`tsMs=1793983776257/98`，`generatedAt=2026-11-06T16:50:18.641Z`）；标注旧批次作废，避免第三份文档各说一套 |
