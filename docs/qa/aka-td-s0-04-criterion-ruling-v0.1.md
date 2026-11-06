@@ -27,8 +27,8 @@
 > 在**当前数据集可算范围内**，取周期控件的**最大合法档位**（当前为 `60`；`120` 因 TEMA 预热 `540 > 520` 不可算），
 > 以 `40ms` 间隔连键 `1→12→N`，静默 `120ms` 后：
 > ① `requestsIssued = 1`（前端只发一次请求）；
-> ② `compute.count` 相对基线**增量 = 1**（后端只真实计算一次）；
-> ③ 该条 `indicator.compute` 日志含 `code/period/adj/indicatorId/paramsHash/cacheKey/datasetId/barCount`。
+> ② `compute.count` 相对基线**增量 = 1**（后端只发起 1 个计算批次；`compute.count` 为批次计数，一条 `calc` 请求可含多个实例，事件 `count` = 本批实算实例数，本项断言的是请求批次只发生 1 次，不是「只算 1 个实例」）；
+> ③ 该条 `indicator.compute` 事件原文含 `indicatorId/paramsHash/cacheKey/security/timeframe/adj/datasetId/datasetGeneration/barCount`（原判据的 `code/period` 在本事件中以 `security/timeframe` 落盘）。
 > 数据集扩容到 `≥540` 根后，最大合法档位自动变为 `120`，判据随之要求 `1→12→120`，不再另行修文。
 
 **理由（三条）**
@@ -44,8 +44,8 @@
 | 判据子项 | 证据 | 结论 |
 |---|---|---|
 | ① 只发一次请求 | A 组 `requestsIssued=1`；B 组 `requestsIssued=1` | 满足 |
-| ② 只计算一次 | B 组 `computeDelta=1`；A 组 `computeDelta=0`（因不可算，不计入） | 满足 |
-| ③ 日志字段完整 | `s2-evidence.json` `debounce` 段：`code/period/adj/indicatorId/paramsHash/cacheKey/datasetId/barCount` | 满足 |
+| ② 只发起一个计算批次 | B 组 `computeDelta=1`（事件 `count=12`，本批实算 12 个实例）；A 组 `computeDelta=0`（因不可算，不计入） | 满足 |
+| ③ 日志字段完整 | `s2-evidence.json` `debounce.burst60.computeEvent` 事件原文：`indicatorId/paramsHash/cacheKey/security/timeframe/adj/datasetId/datasetGeneration/barCount` | 满足 |
 | ④ 边界档位 | `60` 为当前数据集下唯一可算的最大档位（`12/60/120` 中 `120` 不可算） | 满足 |
 
 结论：**按修订后判据，`TD-S0-04` 可判「已清偿」**；该结论由 QA 复核签认，本文只提供判据裁定。
@@ -56,8 +56,8 @@
    - `TD-S0-04` 的「清零判据」改为 §2 新判据，并注明「裁定 R-S0-04-01」；
    - 明细段补一句「按修订判据，A 组仅证明请求数为 1，计算证据以 B 组 `computeDelta=1` 为准」；
    - 状态行由 `部分清偿` 改 `已清偿`（由开发执行，本文不改状态行）。
-2. 汇报口径统一为：「连键 `1→12→60`（当前最大合法档位）只发 1 次请求、只算 1 次」；
-   不得再写「`1→12→120` 已达成」。
+2. 汇报口径统一为：「连键 `1→12→60`（当前最大合法档位）只发 1 次请求、只发起 1 个计算批次（本批 12 个实例）」；
+   不得再写「`1→12→120` 已达成」，也不得把批次计数说成「只算 1 个实例」。
 3. 数据集扩到 `≥540` 根后，按新判据自动改测 `1→12→120`，无需再次裁定。
 
 ## 5. 变更记录

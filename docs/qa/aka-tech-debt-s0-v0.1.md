@@ -180,15 +180,15 @@
 
 - **证据分层（按 R-S0-04-01）**：A 组 `1→12→120` 只证明 `requestsIssued=1`（120 撞 TEMA 预热，`computeDelta=0` 不计入）；计算证据以 B 组 `1→12→60` 的 `computeDelta=1` 为准。
 
-- **已落地**：`app-core::telemetry` 的 `indicator.compute` JSONL（字段 `code/period/adj/indicatorId/paramsHash/cacheKey/datasetId/barCount`）；
+- **已落地**：`app-core::telemetry` 的 `indicator.compute` JSONL（事件字段 `indicatorId/paramsHash/cacheKey/security/timeframe/adj/datasetId/datasetGeneration/barCount`，原 `code/period` 以 `security/timeframe` 落盘）；
   `ParamDebouncer`（`TYPICAL_INPUT_GAP_MS=40`、`DEFAULT_DEBOUNCE_QUIET_MS=120`）；
   前端 `WorkbenchPage` 120ms 静默防抖。
 - **证据**：`debounce_fires_once_after_120ms_quiet_with_40ms_inputs`、`separate_bursts_fire_separately`、
   `jsonl_sink_appends_machine_readable_events`；`cargo test -p app-core`。
 - **S2 实机取证（清零判据达成）**：真 Tauri 窗口连键 `1→12→120`（40ms 间隔）→ `requestsIssued=1`、
   `compute.count` 增量 0（该请求在 TEMA 预热阶段返回 `INSUFFICIENT_DATA`，需 540 根/实际 520 根）；
-  同口径 `1→12→60` → `requestsIssued=1`、`compute.count` **增量 1**、`barCount=520`、`totalMs=18`。
-  两组共同证明「静默窗口只放行一次请求，且该请求只计算一次」。
+  同口径 `1→12→60` → `requestsIssued=1`、`compute.count` **增量 1**（批次计数；事件 `count=12`，本批实算 12 个实例）、`barCount=520`、`totalMs=18`。
+  两组共同证明「静默窗口只放行一次请求，且只发起一个计算批次」。
   证据：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §1、
   [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `debounce` 段。
 

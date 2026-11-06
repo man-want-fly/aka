@@ -85,4 +85,45 @@ AKA_DIAG=1 npm run tauri dev                   # 实机证据，renderLayer.ok=t
 - M 周期：模拟数据集只有 520 根日线（≈24 个月），24 根月线不足 B1 的 4 项预热；
   本轮只取到行情层聚合，未伪造指标层证据。
 - T16：仍为 beta（R-03 保留），未取得商业软件逐点对照。
-- 渲染层证据仅覆盖 B1 的 11 个指标；B2 的 8 条渲染层 AC 待接入 UI 后取证。
+- 渲染层证据首轮仅覆盖 B1 的 11 个指标；B2 的 8 条渲染层 AC（`S-03.05-01~08`）已在 `aka-b2-ac-evidence-v0.1.md` §6 补齐。
+
+---
+
+## 第二轮定点复核整改（2026-11-06，P1×2 + P2×5）
+
+- 来源：`docs/qa/aka-s2-qa-recheck-v0.1.md`（QA 在独立 worktree、基线 `2247e0d` 上定点复核）。
+- 结论口径修正：**全量测试 = 88 passed**（`app_core 17 / indicator_core 32 / data_provider 26 / data_store 8 / indicator_golden 5`，命令 `cargo test --workspace --exclude aka-desktop`）；黄金 **137/137**（`cargo test -p indicator-golden -- --nocapture` 输出 `golden: 137/137 passed`）；B2 夹具 **83 case**（bases 21×3 + insufficient 16 + below-min 4）。此前「45 项」只是 `indicator_core + data_store + indicator_golden` 三项之和，属口径错误，已弃用。
+
+### P1-1 TD-S0-04 证据挂接（第三次同类问题）
+
+- 做法：选「补真实事件原文」，不再用「代码里有」代替「证据文件里有」。
+- `diag.ts` 的 `runBurst` 从遥测 `after.recent` 取最后一条 `indicator.compute` 原文，落盘为 `debounce.burst60.computeEvent`。
+- 实机字段：`indicatorId=T05`、`paramsHash=0d154e14a228d636`、`cacheKey=v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{"period":60}|2023-01-02~2024-12-27`、`security=300750.SZ`、`timeframe=D`、`adj=qfq`、`datasetId=sim-default`、`datasetGeneration=1`、`barCount=520`、`computeMs=0.0959`。
+- 文档对齐：`aka-td-s0-04-criterion-ruling-v0.1.md`、`aka-tech-debt-s0-v0.1.md`、`aka-s2-real-machine-evidence-v0.1.md` 的字段清单改为上述**事件实际字段**（原写的 `code/period` 实际以 `security/timeframe` 落盘）。
+- 语义更正：`compute.count` 是**请求批次计数**；一条 `calc` 请求含 12 个实例，事件 `count=12` 表示本批实算 12 个实例。断言目标是「只发 1 次请求、只发起 1 个计算批次」，不是「只算 1 个实例」。
+
+### P1-2 tooltip 逐根等值（`AC-03.04-05`）
+
+- `diag.ts` 新增 `tooltipParity`：从可见窗口取 6 根，派发真实 `mousemove` 后读 tooltip 的 `data-value`，与引擎序列同索引逐点比对，**容差 0**（同时比 T01 SMA 与 M06 DIF）。
+- 实机结果：`sampled=6`、`enginePoints=520`、`mismatches=[]`、`ok=true`（12/12 点全等；例如 `bar=400` 引擎 SMA 与 tooltip `data-value` 同为 `28.598500000000023`）。
+- `verification.renderLayer.ok` 已把 `tooltipParity.ok` 纳入必要条件。
+
+### P2 五项
+
+| 项 | 处理 | 证据 |
+|---|---|---|
+| P2-1 MACD `fast.max` 仍 100 | `model.ts` 本地校验与 `ParamPanel.tsx` 回退上限统一为 200（`fast/slow/signal` 三条与 manifest 一致） | `npm run build` 通过；manifest `fast/slow/signal` 均 `max=200` |
+| P2-2 「11 个 B1 全部未达预热」残留 | 证据文档 §0 结论表与 §4 未达成段均改为「`T02/T04/T05/M06` 4 项不可算；`T01/T03/T19/T20/T21/T22/E13` 7 项可算，本次只取证行情层聚合」 | 文档全库检索无「11 个…未达预热」表述 |
+| P2-3 证据文档缺配色行 | §5 增「§5.1 配色证据（`getComputedStyle`）」6 行：token、上/下 K 线描边、正/负柱 fill、涨跌文字三重编码 | 与 `verification.renderLayer.colorSamples` 逐字对应 |
+| P2-4 below-min 期望值来源未标注 | `gen_reference.py` 注释 + 夹具顶层 `note` 字段：4 条期望值为**规格固化**（手写字面量 `NAN`/`1.0`），非参考实现推导 | 重生成后仅 `edge_b2_below_min_window.json` 增加 `note`，数值未变 |
+| P2-5 报数口径 | 统一按全量：**88** / 黄金 **137/137** / B2 夹具 **83 case**；证据文档 §6 收录 **31** 指标、beta **5** 个（T03/T19/T21/M06/T16）；复跑命令改为 `cargo test -p indicator-golden -- --nocapture` | 本轮实跑输出 |
+
+### 复跑结果（本轮）
+
+```bash
+cargo test --workspace --exclude aka-desktop   # 88 passed（17/32/26/8/5）
+cargo test -p indicator-golden -- --nocapture  # golden: 137/137 passed
+npm run build                                  # 通过
+```
+
+- 边界：`docs/indicators/b1-trend-kernels.md`、`docs/qa/aka-b1-card-reconciliation-v0.1.md`、`docs/story-cards/aka-story-cards-v0.1.md` 存在其他会话（BA）的改动，本会话不代为提交。
