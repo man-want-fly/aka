@@ -9,6 +9,13 @@ use crate::param::param_int;
 use crate::view::{CalcError, Indicator, OhlcvView};
 use crate::Params;
 
+pub mod b2;
+
+pub use b2::{
+    T08_ID, T09_ID, T10_ID, T11_ID, T12_ID, T13_ID, T14_ID, T15_ID, T16_ID, T23_ID, T24_ID,
+    V01_ID, V02_ID, V03_ID, V04_ID, V05_ID, V07_ID, V08_ID, V09_ID, V10_ID,
+};
+
 pub const PLANNED_INDICATOR_COUNT: usize = 105;
 
 /// 兼容常量：主均线（SMA）与 MACD。旧代码可继续引用，但注册表 id 已是 PRD 编号。
@@ -76,8 +83,11 @@ static T22: LinRegIndicator = LinRegIndicator {
 static E13: Bias = Bias;
 static M06: Macd = Macd;
 
-static ALL: [&dyn Indicator; 11] = [
+static ALL: [&dyn Indicator; 31] = [
     &T01, &T02, &T03, &T04, &T05, &T19, &T20, &T21, &T22, &E13, &M06,
+    &b2::T08, &b2::T09, &b2::T10, &b2::T11, &b2::T12, &b2::T13, &b2::T14, &b2::T15,
+    &b2::T16, &b2::T23, &b2::T24,
+    &b2::V01, &b2::V02, &b2::V03, &b2::V04, &b2::V05, &b2::V07, &b2::V08, &b2::V09, &b2::V10,
 ];
 
 #[derive(Debug, Clone, Copy)]
@@ -504,9 +514,13 @@ mod tests {
 
     #[test]
     fn registry_ids_and_aliases() {
-        assert_eq!(implemented_count(), 11);
+        assert_eq!(implemented_count(), 31);
         assert_eq!(PLANNED_INDICATOR_COUNT, 105);
-        for id in [T01_ID, T02_ID, T03_ID, T04_ID, T05_ID, T19_ID, T20_ID, T21_ID, T22_ID, E13_ID, MACD_ID] {
+        for id in [
+            T01_ID, T02_ID, T03_ID, T04_ID, T05_ID, T19_ID, T20_ID, T21_ID, T22_ID, E13_ID, MACD_ID,
+            T08_ID, T09_ID, T10_ID, T11_ID, T12_ID, T13_ID, T14_ID, T15_ID, T16_ID, T23_ID, T24_ID,
+            V01_ID, V02_ID, V03_ID, V04_ID, V05_ID, V07_ID, V08_ID, V09_ID, V10_ID,
+        ] {
             assert!(lookup(id).is_some(), "缺少注册指标 {id}");
         }
         assert_eq!(lookup("ma").map(|item| item.meta().id), Some(T01_ID));
@@ -514,21 +528,24 @@ mod tests {
         assert!(lookup("not-exist").is_none());
     }
 
-    /// 短序列边界：不足窗口时全 NaN，且不 panic。
+    /// 短序列边界：预热不足的指标全 NaN；预热为 0/1 的指标不 panic。
     #[test]
-    fn short_series_is_all_nan_for_every_indicator() {
+    fn short_series_respects_warmup_for_every_indicator() {
         let close = vec![100.0; 3];
         for indicator in all() {
             let params = params(indicator.meta());
+            let warmup = (indicator.meta().warmup)(&params);
             let mut out = vec![vec![0.0; close.len()]; indicator.meta().outputs.len()];
             indicator
                 .calc(&view_of(&close), &params, &mut out)
                 .unwrap();
-            assert!(
-                out.iter().all(|column| column.iter().all(|v| v.is_nan())),
-                "{} 短序列应全 NaN",
-                indicator.meta().id
-            );
+            if warmup >= close.len() {
+                assert!(
+                    out.iter().all(|column| column.iter().all(|v| v.is_nan())),
+                    "{} 短序列应全 NaN",
+                    indicator.meta().id
+                );
+            }
         }
     }
 

@@ -313,12 +313,16 @@ mod tests {
                 let expected = match case.indicator_id.as_str() {
                     "T21" => "absolute:1e-6",
                     "E13" | "M06" => "absolute:1e-4",
+                    "T24" => "absolute:1e-9",
+                    "V02" | "V04" | "V05" | "V07" | "V08" => "absolute:1e-4",
                     _ => "relative:1e-6",
                 };
                 if case.tolerance == "absolute:1e-9" {
                     assert!(
-                        suite.name.starts_with("edge_manual") || suite.name.starts_with("edge_arithmetic"),
-                        "{} 出现收紧容差 absolute:1e-9：收紧只允许用于手算夹具",
+                        suite.name.starts_with("edge_manual")
+                            || suite.name.starts_with("edge_arithmetic")
+                            || case.indicator_id == "T24",
+                        "{} 出现收紧容差 absolute:1e-9：收紧只允许用于手算夹具或 T24 原始值直取",
                         suite.name
                     );
                     tightened += 1;

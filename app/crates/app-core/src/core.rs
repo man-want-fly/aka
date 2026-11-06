@@ -924,6 +924,25 @@ mod tests {
         assert_eq!(key_a.matches('|').count(), 8, "v2 + 7 个维度 + 1 段 range");
     }
 
+    /// S2：D/W/M 切换必须换缓存键，不得命中旧周期缓存。
+    #[test]
+    fn cache_key_includes_timeframe() {
+        let daily = series(Date::new(2024, 12, 20), 10);
+        let mut weekly = series(Date::new(2024, 12, 20), 10);
+        weekly.timeframe = "1w".into();
+        let mut monthly = series(Date::new(2024, 12, 20), 10);
+        monthly.timeframe = "1m".into();
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let window = resolve_window(&daily, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        let kd = calc_key(&daily, meta, &params, &window.range);
+        let kw = calc_key(&weekly, meta, &params, &window.range);
+        let km = calc_key(&monthly, meta, &params, &window.range);
+        assert_ne!(kd, kw, "D→W 必须产生不同缓存键");
+        assert_ne!(kw, km, "W→M 必须产生不同缓存键");
+        assert!(kd.contains("|1d|") && kw.contains("|1w|") && km.contains("|1m|"));
+    }
+
     fn bars_req(timeframe: &str, from: Option<&str>, to: Option<&str>) -> GetBarsRequest {
         GetBarsRequest {
             security: "600519.SH".into(),

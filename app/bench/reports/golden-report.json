@@ -2,7 +2,7 @@
   "failed": 0,
   "failures": [],
   "formatVersion": 1,
-  "generatedAtUnix": 1793967316,
+  "generatedAtUnix": 1793973226,
   "indicators": [
     {
       "cases": 5,
@@ -40,6 +40,51 @@
       "indicatorId": "T05"
     },
     {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T08"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T09"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T10"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T11"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T12"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T13"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T14"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T15"
+    },
+    {
+      "cases": 3,
+      "failed": 0,
+      "indicatorId": "T16"
+    },
+    {
       "cases": 6,
       "failed": 0,
       "indicatorId": "T19"
@@ -58,11 +103,72 @@
       "cases": 6,
       "failed": 0,
       "indicatorId": "T22"
+    },
+    {
+      "cases": 3,
+      "failed": 0,
+      "indicatorId": "T23"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "T24"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "V01"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "V02"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "V03"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "V04"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "V05"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "V07"
+    },
+    {
+      "cases": 4,
+      "failed": 0,
+      "indicatorId": "V08"
+    },
+    {
+      "cases": 3,
+      "failed": 0,
+      "indicatorId": "V09"
+    },
+    {
+      "cases": 3,
+      "failed": 0,
+      "indicatorId": "V10"
     }
   ],
-  "passed": 54,
+  "passed": 130,
   "result": "passed",
   "suites": [
+    {
+      "bars": 520,
+      "cases": 20,
+      "failed": 0,
+      "name": "base_b2_channel_seed42_520"
+    },
     {
       "bars": 520,
       "cases": 11,
@@ -74,6 +180,24 @@
       "cases": 4,
       "failed": 0,
       "name": "edge_arithmetic_regression"
+    },
+    {
+      "bars": 40,
+      "cases": 20,
+      "failed": 0,
+      "name": "edge_b2_constant_ohlc"
+    },
+    {
+      "bars": 1,
+      "cases": 20,
+      "failed": 0,
+      "name": "edge_b2_first_bar"
+    },
+    {
+      "bars": 20,
+      "cases": 16,
+      "failed": 0,
+      "name": "edge_b2_insufficient"
     },
     {
       "bars": 40,
@@ -112,5 +236,5 @@
       "name": "edge_t21_constant_window"
     }
   ],
-  "total": 54
+  "total": 130
 }

@@ -142,6 +142,314 @@ def macd(closes, fast, slow, signal):
     return {"dif": dif_out, "dea": dea_out, "hist": hist}
 
 
+# ----------------------------- B2 通道 / 波动 -----------------------------
+def wilder_of_valid(values, period):
+    out = [NAN] * len(values)
+    start = next((i for i, v in enumerate(values) if v is not None), None)
+    if start is None or period < 2:
+        return out
+    end = start + period
+    if end > len(values) or any(v is None for v in values[start:end]):
+        return out
+    seed = sum(values[start:end]) / period
+    out[end - 1] = seed
+    for i in range(end, len(values)):
+        if values[i] is not None and out[i - 1] is not None:
+            out[i] = (out[i - 1] * (period - 1) + values[i]) / period
+    return out
+
+
+def rolling_max(values, period):
+    out = [NAN] * len(values)
+    if period < 1 or len(values) < period:
+        return out
+    for i in range(period - 1, len(values)):
+        window = values[i + 1 - period:i + 1]
+        if any(v is None for v in window):
+            continue
+        out[i] = max(window)
+    return out
+
+
+def rolling_min(values, period):
+    out = [NAN] * len(values)
+    if period < 1 or len(values) < period:
+        return out
+    for i in range(period - 1, len(values)):
+        window = values[i + 1 - period:i + 1]
+        if any(v is None for v in window):
+            continue
+        out[i] = min(window)
+    return out
+
+
+def rolling_std(values, period):
+    out = [NAN] * len(values)
+    if period < 2 or len(values) < period:
+        return out
+    for i in range(period - 1, len(values)):
+        window = values[i + 1 - period:i + 1]
+        if any(v is None for v in window):
+            continue
+        mean = sum(window) / period
+        var = sum((v - mean) ** 2 for v in window) / (period - 1)
+        out[i] = max(0.0, var) ** 0.5
+    return out
+
+
+def true_range(high, low, close):
+    out = [NAN] * len(high)
+    for i in range(1, len(high)):
+        if high[i] is None or low[i] is None or close[i - 1] is None:
+            continue
+        pc = close[i - 1]
+        out[i] = max(abs(high[i] - low[i]), abs(high[i] - pc), abs(low[i] - pc))
+    return out
+
+
+def atr(high, low, close, period):
+    return wilder_of_valid(true_range(high, low, close), period)
+
+
+def boll(closes, period, mult):
+    mid = sma(closes, period)
+    sd = rolling_std(closes, period)
+    upper = [NAN] * len(closes)
+    lower = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if mid[i] is not None and sd[i] is not None:
+            upper[i] = mid[i] + mult * sd[i]
+            lower[i] = mid[i] - mult * sd[i]
+    return {"upper": upper, "middle": mid, "lower": lower}
+
+
+def envelopes(closes, period, pct):
+    mid = sma(closes, period)
+    upper = [NAN] * len(closes)
+    lower = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if mid[i] is not None:
+            upper[i] = mid[i] * (1.0 + pct / 100.0)
+            lower[i] = mid[i] * (1.0 - pct / 100.0)
+    return {"upper": upper, "middle": mid, "lower": lower}
+
+
+def atr_bands(closes, high, low, period, mult):
+    mid = sma(closes, period)
+    a = atr(high, low, closes, period)
+    upper = [NAN] * len(closes)
+    middle = [NAN] * len(closes)
+    lower = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if mid[i] is not None and a[i] is not None:
+            middle[i] = mid[i]
+            upper[i] = mid[i] + mult * a[i]
+            lower[i] = mid[i] - mult * a[i]
+    return {"upper": upper, "middle": middle, "lower": lower}
+
+
+def keltner(closes, high, low, period, mult):
+    mid = ema(closes, period)
+    a = atr(high, low, closes, period)
+    upper = [NAN] * len(closes)
+    middle = [NAN] * len(closes)
+    lower = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if mid[i] is not None and a[i] is not None:
+            middle[i] = mid[i]
+            upper[i] = mid[i] + mult * a[i]
+            lower[i] = mid[i] - mult * a[i]
+    return {"upper": upper, "middle": middle, "lower": lower}
+
+
+def atr_trail(closes, high, low, period, k):
+    a = atr(high, low, closes, period)
+    long_out = [NAN] * len(closes)
+    short_out = [NAN] * len(closes)
+    start = next((i for i, v in enumerate(a) if v is not None), None)
+    if start is None:
+        return {"long": long_out, "short": short_out}
+    long_state = closes[start] >= closes[start - 1] if start > 0 else True
+    long_stop = closes[start] - k * a[start]
+    short_stop = closes[start] + k * a[start]
+    if long_state:
+        long_out[start] = long_stop
+    else:
+        short_out[start] = short_stop
+    for i in range(start + 1, len(closes)):
+        if a[i] is None:
+            continue
+        if long_state:
+            candidate = max(closes[i] - k * a[i], long_stop)
+            if closes[i] < long_stop:
+                long_state = False
+                short_stop = closes[i] + k * a[i]
+                long_out[i] = long_stop
+                short_out[i] = short_stop
+            else:
+                long_stop = candidate
+                long_out[i] = long_stop
+        else:
+            candidate = min(closes[i] + k * a[i], short_stop)
+            if closes[i] > short_stop:
+                long_state = True
+                long_stop = closes[i] - k * a[i]
+                long_out[i] = long_stop
+                short_out[i] = short_stop
+            else:
+                short_stop = candidate
+                short_out[i] = short_stop
+    return {"long": long_out, "short": short_out}
+
+
+def chandelier(closes, high, low, period, mult):
+    a = atr(high, low, closes, period)
+    hh = rolling_max(high, period)
+    ll = rolling_min(low, period)
+    long_out = [NAN] * len(closes)
+    short_out = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if a[i] is not None and hh[i] is not None and ll[i] is not None:
+            long_out[i] = hh[i] - mult * a[i]
+            short_out[i] = ll[i] + mult * a[i]
+    return {"long": long_out, "short": short_out}
+
+
+def midline(high, low, period):
+    hh = rolling_max(high, period)
+    ll = rolling_min(low, period)
+    out = [NAN] * len(high)
+    for i in range(len(high)):
+        if hh[i] is not None and ll[i] is not None:
+            out[i] = (hh[i] + ll[i]) / 2.0
+    return out
+
+
+def ichimoku(closes, high, low, tenkan, kijun, senkou, displacement):
+    tk = midline(high, low, tenkan)
+    kj = midline(high, low, kijun)
+    sb = midline(high, low, senkou)
+    out = {key: [NAN] * len(closes)
+           for key in ("tenkan", "kijun", "senkouA", "senkouB", "chikou")}
+    for i in range(len(closes)):
+        out["tenkan"][i] = tk[i]
+        out["kijun"][i] = kj[i]
+    for i in range(len(closes)):
+        target = i + displacement
+        if target < len(closes):
+            if tk[i] is not None and kj[i] is not None:
+                out["senkouA"][target] = (tk[i] + kj[i]) / 2.0
+            if sb[i] is not None:
+                out["senkouB"][target] = sb[i]
+    for j in range(max(0, len(closes) - displacement)):
+        out["chikou"][j] = closes[j + displacement]
+    return out
+
+
+def psar(closes, high, low, step, increment, max_af):
+    out = [NAN] * len(closes)
+    if len(closes) < 2:
+        return {"psar": out}
+    up = closes[1] >= closes[0]
+    sar = low[0] if up else high[0]
+    extreme = high[1] if up else low[1]
+    af = step
+    out[1] = sar
+    for i in range(2, len(closes)):
+        nxt = sar + af * (extreme - sar)
+        if up:
+            nxt = min(nxt, low[i - 1], low[i - 2])
+            if low[i] < nxt:
+                up = False
+                nxt = extreme
+                extreme = low[i]
+                af = step
+            elif high[i] > extreme:
+                extreme = high[i]
+                af = min(af + increment, max_af)
+        else:
+            nxt = max(nxt, high[i - 1], high[i - 2])
+            if high[i] > nxt:
+                up = True
+                nxt = extreme
+                extreme = high[i]
+                af = step
+            elif low[i] < extreme:
+                extreme = low[i]
+                af = min(af + increment, max_af)
+        sar = nxt
+        out[i] = sar
+    return {"psar": out}
+
+
+def pivot(high, low, close):
+    p = [NAN] * len(close)
+    r1 = [NAN] * len(close)
+    s1 = [NAN] * len(close)
+    for i in range(1, len(close)):
+        if high[i - 1] is None or low[i - 1] is None or close[i - 1] is None:
+            continue
+        value = (high[i - 1] + low[i - 1] + close[i - 1]) / 3.0
+        p[i] = value
+        r1[i] = 2.0 * value - low[i - 1]
+        s1[i] = 2.0 * value - high[i - 1]
+    return {"pivot": p, "r1": r1, "s1": s1}
+
+
+def bb_width(closes, period, mult):
+    mid = sma(closes, period)
+    sd = rolling_std(closes, period)
+    out = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if mid[i] is not None and sd[i] is not None and mid[i] != 0.0:
+            out[i] = 2.0 * mult * sd[i] / mid[i]
+    return out
+
+
+def percent_b(closes, period, mult):
+    mid = sma(closes, period)
+    sd = rolling_std(closes, period)
+    out = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if mid[i] is None or sd[i] is None:
+            continue
+        width = 2.0 * mult * sd[i]
+        if width != 0.0:
+            out[i] = (closes[i] - (mid[i] - mult * sd[i])) / width
+    return out
+
+
+def ulcer(closes, period):
+    out = [NAN] * len(closes)
+    if len(closes) < period:
+        return out
+    for i in range(period - 1, len(closes)):
+        window = closes[i + 1 - period:i + 1]
+        if any(v is None for v in window):
+            continue
+        peak = max(window)
+        if peak <= 0.0:
+            continue
+        total = sum(((v - peak) / peak * 100.0) ** 2 for v in window)
+        out[i] = (total / period) ** 0.5
+    return out
+
+
+def gapo(opens, closes, high, low, period):
+    a = atr(high, low, closes, period)
+    out = [NAN] * len(closes)
+    for i in range(1, len(closes)):
+        if a[i] is not None and a[i] != 0.0 and closes[i - 1] is not None:
+            out[i] = (opens[i] - closes[i - 1]) / a[i] * 100.0
+    return out
+
+
+def amplitude(high, low):
+    return [NAN if (high[i] is None or low[i] is None) else high[i] - low[i]
+            for i in range(len(high))]
+
+
+
 def roundv(value):
     return None if value is None else round(value, 9)
 
@@ -180,22 +488,31 @@ def case(indicator_id, params, outputs, expected, tolerance=None):
                          for key, column in expected.items()}}
 
 
-# 容差口径（与 docs/indicators/b1-trend-kernels.md 一致，测试 `tolerance_rules_are_frozen` 锁定）：
+# 容差口径（与 docs/indicators/b1-trend-kernels.md、b2-channel-volatility.md 一致，
+# 测试 `tolerance_rules_are_frozen` 锁定）：
 # - 价格/金额口径（元、元/根）：relative 1e-6，分母 max(|expected|, 1.0)
 # - 无量纲比率（T21 R²）：absolute 1e-6
 # - 百分比振荡（E13 BIAS，%）与 MACD 副图：absolute 1e-4
+# - B2 无量纲振荡（V02/V04/V05/V07/V08）：absolute 1e-4
+# - T24 为原始窗口最值直取，用 absolute 1e-9 等价精确（容差 0）
 # - 手算类夹具（edge_manual_nonlinear / edge_arithmetic_regression）允许单 case 收紧到 absolute 1e-9
 TOLERANCE_RULES = (
     "relative:1e-6=价格/斜率类（元、元/根），分母 max(|expected|,1.0)；"
     "absolute:1e-6=R²（无量纲）；"
-    "absolute:1e-4=BIAS(%)、MACD 副图；"
-    "absolute:1e-9=仅手算夹具单 case 收紧；"
+    "absolute:1e-4=BIAS(%)、MACD 副图、B2 无量纲振荡（ATRP/带宽/%B/ULCER/GAPO）；"
+    "absolute:1e-9=仅手算夹具单 case 收紧，或 T24 原始值直取（容差 0）；"
     "count=计数严格相等"
 )
 TOLERANCE_BY_INDICATOR = {
     "T21": "absolute:1e-6",
     "E13": "absolute:1e-4",
     "M06": "absolute:1e-4",
+    "T24": "absolute:1e-9",
+    "V02": "absolute:1e-4",
+    "V04": "absolute:1e-4",
+    "V05": "absolute:1e-4",
+    "V07": "absolute:1e-4",
+    "V08": "absolute:1e-4",
 }
 DEFAULT_TOLERANCE = "relative:1e-6"
 
@@ -222,6 +539,56 @@ def suite(name, seed, bars, closes, cases, volume=None):
                       "close": closes, "volume": volume,
                       "amount": [0.0] * bars},
             "cases": cases}
+
+
+def suite_ohlc(name, seed, data, cases):
+    bars = len(data["close"])
+    return {"formatVersion": 1, "name": name, "seed": seed, "bars": bars,
+            "toleranceRules": TOLERANCE_RULES,
+            "input": {"open": data["open"], "high": data["high"], "low": data["low"],
+                      "close": data["close"], "volume": data["volume"],
+                      "amount": data["amount"]},
+            "cases": cases}
+
+
+def b2_cases(data):
+    """B2 默认参数下的 20 个指标基线（含开高低收的真实数据）。"""
+    o, h, l, c = data["open"], data["high"], data["low"], data["close"]
+    return [
+        case("T08", {"period": 20, "pct": 2.5}, ["upper", "middle", "lower"],
+             envelopes(c, 20, 2.5)),
+        case("T09", {"period": 20, "mult": 2.0}, ["upper", "middle", "lower"],
+             boll(c, 20, 2.0)),
+        case("T10", {"period": 20, "mult": 2.0}, ["upper", "middle", "lower"],
+             keltner(c, h, l, 20, 2.0)),
+        case("T11", {"period": 20}, ["upper", "lower"],
+             {"upper": rolling_max(h, 20), "lower": rolling_min(l, 20)}),
+        case("T12", {"period": 20, "mult": 2.0}, ["upper", "middle", "lower"],
+             atr_bands(c, h, l, 20, 2.0)),
+        case("T13", {"period": 14, "mult": 3.5}, ["long", "short"],
+             atr_trail(c, h, l, 14, 3.5)),
+        case("T14", {"period": 22, "mult": 3.0}, ["long", "short"],
+             chandelier(c, h, l, 22, 3.0)),
+        case("T15", {"tenkan": 9, "kijun": 26, "senkou": 52, "displacement": 26},
+             ["tenkan", "kijun", "senkouA", "senkouB", "chikou"],
+             ichimoku(c, h, l, 9, 26, 52, 26)),
+        case("T16", {"step": 0.02, "increment": 0.02, "max": 0.2}, ["psar"],
+             psar(c, h, l, 0.02, 0.02, 0.2)),
+        case("T23", {}, ["pivot", "r1", "s1"], pivot(h, l, c)),
+        case("T24", {"period": 20}, ["hhv", "llv"],
+             {"hhv": rolling_max(h, 20), "llv": rolling_min(l, 20)}),
+        case("V01", {"period": 14}, ["atr"], {"atr": atr(h, l, c, 14)}),
+        case("V02", {"period": 14}, ["atrp"],
+             {"atrp": [NAN if (a is None or c[i] == 0.0) else a / c[i]
+                       for i, a in enumerate(atr(h, l, c, 14))]}),
+        case("V03", {"period": 20}, ["std"], {"std": rolling_std(c, 20)}),
+        case("V04", {"period": 20, "mult": 2.0}, ["width"], {"width": bb_width(c, 20, 2.0)}),
+        case("V05", {"period": 20, "mult": 2.0}, ["percentB"], {"percentB": percent_b(c, 20, 2.0)}),
+        case("V07", {"period": 14}, ["ulcer"], {"ulcer": ulcer(c, 14)}),
+        case("V08", {"period": 20}, ["gapo"], {"gapo": gapo(o, c, h, l, 20)}),
+        case("V09", {}, ["amplitude"], {"amplitude": amplitude(h, l)}),
+        case("V10", {}, ["tr"], {"tr": true_range(h, l, c)}),
+    ]
 
 
 def main():
@@ -367,6 +734,73 @@ def main():
     write("edge_t21_constant_window.json",
           suite("edge_t21_constant_window", 0, 40, jumpy,
                 [case("T21", {"period": 20}, ["r2"], {"r2": linreg(jumpy, 20)["r2"]})]))
+
+    # ----------------------------- B2 夹具 -----------------------------
+    write("base_b2_channel_seed42_520.json",
+          suite_ohlc("base_b2_channel_seed42_520", 42, data, b2_cases(data)))
+
+    # 常数 OHLC：H=L=O=C=10；验证零带宽、零振幅、零 ATR 的退化口径。
+    flat_bars = 40
+    flat_data = {
+        "open": [10.0] * flat_bars, "high": [10.0] * flat_bars,
+        "low": [10.0] * flat_bars, "close": [10.0] * flat_bars,
+        "volume": [0.0] * flat_bars, "amount": [0.0] * flat_bars,
+    }
+    write("edge_b2_constant_ohlc.json",
+          suite_ohlc("edge_b2_constant_ohlc", 0, flat_data, b2_cases(flat_data)))
+
+    # 首根：1 根 K 线；仅 V09（H-L）当根有效，其余全部 NaN。
+    first_data = {
+        "open": [100.0], "high": [101.0], "low": [99.0], "close": [100.0],
+        "volume": [0.0], "amount": [0.0],
+    }
+    first_cases = b2_cases({**first_data,
+                            "open": [100.0], "high": [101.0], "low": [99.0],
+                            "close": [100.0]})
+    write("edge_b2_first_bar.json",
+          suite_ohlc("edge_b2_first_bar", 0, first_data, first_cases))
+
+    # 预热不足：20 根数据 + 周期 60（T15 默认需 78 根），周期驱动类全 NaN。
+    short_b2 = build_input(20, 7)
+    insufficient_b2 = [
+        case("T08", {"period": 60, "pct": 2.5}, ["upper", "middle", "lower"],
+             envelopes(short_b2["close"], 60, 2.5)),
+        case("T09", {"period": 60, "mult": 2.0}, ["upper", "middle", "lower"],
+             boll(short_b2["close"], 60, 2.0)),
+        case("T10", {"period": 60, "mult": 2.0}, ["upper", "middle", "lower"],
+             keltner(short_b2["close"], short_b2["high"], short_b2["low"], 60, 2.0)),
+        case("T11", {"period": 60}, ["upper", "lower"],
+             {"upper": rolling_max(short_b2["high"], 60),
+              "lower": rolling_min(short_b2["low"], 60)}),
+        case("T12", {"period": 60, "mult": 2.0}, ["upper", "middle", "lower"],
+             atr_bands(short_b2["close"], short_b2["high"], short_b2["low"], 60, 2.0)),
+        case("T13", {"period": 60, "mult": 3.5}, ["long", "short"],
+             atr_trail(short_b2["close"], short_b2["high"], short_b2["low"], 60, 3.5)),
+        case("T14", {"period": 60, "mult": 3.0}, ["long", "short"],
+             chandelier(short_b2["close"], short_b2["high"], short_b2["low"], 60, 3.0)),
+        case("T15", {"tenkan": 9, "kijun": 26, "senkou": 52, "displacement": 26},
+             ["tenkan", "kijun", "senkouA", "senkouB", "chikou"],
+             ichimoku(short_b2["close"], short_b2["high"], short_b2["low"], 9, 26, 52, 26)),
+        case("T24", {"period": 60}, ["hhv", "llv"],
+             {"hhv": rolling_max(short_b2["high"], 60),
+              "llv": rolling_min(short_b2["low"], 60)}),
+        case("V01", {"period": 60}, ["atr"],
+             {"atr": atr(short_b2["high"], short_b2["low"], short_b2["close"], 60)}),
+        case("V02", {"period": 60}, ["atrp"],
+             {"atrp": [NAN] * len(short_b2["close"])}),
+        case("V03", {"period": 60}, ["std"],
+             {"std": rolling_std(short_b2["close"], 60)}),
+        case("V04", {"period": 60, "mult": 2.0}, ["width"],
+             {"width": bb_width(short_b2["close"], 60, 2.0)}),
+        case("V05", {"period": 60, "mult": 2.0}, ["percentB"],
+             {"percentB": percent_b(short_b2["close"], 60, 2.0)}),
+        case("V07", {"period": 60}, ["ulcer"], {"ulcer": ulcer(short_b2["close"], 60)}),
+        case("V08", {"period": 60}, ["gapo"],
+             {"gapo": gapo(short_b2["open"], short_b2["close"],
+                           short_b2["high"], short_b2["low"], 60)}),
+    ]
+    write("edge_b2_insufficient.json",
+          suite_ohlc("edge_b2_insufficient", 7, short_b2, insufficient_b2))
 
 
 if __name__ == "__main__":

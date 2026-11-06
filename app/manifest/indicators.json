@@ -249,6 +249,451 @@
       "status": "beta",
       "unit": "元",
       "notes": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)；旧 id «macd» 保留 alias 一版。"
+    },
+    {
+      "id": "T08",
+      "prdId": "T08",
+      "aliases": [],
+      "nameZh": "均线包络",
+      "nameEn": "Envelopes",
+      "category": "trend",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
+        { "kind": "float", "key": "pct", "label": "带宽 %", "min": 0.1, "max": 20.0, "default": 2.5, "step": 0.1, "unit": "%" }
+      ],
+      "outputs": [
+        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
+        { "key": "middle", "labelZh": "中轨", "kind": "line", "color": "var(--accent)" },
+        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t08-envelopes",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "中轨=SMA(close,N)；上/下轨=中轨×(1±pct%)；首根有效值 N-1。"
+    },
+    {
+      "id": "T09",
+      "prdId": "T09",
+      "aliases": [],
+      "nameZh": "布林带",
+      "nameEn": "Bollinger Bands",
+      "category": "trend",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
+        { "kind": "float", "key": "mult", "label": "标准差倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
+      ],
+      "outputs": [
+        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
+        { "key": "middle", "labelZh": "中轨", "kind": "line", "color": "var(--accent)" },
+        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t09-boll",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "中轨=SMA(close,N)；σ 为样本标准差（ddof=1）；上/下轨=中轨±kσ。"
+    },
+    {
+      "id": "T10",
+      "prdId": "T10",
+      "aliases": [],
+      "nameZh": "肯特纳通道",
+      "nameEn": "Keltner Channel",
+      "category": "trend",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
+        { "kind": "float", "key": "mult", "label": "ATR 倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
+      ],
+      "outputs": [
+        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
+        { "key": "middle", "labelZh": "中轨", "kind": "line", "color": "var(--accent)" },
+        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t10-keltner",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "中轨=EMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。"
+    },
+    {
+      "id": "T11",
+      "prdId": "T11",
+      "aliases": [],
+      "nameZh": "唐奇安通道",
+      "nameEn": "Donchian Channel",
+      "category": "trend",
+      "inputs": { "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
+        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t11-donchian",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "上轨=近 N 根最高价；下轨=近 N 根最低价；首根有效值 N-1。"
+    },
+    {
+      "id": "T12",
+      "prdId": "T12",
+      "aliases": [],
+      "nameZh": "ATR 通道",
+      "nameEn": "ATR Bands",
+      "category": "trend",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
+        { "kind": "float", "key": "mult", "label": "ATR 倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
+      ],
+      "outputs": [
+        { "key": "upper", "labelZh": "上轨", "kind": "line", "color": "var(--rise)" },
+        { "key": "middle", "labelZh": "中轨", "kind": "line", "color": "var(--accent)" },
+        { "key": "lower", "labelZh": "下轨", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t12-atr-bands",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "中轨=SMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。"
+    },
+    {
+      "id": "T13",
+      "prdId": "T13",
+      "aliases": [],
+      "nameZh": "ATR 移动止损",
+      "nameEn": "ATR Trailing Stop",
+      "category": "trend",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "ATR 周期", "min": 2, "max": 200, "default": 14, "step": 1 },
+        { "kind": "float", "key": "mult", "label": "ATR 倍数", "min": 0.1, "max": 10.0, "default": 3.5, "step": 0.1 }
+      ],
+      "outputs": [
+        { "key": "long", "labelZh": "多头止损", "kind": "line", "color": "var(--rise)" },
+        { "key": "short", "labelZh": "空头止损", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t13-atr-trail",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "元",
+      "notes": "多空状态机：多头止损=max(前值, C-k×ATR)，C 跌破前值翻空；空头对称。翻空阈值口径为自定，暂标 beta；未激活一侧 NaN。"
+    },
+    {
+      "id": "T14",
+      "prdId": "T14",
+      "aliases": [],
+      "nameZh": "吊灯止损",
+      "nameEn": "Chandelier Exit",
+      "category": "trend",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 22, "step": 1 },
+        { "kind": "float", "key": "mult", "label": "ATR 倍数", "min": 0.1, "max": 10.0, "default": 3.0, "step": 0.1 }
+      ],
+      "outputs": [
+        { "key": "long", "labelZh": "多头止损", "kind": "line", "color": "var(--rise)" },
+        { "key": "short", "labelZh": "空头止损", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t14-chandelier",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "多头=HHV(high,N)-k×ATR(N)；空头=LLV(low,N)+k×ATR(N)；首个有效值 N。"
+    },
+    {
+      "id": "T15",
+      "prdId": "T15",
+      "aliases": [],
+      "nameZh": "一目均衡表",
+      "nameEn": "Ichimoku Kinko Hyo",
+      "category": "trend",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "int", "key": "tenkan", "label": "转换线周期", "min": 2, "max": 200, "default": 9, "step": 1 },
+        { "kind": "int", "key": "kijun", "label": "基准线周期", "min": 2, "max": 200, "default": 26, "step": 1 },
+        { "kind": "int", "key": "senkou", "label": "先行带周期", "min": 2, "max": 200, "default": 52, "step": 1 },
+        { "kind": "int", "key": "displacement", "label": "位移", "min": 0, "max": 200, "default": 26, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "tenkan", "labelZh": "转换线", "kind": "line", "color": "#60a5fa" },
+        { "key": "kijun", "labelZh": "基准线", "kind": "line", "color": "#f472b6" },
+        { "key": "senkouA", "labelZh": "先行带 A", "kind": "line", "color": "var(--rise)" },
+        { "key": "senkouB", "labelZh": "先行带 B", "kind": "line", "color": "var(--fall)" },
+        { "key": "chikou", "labelZh": "迟行线", "kind": "line", "color": "#94a3b8" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t15-ichimoku",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "元",
+      "notes": "转换/基准=(HHV+LLV)/2；先行带 A/B 向未来位移 D 根；迟行线向后位移 D 根；未来段输出 NaN。位移的尾部对齐口径待人工校对，暂标 beta。"
+    },
+    {
+      "id": "T16",
+      "prdId": "T16",
+      "aliases": [],
+      "nameZh": "抛物线转向",
+      "nameEn": "Parabolic SAR",
+      "category": "trend",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "float", "key": "step", "label": "初始 AF", "min": 0.001, "max": 0.2, "default": 0.02, "step": 0.001 },
+        { "kind": "float", "key": "increment", "label": "AF 步长", "min": 0.001, "max": 0.2, "default": 0.02, "step": 0.001 },
+        { "kind": "float", "key": "max", "label": "AF 上限", "min": 0.01, "max": 1.0, "default": 0.2, "step": 0.01 }
+      ],
+      "outputs": [
+        { "key": "psar", "labelZh": "PSAR", "kind": "dot", "color": "#f59e0b" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t16-psar",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "元",
+      "notes": "Wilder 抛物线转向；首根有效值第 2 根。初始方向与首根 SAR 取值口径为自定，暂标 beta。"
+    },
+    {
+      "id": "T23",
+      "prdId": "T23",
+      "aliases": [],
+      "nameZh": "轴心点",
+      "nameEn": "Pivot Points",
+      "category": "trend",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [],
+      "outputs": [
+        { "key": "pivot", "labelZh": "P", "kind": "line", "color": "var(--accent)" },
+        { "key": "r1", "labelZh": "R1", "kind": "line", "color": "var(--rise)" },
+        { "key": "s1", "labelZh": "S1", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t23-pivot",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "元",
+      "notes": "P=(H+L+C)/3，R1=2P-L，S1=2P-H，取上一根；日/周口径由图表周期 D/W 决定，指标不设参数；该映射待人工校对，暂标 beta。"
+    },
+    {
+      "id": "T24",
+      "prdId": "T24",
+      "aliases": [],
+      "nameZh": "最高最低",
+      "nameEn": "HHV/LLV",
+      "category": "trend",
+      "inputs": { "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "hhv", "labelZh": "HHV", "kind": "line", "color": "var(--rise)" },
+        { "key": "llv", "labelZh": "LLV", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#t24-hhvllv",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "元",
+      "notes": "近 N 根最高价/最低价，原始值直取；首根有效值 N-1。规划标「完整▲」，边界说明待补，暂标 beta。"
+    },
+    {
+      "id": "V01",
+      "prdId": "V01",
+      "aliases": [],
+      "nameZh": "真实波幅均值",
+      "nameEn": "Average True Range",
+      "category": "volatility",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "atr", "labelZh": "ATR", "kind": "line", "color": "#f59e0b" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v01-atr",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "TR 首根 NaN；ATR 为 TR 的 Wilder 平滑，种子取前 N 个 TR 的均值；首个有效值 N。"
+    },
+    {
+      "id": "V02",
+      "prdId": "V02",
+      "aliases": [],
+      "nameZh": "归一化 ATR",
+      "nameEn": "ATR Percentage",
+      "category": "volatility",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "atrp", "labelZh": "ATRP", "kind": "line", "color": "#22d3ee" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v02-atrp",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "无量纲",
+      "notes": "ATRP=ATR/收盘，无量纲比值（非百分数）；收盘为 0 时 NaN。"
+    },
+    {
+      "id": "V03",
+      "prdId": "V03",
+      "aliases": [],
+      "nameZh": "标准差",
+      "nameEn": "Standard Deviation",
+      "category": "volatility",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "std", "labelZh": "StdDev", "kind": "line", "color": "#a78bfa" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v03-stddev",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "样本标准差（ddof=1）；分母 N-1；首根有效值 N-1。"
+    },
+    {
+      "id": "V04",
+      "prdId": "V04",
+      "aliases": [],
+      "nameZh": "布林带宽",
+      "nameEn": "Bollinger Band Width",
+      "category": "volatility",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
+        { "kind": "float", "key": "mult", "label": "标准差倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
+      ],
+      "outputs": [
+        { "key": "width", "labelZh": "带宽", "kind": "line", "color": "#94a3b8" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v04-bb-width",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "无量纲",
+      "notes": "带宽=(上轨-下轨)/中轨=2kσ/SMA；中轨为 0 时 NaN。"
+    },
+    {
+      "id": "V05",
+      "prdId": "V05",
+      "aliases": [],
+      "nameZh": "布林 %B",
+      "nameEn": "Bollinger %B",
+      "category": "volatility",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 },
+        { "kind": "float", "key": "mult", "label": "标准差倍数", "min": 0.1, "max": 10.0, "default": 2.0, "step": 0.1 }
+      ],
+      "outputs": [
+        { "key": "percentB", "labelZh": "%B", "kind": "line", "color": "#34d399" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v05-percent-b",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "无量纲",
+      "notes": "%B=(C-下轨)/(上轨-下轨)；零带宽输出 NaN。"
+    },
+    {
+      "id": "V07",
+      "prdId": "V07",
+      "aliases": [],
+      "nameZh": "溃疡指数",
+      "nameEn": "Ulcer Index",
+      "category": "volatility",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "ulcer", "labelZh": "Ulcer", "kind": "line", "color": "#f472b6" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v07-ulcer",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "回撤=(C-窗口峰值)/窗口峰值×100；UI=sqrt(mean(回撤²))；峰值为 0 时 NaN。"
+    },
+    {
+      "id": "V08",
+      "prdId": "V08",
+      "aliases": [],
+      "nameZh": "GAPO 跳空",
+      "nameEn": "GAPO",
+      "category": "volatility",
+      "inputs": { "open": true, "high": true, "low": true, "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "ATR 周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "gapo", "labelZh": "GAPO", "kind": "line", "color": "#f59e0b" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v08-gapo",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "%",
+      "notes": "GAPO=(Open-前收)/ATR×100；规划仅写「跳空持续口径」，ATR 归一化与正负号为自定，暂标 beta。"
+    },
+    {
+      "id": "V09",
+      "prdId": "V09",
+      "aliases": [],
+      "nameZh": "振幅",
+      "nameEn": "High − Low",
+      "category": "volatility",
+      "inputs": { "high": true, "low": true },
+      "params": [],
+      "outputs": [
+        { "key": "amplitude", "labelZh": "振幅", "kind": "line", "color": "#60a5fa" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v09-amplitude",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "单根 H-L（元），首根即有效。"
+    },
+    {
+      "id": "V10",
+      "prdId": "V10",
+      "aliases": [],
+      "nameZh": "真实波幅",
+      "nameEn": "True Range",
+      "category": "volatility",
+      "inputs": { "high": true, "low": true, "close": true },
+      "params": [],
+      "outputs": [
+        { "key": "tr", "labelZh": "TR", "kind": "line", "color": "#94a3b8" }
+      ],
+      "formulaRef": "docs/indicators/b2-channel-volatility.md#v10-true-range",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "TR=max(H-L, |H-PC|, |L-PC|)；首根 NaN。"
     }
   ]
 }

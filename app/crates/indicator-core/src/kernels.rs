@@ -134,6 +134,102 @@ pub fn wilder(values: &[f64], period: usize) -> Vec<f64> {
     out
 }
 
+/// 对含 `NAN` 前缀的序列做 Wilder RMA：从第一个有限值起取连续 `period` 个有限值做种子。
+pub fn wilder_of_valid(values: &[f64], period: usize) -> Vec<f64> {
+    let len = values.len();
+    let mut out = vec![f64::NAN; len];
+    if period < 2 {
+        return out;
+    }
+    let Some(start) = values.iter().position(|value| value.is_finite()) else {
+        return out;
+    };
+    let end = start + period;
+    if end > len || values[start..end].iter().any(|value| !value.is_finite()) {
+        return out;
+    }
+    let seed: f64 = values[start..end].iter().sum::<f64>() / period as f64;
+    out[end - 1] = seed;
+    let n = period as f64;
+    for i in end..len {
+        if values[i].is_finite() && out[i - 1].is_finite() {
+            out[i] = (out[i - 1] * (n - 1.0) + values[i]) / n;
+        }
+    }
+    out
+}
+
+/// 滚动最大值：`out[i] = max(values[i-n+1..=i])`；窗口含 `NAN` 或长度不足时输出 `NAN`。
+pub fn rolling_max(values: &[f64], period: usize) -> Vec<f64> {
+    let len = values.len();
+    let mut out = vec![f64::NAN; len];
+    if period < 1 || len < period {
+        return out;
+    }
+    for i in (period - 1)..len {
+        let window = &values[i + 1 - period..=i];
+        if window.iter().any(|value| !value.is_finite()) {
+            continue;
+        }
+        out[i] = window.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    }
+    out
+}
+
+/// 滚动最小值：`out[i] = min(values[i-n+1..=i])`；窗口含 `NAN` 或长度不足时输出 `NAN`。
+pub fn rolling_min(values: &[f64], period: usize) -> Vec<f64> {
+    let len = values.len();
+    let mut out = vec![f64::NAN; len];
+    if period < 1 || len < period {
+        return out;
+    }
+    for i in (period - 1)..len {
+        let window = &values[i + 1 - period..=i];
+        if window.iter().any(|value| !value.is_finite()) {
+            continue;
+        }
+        out[i] = window.iter().copied().fold(f64::INFINITY, f64::min);
+    }
+    out
+}
+
+/// 滚动样本标准差（ddof=1）：`sqrt(Σ(x-x̄)²/(N-1))`；N<2 或窗口含 `NAN` 时输出 `NAN`。
+pub fn rolling_std(values: &[f64], period: usize) -> Vec<f64> {
+    let len = values.len();
+    let mut out = vec![f64::NAN; len];
+    if period < 2 || len < period {
+        return out;
+    }
+    for i in (period - 1)..len {
+        let window = &values[i + 1 - period..=i];
+        if window.iter().any(|value| !value.is_finite()) {
+            continue;
+        }
+        let mean = window.iter().sum::<f64>() / period as f64;
+        let variance = window.iter().map(|value| (value - mean).powi(2)).sum::<f64>()
+            / (period - 1) as f64;
+        out[i] = variance.max(0.0).sqrt();
+    }
+    out
+}
+
+/// 真实波幅：首根 `NAN`；其后 `max(H-L, |H-PC|, |L-PC|)`。
+pub fn true_range(high: &[f64], low: &[f64], close: &[f64]) -> Vec<f64> {
+    let len = high.len();
+    let mut out = vec![f64::NAN; len];
+    for i in 1..len {
+        let previous = close[i - 1];
+        if !previous.is_finite() || !high[i].is_finite() || !low[i].is_finite() {
+            continue;
+        }
+        out[i] = (high[i] - low[i])
+            .abs()
+            .max((high[i] - previous).abs())
+            .max((low[i] - previous).abs());
+    }
+    out
+}
+
 /// 一元线性回归的四条输出曲线；长度均等于输入，前缀为 `NAN`。
 #[derive(Debug, Clone)]
 pub struct LinRegSeries {

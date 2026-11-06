@@ -218,6 +218,8 @@ fn peak_rss_bytes() -> u64 {
 fn main() {
     let mut cases = Vec::new();
     let period20 = [("period", ParamValue::Int(20))];
+    let period14 = [("period", ParamValue::Int(14))];
+    let period22 = [("period", ParamValue::Int(22))];
 
     for (bars, runs, threshold) in [(520usize, 200usize, THRESHOLD_P95_MS_520), (2500, 100, THRESHOLD_P95_MS_2500)] {
         cases.push(measure("T01", "sma20", bars, runs, &period20, threshold));
@@ -231,6 +233,27 @@ fn main() {
         cases.push(measure("T22", "linregSlope20", bars, runs, &period20, threshold));
         cases.push(measure("E13", "bias6/12/24", bars, runs, &[], threshold));
         cases.push(measure(MACD_ID, "macd12/26/9", bars, runs, &[], threshold));
+        // B2 通道 / 波动
+        cases.push(measure("T08", "envelopes20/2.5", bars, runs, &period20, threshold));
+        cases.push(measure("T09", "boll20/2", bars, runs, &period20, threshold));
+        cases.push(measure("T10", "keltner20/2", bars, runs, &period20, threshold));
+        cases.push(measure("T11", "donchian20", bars, runs, &period20, threshold));
+        cases.push(measure("T12", "atrBands20/2", bars, runs, &period20, threshold));
+        cases.push(measure("T13", "atrTrail14/3.5", bars, runs, &period14, threshold));
+        cases.push(measure("T14", "chandelier22/3", bars, runs, &period22, threshold));
+        cases.push(measure("T15", "ichimoku9/26/52", bars, runs, &[], threshold));
+        cases.push(measure("T16", "psar0.02/0.2", bars, runs, &[], threshold));
+        cases.push(measure("T23", "pivot", bars, runs, &[], threshold));
+        cases.push(measure("T24", "hhvllv20", bars, runs, &period20, threshold));
+        cases.push(measure("V01", "atr14", bars, runs, &period14, threshold));
+        cases.push(measure("V02", "atrp14", bars, runs, &period14, threshold));
+        cases.push(measure("V03", "stddev20", bars, runs, &period20, threshold));
+        cases.push(measure("V04", "bbWidth20/2", bars, runs, &period20, threshold));
+        cases.push(measure("V05", "percentB20/2", bars, runs, &period20, threshold));
+        cases.push(measure("V07", "ulcer14", bars, runs, &period14, threshold));
+        cases.push(measure("V08", "gapo20", bars, runs, &period20, threshold));
+        cases.push(measure("V09", "amplitude", bars, runs, &[], threshold));
+        cases.push(measure("V10", "trueRange", bars, runs, &[], threshold));
     }
 
     let mut bin_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
