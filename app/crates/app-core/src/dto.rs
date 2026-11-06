@@ -253,3 +253,95 @@ pub struct CalcResponse {
     pub range: RangeDto,
     pub series: Vec<SeriesDto>,
 }
+
+// ---------- E-01 行情列表 ----------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketSnapshotDto {
+    /// 样本口径：当前模拟数据集内全部标的数
+    pub sample_count: usize,
+    /// 最新一根日线的交易日（列表「数据时间」列）
+    pub data_date: String,
+    pub provider: String,
+    pub dataset_id: String,
+    pub data_version: String,
+    pub dataset_generation: u64,
+    pub simulated: bool,
+    pub generated_at: i64,
+    pub rows: Vec<MarketRowDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketRowDto {
+    pub security: String,
+    pub code: String,
+    pub name: String,
+    pub market: String,
+    /// 主板 / 创业板 / 科创板 / 指数
+    pub board: String,
+    pub is_index: bool,
+    pub suspended: bool,
+    pub last_price: Option<f64>,
+    pub prev_close: Option<f64>,
+    pub change_abs: Option<f64>,
+    pub change_pct: Option<f64>,
+    pub volume: Option<f64>,
+    pub amount: Option<f64>,
+    pub turnover_pct: Option<f64>,
+    pub volume_ratio: Option<f64>,
+    pub amplitude_pct: Option<f64>,
+    /// 涨跌停等数据质量标记（如 LIMIT_UP / LIMIT_DOWN）
+    pub flags: Vec<String>,
+    /// 关键字段缺失，前端显示「数据异常」而不是 0
+    pub data_issue: bool,
+}
+
+// ---------- E-01 自选 ----------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchGroupDto {
+    pub name: String,
+    pub count: i64,
+    pub sort_order: i64,
+    pub is_builtin: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchItemDto {
+    pub security: String,
+    pub group_name: String,
+    pub sort_order: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchlistDto {
+    pub limit: i64,
+    pub total: i64,
+    pub groups: Vec<WatchGroupDto>,
+    pub items: Vec<WatchItemDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchToggleResult {
+    /// 操作后该标的是否在任一自选分组内
+    pub watched: bool,
+    pub total: i64,
+}
+
+// ---------- E-01 持仓 ----------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PositionDto {
+    pub security: String,
+    pub cost_price: f64,
+    pub shares: i64,
+    pub updated_at: i64,
+}
+

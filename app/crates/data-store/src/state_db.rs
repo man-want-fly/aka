@@ -17,9 +17,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 const MIGRATION_001: &str = include_str!("../migrations/001_init.sql");
+const MIGRATION_002: &str = include_str!("../migrations/002_watchlist_positions.sql");
 
 #[derive(Debug)]
 pub enum DbError {
@@ -53,6 +54,21 @@ pub struct WatchItem {
     pub security: String,
     pub group_name: String,
     pub sort_order: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WatchGroup {
+    pub name: String,
+    pub sort_order: i64,
+    pub is_builtin: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PositionRow {
+    pub security: String,
+    pub cost_price: f64,
+    pub shares: i64,
+    pub updated_at: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -179,6 +195,16 @@ impl StateDb {
                     .map_err(|e| DbError::Write(e.to_string()))?;
                     tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
                 }
+                2 => {
+                    let tx = self.conn.transaction().map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.execute_batch(MIGRATION_002).map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.execute(
+                        "INSERT OR REPLACE INTO schema_versions(version, applied_at, note) VALUES (?, ?, ?)",
+                        params![2_i64, now(), "e01: builtin group / positions"],
+                    )
+                    .map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
+                }
                 other => {
                     return Err(DbError::Corrupt(format!("缺失迁移脚本：v{other}")));
                 }
@@ -211,6 +237,9 @@ impl StateDb {
     /// 迁移演练入口（回滚脚本仅本地使用，不自动执行）。
     #[doc(hidden)]
     pub fn apply_rollback_v1_for_tests(&self) -> Result<(), DbError> {
+        self.conn
+            .execute_batch(include_str!("../migrations/002_watchlist_positions_rollback.sql"))
+            .map_err(|e| DbError::Write(e.to_string()))?;
         self.conn
             .execute_batch(include_str!("../migrations/001_init_rollback.sql"))
             .map_err(|e| DbError::Write(e.to_string()))?;
@@ -277,6 +306,162 @@ impl StateDb {
                 "DELETE FROM watchlist_items WHERE security = ? AND group_name = ?",
                 params![security, group],
             )
+            .map(|_| ())
+            .map_err(|err| DbError::Write(err.to_string()))
+    }
+
+    /// 去重后的自选标的总数（同一标的在多个分组只算一次），用于 500 上限判定。
+    pub fn watch_distinct_count(&self) -> Result<i64, DbError> {
+        self.conn
+            .query_row("SELECT COUNT(DISTINCT security) FROM watchlist_items", [], |row| row.get(0))
+            .map_err(|err| DbError::Read(err.to_string()))
+    }
+
+    // ---------- watchlist groups ----------
+
+    pub fn watch_groups(&self) -> Result<Vec<WatchGroup>, DbError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT name, sort_order, is_builtin FROM watchlist_groups ORDER BY sort_order, name")
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(WatchGroup {
+                    name: row.get(0)?,
+                    sort_order: row.get(1)?,
+                    is_builtin: row.get::<_, i64>(2)? != 0,
+                })
+            })
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(|err| DbError::Read(err.to_string()))
+    }
+
+    pub fn watch_group_exists(&self, name: &str) -> Result<bool, DbError> {
+        let count: i64 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM watchlist_groups WHERE name = ? COLLATE NOCASE",
+                params![name],
+                |row| row.get(0),
+            )
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        Ok(count > 0)
+    }
+
+    pub fn create_watch_group(&self, name: &str) -> Result<(), DbError> {
+        let next: i64 = self
+            .conn
+            .query_row("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM watchlist_groups", [], |row| row.get(0))
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        self.conn
+            .execute(
+                "INSERT INTO watchlist_groups(name, sort_order, is_builtin, created_at) VALUES (?, ?, 0, ?)",
+                params![name, next, now()],
+            )
+            .map(|_| ())
+            .map_err(|err| DbError::Write(err.to_string()))
+    }
+
+    pub fn rename_watch_group(&self, old: &str, new: &str) -> Result<(), DbError> {
+        let tx = self.conn.unchecked_transaction().map_err(|e| DbError::Write(e.to_string()))?;
+        // 先建新组、再搬标的、最后删旧组，全程满足外键（直接 UPDATE 父表会立刻触发 FK 失败）
+        tx.execute(
+            "INSERT INTO watchlist_groups(name, sort_order, is_builtin, created_at)
+             SELECT ?, sort_order, is_builtin, created_at FROM watchlist_groups WHERE name = ?",
+            params![new, old],
+        )
+        .map_err(|err| DbError::Write(err.to_string()))?;
+        tx.execute(
+            "UPDATE watchlist_items SET group_name = ? WHERE group_name = ?",
+            params![new, old],
+        )
+        .map_err(|err| DbError::Write(err.to_string()))?;
+        tx.execute("DELETE FROM watchlist_groups WHERE name = ?", params![old])
+            .map_err(|err| DbError::Write(err.to_string()))?;
+        tx.commit().map_err(|e| DbError::Write(e.to_string()))
+    }
+
+    /// 删除自定义分组；组内标的回落到内置组「全部」，不丢自选。
+    pub fn delete_watch_group(&self, name: &str) -> Result<(), DbError> {
+        let tx = self.conn.unchecked_transaction().map_err(|e| DbError::Write(e.to_string()))?;
+        tx.execute(
+            "UPDATE watchlist_items SET group_name = '全部' WHERE group_name = ?",
+            params![name],
+        )
+        .map_err(|err| DbError::Write(err.to_string()))?;
+        tx.execute("DELETE FROM watchlist_groups WHERE name = ?", params![name])
+            .map_err(|err| DbError::Write(err.to_string()))?;
+        tx.commit().map_err(|e| DbError::Write(e.to_string()))
+    }
+
+    // ---------- view state ----------
+
+    pub fn view_state(&self, scope: &str) -> Result<Option<serde_json::Value>, DbError> {
+        let raw: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT state_json FROM view_state WHERE scope = ?",
+                params![scope],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        match raw {
+            None => Ok(None),
+            Some(text) => serde_json::from_str(&text)
+                .map(Some)
+                .map_err(|err| DbError::Corrupt(format!("视图状态 JSON 非法：{err}"))),
+        }
+    }
+
+    pub fn set_view_state(&self, scope: &str, value: &serde_json::Value) -> Result<(), DbError> {
+        let text = serde_json::to_string(value)
+            .map_err(|err| DbError::Write(format!("视图状态序列化失败：{err}")))?;
+        self.conn
+            .execute(
+                "INSERT INTO view_state(scope, state_json, updated_at) VALUES (?, ?, ?)
+                 ON CONFLICT(scope) DO UPDATE SET state_json = excluded.state_json, updated_at = excluded.updated_at",
+                params![scope, text, now()],
+            )
+            .map(|_| ())
+            .map_err(|err| DbError::Write(err.to_string()))
+    }
+
+    // ---------- positions ----------
+
+    pub fn positions(&self) -> Result<Vec<PositionRow>, DbError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT security, cost_price, shares, updated_at FROM positions ORDER BY security")
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(PositionRow {
+                    security: row.get(0)?,
+                    cost_price: row.get(1)?,
+                    shares: row.get(2)?,
+                    updated_at: row.get(3)?,
+                })
+            })
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(|err| DbError::Read(err.to_string()))
+    }
+
+    pub fn save_position(&self, security: &str, cost_price: f64, shares: i64) -> Result<(), DbError> {
+        self.conn
+            .execute(
+                "INSERT INTO positions(security, cost_price, shares, updated_at) VALUES (?, ?, ?, ?)
+                 ON CONFLICT(security) DO UPDATE SET cost_price = excluded.cost_price,
+                    shares = excluded.shares, updated_at = excluded.updated_at",
+                params![security, cost_price, shares, now()],
+            )
+            .map(|_| ())
+            .map_err(|err| DbError::Write(err.to_string()))
+    }
+
+    pub fn delete_position(&self, security: &str) -> Result<(), DbError> {
+        self.conn
+            .execute("DELETE FROM positions WHERE security = ?", params![security])
             .map(|_| ())
             .map_err(|err| DbError::Write(err.to_string()))
     }
@@ -400,6 +585,7 @@ mod tests {
             "view_state",
             "indicator_params",
             "dataset_meta",
+            "positions",
             "schema_versions",
         ] {
             assert!(tables.iter().any(|t| t == expected), "缺少表 {expected}：{tables:?}");
@@ -409,7 +595,11 @@ mod tests {
             .conn
             .query_row("SELECT COUNT(*) FROM schema_versions", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(logged, 1);
+        assert_eq!(logged, 2);
+        let builtin = db.watch_groups().unwrap();
+        assert_eq!(builtin.len(), 1);
+        assert_eq!(builtin[0].name, "全部");
+        assert!(builtin[0].is_builtin);
     }
 
     #[test]
@@ -424,15 +614,44 @@ mod tests {
     #[test]
     fn watchlist_roundtrip() {
         let db = memory();
-        db.add_watch("600519.SH", "默认", 0).unwrap();
-        db.add_watch("000001.SZ", "默认", 1).unwrap();
-        db.add_watch("600519.SH", "默认", 5).unwrap();
+        db.add_watch("600519.SH", "全部", 0).unwrap();
+        db.add_watch("000001.SZ", "全部", 1).unwrap();
+        db.add_watch("600519.SH", "全部", 5).unwrap();
         let items = db.watchlist().unwrap();
         assert_eq!(items.len(), 2);
         assert_eq!(items[1].security, "600519.SH");
         assert_eq!(items[1].sort_order, 5);
-        db.remove_watch("600519.SH", "默认").unwrap();
+        db.remove_watch("600519.SH", "全部").unwrap();
         assert_eq!(db.watchlist().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn group_rename_and_delete_move_items_back_to_builtin() {
+        let db = memory();
+        db.create_watch_group("短线").unwrap();
+        db.add_watch("600519.SH", "短线", 0).unwrap();
+        db.rename_watch_group("短线", "波段").unwrap();
+        assert_eq!(db.watchlist().unwrap()[0].group_name, "波段");
+        db.delete_watch_group("波段").unwrap();
+        assert_eq!(db.watchlist().unwrap()[0].group_name, "全部");
+        assert!(db.watch_groups().unwrap().iter().all(|g| g.name != "波段"));
+        assert_eq!(db.watch_distinct_count().unwrap(), 1);
+    }
+
+    #[test]
+    fn positions_and_view_state_roundtrip() {
+        let db = memory();
+        db.save_position("600519.SH", 1500.0, 100).unwrap();
+        db.save_position("600519.SH", 1600.0, 200).unwrap();
+        let rows = db.positions().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].shares, 200);
+        db.delete_position("600519.SH").unwrap();
+        assert!(db.positions().unwrap().is_empty());
+
+        let state = serde_json::json!({"board": "sz", "sort": {"key": "changePct", "dir": "desc"}});
+        db.set_view_state("market", &state).unwrap();
+        assert_eq!(db.view_state("market").unwrap(), Some(state));
     }
 
     #[test]

@@ -16,14 +16,134 @@ use indicator_core::{
 
 use crate::dto::{
     BarDto, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, IndicatorMetaDto, InputsDto,
-    ListSecuritiesRequest, OutputSeriesDto, OutputSpecDto, ProvenanceDto, RangeDto,
-    RegistryResponse, SecurityDto, SeriesDto,
+    ListSecuritiesRequest, MarketRowDto, MarketSnapshotDto, OutputSeriesDto, OutputSpecDto,
+    PositionDto, ProvenanceDto, RangeDto, RegistryResponse, SecurityDto, SeriesDto, WatchGroupDto,
+    WatchItemDto, WatchToggleResult, WatchlistDto,
 };
 use crate::error::{AppError, ErrorCode};
 use crate::telemetry::{
     Telemetry, EVENT_CACHE_HIT, EVENT_CACHE_MISS, EVENT_COMPUTE_COUNT, EVENT_COMPUTE_SKIP,
     EVENT_INDICATOR_COMPUTE,
 };
+
+/// 自选上限（跨分组按标的去重计数）
+pub const WATCHLIST_LIMIT: i64 = 500;
+/// 自定义分组上限
+pub const MAX_CUSTOM_GROUPS: usize = 20;
+/// 内置分组名
+pub const DEFAULT_WATCH_GROUP: &str = "全部";
+
+fn validate_group_name(name: &str) -> Result<&str, AppError> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::invalid_argument("分组名不能为空"));
+    }
+    if trimmed.chars().count() > 20 {
+        return Err(AppError::invalid_argument("分组名最长 20 个字符"));
+    }
+    if trimmed == DEFAULT_WATCH_GROUP {
+        return Err(AppError::invalid_argument("内置分组「全部」不可作为自定义分组名"));
+    }
+    Ok(trimmed)
+}
+
+fn group_duplicate(name: &str) -> AppError {
+    AppError::invalid_argument(format!("分组已存在：{name}"))
+        .with_details(serde_json::json!({ "reason": "GROUP_DUPLICATE", "name": name }))
+}
+
+fn board_label(sec: &Security) -> &'static str {
+    match sec.board {
+        data_provider::Board::ShMain | data_provider::Board::SzMain => "主板",
+        data_provider::Board::ChiNext => "创业板",
+        data_provider::Board::Star => "科创板",
+        data_provider::Board::Index => "指数",
+    }
+}
+
+/// 行情列表行：缺字段给 `None`（前端显示 —），绝不把缺失当 0。
+fn summary_row(sec: &Security, rows: &[data_provider::BarRow]) -> MarketRowDto {
+    let last = rows.last();
+    let prev = if rows.len() >= 2 { Some(&rows[rows.len() - 2]) } else { None };
+
+    let suspended = last.map(|row| row.volume <= 0.0).unwrap_or(true);
+    let last_price = last.map(|row| row.close).filter(|p| p.is_finite() && *p > 0.0);
+    let prev_close = prev.map(|row| row.close).filter(|p| p.is_finite() && *p > 0.0);
+
+    let change_abs = match (last_price, prev_close) {
+        (Some(last), Some(prev)) => Some(last - prev),
+        _ => None,
+    };
+    let change_pct = match (last_price, prev_close) {
+        (Some(last), Some(prev)) => Some((last - prev) / prev * 100.0),
+        _ => None,
+    };
+
+    // 模拟域的流通股本口径：与 mock 成交量同量级派生（指数不适用）。
+    let float_shares = if sec.is_index {
+        0.0
+    } else {
+        (sec.base_price * 120_000.0).clamp(4_000_000.0, 80_000_000.0) * 10.0
+    };
+    let turnover_pct = match (last.map(|row| row.volume), float_shares > 0.0) {
+        (Some(volume), true) if volume.is_finite() => Some(volume / float_shares * 100.0),
+        _ => None,
+    };
+
+    let volume_ratio = (rows.len() >= 6).then(|| {
+        let start = rows.len() - 6;
+        let prior = &rows[start..rows.len() - 1];
+        let avg = prior.iter().map(|row| row.volume).sum::<f64>() / prior.len() as f64;
+        if avg > 0.0 {
+            Some(last.map(|row| row.volume).unwrap_or(0.0) / avg)
+        } else {
+            None
+        }
+    }).flatten();
+
+    let amplitude_pct = match (last, prev_close) {
+        (Some(row), Some(prev)) if row.high.is_finite() && row.low.is_finite() => {
+            Some((row.high - row.low) / prev * 100.0)
+        }
+        _ => None,
+    };
+
+    let mut flags: Vec<String> = last
+        .map(|row| {
+            row.quality
+                .iter()
+                .filter(|q| !matches!(q, data_provider::QualityFlag::Simulated))
+                .map(|q| q.as_str().to_ascii_uppercase())
+                .collect()
+        })
+        .unwrap_or_default();
+    flags.sort();
+    flags.dedup();
+
+    let amount = last.map(|row| row.amount).filter(|a| a.is_finite());
+    let data_issue = last_price.is_none() || prev_close.is_none() || amount.is_none();
+
+    MarketRowDto {
+        security: sec.code.clone(),
+        code: sec.code.split('.').next().unwrap_or(&sec.code).to_string(),
+        name: sec.name.clone(),
+        market: sec.market.as_str().to_string(),
+        board: board_label(sec).to_string(),
+        is_index: sec.is_index,
+        suspended,
+        last_price,
+        prev_close,
+        change_abs,
+        change_pct,
+        volume: last.map(|row| row.volume).filter(|v| v.is_finite()),
+        amount,
+        turnover_pct,
+        volume_ratio,
+        amplitude_pct,
+        flags,
+        data_issue,
+    }
+}
 
 /// 编排层：唯一知道「provider + store + 指标 + 缓存」如何协作的地方。
 /// 命令层不得绕过它直接访问任一子系统。
@@ -134,6 +254,251 @@ impl AppCore {
                 base_price: sec.base_price,
             })
             .collect()
+    }
+
+    /// E-01 行情列表：以最新两根日线生成全市场快照（模拟数据域内全样本）。
+    pub async fn market_snapshot(&self) -> Result<MarketSnapshotDto, AppError> {
+        let mut rows = Vec::with_capacity(self.securities.len());
+        let mut data_date = String::new();
+        let mut provenance: Option<(String, String, String, u64, bool, i64)> = None;
+
+        for sec in &self.securities {
+            let batch = self.daily_batch(&sec.code, Adjust::Qfq).await?;
+            if provenance.is_none() {
+                provenance = Some((
+                    batch.provider.as_str().to_string(),
+                    batch.dataset_id.clone(),
+                    batch.data_version.clone(),
+                    batch.dataset_generation,
+                    batch.simulated,
+                    batch.generated_at,
+                ));
+            }
+            if let Some(last) = batch.rows.last() {
+                data_date = last.date.iso();
+            }
+            rows.push(summary_row(sec, &batch.rows));
+        }
+
+        let (provider, dataset_id, data_version, dataset_generation, simulated, generated_at) =
+            provenance.unwrap_or_else(|| {
+                (
+                    self.provider.id().as_str().to_string(),
+                    String::new(),
+                    String::new(),
+                    0,
+                    true,
+                    0,
+                )
+            });
+
+        Ok(MarketSnapshotDto {
+            sample_count: self.securities.len(),
+            data_date,
+            provider,
+            dataset_id,
+            data_version,
+            dataset_generation,
+            simulated,
+            generated_at,
+            rows,
+        })
+    }
+
+    // ---------- 自选 ----------
+
+    pub fn watch_limit(&self) -> i64 {
+        WATCHLIST_LIMIT
+    }
+
+    pub fn watchlist(&self) -> Result<WatchlistDto, AppError> {
+        let db = self
+            .state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+        let items = db.watchlist().map_err(AppError::from)?;
+        let groups = db.watch_groups().map_err(AppError::from)?;
+        let mut counts: HashMap<String, i64> = HashMap::new();
+        for item in &items {
+            *counts.entry(item.group_name.clone()).or_insert(0) += 1;
+        }
+        let total = db.watch_distinct_count().map_err(AppError::from)?;
+        Ok(WatchlistDto {
+            limit: WATCHLIST_LIMIT,
+            total,
+            groups: groups
+                .into_iter()
+                .map(|g| WatchGroupDto {
+                    count: if g.is_builtin {
+                        total
+                    } else {
+                        counts.get(&g.name).copied().unwrap_or(0)
+                    },
+                    name: g.name,
+                    sort_order: g.sort_order,
+                    is_builtin: g.is_builtin,
+                })
+                .collect(),
+            items: items
+                .into_iter()
+                .map(|i| WatchItemDto {
+                    security: i.security,
+                    group_name: i.group_name,
+                    sort_order: i.sort_order,
+                })
+                .collect(),
+        })
+    }
+
+    /// 星标切换：未收藏 → 加入分组；已收藏（任意分组）→ 从全部分组移除。
+    pub fn toggle_watch(&self, security: &str, group: Option<&str>) -> Result<WatchToggleResult, AppError> {
+        if !self.securities.iter().any(|s| s.code == security) {
+            return Err(AppError::unknown_security(security));
+        }
+        let db = self
+            .state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+        let existing = db.watchlist().map_err(AppError::from)?;
+        let watched_now = existing.iter().any(|i| i.security == security);
+        if watched_now {
+            for item in existing.iter().filter(|i| i.security == security) {
+                db.remove_watch(security, &item.group_name).map_err(AppError::from)?;
+            }
+            return Ok(WatchToggleResult { watched: false, total: db.watch_distinct_count().map_err(AppError::from)? });
+        }
+
+        let target = group.unwrap_or(DEFAULT_WATCH_GROUP);
+        if db.watch_group_exists(target).map_err(AppError::from)? == false {
+            return Err(AppError::invalid_argument(format!("自选分组不存在：{target}")));
+        }
+        let distinct = db.watch_distinct_count().map_err(AppError::from)?;
+        if distinct >= WATCHLIST_LIMIT {
+            return Err(AppError::new(
+                ErrorCode::InvalidArgument,
+                format!("自选数量已达上限 {WATCHLIST_LIMIT} 只"),
+            )
+            .with_details(serde_json::json!({
+                "reason": "WATCHLIST_LIMIT",
+                "limit": WATCHLIST_LIMIT,
+                "security": security,
+            })));
+        }
+        db.add_watch(security, target, distinct + 1).map_err(AppError::from)?;
+        Ok(WatchToggleResult {
+            watched: true,
+            total: db.watch_distinct_count().map_err(AppError::from)?,
+        })
+    }
+
+    pub fn create_watch_group(&self, name: &str) -> Result<(), AppError> {
+        let name = validate_group_name(name)?;
+        let db = self
+            .state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+        if db.watch_group_exists(name).map_err(AppError::from)? {
+            return Err(group_duplicate(name));
+        }
+        let custom = db
+            .watch_groups()
+            .map_err(AppError::from)?
+            .into_iter()
+            .filter(|g| !g.is_builtin)
+            .count();
+        if custom >= MAX_CUSTOM_GROUPS {
+            return Err(AppError::invalid_argument(format!(
+                "自定义分组最多 {MAX_CUSTOM_GROUPS} 个"
+            )));
+        }
+        db.create_watch_group(name).map_err(AppError::from)
+    }
+
+    pub fn rename_watch_group(&self, old: &str, new: &str) -> Result<(), AppError> {
+        let db = self
+            .state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+        let groups = db.watch_groups().map_err(AppError::from)?;
+        if old == DEFAULT_WATCH_GROUP || groups.iter().any(|g| g.name == old && g.is_builtin) {
+            return Err(AppError::invalid_argument("内置分组「全部」不可重命名"));
+        }
+        if !groups.iter().any(|g| g.name == old) {
+            return Err(AppError::invalid_argument(format!("自选分组不存在：{old}")));
+        }
+        let name = validate_group_name(new)?;
+        if db.watch_group_exists(name).map_err(AppError::from)? {
+            return Err(group_duplicate(name));
+        }
+        db.rename_watch_group(old, name).map_err(AppError::from)
+    }
+
+    pub fn delete_watch_group(&self, name: &str) -> Result<(), AppError> {
+        let db = self
+            .state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+        let groups = db.watch_groups().map_err(AppError::from)?;
+        let Some(group) = groups.iter().find(|g| g.name == name) else {
+            return Err(AppError::invalid_argument(format!("自选分组不存在：{name}")));
+        };
+        if group.is_builtin {
+            return Err(AppError::invalid_argument("内置分组「全部」不可删除"));
+        }
+        db.delete_watch_group(name).map_err(AppError::from)
+    }
+
+    // ---------- 视图状态（沿用 state.db，不新起存储） ----------
+
+    pub fn view_state(&self, scope: &str) -> Result<Option<serde_json::Value>, AppError> {
+        self.state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?
+            .view_state(scope)
+            .map_err(AppError::from)
+    }
+
+    pub fn set_view_state(&self, scope: &str, value: &serde_json::Value) -> Result<(), AppError> {
+        self.state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?
+            .set_view_state(scope, value)
+            .map_err(AppError::from)
+    }
+
+    // ---------- 持仓 ----------
+
+    pub fn positions(&self) -> Result<Vec<PositionDto>, AppError> {
+        let db = self
+            .state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+        Ok(db
+            .positions()
+            .map_err(AppError::from)?
+            .into_iter()
+            .map(|p| PositionDto {
+                security: p.security,
+                cost_price: p.cost_price,
+                shares: p.shares,
+                updated_at: p.updated_at,
+            })
+            .collect())
+    }
+
+    pub fn save_position(&self, security: &str, cost_price: f64, shares: i64) -> Result<(), AppError> {
+        if !self.securities.iter().any(|s| s.code == security) {
+            return Err(AppError::unknown_security(security));
+        }
+        if !cost_price.is_finite() || cost_price <= 0.0 {
+            return Err(AppError::invalid_argument("成本价必须大于 0"));
+        }
+        if shares < 0 || shares > 10_000_000_000 {
+            return Err(AppError::invalid_argument("持仓数量超出范围"));
+        }
+        self.state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?
+            .save_position(security, cost_price, shares)
+            .map_err(AppError::from)
+    }
+
+    pub fn delete_position(&self, security: &str) -> Result<(), AppError> {
+        self.state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?
+            .delete_position(security)
+            .map_err(AppError::from)
     }
 
     /// 指标 manifest：目录的唯一事实来源，前端据此生成指标目录（含未实现项）。
@@ -836,6 +1201,99 @@ mod tests {
             generated_at: 0,
             candles,
         }
+    }
+
+    #[tokio::test]
+    async fn market_snapshot_covers_all_securities_and_board_partitions() {
+        let core = AppCore::new(Box::new(data_provider::mock::MockProvider::new())).await.unwrap();
+        let snapshot = core.market_snapshot().await.unwrap();
+        assert_eq!(snapshot.sample_count, core.securities.len());
+        assert_eq!(snapshot.sample_count, 120, "模拟域样本口径应为 120 只");
+        assert_eq!(snapshot.rows.len(), 120);
+        assert!(snapshot.data_date.len() == 10, "数据时间应为最后一个交易日");
+
+        for row in &snapshot.rows {
+            assert!(row.last_price.is_some(), "{} 缺最新价", row.security);
+            assert!(row.change_pct.is_some(), "{} 缺涨跌幅", row.security);
+            assert!(row.amount.is_some(), "{} 缺成交额", row.security);
+            if row.is_index {
+                assert!(row.turnover_pct.is_none(), "指数不应有换手率");
+            } else {
+                assert!(row.turnover_pct.unwrap() >= 0.0);
+            }
+            assert!(!row.data_issue, "{} 关键字段缺失", row.security);
+        }
+
+        let mut boards: HashMap<&str, usize> = HashMap::new();
+        let mut markets: HashMap<&str, usize> = HashMap::new();
+        for row in &snapshot.rows {
+            *boards.entry(row.board.as_str()).or_default() += 1;
+            *markets.entry(row.market.as_str()).or_default() += 1;
+        }
+        let sum: usize = boards.values().sum();
+        assert_eq!(sum, 120, "板块分区必须覆盖全部样本");
+        let market_sum: usize = markets.values().sum();
+        assert_eq!(market_sum, 120, "沪/深分区必须覆盖全部样本");
+        assert!(boards.get("主板").copied().unwrap_or(0) > 0);
+        assert!(boards.get("创业板").copied().unwrap_or(0) > 0);
+        assert!(boards.get("科创板").copied().unwrap_or(0) > 0);
+        assert!(boards.get("指数").copied().unwrap_or(0) > 0);
+    }
+
+    #[tokio::test]
+    async fn watchlist_toggle_groups_and_positions_use_state_db() {
+        let core = AppCore::new(Box::new(data_provider::mock::MockProvider::new()))
+            .await
+            .unwrap()
+            .with_state_db(data_store::state_db::StateDb::open_in_memory().unwrap());
+
+        let first = core.toggle_watch("600519.SH", None).unwrap();
+        assert!(first.watched);
+        assert_eq!(first.total, 1);
+        let off = core.toggle_watch("600519.SH", None).unwrap();
+        assert!(!off.watched);
+        assert_eq!(off.total, 0);
+
+        core.create_watch_group("短线").unwrap();
+        assert!(core.create_watch_group("短线").is_err(), "重名分组应拒绝");
+        let added = core.toggle_watch("600519.SH", Some("短线")).unwrap();
+        assert!(added.watched);
+        let watchlist = core.watchlist().unwrap();
+        assert_eq!(watchlist.total, 1);
+        assert!(watchlist
+            .groups
+            .iter()
+            .any(|group| group.name == "短线" && group.count == 1 && !group.is_builtin));
+
+        core.rename_watch_group("短线", "波段").unwrap();
+        assert!(core.delete_watch_group("全部").is_err(), "内置组不可删除");
+        core.delete_watch_group("波段").unwrap();
+        let after = core.watchlist().unwrap();
+        assert_eq!(after.items[0].group_name, "全部", "删组后标的应回落内置组");
+
+        core.save_position("600519.SH", 1500.0, 100).unwrap();
+        assert!(core.save_position("600519.SH", -1.0, 100).is_err());
+        assert_eq!(core.positions().unwrap()[0].shares, 100);
+        core.delete_position("600519.SH").unwrap();
+        assert!(core.positions().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn watchlist_cap_is_500_distinct_securities() {
+        let core = AppCore::new(Box::new(data_provider::mock::MockProvider::new()))
+            .await
+            .unwrap()
+            .with_state_db(data_store::state_db::StateDb::open_in_memory().unwrap());
+        // 模拟域只有 120 只，直接写 500 条到 state.db 验证上限分支
+        {
+            let db = core.state_db().unwrap();
+            for i in 0..500 {
+                db.add_watch(&format!("TEST{i}.SZ"), "全部", i).unwrap();
+            }
+        }
+        let err = core.toggle_watch("600519.SH", None).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidArgument);
+        assert_eq!(err.details.as_ref().unwrap()["reason"], "WATCHLIST_LIMIT");
     }
 
     #[test]

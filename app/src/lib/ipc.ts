@@ -6,9 +6,13 @@ import type {
   CalcResponse,
   GetBarsRequest,
   ManifestResponse,
+  MarketSnapshotDto,
+  PositionDto,
   RegistryResponse,
   SecurityDto,
   TelemetrySummary,
+  WatchToggleResult,
+  WatchlistDto,
 } from "./types";
 
 export const isTauriRuntime = (): boolean =>
@@ -65,4 +69,34 @@ export const ipc = {
 
   diagWrite: (payload: string): Promise<string> =>
     invoke<string>("diag_write", { payload }),
+
+  marketSnapshot: (): Promise<MarketSnapshotDto> => invoke<MarketSnapshotDto>("market_snapshot"),
+
+  watchlist: (): Promise<WatchlistDto> => invoke<WatchlistDto>("watchlist_read"),
+
+  toggleWatch: (security: string, group?: string): Promise<WatchToggleResult> =>
+    invoke<WatchToggleResult>("watch_toggle", { security, group: group ?? null }),
+
+  createWatchGroup: (name: string): Promise<void> =>
+    invoke<void>("watch_group_create", { name }),
+
+  renameWatchGroup: (oldName: string, newName: string): Promise<void> =>
+    invoke<void>("watch_group_rename", { old: oldName, new: newName }),
+
+  deleteWatchGroup: (name: string): Promise<void> =>
+    invoke<void>("watch_group_delete", { name }),
+
+  viewStateGet: (scope: string): Promise<unknown | null> =>
+    invoke<unknown | null>("view_state_get", { scope }),
+
+  viewStateSet: (scope: string, value: unknown): Promise<void> =>
+    invoke<void>("view_state_set", { scope, value }),
+
+  positions: (): Promise<PositionDto[]> => invoke<PositionDto[]>("positions_read"),
+
+  savePosition: (security: string, costPrice: number, shares: number): Promise<void> =>
+    invoke<void>("position_save", { security, costPrice, shares }),
+
+  deletePosition: (security: string): Promise<void> =>
+    invoke<void>("position_delete", { security }),
 };

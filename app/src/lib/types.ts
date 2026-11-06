@@ -104,6 +104,8 @@ export interface ManifestIndicatorDto {
   aliases: string[];
   nameZh: string;
   nameEn: string;
+  abbr: string;
+  pinyinInitials: string;
   category: Category;
   inputs: InputsDto;
   params: ManifestParam[];
@@ -111,9 +113,14 @@ export interface ManifestIndicatorDto {
   formulaRef: string;
   version: number;
   specStatus: SpecStatus;
-  status: "normal" | "beta";
+  status: "normal" | "beta" | "planned";
   unit: string;
   notes: string;
+  /** 面板归属：主 / 副 */
+  panel: string;
+  formulaSummary: string;
+  priority: "P0" | "P1";
+  warmupBars: number;
 }
 
 /** 指标目录的单一事实来源；前端指标列表一律由它生成。 */
@@ -255,4 +262,71 @@ export interface TelemetrySummary {
   coldSamples: number;
   coldP95Ms: number | null;
   recent: TelemetryEventDto[];
+}
+
+// ---------- E-01 行情 / 自选 / 持仓 ----------
+
+export interface MarketRowDto {
+  security: string;
+  code: string;
+  name: string;
+  market: string;
+  board: string;
+  isIndex: boolean;
+  suspended: boolean;
+  lastPrice: number | null;
+  prevClose: number | null;
+  changeAbs: number | null;
+  changePct: number | null;
+  volume: number | null;
+  amount: number | null;
+  turnoverPct: number | null;
+  volumeRatio: number | null;
+  amplitudePct: number | null;
+  flags: string[];
+  dataIssue: boolean;
+}
+
+export interface MarketSnapshotDto {
+  sampleCount: number;
+  dataDate: string;
+  provider: string;
+  datasetId: string;
+  dataVersion: string;
+  datasetGeneration: number;
+  simulated: boolean;
+  generatedAt: number;
+  rows: MarketRowDto[];
+}
+
+export interface WatchGroupDto {
+  name: string;
+  count: number;
+  sortOrder: number;
+  isBuiltin: boolean;
+}
+
+export interface WatchItemDto {
+  security: string;
+  groupName: string;
+  sortOrder: number;
+}
+
+export interface WatchlistDto {
+  limit: number;
+  total: number;
+  groups: WatchGroupDto[];
+  items: WatchItemDto[];
+}
+
+export interface WatchToggleResult {
+  watched: boolean;
+  total: number;
+}
+
+export interface PositionDto {
+  security: string;
+  costPrice: number;
+  shares: number;
+  updatedAt: number;
 }

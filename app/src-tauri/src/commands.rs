@@ -3,8 +3,10 @@
 
 use app_core::{
     AppError, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, ListSecuritiesRequest,
-    Manifest, RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary,
+    Manifest, MarketSnapshotDto, PositionDto, RegistryRequest, RegistryResponse, SecurityDto,
+    TelemetrySummary, WatchToggleResult, WatchlistDto,
 };
+use serde_json::Value;
 use tauri::State;
 
 use crate::state::AppState;
@@ -55,6 +57,80 @@ pub async fn telemetry_dump(
     recent: Option<usize>,
 ) -> Result<TelemetrySummary, AppError> {
     Ok(state.core.telemetry().summary(recent.unwrap_or(200).clamp(1, 4_096)))
+}
+
+// ---------- E-01 行情 / 自选 / 持仓 ----------
+
+#[tauri::command]
+pub async fn market_snapshot(state: State<'_, AppState>) -> Result<MarketSnapshotDto, AppError> {
+    state.core.market_snapshot().await
+}
+
+#[tauri::command]
+pub async fn watchlist_read(state: State<'_, AppState>) -> Result<WatchlistDto, AppError> {
+    state.core.watchlist()
+}
+
+#[tauri::command]
+pub async fn watch_toggle(
+    state: State<'_, AppState>,
+    security: String,
+    group: Option<String>,
+) -> Result<WatchToggleResult, AppError> {
+    state.core.toggle_watch(&security, group.as_deref())
+}
+
+#[tauri::command]
+pub async fn watch_group_create(state: State<'_, AppState>, name: String) -> Result<(), AppError> {
+    state.core.create_watch_group(&name)
+}
+
+#[tauri::command]
+pub async fn watch_group_rename(
+    state: State<'_, AppState>,
+    old: String,
+    new: String,
+) -> Result<(), AppError> {
+    state.core.rename_watch_group(&old, &new)
+}
+
+#[tauri::command]
+pub async fn watch_group_delete(state: State<'_, AppState>, name: String) -> Result<(), AppError> {
+    state.core.delete_watch_group(&name)
+}
+
+#[tauri::command]
+pub async fn view_state_get(state: State<'_, AppState>, scope: String) -> Result<Option<Value>, AppError> {
+    state.core.view_state(&scope)
+}
+
+#[tauri::command]
+pub async fn view_state_set(
+    state: State<'_, AppState>,
+    scope: String,
+    value: Value,
+) -> Result<(), AppError> {
+    state.core.set_view_state(&scope, &value)
+}
+
+#[tauri::command]
+pub async fn positions_read(state: State<'_, AppState>) -> Result<Vec<PositionDto>, AppError> {
+    state.core.positions()
+}
+
+#[tauri::command]
+pub async fn position_save(
+    state: State<'_, AppState>,
+    security: String,
+    cost_price: f64,
+    shares: i64,
+) -> Result<(), AppError> {
+    state.core.save_position(&security, cost_price, shares)
+}
+
+#[tauri::command]
+pub async fn position_delete(state: State<'_, AppState>, security: String) -> Result<(), AppError> {
+    state.core.delete_position(&security)
 }
 
 /// S2 实机取证：只有显式设置 `AKA_DIAG=1` 启动时才允许前端自跑诊断。
