@@ -2233,7 +2233,7 @@ Confirmation：5 指标 × 4 类边界（基础 / 数据不足 / 常数 / 首根
 - **AC-03.04-05**｜Given 主图叠加 MA 与 EMA（N=20）、数据 60 根；When 十字光标停在最后一根；Then tooltip 显示值与引擎输出逐根一致（误差 0，2 位小数），图线与 tooltip 同帧，NaN 区间留白不画平线。`[渲染层]`
   - **证据挂接（S2）**：`[渲染层]` 已取证。实机悬停第 76 根，`data-overlay` 8 条（T01 T02 T03 T04 T05 T19 T20 T22，重复的 T01 已去重），`data-readout` 的 `data-value` 与 2 位小数文本一致（如 T01 `25.6485…` → 「T01 25.65 元」），`decimalsOk=true`、`hoverError=null`。证据见 `docs/qa/aka-s2-real-machine-evidence-v0.1.md` §5。**渲染层证据存在 ≠ 卡已签认，结项由 BA/QA 判定。**
 - **AC-03.04-05（补1）**｜Given 当前标的 59 根日线；When 添加 EMA(20)；Then 不画线并显示「EMA 需要 60 根，当前 59 根」；补到 60 根后按同一参数重算并画出首根产品有效值。`[渲染层]`
-  - **证据挂接（S2）**：`[渲染层]` 已实现，但**判据未全满足**。`IndicatorReadouts.tsx` 在 `barCount < 60` 时渲染 `data-readout="warmup-hint"`，文案按 `3N−1` 口径给出（EMA/DEMA/TEMA 需 ≥59 根有效收盘价），「当前 N 根」为动态值；「补到 60 根后重算并画出首根有效值」只由 `edge_first_bar` 类的数据层夹具覆盖，**未做实机补数据取证**，故本条按「部分满足」登记。
+  - **证据挂接（S2）**：**部分满足**。`IndicatorReadouts.tsx` 在 `barCount < 60` 时渲染 `data-readout="warmup-hint"`，文案为「EMA / DEMA / TEMA 需要至少 **59** 根有效收盘价（3×N−1），当前 {barCount} 根」。与 AC 的两处差异：①AC 写「EMA 需要 60 根」，实现按 `3N−1` 写 59 根，**差 1 根的口径待 BA 裁定**；②实现只显示提示，**未按 AC 停止画线**。另外「补到 60 根后重算并画出首根有效值」只有数据层夹具覆盖，**未做实机补数据取证**。故本条只登记「提示已实现」，不签认整条。
 - **AC-03.04-06**｜Given M06 参数 12 / 26 / 9、数据 40 根；When 计算；Then 第 26 根 DIF 有值、第 34 根 DEA 与 HIST 有值，`HIST = 2×(DIF−DEA)`（绝对误差 ≤1e-4）；Given 40 根同一收盘价；Then DIF / DEA / HIST 恒 0 而非 NaN。`[数据层]`
 
 **依赖与关联 Story**
@@ -2315,7 +2315,7 @@ T19–T22 是「趋势强度」的数值骨架：斜率与 R² 直接决定用�
 - **AC-03.04-09**｜Given 20 根同一收盘价；When 计算 T19–T22；Then slope = 0.0、intercept = 收盘价、forecast = 收盘价、R² = 1.0；全部窗口 R² 均落在 [0,1]。`[数据层]`
 - **AC-03.04-10**｜Given 19 根日线；When 计算四个指标；Then 输出全 NaN 并显示「需要 20 根，当前 19 根」，不补 0、不以 0 参与拟合。`[数据层]` + `[运行层]`
 - **AC-03.04-11**｜Given T19 / T20 / T21 / T22 加入主图（B2 起）；When 十字光标停在同一根；Then tooltip 与引擎输出同帧一致（误差 0），单位依次为 元 / 元 / 无量纲 / 元每根。`[渲染层]`
-  - **证据挂接（S2）**：**部分满足**。T19 / T20 / T22 三条已进主图叠加并带单位 tooltip（实测 T19 25.53 元、T20 25.77 元、T22 −0.01 元/根）；T21 未按「加主图」呈现，而是作为读数条独立项 `data-readout="T21-r2"` 输出（`data-unit="无量纲"`、2 位小数）。因判据写的是「四个都加主图」，故只登记 3/4 满足 + T21 独立读数替代，**不按整条 AC 签认**。证据见 `docs/qa/aka-s2-real-machine-evidence-v0.1.md` §5。
+  - **证据挂接（S2）**：**部分满足**。T19 / T20 / T22 三条已进主图叠加并带单位 tooltip（实测 T19 25.53 元、T20 25.77 元、T22 -0.01 元/根）；T21 未按「加主图」呈现，而是作为读数条独立项 `data-readout="T21-r2"` 输出（`data-unit="无量纲"`、2 位小数）。因判据写的是「四个都加主图」，故只登记 3/4 满足 + T21 独立读数替代，**不按整条 AC 签认**。证据见 `docs/qa/aka-s2-real-machine-evidence-v0.1.md` §5。
 
 **依赖与关联 Story**
 - 上游：复权序列、manifest（T19 / T21 `specStatus = partial`）。
