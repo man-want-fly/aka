@@ -241,3 +241,18 @@ export interface AppError {
   retryable: boolean;
   details?: Record<string, unknown>;
 }
+
+export interface TelemetryEventDto {
+  tsMs: number;
+  name: string;
+  fields: Record<string, unknown>;
+}
+
+export interface TelemetrySummary {
+  path: string | null;
+  total: number;
+  counts: Record<string, number>;
+  coldSamples: number;
+  coldP95Ms: number | null;
+  recent: TelemetryEventDto[];
+}

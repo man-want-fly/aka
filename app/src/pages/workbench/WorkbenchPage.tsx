@@ -1,10 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "../../app/AppShell";
 import { CandleChart } from "../../components/CandleChart";
+import { IndicatorReadouts } from "../../components/IndicatorReadouts";
 import { ParamPanel } from "../../components/ParamPanel";
 import { SimBadge } from "../../components/SimBadge";
 import { Watchlist } from "../../components/Watchlist";
-import { DEFAULT_PARAMS, buildInstances, localCheck, type WorkbenchParams } from "../../features/workbench/model";
+import {
+  DEFAULT_PARAMS,
+  buildInstances,
+  localCheck,
+  type WorkbenchParams,
+} from "../../features/workbench/model";
+import {
+  runS2Diagnostics,
+  seriesSignature,
+  type DiagPhase,
+  type DiagSample,
+  type TimeframeCode,
+} from "../../features/workbench/diag";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type {
   AppError,
@@ -30,6 +43,7 @@ interface Props {
   onThemeMode: (mode: ThemeMode) => void;
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
+  onNavigate: (key: "workbench" | "catalog") => void;
 }
 
 const RANGES = [
@@ -47,12 +61,14 @@ export function WorkbenchPage({
   onThemeMode,
   colorMode,
   onColorMode,
+  onNavigate,
 }: Props) {
   const [securities, setSecurities] = useState<SecurityDto[]>([]);
   const [registry, setRegistry] = useState<RegistryResponse | null>(null);
   const [manifest, setManifest] = useState<ManifestResponse | null>(null);
   const [activeCode, setActiveCode] = useState("300750.SZ");
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">("qfq");
+  const [timeframe, setTimeframe] = useState<TimeframeCode>("D");
   const [range, setRange] = useState(120);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -63,6 +79,42 @@ export function WorkbenchPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const generation = useRef(0);
+
+  // S2 实机取证（TD-S0-04/06/07）：只在 AKA_DIAG=1 时激活，采样只来自真实 IPC 路径
+  const diagPhase = useRef<DiagPhase>("off");
+  const diagSamples = useRef<DiagSample[]>([]);
+  const diagWaiters = useRef<Array<(sample: DiagSample) => void>>([]);
+  const diagStarted = useRef(false);
+  const activeCodeRef = useRef(activeCode);
+  activeCodeRef.current = activeCode;
+  const [diagStatus, setDiagStatus] = useState<string | null>(null);
+
+  const drainSamples = useCallback(() => {
+    const items = diagSamples.current;
+    diagSamples.current = [];
+    return items;
+  }, []);
+
+  const nextSample = useCallback((timeoutMs = 4_000) => {
+    return new Promise<DiagSample | null>((resolve) => {
+      let settled = false;
+      let timer = 0;
+      const wrapped = (sample: DiagSample) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        resolve(sample);
+      };
+      timer = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        const index = diagWaiters.current.indexOf(wrapped);
+        if (index >= 0) diagWaiters.current.splice(index, 1);
+        resolve(null);
+      }, timeoutMs);
+      diagWaiters.current.push(wrapped);
+    });
+  }, []);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -106,7 +158,7 @@ export function WorkbenchPage({
 
       const request = {
         security: activeCode,
-        timeframe: "D" as const,
+        timeframe,
         adj,
         from: dateFrom || undefined,
         to: dateTo || undefined,
@@ -114,17 +166,76 @@ export function WorkbenchPage({
         instances: buildInstances(appliedParams),
       };
 
-      Promise.all([ipc.getBars(request), ipc.calcIndicators(request)])
+      const phaseAtIssue = diagPhase.current;
+      const startedAt = performance.now();
+      let barsMs = Number.NaN;
+      let calcMs = Number.NaN;
+
+      Promise.all([
+        ipc.getBars(request).then((value) => {
+          barsMs = performance.now() - startedAt;
+          return value;
+        }),
+        ipc.calcIndicators(request).then((value) => {
+          calcMs = performance.now() - startedAt;
+          return value;
+        }),
+      ])
         .then(([nextBars, nextCalc]) => {
           if (current !== generation.current) return;
           setBars(nextBars);
           setCalc(nextCalc);
           setLoading(false);
+
+          if (phaseAtIssue !== "debounce" && phaseAtIssue !== "cold" && phaseAtIssue !== "warm") {
+            return;
+          }
+          const signature = seriesSignature(nextCalc);
+          const sample: DiagSample = {
+            phase: phaseAtIssue,
+            security: activeCode,
+            timeframe,
+            adj,
+            barsMs,
+            calcMs,
+            totalMs: performance.now() - startedAt,
+            cacheHit: nextCalc.cacheHit,
+            computedMs: nextCalc.computedMs,
+            barCount: nextCalc.barCount,
+            seriesHash: signature.hash,
+            seriesPoints: signature.points,
+          };
+          diagSamples.current.push(sample);
+          const waiter = diagWaiters.current.shift();
+          if (waiter) waiter(sample);
         })
         .catch((err) => {
           if (current !== generation.current) return;
-          setError(describeError(err));
+          const failure = describeError(err);
+          setError(failure);
           setLoading(false);
+          if (phaseAtIssue !== "debounce" && phaseAtIssue !== "cold" && phaseAtIssue !== "warm") {
+            return;
+          }
+          // 失败也算一次真实请求：既进样本池，也唤醒等待中的诊断步骤
+          const sample: DiagSample = {
+            phase: phaseAtIssue,
+            security: activeCode,
+            timeframe,
+            adj,
+            barsMs,
+            calcMs,
+            totalMs: performance.now() - startedAt,
+            cacheHit: false,
+            computedMs: Number.NaN,
+            barCount: 0,
+            seriesHash: "error",
+            seriesPoints: 0,
+            error: `${failure.code}: ${failure.message}`,
+          };
+          diagSamples.current.push(sample);
+          const waiter = diagWaiters.current.shift();
+          if (waiter) waiter(sample);
         });
     }, REQUEST_DEBOUNCE_MS);
 
@@ -132,7 +243,62 @@ export function WorkbenchPage({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeCode, adj, appliedParams, dateFrom, dateTo]);
+  }, [activeCode, adj, appliedParams, dateFrom, dateTo, timeframe]);
+
+  // S2 实机取证：仅 AKA_DIAG=1 且已有标的列表时自跑一次
+  useEffect(() => {
+    if (!isTauriRuntime() || securities.length === 0 || diagStarted.current) return;
+    if (window.sessionStorage.getItem("aka.s2.diag.once") === "1") return;
+    diagStarted.current = true;
+    let alive = true;
+    (async () => {
+      const enabled = await ipc.diagEnabled();
+      if (!enabled || !alive) return;
+      window.sessionStorage.setItem("aka.s2.diag.once", "1");
+      setDiagStatus("S2 取证：运行中");
+      try {
+        const report = await runS2Diagnostics({
+          codes: securities.map((item) => item.code),
+          activeCode: activeCodeRef.current,
+          baseParams: DEFAULT_PARAMS,
+          setPhase: (phase) => {
+            diagPhase.current = phase;
+          },
+          setCode: setActiveCode,
+          setParams: setAppliedParams,
+          setTimeframe,
+          nextSample,
+          drainSamples,
+          telemetry: () => ipc.telemetryDump(200),
+          probeBars: async (tf) => {
+            const response = await ipc.getBars({
+              security: activeCodeRef.current,
+              timeframe: tf,
+              adj,
+              from: dateFrom || undefined,
+              to: dateTo || undefined,
+            });
+            return {
+              timeframe: response.timeframe,
+              barCount: response.bars.length,
+              datasetId: response.datasetId,
+            };
+          },
+          write: (payload) => ipc.diagWrite(payload),
+        });
+        if (!alive) return;
+        const written = String(report.writtenTo ?? "");
+        setDiagStatus(`S2 取证：完成 → ${written.split("/").slice(-2).join("/")}`);
+        (window as unknown as Record<string, unknown>).__AKA_S2_EVIDENCE__ = report;
+      } catch (err) {
+        if (!alive) return;
+        setDiagStatus(`S2 取证：失败 ${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [securities, nextSample, drainSamples]);
 
   const security = securities.find((item) => item.code === activeCode);
   const lastIndex = bars && bars.bars.length > 0 ? bars.bars.length - 1 : -1;
@@ -153,7 +319,7 @@ export function WorkbenchPage({
   };
 
   return (
-    <AppShell>
+    <AppShell active="workbench" onNavigate={onNavigate}>
       <div className="workbench">
         <header className="wb-header">
           <div className="sec-identity">
@@ -244,16 +410,24 @@ export function WorkbenchPage({
           <main className="main">
             <div className="toolbar">
               <span className="caption">周期</span>
-              <div className="seg">
-                <button type="button" aria-pressed>
-                  D
-                </button>
-                <button type="button" disabled title="骨架期未实现">
-                  W
-                </button>
-                <button type="button" disabled title="骨架期未实现">
-                  M
-                </button>
+              <div className="seg" role="group" aria-label="周期切换">
+                {(
+                  [
+                    ["D", "日"],
+                    ["W", "周"],
+                    ["M", "月"],
+                  ] as Array<["D" | "W" | "M", string]>
+                ).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={timeframe === mode}
+                    title={`${label}线`}
+                    onClick={() => setTimeframe(mode)}
+                  >
+                    {mode}
+                  </button>
+                ))}
               </div>
 
               <span className="caption">复权</span>
@@ -329,7 +503,10 @@ export function WorkbenchPage({
 
             <div className="chart-card">
               {bars ? (
-                <CandleChart bars={bars.bars} series={calc?.series ?? []} windowSize={range} />
+                <>
+                  <CandleChart bars={bars.bars} series={calc?.series ?? []} windowSize={range} />
+                  <IndicatorReadouts series={calc?.series ?? []} barCount={bars.bars.length} />
+                </>
               ) : (
                 <div className="empty">
                   {loading ? (
@@ -401,6 +578,7 @@ export function WorkbenchPage({
             渲染 <b>{range === 9999 ? "全部" : `${range} 根`}</b>
           </span>
           <span className="mono">{bars ? formatDate(lastBar?.date ?? "") : ""}</span>
+          {diagStatus && <span className="diag-status">{diagStatus}</span>}
         </footer>
       </div>
     </AppShell>

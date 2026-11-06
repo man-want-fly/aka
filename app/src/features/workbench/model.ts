@@ -25,6 +25,22 @@ export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
       indicatorId: maId,
       params: { period: params.maPeriod },
     },
+    // B1 渲染层证据（TD-B1-02）：T01–T05 图线与 T19–T22 / E13 读数
+    ...(["T01", "T02", "T03", "T04", "T05"] as const).map((indicatorId) => ({
+      instanceId: `overlay-${indicatorId}`,
+      indicatorId,
+      params: { period: params.maPeriod },
+    })),
+    ...(["T19", "T20", "T21", "T22"] as const).map((indicatorId) => ({
+      instanceId: `stat-${indicatorId}`,
+      indicatorId,
+      params: { period: 20 },
+    })),
+    {
+      instanceId: "stat-E13",
+      indicatorId: "E13",
+      params: { period1: 6, period2: 12, period3: 24 },
+    },
     {
       instanceId: "sub-macd",
       indicatorId: "M06",

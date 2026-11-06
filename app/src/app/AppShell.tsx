@@ -1,14 +1,19 @@
 import type { ReactNode } from "react";
 
+export type RouteKey = "workbench" | "catalog";
+
 interface Props {
   children: ReactNode;
+  active: RouteKey;
+  onNavigate: (key: RouteKey) => void;
 }
 
-const NAV = [
+const NAV: Array<{ key: string; label: string; enabled: boolean; route?: RouteKey; icon: string }> = [
   {
     key: "workbench",
     label: "工作台",
     enabled: true,
+    route: "workbench",
     icon: "M2 12h7l2-8 3 16 2-8h6",
   },
   {
@@ -20,7 +25,8 @@ const NAV = [
   {
     key: "catalog",
     label: "指标库",
-    enabled: false,
+    enabled: true,
+    route: "catalog",
     icon: "M4 4h12v12H4zM4 9h12M9 4v12",
   },
   {
@@ -31,7 +37,7 @@ const NAV = [
   },
 ];
 
-export function AppShell({ children }: Props) {
+export function AppShell({ children, active, onNavigate }: Props) {
   return (
     <div className="app">
       <nav className="rail" aria-label="主导航">
@@ -40,9 +46,10 @@ export function AppShell({ children }: Props) {
           <button
             key={item.key}
             type="button"
-            className={`rail-btn ${item.enabled ? "active" : ""}`}
+            className={`rail-btn ${item.enabled && item.route === active ? "active" : ""}`}
             disabled={!item.enabled}
             title={item.enabled ? item.label : `${item.label}（骨架期未实现）`}
+            onClick={() => item.route && onNavigate(item.route)}
           >
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <path d={item.icon} strokeLinecap="round" strokeLinejoin="round" />

@@ -47,10 +47,29 @@ export function CandleChart({ bars, series, windowSize }: Props) {
     const start = bars.length - count;
     const visible = bars.slice(start);
 
-    const maIds = ["T01", "T02", "T03"];
-    const ma = series.find((item) => maIds.includes(item.indicatorId))?.outputs[0];
-    const maValues = ma ? ma.values.slice(start) : [];
-
+    const overlayIds = ["T01", "T02", "T03", "T04", "T05", "T19", "T20", "T22"];
+    const overlayUnits: Record<string, string> = {
+      T01: "元",
+      T02: "元",
+      T03: "元",
+      T04: "元",
+      T05: "元",
+      T19: "元",
+      T20: "元",
+      T22: "元/根",
+    };
+    const seen = new Set<string>();
+    const overlays = series
+      .filter((item) => overlayIds.includes(item.indicatorId))
+      .filter((item) => (seen.has(item.indicatorId) ? false : seen.add(item.indicatorId) && true))
+      .map((item) => ({
+        id: item.instanceId,
+        indicatorId: item.indicatorId,
+        label: item.outputs[0]?.labelZh ?? item.indicatorId,
+        unit: overlayUnits[item.indicatorId] ?? "",
+        color: item.outputs[0]?.color ?? "var(--warn)",
+        values: item.outputs[0]?.values.slice(start) ?? [],
+      }));
     const macd = series.find((item) => item.indicatorId === "M06");
     const macdOutput = (key: string) =>
       macd?.outputs.find((item) => item.key === key)?.values.slice(start) ?? [];
@@ -67,11 +86,13 @@ export function CandleChart({ bars, series, windowSize }: Props) {
       priceMin = Math.min(priceMin, bar.low);
       priceMax = Math.max(priceMax, bar.high);
       volMax = Math.max(volMax, bar.volume);
-      const maValue = maValues[index];
-      if (maValue !== null && maValue !== undefined) {
-        priceMin = Math.min(priceMin, maValue);
-        priceMax = Math.max(priceMax, maValue);
-      }
+      overlays.forEach((line) => {
+        const value = line.values[index];
+        if (value !== null && value !== undefined && Number.isFinite(value)) {
+          priceMin = Math.min(priceMin, value);
+          priceMax = Math.max(priceMax, value);
+        }
+      });
       [dif[index], dea[index], hist[index]].forEach((value) => {
         if (value !== null && value !== undefined) {
           macdAbs = Math.max(macdAbs, Math.abs(value));
@@ -111,8 +132,7 @@ export function CandleChart({ bars, series, windowSize }: Props) {
       yOfMacd,
       priceTicks,
       dateTicks,
-      maValues,
-      maColor: ma?.color ?? "var(--warn)",
+      overlays,
       dif,
       dea,
       hist,
@@ -161,6 +181,7 @@ export function CandleChart({ bars, series, windowSize }: Props) {
     <div className="chart-host">
       <svg
         className="chart-svg"
+        data-chart="candle"
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="xMidYMid meet"
         onMouseMove={handleMove}
@@ -220,13 +241,18 @@ export function CandleChart({ bars, series, windowSize }: Props) {
           );
         })}
 
-        {/* MA */}
-        <path
-          d={pathFor(view.maValues, view.xOf, view.yOfPrice)}
-          fill="none"
-          stroke={view.maColor}
-          strokeWidth={1.4}
-        />
+        {/* 指标叠加层：T01–T05 / T19 / T20 / T22 */}
+        {view.overlays.map((line) => (
+          <path
+            key={`overlay-${line.id}`}
+            data-overlay={line.indicatorId}
+            d={pathFor(line.values, view.xOf, view.yOfPrice)}
+            fill="none"
+            stroke={line.color}
+            strokeWidth={1.3}
+            opacity={0.92}
+          />
+        ))}
 
         {/* 成交量 */}
         <line
@@ -279,12 +305,14 @@ export function CandleChart({ bars, series, windowSize }: Props) {
           );
         })}
         <path
+          data-macd="dif"
           d={pathFor(view.dif, view.xOf, view.yOfMacd)}
           fill="none"
           stroke={view.difColor}
           strokeWidth={1.3}
         />
         <path
+          data-macd="dea"
           d={pathFor(view.dea, view.xOf, view.yOfMacd)}
           fill="none"
           stroke={view.deaColor}
@@ -308,13 +336,13 @@ export function CandleChart({ bars, series, windowSize }: Props) {
 
         {/* 图例 */}
         <g className="mono" fontSize={9.5}>
-          <text x={RIGHT - 150} y={24} fill={view.maColor}>
-            MA
+          <text x={RIGHT - 210} y={24} fill="var(--muted)">
+            T01–T05 · T19/T20/T22
           </text>
-          <text x={RIGHT - 96} y={24} fill={view.difColor}>
+          <text x={RIGHT - 100} y={24} fill={view.difColor}>
             DIF
           </text>
-          <text x={RIGHT - 58} y={24} fill={view.deaColor}>
+          <text x={RIGHT - 62} y={24} fill={view.deaColor}>
             DEA
           </text>
           <text x={RIGHT - 8} y={24} fill="var(--muted)" textAnchor="end">
@@ -337,7 +365,11 @@ export function CandleChart({ bars, series, windowSize }: Props) {
         )}
       </svg>
 
-      <div className={`chart-readout ${hovered ? "visible" : ""}`}>
+      <div
+        className={`chart-readout ${hovered ? "visible" : ""}`}
+        data-readout-host="1"
+        data-hover-index={hover ?? ""}
+      >
         {hovered && hover !== null && (
           <>
             <span>{hovered.date}</span>
@@ -347,6 +379,18 @@ export function CandleChart({ bars, series, windowSize }: Props) {
             <span>收 {formatPrice(hovered.close)}</span>
             <span>量 {formatVolume(hovered.volume)}</span>
             <span>额 {formatAmount(hovered.amount)}</span>
+            {view.overlays.map((line) => (
+              <span
+                key={`readout-${line.id}`}
+                data-readout={`ma-${line.indicatorId}`}
+                data-value={line.values[hover] ?? ""}
+                data-unit={line.unit}
+                style={{ color: line.color }}
+              >
+                {line.indicatorId} {formatPrice(line.values[hover] ?? Number.NaN)}
+                {line.unit ? ` ${line.unit}` : ""}
+              </span>
+            ))}
             <span style={{ color: hoveredChg >= 0 ? "var(--rise)" : "var(--fall)" }}>
               {formatPct(hoveredChg)}
             </span>

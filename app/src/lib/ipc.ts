@@ -8,6 +8,7 @@ import type {
   ManifestResponse,
   RegistryResponse,
   SecurityDto,
+  TelemetrySummary,
 } from "./types";
 
 export const isTauriRuntime = (): boolean =>
@@ -56,4 +57,12 @@ export const ipc = {
 
   calcIndicators: (req: CalcRequest): Promise<CalcResponse> =>
     invoke<CalcResponse>("calc_indicators", { req }),
+
+  telemetryDump: (recent = 200): Promise<TelemetrySummary> =>
+    invoke<TelemetrySummary>("telemetry_dump", { recent }),
+
+  diagEnabled: (): Promise<boolean> => invoke<boolean>("diag_enabled"),
+
+  diagWrite: (payload: string): Promise<string> =>
+    invoke<string>("diag_write", { payload }),
 };
