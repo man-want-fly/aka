@@ -233,10 +233,8 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
       snapshot.calc.series
         .find((item) => item.indicatorId === "M06")
         ?.outputs.find((output) => output.key === "dif")?.values ?? [];
-    const ratio = [0, 0.2, 0.4, 0.6, 0.8, 1];
-    const picks = Array.from(
-      new Set(ratio.map((r) => Math.min(count - 1, Math.round((count - 1) * r))).filter((i) => i >= 0)),
-    );
+    // 全窗口逐根：每根可见 K 线都悬停一次，读 tooltip 显示值并与引擎序列逐点等值
+    const picks = Array.from({ length: count }, (_, index) => index);
     const rows: Array<Record<string, unknown>> = [];
     for (const visible of picks) {
       const candle =
@@ -251,7 +249,7 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
           clientY: box.top + box.height / 2,
         }),
       );
-      await sleep(70);
+      await sleep(50);
       const absolute = offset + visible;
       const shownSma =
         document.querySelector("[data-readout='ma-T01']")?.getAttribute("data-value") ?? "";
@@ -276,7 +274,7 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
       sampled: rows.length,
       samples: rows,
       mismatches: rows.filter((row) => row.ok !== true).map((row) => row.bar),
-      ok: rows.length >= 6 && rows.every((row) => row.ok === true),
+      ok: rows.length === count && rows.every((row) => row.ok === true),
     };
     svg.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
     await sleep(60);
@@ -478,6 +476,79 @@ async function collectB2RenderChecks(): Promise<Record<string, unknown>> {
   };
 }
 
+/** B3 渲染层证据：13 个动量/摆动指标逐个切副图，读 DOM 节点数/描边/读数。 */
+async function collectB3RenderChecks(): Promise<Record<string, unknown>> {
+  const ids = [
+    "M01", "M02", "M04", "M05", "M08", "M09", "M10",
+    "M19", "M20", "M21", "M24", "M25", "M26",
+  ];
+  const expect: Record<string, number> = {
+    M01: 1, M02: 3, M04: 1, M05: 1, M08: 2, M09: 1, M10: 1,
+    M19: 2, M20: 2, M21: 1, M24: 1, M25: 2, M26: 1,
+  };
+  const select = document.querySelector<HTMLSelectElement>("[data-b2-sub-select]");
+  const options = select ? Array.from(select.options).map((option) => option.value) : [];
+  const missing = ids.filter((id) => !options.includes(id));
+
+  const cards: Array<Record<string, unknown>> = [];
+  for (const id of ids) {
+    if (!select) {
+      cards.push({ id, ok: false, reason: "副图下拉缺失" });
+      continue;
+    }
+    select.value = id;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(260);
+    const nodes = Array.from(document.querySelectorAll<SVGElement>(`[data-sub='${id}']`));
+    // line 输出把 data-sub 挂 path 上；dot/histogram 输出挂在外层 g 上，需下钻取子元素样式
+    const paints = nodes.map((node) => {
+      if (node.tagName.toLowerCase() === "path") return getComputedStyle(node).stroke;
+      const child = node.querySelector<SVGElement>("circle, rect");
+      return child ? getComputedStyle(child).fill : "";
+    });
+    const paintOk =
+      paints.length === nodes.length &&
+      paints.every((paint) => paint !== "" && paint !== "none" && !paint.includes("NaN"));
+    const readouts = Array.from(
+      document.querySelectorAll<HTMLElement>(`[data-readout^='b2-sub-${id}-']`),
+    ).map((element) => ({
+      value: element.getAttribute("data-value") ?? "",
+      text: element.textContent?.trim() ?? "",
+    }));
+    const readoutOk =
+      readouts.length === expect[id] &&
+      readouts.some((entry) => entry.value !== "") &&
+      readouts.every((entry) =>
+        entry.value !== "" ? Number.isFinite(Number(entry.value)) : entry.text.includes("—"),
+      );
+    cards.push({
+      id,
+      nodes: nodes.length,
+      paintCount: paints.length,
+      paintOk,
+      paints,
+      readouts: readouts.length,
+      readoutOk,
+      ok: nodes.length === expect[id] && paintOk && readoutOk,
+    });
+  }
+
+  // 复位默认副图
+  if (select) {
+    select.value = "M06";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(260);
+  }
+
+  return {
+    cardCount: cards.length,
+    optionsCount: options.length,
+    missing,
+    cards,
+    ok: cards.length === 13 && missing.length === 0 && cards.every((item) => Boolean(item.ok)),
+  };
+}
+
 /** 口径页证据：真实跳转 P4 路由，读 DOM 里的指标条目与四段结构。 */
 async function collectCatalogCheck(): Promise<Record<string, unknown>> {
   const previous = window.location.hash;
@@ -503,7 +574,7 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
     sections,
     betaIds,
     betaCount: betaIds.length,
-    ok: rootPresent && items.length === 31 && sections.length === 4 && betaIds.includes("T16"),
+    ok: rootPresent && items.length === 44 && sections.length === 4 && betaIds.includes("T16"),
   };
 }
 
@@ -691,9 +762,11 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
 
   const renderLayer = await collectRenderChecks(hooks);
   const b2Render = await collectB2RenderChecks();
+  const b3Render = await collectB3RenderChecks();
   const catalog = await collectCatalogCheck();
   if (!renderLayer.ok) notes.push("渲染层 DOM 断言未通过，见 verification.renderLayer");
   if (!b2Render.ok) notes.push("B2 渲染层 8 卡断言未通过，见 verification.b2Render");
+  if (!b3Render.ok) notes.push("B3 渲染层 13 指标断言未通过，见 verification.b3Render");
   if (!catalog.ok) notes.push("口径页 DOM 断言未通过，见 verification.catalog");
 
   const payload = {
@@ -790,6 +863,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     verification: {
       renderLayer,
       b2Render,
+      b3Render,
       catalog,
     },
     telemetry: {

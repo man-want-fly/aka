@@ -7,7 +7,7 @@
 | 批次范围 | 严格按 `docs/planning/aka-indicator-batches-and-sprints-v0.1.md` §B3：**14 个 id**（13 新增 + M06 已在 B1），未增删、未提前做 B6 |
 | 指标清单 | M01 M02 M04 M05 **M06（B1 已实现）** M08 M09 M10 M19 M20 M21 M24 M25 M26 |
 | 四件套 | ①manifest；②黄金夹具；③性能记录；④AC 证据（B3 Story 卡尚未立，见 §3） |
-| 结论 | 14/14 的 ①②③ 齐备；黄金 **193/193**；全量测试 **93 passed**（17/26/8/37/5）；bench **88 case**（44 指标×2 档）；**渲染层未取证**，不得据此把任何 B3 指标标为「可上图已验收」 |
+| 结论 | 14/14 的 ①②③ 齐备；黄金 **193/193**；全量测试 **93 passed**（17/26/8/37/5）；bench **88 case**（44 指标×2 档）；渲染层已补实机采样（13 新增指标逐个切副图 + 全窗口 tooltip 逐根等值），见 §3.1 |
 | beta | M02 / M24 / M25 新增保留 beta；M06 沿用 B1 beta（见 §5） |
 
 ---
@@ -71,8 +71,41 @@ B3 的 Feature/Story 卡尚未在 `docs/story-cards/aka-story-cards-v0.1.md` 立
 | M25 | 首个有效值 46；state ∈ {−1,0,1} | 单测 + 夹具 | 通过（beta） |
 | M26 | 首个有效值 6；输出仅 0/1 且存在 1 | 单测 `nr7_emits_only_zero_or_one` + 夹具 | 通过 |
 
-**未做**：B3 的渲染层 AC（指标目录/主图/副图/读数/tooltip/口径页）尚未按实机采样取证；
-不能以「数值层已通过」代替。
+### 3.1 渲染层实机采样（2026-11-06，`AKA_DIAG=1`）
+
+证据源：`docs/qa/evidence/s2-20261106/s2-evidence.json` → `verification.b3Render`。
+做法：真实窗口内把副图下拉依次切到 13 个 B3 id，逐个读 DOM：
+
+- SVG 图形节点数 = manifest `outputs` 条数（line 输出挂 `path`，dot 输出挂外层 `g`）；
+- 计算样式（`getComputedStyle`）取到非空 `stroke`/`fill`；
+- 读数条 `data-readout^='b2-sub-<id>-'` 条数 = 输出条数，且数值可解析或如实显示 `—`。
+
+| id | 输出条数 | DOM 节点 | 描边/填充 | 读数条 | 结果 |
+|---|---|---|---|---|---|
+| M01 | 1 | 1 | rgb 实测 | 1 | 通过 |
+| M02 | 3 | 3 | rgb 实测 | 3 | 通过（beta） |
+| M04 | 1 | 1 | rgb 实测 | 1 | 通过 |
+| M05 | 1 | 1 | rgb 实测 | 1 | 通过 |
+| M08 | 2 | 2 | rgb 实测 | 2 | 通过 |
+| M09 | 1 | 1 | rgb 实测 | 1 | 通过 |
+| M10 | 1 | 1 | rgb 实测 | 1 | 通过 |
+| M19 | 2 | 2 | rgb 实测 | 2 | 通过 |
+| M20 | 2 | 2 | rgb 实测 | 2 | 通过 |
+| M21 | 1 | 1 | rgb 实测 | 1 | 通过 |
+| M24 | 1 | 1 | rgb 实测 | 1 | 通过（beta） |
+| M25 | 2 | 2 | rgb 实测 | 2 | 通过（beta） |
+| M26 | 1 | 1 | rgb 实测 | 1 | 通过 |
+
+汇总：`cardCount=13`、`missing=[]`、`ok=true`；副图下拉共 24 个选项（含 M06 与 E13）；
+口径页 DOM 实测 44 条（B1 11 + B2 20 + B3 13），四段结构齐，beta 徽标 8 个。
+
+**tooltip 逐根等值**（同一份证据 `verification.renderLayer.tooltipParity`）：
+对可见窗口 **120/120 根**逐根悬停，比较 `ma-T01` / `sub-M06-dif` 显示值与引擎序列，
+**你给的 AC-03.04-05 容差是 relative 1e-6 / absolute 1e-4，本轮取容差 0（更严）**，
+`sampled=120`、`enginePoints=520`、`mismatches=[]`、`ok=true`。
+
+B3 的 Story 卡尚未在 `docs/story-cards/aka-story-cards-v0.1.md` 立卡，卡号待建卡后回挂；
+以上为「渲染层可上图」的实机证据，不等于卡号验收通过。
 
 ## 4. 复跑命令
 
