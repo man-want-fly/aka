@@ -43,7 +43,7 @@
 | TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（数字已同步至 `16:50:18Z` 批次） |
 | TD-S0-05 | QA-S0-028 | 无 `compute.count` / `compute.skip` 埋点，5 实例去重计数无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-06 | QA-S0-029 | 无 `indicator.cold_ms` 埋点，冷缓存 30 次 P95 无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
-| TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿（G 线护栏口径）**：G 线 dev(`opt-level=1`) 连续 3 批 × 30 样本 max 48/58/40ms 通过；**P 线 release 端到端「未测」**（不得写作 release 已达标）；`#1` 123ms 属 load avg 8.4 受扰批次，样本保留但不作通过批次；`229/192/132ms` 标注「dev（未加 opt-level）」 |
+| TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿（完整签认）**：G 线 dev(`opt-level=1`) 3 批 × 30 样本 max 48/58/40ms 通过；P 线 release 90 样本 × 3 批 批 max 89/39/27ms 通过（P50 22 / P95 26，命中 90/90、逐点一致）；回退条款保留。`#1` 123ms 属 load avg 8.4 受扰批次，样本保留但不作通过批次；`229/192/132ms` 为 dev（未加 opt-level）历史坏样本 |
 | TD-S0-08 | QA-S0-062 | `data/real` 实物不存在，无法验证 real 不变、仅 sim 变化 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-09 | QA-S0-070 | `data/sim` 实物与固定 sha256 算法未落地，无法重算对拍 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 
@@ -249,7 +249,7 @@
   `cache.hit=1`、`indicator.compute` 不增长，且 DIF/DEA/HIST 三列 `values` 逐点相等（缓存直返一致）。
 - **多实例命中另测**：`calc_telemetry_records_dedup_cache_and_cold_ms` 二次请求 `cache.hit=2`（两个缓存项各 1 条）。
 - **判据（按 `R-S0-07-01`，v0.1 / 2026-11-07）**：`warmMaxTotal ≤120ms` 不变，但必须区分构建类型——**release 为产品口径，dev（`[profile.dev] opt-level=1`）为更严护栏**；两套数字都要按「3 批 × 30 样本、判值取 max、P50/P95/max 均留档」记录，**任一构建线出现单样本 `>120ms` 即未达标**。跨构建/换编译器/换数据集形状属**口径切换**，只能重建基线，不得当作性能突变或性能改善。
-- **双线记账（台账口径）**：P 线（release）当前记「**未测**」，只能表述为「release 端到端 30×3 批待补」，**不得**写作「release 已达标」；G 线（dev `opt-level=1`）记「通过」（3 批 × 30 样本，max 48/58/40ms）。P 线批次入库并同时满足两条线后，才升级为完整签认。
+- **双线记账（台账口径）**：**P 线（release）记「通过」**：90 样本 × 3 批，批 max 89 / 39 / 27ms、P50 22ms、P95 26ms，`cacheHit` 90/90、`matchesCold` 90/90；构建参数 release / `opt-level=3` / `lto=false` / `cgu=16` / `debug=0`。**G 线（dev `opt-level=1`）记「通过」**：3 批 × 30 样本，max 48/58/40ms。两线同时满足 → **完整签认**。
 - **回退条款（无条件，独立条目）**：后续安静机器复跑，任一构建线出现单样本 `totalMs > 120ms`，本条立即回退「部分清偿」；不以「偶发 / 冷启 / 负载 / 编译收尾」为由豁免。判据为 `≤120ms`，故回退条件严格写 `>120ms`（恰好 120ms 仍合格）。
 - **实机取证（修复前，未达标）**：判据字面为「切回耗时 ≤120ms」，diag 判据实现为 `warmMaxTotal <= 120`（max 口径）。
 
@@ -308,10 +308,22 @@
 
   **判定（G 线护栏口径）**：安静机器（无并发构建）连续 3 批 30 样本共 90 个样本，`totalMs` P50 23–24ms、P95 33–50ms、
   max 48/58/40ms，全部 ≤120ms，且 30/30 `cacheHit=true`、`engineMs=0`（命中不再重算）→ **G 线通过**。
-  P 线（release 产品口径）尚无 UI 端到端 30 样本批次，按 `R-S0-07-01` §2.2 只能记「未测」；本次签认限定为「已清偿（G 线护栏口径）」，release 批次入库后才升级为完整签认。
+  P 线（release 产品口径）见下节，批 max 89/39/27ms、P50 22ms、P95 26ms，全部 ≤120ms → **P 线通过**。
+  两条线同时满足，按 `R-S0-07-01` §2.2 构成 **完整签认（已清偿）**。
   修复后 #1 的 123ms 单点原样保留在上表：它出现在编译刚结束、系统仍在收尾的首次启动批次，
   不是冷启首切（第 13 个样本）、也不是缓存失效；**该批不作通过批次**，通过批次以 #2–#4 为准。
   回退判定不依赖对本样本的解释，见上方「回退条款（无条件，独立条目）」。
+- **P 线实机批次（release / `opt-level=3` / `lto=false` / `cgu=16` / `debug=0`；每批 30 样本，判值 max ≤120ms）**：
+
+  | 批次 | 样本 | P50 | P95 | max | 备注 |
+  | --- | --- | --- | --- | --- | --- |
+  | P-1 | 30 | — | — | **89ms** | 全部 ≤120ms；`cacheHit` 30/30 |
+  | P-2 | 30 | — | — | **39ms** | 全部 ≤120ms；`cacheHit` 30/30 |
+  | P-3 | 30 | — | — | **27ms** | 全部 ≤120ms；`cacheHit` 30/30 |
+  | 合计 | **90** | **22ms** | **26ms** | **89ms** | `matchesCold` 90/90（逐点一致） |
+
+  证据：[`s2-evidence-p-line-20261107k.json`](./evidence/s2-evidence-p-line-20261107k.json)
+  （`allCacheHit=true`、`allPointwiseMatch=true`；构建参数字段 `buildProfile=release / optLevel=3 / lto=false / codegenUnits=16 / debug=0`）。
 - **证据**：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §3、
   [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `warm` 段（`generatedAt=2026-11-06T16:50:18.641Z`，含 30 行采样表）。
 

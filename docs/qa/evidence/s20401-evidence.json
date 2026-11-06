@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-06T20:38:51.434Z",
+  "finishedAt": "2026-11-06T20:56:48.613Z",
   "context": {
     "manifestCount": 105,
     "plannedCount": 61,
@@ -16,10 +16,10 @@
     },
     {
       "id": "D-02",
-      "ac": "AC-02.04-03(补1)",
+      "ac": "AC-02.04-03(补3)",
       "layer": "data",
       "passed": true,
-      "detail": "规划中 61 / normal 40 / beta 4 / 缺四字段 无（manifest.plannedCount=105 为目录规划总量，非 status=planned 的条数）"
+      "detail": "规划中 61 / normal 40 / beta 4 / 缺四字段 无（manifest.catalogTotal=105 为目录规划总量，非 status=planned 的条数）"
     },
     {
       "id": "R-01",
@@ -30,7 +30,7 @@
     },
     {
       "id": "R-02",
-      "ac": "AC-02.04-03",
+      "ac": "AC-02.04-03(补3)",
       "layer": "render",
       "passed": true,
       "detail": "置灰条目 61 / 缺缩写 0 / 面板异常 0"
@@ -40,7 +40,7 @@
       "ac": "AC-02.04-02",
       "layer": "render",
       "passed": true,
-      "detail": "搜索 MACD → M06:normal,M07:planned / 首行 M06 面板 副 参数 12,26,9 / 命中高亮=有（AC 原文「只返回一行」与「规划中条目可搜到并置灰」冲突，见汇报）"
+      "detail": "搜索 MACD → M06:normal,M07:planned / normal 命中 1 / 首行 M06 面板 副 参数 12,26,9 / 命中高亮=有"
     },
     {
       "id": "R-04",
@@ -68,7 +68,7 @@
       "ac": "AC-02.04-03",
       "layer": "render",
       "passed": true,
-      "detail": "点击置灰条目「赫尔均线HMA主图P1规」→ 提示「「赫尔均线」该指标规划中（本期未开放）」"
+      "detail": "点击置灰条目「赫尔均线HMA主图P1规」→ 提示「该指标规划中，本期未开放」"
     },
     {
       "id": "R-08",
@@ -76,6 +76,62 @@
       "layer": "render",
       "passed": true,
       "detail": "关闭=是 / 焦点回归触发按钮=是"
+    },
+    {
+      "id": "R-09",
+      "ac": "AC-02.04-02(补1)",
+      "layer": "render",
+      "passed": true,
+      "detail": "M06 按钮已添加态=1 / 文案「✓ 已添加」/ 重击后副图 1 面板 / 提示「该指标已添加」"
+    },
+    {
+      "id": "R-10",
+      "ac": "AC-02.04-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "副图 3 个 / 标题 MACD(12,26,9) | ATR | KDJ"
+    },
+    {
+      "id": "R-11",
+      "ac": "AC-02.04-03(补1)",
+      "layer": "render",
+      "passed": true,
+      "detail": "第 4 个副图按钮 disabled=true / full=1 / 容量「主图 2/2 · 副图 3/3」/ tooltip「请先移除一个指标」/ 副图 3 个 / 实例 M06+V01+M02 → M06+V01+M02"
+    },
+    {
+      "id": "R-12",
+      "ac": "AC-02.04-03(补2)",
+      "layer": "render",
+      "passed": true,
+      "detail": "移除 V01 后 V02 可添加=true / 副图 3 个 / V02 面板=在"
+    },
+    {
+      "id": "R-13",
+      "ac": "AC-02.04-04(补1)",
+      "layer": "render",
+      "passed": true,
+      "detail": "T08(主) 带副图按钮=false / M02(副) 带主图按钮=false"
+    },
+    {
+      "id": "R-14",
+      "ac": "AC-02.04-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "T08 full=1 / 点击提示「主图最多 2 个叠加，请先移除一个」/ 未被静默加入=0"
+    },
+    {
+      "id": "R-15",
+      "ac": "AC-02.04-04(补2)",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "M06 冷算 0.04ms / M02 冷算 0.02ms / M02 点击→曲线 23ms / 冷样本 44 P95 0.08ms"
+    },
+    {
+      "id": "R-16",
+      "ac": "AC-02.04-04(补2)",
+      "layer": "render",
+      "passed": true,
+      "detail": "面板动画 180ms / 覆盖坐标轴的绝对定位层 0 个"
     }
   ]
 }
