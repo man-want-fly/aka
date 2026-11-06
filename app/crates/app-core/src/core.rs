@@ -393,6 +393,8 @@ fn indicator_meta_dto(indicator: &'static dyn Indicator) -> IndicatorMetaDto {
         inputs: InputsDto::from(meta.inputs),
         spec_status: meta.spec_status,
         engine_version: meta.engine_version,
+        unit: meta.unit,
+        notes: meta.notes,
         warmup: (meta.warmup)(&defaults),
         implemented: true,
     }

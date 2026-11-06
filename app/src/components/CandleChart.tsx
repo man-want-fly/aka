@@ -47,10 +47,11 @@ export function CandleChart({ bars, series, windowSize }: Props) {
     const start = bars.length - count;
     const visible = bars.slice(start);
 
-    const ma = series.find((item) => item.indicatorId === "ma")?.outputs[0];
+    const maIds = ["T01", "T02", "T03"];
+    const ma = series.find((item) => maIds.includes(item.indicatorId))?.outputs[0];
     const maValues = ma ? ma.values.slice(start) : [];
 
-    const macd = series.find((item) => item.indicatorId === "macd");
+    const macd = series.find((item) => item.indicatorId === "M06");
     const macdOutput = (key: string) =>
       macd?.outputs.find((item) => item.key === key)?.values.slice(start) ?? [];
     const dif = macdOutput("dif");

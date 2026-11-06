@@ -18,15 +18,16 @@ export const DEFAULT_PARAMS: WorkbenchParams = {
 
 /** 前端只做「表单 → 实例」的装配；范围校验以后端 ParamSpec 为准。 */
 export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
+  const maId = { sma: "T01", ema: "T02", wma: "T03" }[params.maType];
   return [
     {
       instanceId: "main-ma",
-      indicatorId: "ma",
-      params: { period: params.maPeriod, maType: params.maType },
+      indicatorId: maId,
+      params: { period: params.maPeriod },
     },
     {
       instanceId: "sub-macd",
-      indicatorId: "macd",
+      indicatorId: "M06",
       params: {
         fast: params.fast,
         slow: params.slow,

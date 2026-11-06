@@ -1,4 +1,4 @@
-//! 可重复的单指标基准程序（Sprint 0 性能基线）。
+//! 可重复的单指标基准程序（S0 建立，S1 扩到 B1 十个指标）。
 //!
 //! 运行：
 //! ```text
@@ -7,7 +7,7 @@
 //! 输出：`app/bench/baselines/macos-<arch>.json`（含机器、rustc、profile、阈值与判定）。
 //!
 //! 数据是固定种子的合成 OHLCV，不含随机源；同一机器同一版本应得到可对比的 p50/p95。
-//! 阈值（S0）在 `thresholds` 里冻结：520 根 p95 ≤ 1.0ms，2500 根 p95 ≤ 8.0ms；
+//! 阈值（S0 冻结，B1 沿用）：520 根 p95 ≤ 1.0ms，2500 根 p95 ≤ 8.0ms；
 //! 只记录，不让 CI 因此变红（性能回归由人判读基线 diff）。
 
 use std::hint::black_box;
@@ -16,7 +16,7 @@ use std::process::Command;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use indicator_core::{
-    lookup, merge_defaults, OhlcvView, ParamValue, Params, ENGINE_VERSION, MA_ID, MACD_ID,
+    lookup, merge_defaults, OhlcvView, ParamValue, Params, ENGINE_VERSION, MACD_ID,
 };
 use serde::Serialize;
 
@@ -217,22 +217,20 @@ fn peak_rss_bytes() -> u64 {
 
 fn main() {
     let mut cases = Vec::new();
-    let sma = [("period", ParamValue::Int(20))];
-    let ema = [
-        ("period", ParamValue::Int(20)),
-        ("maType", ParamValue::Text("ema".into())),
-    ];
-    let wma = [
-        ("period", ParamValue::Int(20)),
-        ("maType", ParamValue::Text("wma".into())),
-    ];
-    let macd: &[(&str, ParamValue)] = &[];
+    let period20 = [("period", ParamValue::Int(20))];
 
     for (bars, runs, threshold) in [(520usize, 200usize, THRESHOLD_P95_MS_520), (2500, 100, THRESHOLD_P95_MS_2500)] {
-        cases.push(measure(MA_ID, "sma20", bars, runs, &sma, threshold));
-        cases.push(measure(MA_ID, "ema20", bars, runs, &ema, threshold));
-        cases.push(measure(MA_ID, "wma20", bars, runs, &wma, threshold));
-        cases.push(measure(MACD_ID, "macd12/26/9", bars, runs, macd, threshold));
+        cases.push(measure("T01", "sma20", bars, runs, &period20, threshold));
+        cases.push(measure("T02", "ema20", bars, runs, &period20, threshold));
+        cases.push(measure("T03", "wma20", bars, runs, &period20, threshold));
+        cases.push(measure("T04", "dema20", bars, runs, &period20, threshold));
+        cases.push(measure("T05", "tema20", bars, runs, &period20, threshold));
+        cases.push(measure("T19", "linregForecast20", bars, runs, &period20, threshold));
+        cases.push(measure("T20", "linregIntercept20", bars, runs, &period20, threshold));
+        cases.push(measure("T21", "linregR2_20", bars, runs, &period20, threshold));
+        cases.push(measure("T22", "linregSlope20", bars, runs, &period20, threshold));
+        cases.push(measure("E13", "bias6/12/24", bars, runs, &[], threshold));
+        cases.push(measure(MACD_ID, "macd12/26/9", bars, runs, &[], threshold));
     }
 
     let mut bin_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

@@ -70,6 +70,8 @@ export interface IndicatorMetaDto {
   inputs: InputsDto;
   specStatus: SpecStatus;
   engineVersion: number;
+  unit: string;
+  notes: string;
   warmup: number;
   implemented: boolean;
 }
@@ -110,6 +112,8 @@ export interface ManifestIndicatorDto {
   version: number;
   specStatus: SpecStatus;
   status: "normal" | "beta";
+  unit: string;
+  notes: string;
 }
 
 /** 指标目录的单一事实来源；前端指标列表一律由它生成。 */

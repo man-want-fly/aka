@@ -5,12 +5,15 @@
 //! MVP 骨架只注册 MA 与 MACD 两个示例，规划总数为 105。
 
 pub mod indicators;
+pub mod kernels;
 pub mod manifest;
 pub mod meta;
 pub mod param;
 pub mod view;
 
-pub use indicators::{all, implemented_count, lookup, MACD_ID, MA_ID, PLANNED_INDICATOR_COUNT};
+pub use indicators::{
+    all, implemented_count, lookup, MACD_ID, MA_ID, PLANNED_INDICATOR_COUNT,
+};
 pub use manifest::{
     manifest, Manifest, ManifestIndicator, ManifestInputs, ManifestOutput, ManifestParam,
 };

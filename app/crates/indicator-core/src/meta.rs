@@ -82,6 +82,10 @@ pub struct Meta {
     pub inputs: InputReq,
     pub spec_status: SpecStatus,
     pub engine_version: u16,
+    /// 输出单位/量纲：如「元」「%」「元/根」「无量纲」。
+    pub unit: &'static str,
+    /// 口径说明：公式要点、首个有效值、边界规则。
+    pub notes: &'static str,
     /// 返回需要多少根「前置」数据；与参数有关，必须是纯函数
     pub warmup: fn(&Params) -> usize,
 }

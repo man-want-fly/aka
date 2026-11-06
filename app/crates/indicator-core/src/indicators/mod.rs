@@ -1,11 +1,30 @@
+//! 指标注册表（B1：均线 / 回归底座 + MACD 存量）。
+//!
+//! id 统一为 PRD 编号（`T01`…`T22`、`E13`、`M06`），旧 `ma` / `macd` 保留 alias 一版，
+//! 由 manifest 的 `aliases` 解析。实现入口仍是 `Indicator::calc(&OhlcvView, &Params, &mut [Vec<f64>])`。
+
+use crate::kernels::{bias, ema, ema_of_valid, linreg, sma, wma};
 use crate::meta::Meta;
-use crate::param::{param_int, param_text};
+use crate::param::param_int;
 use crate::view::{CalcError, Indicator, OhlcvView};
 use crate::Params;
 
 pub const PLANNED_INDICATOR_COUNT: usize = 105;
-pub const MA_ID: &str = "ma";
-pub const MACD_ID: &str = "macd";
+
+/// 兼容常量：主均线（SMA）与 MACD。旧代码可继续引用，但注册表 id 已是 PRD 编号。
+pub const MA_ID: &str = "T01";
+pub const MACD_ID: &str = "M06";
+
+pub const T01_ID: &str = "T01";
+pub const T02_ID: &str = "T02";
+pub const T03_ID: &str = "T03";
+pub const T04_ID: &str = "T04";
+pub const T05_ID: &str = "T05";
+pub const T19_ID: &str = "T19";
+pub const T20_ID: &str = "T20";
+pub const T21_ID: &str = "T21";
+pub const T22_ID: &str = "T22";
+pub const E13_ID: &str = "E13";
 
 pub fn all() -> &'static [&'static dyn Indicator] {
     &ALL
@@ -15,22 +34,71 @@ pub fn implemented_count() -> usize {
     ALL.len()
 }
 
+/// 先按注册表 id 精确查；未命中再用 manifest alias 解析（`ma`→`T01`、`macd`→`M06`）。
 pub fn lookup(id: &str) -> Option<&'static dyn Indicator> {
-    ALL.iter()
-        .copied()
-        .find(|item| item.meta().id == id)
+    if let Some(found) = ALL.iter().copied().find(|item| item.meta().id == id) {
+        return Some(found);
+    }
+    let resolved = crate::manifest::entry(id)?;
+    ALL.iter().copied().find(|item| item.meta().id == resolved.id)
 }
 
-static MA: Ma = Ma;
-static MACD: Macd = Macd;
-static ALL: [&dyn Indicator; 2] = [&MA, &MACD];
+static T01: Ma = Ma {
+    id: T01_ID,
+    kind: MaKind::Sma,
+};
+static T02: Ma = Ma {
+    id: T02_ID,
+    kind: MaKind::Ema,
+};
+static T03: Ma = Ma {
+    id: T03_ID,
+    kind: MaKind::Wma,
+};
+static T04: Dema = Dema;
+static T05: Tema = Tema;
+static T19: LinRegIndicator = LinRegIndicator {
+    id: T19_ID,
+    kind: LinRegKind::Forecast,
+};
+static T20: LinRegIndicator = LinRegIndicator {
+    id: T20_ID,
+    kind: LinRegKind::Intercept,
+};
+static T21: LinRegIndicator = LinRegIndicator {
+    id: T21_ID,
+    kind: LinRegKind::R2,
+};
+static T22: LinRegIndicator = LinRegIndicator {
+    id: T22_ID,
+    kind: LinRegKind::Slope,
+};
+static E13: Bias = Bias;
+static M06: Macd = Macd;
 
-pub struct Ma;
-pub struct Macd;
+static ALL: [&dyn Indicator; 11] = [
+    &T01, &T02, &T03, &T04, &T05, &T19, &T20, &T21, &T22, &E13, &M06,
+];
+
+#[derive(Debug, Clone, Copy)]
+enum MaKind {
+    Sma,
+    Ema,
+    Wma,
+}
+
+pub struct Ma {
+    id: &'static str,
+    kind: MaKind,
+}
 
 impl Indicator for Ma {
     fn meta(&self) -> &'static Meta {
-        crate::manifest::meta_for(MA_ID, ma_warmup)
+        let warmup: fn(&Params) -> usize = match self.kind {
+            MaKind::Ema => ema_warmup,
+            _ => ma_warmup,
+        };
+        crate::manifest::meta_for(self.id, warmup)
     }
 
     fn calc(
@@ -39,53 +107,155 @@ impl Indicator for Ma {
         params: &Params,
         out: &mut [Vec<f64>],
     ) -> Result<(), CalcError> {
-        if out.len() != 1 || !view.columns_are_aligned() {
-            return Err(CalcError::Internal("MA 输出/输入维度不一致".to_string()));
-        }
-        let len = view.len();
-        if out[0].len() != len {
-            return Err(CalcError::Internal("MA 输出未预分配".to_string()));
-        }
-
-        let period = param_int(params, "period").unwrap_or(20).max(1) as usize;
-        let ma_type = param_text(params, "maType").unwrap_or("sma");
-
+        ensure_shape(view, out, 1, self.id)?;
+        let period = period_of(params, 20);
         out[0].fill(f64::NAN);
-        if len < period {
+        if view.len() < period {
             return Ok(());
         }
+        out[0] = match self.kind {
+            MaKind::Sma => sma(view.close, period),
+            MaKind::Ema => ema(view.close, period),
+            MaKind::Wma => wma(view.close, period),
+        };
+        Ok(())
+    }
+}
 
-        match ma_type {
-            "ema" => out[0] = ema(view.close, period),
-            "wma" => {
-                for i in (period - 1)..len {
-                    let start = i + 1 - period;
-                    let mut num = 0.0;
-                    let mut den = 0.0;
-                    for k in 0..period {
-                        let weight = (k + 1) as f64;
-                        num += weight * view.close[start + k];
-                        den += weight;
-                    }
-                    out[0][i] = num / den;
-                }
-            }
-            _ => {
-                let mut sum: f64 = view.close[..period].iter().sum();
-                out[0][period - 1] = sum / period as f64;
-                for i in period..len {
-                    sum += view.close[i] - view.close[i - period];
-                    out[0][i] = sum / period as f64;
-                }
+pub struct Dema;
+
+impl Indicator for Dema {
+    fn meta(&self) -> &'static Meta {
+        crate::manifest::meta_for(T04_ID, dema_warmup)
+    }
+
+    fn calc(
+        &self,
+        view: &OhlcvView<'_>,
+        params: &Params,
+        out: &mut [Vec<f64>],
+    ) -> Result<(), CalcError> {
+        ensure_shape(view, out, 1, T04_ID)?;
+        let period = period_of(params, 20);
+        out[0].fill(f64::NAN);
+        if view.len() < period * 2 - 1 {
+            return Ok(());
+        }
+        let first = ema(view.close, period);
+        let second = ema_of_valid(&first, period);
+        for i in 0..view.len() {
+            if first[i].is_finite() && second[i].is_finite() {
+                out[0][i] = 2.0 * first[i] - second[i];
             }
         }
         Ok(())
     }
 }
 
-fn ma_warmup(params: &Params) -> usize {
-    param_int(params, "period").unwrap_or(20).max(2) as usize - 1
+pub struct Tema;
+
+impl Indicator for Tema {
+    fn meta(&self) -> &'static Meta {
+        crate::manifest::meta_for(T05_ID, tema_warmup)
+    }
+
+    fn calc(
+        &self,
+        view: &OhlcvView<'_>,
+        params: &Params,
+        out: &mut [Vec<f64>],
+    ) -> Result<(), CalcError> {
+        ensure_shape(view, out, 1, T05_ID)?;
+        let period = period_of(params, 20);
+        out[0].fill(f64::NAN);
+        if view.len() < period * 3 - 2 {
+            return Ok(());
+        }
+        let first = ema(view.close, period);
+        let second = ema_of_valid(&first, period);
+        let third = ema_of_valid(&second, period);
+        for i in 0..view.len() {
+            if first[i].is_finite() && second[i].is_finite() && third[i].is_finite() {
+                out[0][i] = 3.0 * first[i] - 3.0 * second[i] + third[i];
+            }
+        }
+        Ok(())
+    }
 }
+
+#[derive(Debug, Clone, Copy)]
+enum LinRegKind {
+    Forecast,
+    Intercept,
+    R2,
+    Slope,
+}
+
+pub struct LinRegIndicator {
+    id: &'static str,
+    kind: LinRegKind,
+}
+
+impl Indicator for LinRegIndicator {
+    fn meta(&self) -> &'static Meta {
+        crate::manifest::meta_for(self.id, linreg_warmup)
+    }
+
+    fn calc(
+        &self,
+        view: &OhlcvView<'_>,
+        params: &Params,
+        out: &mut [Vec<f64>],
+    ) -> Result<(), CalcError> {
+        ensure_shape(view, out, 1, self.id)?;
+        let period = period_of(params, 20);
+        out[0].fill(f64::NAN);
+        if view.len() < period {
+            return Ok(());
+        }
+        let series = linreg(view.close, period);
+        out[0].copy_from_slice(match self.kind {
+            LinRegKind::Forecast => &series.forecast,
+            LinRegKind::Intercept => &series.intercept,
+            LinRegKind::R2 => &series.r2,
+            LinRegKind::Slope => &series.slope,
+        });
+        Ok(())
+    }
+}
+
+pub struct Bias;
+
+impl Indicator for Bias {
+    fn meta(&self) -> &'static Meta {
+        crate::manifest::meta_for(E13_ID, bias_warmup)
+    }
+
+    fn calc(
+        &self,
+        view: &OhlcvView<'_>,
+        params: &Params,
+        out: &mut [Vec<f64>],
+    ) -> Result<(), CalcError> {
+        ensure_shape(view, out, 3, E13_ID)?;
+        let periods = [
+            period_of_key(params, "period1", 6),
+            period_of_key(params, "period2", 12),
+            period_of_key(params, "period3", 24),
+        ];
+        for column in out.iter_mut() {
+            column.fill(f64::NAN);
+        }
+        for (index, period) in periods.iter().enumerate() {
+            if view.len() >= *period {
+                out[index] = bias(view.close, *period);
+            }
+        }
+        Ok(())
+    }
+}
+
+pub struct Macd;
 
 impl Indicator for Macd {
     fn meta(&self) -> &'static Meta {
@@ -98,41 +268,32 @@ impl Indicator for Macd {
         params: &Params,
         out: &mut [Vec<f64>],
     ) -> Result<(), CalcError> {
-        if out.len() != 3 || !view.columns_are_aligned() {
-            return Err(CalcError::Internal("MACD 输出/输入维度不一致".to_string()));
-        }
-        let len = view.len();
-        if out.iter().any(|column| column.len() != len) {
-            return Err(CalcError::Internal("MACD 输出未预分配".to_string()));
-        }
-
-        let fast = param_int(params, "fast").unwrap_or(12).max(1) as usize;
-        let slow = param_int(params, "slow").unwrap_or(26).max(1) as usize;
-        let signal = param_int(params, "signal").unwrap_or(9).max(1) as usize;
+        ensure_shape(view, out, 3, MACD_ID)?;
+        let fast = period_of_key(params, "fast", 12);
+        let slow = period_of_key(params, "slow", 26);
+        let signal = period_of_key(params, "signal", 9);
         if fast >= slow {
-            return Err(CalcError::InvalidParam(
-                "fast 必须小于 slow".to_string(),
-            ));
+            return Err(CalcError::InvalidParam("fast 必须小于 slow".to_string()));
         }
 
-        out[0].fill(f64::NAN);
-        out[1].fill(f64::NAN);
-        out[2].fill(f64::NAN);
-        if len < slow {
+        for column in out.iter_mut() {
+            column.fill(f64::NAN);
+        }
+        if view.len() < slow {
             return Ok(());
         }
 
         let ema_fast = ema(view.close, fast);
         let ema_slow = ema(view.close, slow);
-        let mut dif = vec![f64::NAN; len];
-        for i in 0..len {
+        let mut dif = vec![f64::NAN; view.len()];
+        for i in 0..view.len() {
             if ema_fast[i].is_finite() && ema_slow[i].is_finite() {
                 dif[i] = ema_fast[i] - ema_slow[i];
             }
         }
 
         let dea = ema_of_valid(&dif, signal);
-        for i in 0..len {
+        for i in 0..view.len() {
             if dif[i].is_finite() && dea[i].is_finite() {
                 out[0][i] = dif[i];
                 out[1][i] = dea[i];
@@ -144,48 +305,68 @@ impl Indicator for Macd {
     }
 }
 
+fn ensure_shape(
+    view: &OhlcvView<'_>,
+    out: &mut [Vec<f64>],
+    expected_outputs: usize,
+    id: &str,
+) -> Result<(), CalcError> {
+    if out.len() != expected_outputs || !view.columns_are_aligned() {
+        return Err(CalcError::Internal(format!("{id} 输出/输入维度不一致")));
+    }
+    if out.iter().any(|column| column.len() != view.len()) {
+        return Err(CalcError::Internal(format!("{id} 输出未预分配")));
+    }
+    Ok(())
+}
+
+fn period_of(params: &Params, fallback: usize) -> usize {
+    period_of_key(params, "period", fallback as i64)
+}
+
+fn period_of_key(params: &Params, key: &str, fallback: i64) -> usize {
+    (param_int(params, key).unwrap_or(fallback).max(2) as usize).min(200)
+}
+
+fn period_warmup(params: &Params) -> usize {
+    period_of(params, 20).saturating_sub(1)
+}
+
+fn ma_warmup(params: &Params) -> usize {
+    period_warmup(params)
+}
+
+/// B1 口径：EMA 建议 3N 根观察期（默认 N=20 → 60 根）。
+fn ema_warmup(params: &Params) -> usize {
+    period_of(params, 20) * 3 - 1
+}
+
+fn dema_warmup(params: &Params) -> usize {
+    period_of(params, 20) * 3 - 1
+}
+
+/// B1 口径：TEMA 建议 4.5N 根观察期（默认 N=20 → 90 根）。
+fn tema_warmup(params: &Params) -> usize {
+    period_of(params, 20) * 9 / 2 - 1
+}
+
+fn linreg_warmup(params: &Params) -> usize {
+    period_warmup(params)
+}
+
+fn bias_warmup(params: &Params) -> usize {
+    let periods = [
+        period_of_key(params, "period1", 6),
+        period_of_key(params, "period2", 12),
+        period_of_key(params, "period3", 24),
+    ];
+    periods.iter().copied().min().unwrap_or(6).saturating_sub(1)
+}
+
 fn macd_warmup(params: &Params) -> usize {
-    let slow = param_int(params, "slow").unwrap_or(26).max(2) as usize;
-    let signal = param_int(params, "signal").unwrap_or(9).max(2) as usize;
+    let slow = period_of_key(params, "slow", 26);
+    let signal = period_of_key(params, "signal", 9);
     slow + signal - 2
-}
-
-/// EMA：前 period 根用 SMA 种子，之后按 α = 2/(n+1) 递推。与口径页约定一致。
-pub(crate) fn ema(values: &[f64], period: usize) -> Vec<f64> {
-    let len = values.len();
-    let mut out = vec![f64::NAN; len];
-    if period == 0 || len < period {
-        return out;
-    }
-    let seed: f64 = values[..period].iter().sum::<f64>() / period as f64;
-    out[period - 1] = seed;
-    let alpha = 2.0 / (period as f64 + 1.0);
-    for i in period..len {
-        out[i] = alpha * values[i] + (1.0 - alpha) * out[i - 1];
-    }
-    out
-}
-
-/// 对含 NaN 前缀的序列做 EMA：从第一个有限值开始，取连续 period 个有限值做种子。
-fn ema_of_valid(values: &[f64], period: usize) -> Vec<f64> {
-    let len = values.len();
-    let mut out = vec![f64::NAN; len];
-    let Some(start) = values.iter().position(|value| value.is_finite()) else {
-        return out;
-    };
-    let end = start + period;
-    if end > len || values[start..end].iter().any(|value| !value.is_finite()) {
-        return out;
-    }
-    let seed: f64 = values[start..end].iter().sum::<f64>() / period as f64;
-    out[end - 1] = seed;
-    let alpha = 2.0 / (period as f64 + 1.0);
-    for i in end..len {
-        if values[i].is_finite() && out[i - 1].is_finite() {
-            out[i] = alpha * values[i] + (1.0 - alpha) * out[i - 1];
-        }
-    }
-    out
 }
 
 #[cfg(test)]
@@ -194,8 +375,8 @@ mod tests {
     use crate::param::merge_defaults;
 
     fn sample_close() -> Vec<f64> {
-        (0..80)
-            .map(|i| 100.0 + i as f64 * 0.5 + (i as f64 * 0.7).sin() * 2.0)
+        (0..520)
+            .map(|i| 100.0 + i as f64 * 0.05 + (i as f64 * 0.7).sin() * 2.0)
             .collect()
     }
 
@@ -207,46 +388,102 @@ mod tests {
         merge_defaults(meta.params, &Params::new())
     }
 
-    #[test]
-    fn ma_sma_has_warmup_nan_and_then_value() {
-        let close = sample_close();
-        let meta = MA.meta();
-        let params = params(meta);
-        let mut out = vec![vec![0.0; close.len()]];
-        MA.calc(&view_of(&close), &params, &mut out).unwrap();
+    fn run(id: &str, close: &[f64], outputs: usize) -> Vec<Vec<f64>> {
+        let indicator = lookup(id).unwrap();
+        let params = params(indicator.meta());
+        let mut out = vec![vec![0.0; close.len()]; outputs];
+        indicator.calc(&view_of(close), &params, &mut out).unwrap();
+        out
+    }
 
+    #[test]
+    fn t01_sma_matches_manual_mean() {
+        let close = sample_close();
+        let out = run(T01_ID, &close, 1);
         assert!(out[0][..19].iter().all(|v| v.is_nan()));
-        assert!(out[0][19].is_finite());
         let expected: f64 = close[..20].iter().sum::<f64>() / 20.0;
         assert!((out[0][19] - expected).abs() < 1e-9);
     }
 
     #[test]
-    fn ma_ema_seed_matches_sma() {
+    fn t02_ema_seed_is_sma() {
         let close = sample_close();
-        let meta = MA.meta();
-        let mut params = params(meta);
-        params.insert("maType".into(), crate::ParamValue::Text("ema".into()));
-        let mut out = vec![vec![0.0; close.len()]];
-        MA.calc(&view_of(&close), &params, &mut out).unwrap();
-        let sma_seed: f64 = close[..20].iter().sum::<f64>() / 20.0;
-        assert!((out[0][19] - sma_seed).abs() < 1e-9);
-        assert!(out[0][80 - 1].is_finite());
+        let out = run(T02_ID, &close, 1);
+        let seed: f64 = close[..20].iter().sum::<f64>() / 20.0;
+        assert!((out[0][19] - seed).abs() < 1e-9);
+        assert!(out[0][519].is_finite());
+    }
+
+    #[test]
+    fn t03_wma_matches_manual() {
+        let close = sample_close();
+        let out = run(T03_ID, &close, 1);
+        let mut numerator = 0.0;
+        for k in 0..20 {
+            numerator += (k + 1) as f64 * close[k];
+        }
+        assert!((out[0][19] - numerator / 210.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn t04_dema_matches_two_ema_formula() {
+        let close = sample_close();
+        let out = run(T04_ID, &close, 1);
+        let first = ema(&close, 20);
+        let second = ema_of_valid(&first, 20);
+        let i = 38;
+        assert!((out[0][i] - (2.0 * first[i] - second[i])).abs() < 1e-9);
+        assert!(out[0][..38].iter().all(|v| v.is_nan()));
+    }
+
+    #[test]
+    fn t05_tema_matches_three_ema_formula() {
+        let close = sample_close();
+        let out = run(T05_ID, &close, 1);
+        let first = ema(&close, 20);
+        let second = ema_of_valid(&first, 20);
+        let third = ema_of_valid(&second, 20);
+        let i = 57;
+        assert!((out[0][i] - (3.0 * first[i] - 3.0 * second[i] + third[i])).abs() < 1e-9);
+        assert!(out[0][..57].iter().all(|v| v.is_nan()));
+    }
+
+    #[test]
+    fn t19_to_t22_regression_columns_share_window() {
+        let close = sample_close();
+        let forecast = run(T19_ID, &close, 1);
+        let intercept = run(T20_ID, &close, 1);
+        let r2 = run(T21_ID, &close, 1);
+        let slope = run(T22_ID, &close, 1);
+        let i = 19;
+        assert!((forecast[0][i] - (intercept[0][i] + slope[0][i] * 19.0)).abs() < 1e-9);
+        assert!((0.0..=1.0).contains(&r2[0][i]));
+    }
+
+    #[test]
+    fn e13_bias_has_three_periods() {
+        let close = sample_close();
+        let out = run(E13_ID, &close, 3);
+        let mean6: f64 = close[..6].iter().sum::<f64>() / 6.0;
+        assert!((out[0][5] - (close[5] - mean6) / mean6 * 100.0).abs() < 1e-9);
+        assert!(out[1][..11].iter().all(|v| v.is_nan()));
+        assert!(out[2][..23].iter().all(|v| v.is_nan()));
+        assert!(out[2][23].is_finite());
     }
 
     #[test]
     fn macd_outputs_are_finite_after_warmup() {
         let close = sample_close();
-        let meta = MACD.meta();
+        let meta = lookup(MACD_ID).unwrap().meta();
         let params = params(meta);
         let mut out = vec![vec![0.0; close.len()]; 3];
-        MACD.calc(&view_of(&close), &params, &mut out).unwrap();
+        lookup(MACD_ID)
+            .unwrap()
+            .calc(&view_of(&close), &params, &mut out)
+            .unwrap();
         let warmup = (meta.warmup)(&params);
         assert!(out[0][..warmup].iter().all(|v| v.is_nan()));
         assert!(out[0][warmup].is_finite());
-        assert!(out[1][warmup].is_finite());
-        assert!(out[2][warmup].is_finite());
-        // 柱 = 2 × (DIF − DEA)
         let i = warmup + 2;
         assert!((out[2][i] - 2.0 * (out[0][i] - out[1][i])).abs() < 1e-9);
     }
@@ -254,20 +491,69 @@ mod tests {
     #[test]
     fn macd_rejects_fast_ge_slow() {
         let close = sample_close();
-        let meta = MACD.meta();
+        let meta = lookup(MACD_ID).unwrap().meta();
         let mut params = params(meta);
         params.insert("fast".into(), crate::ParamValue::Int(30));
         params.insert("slow".into(), crate::ParamValue::Int(20));
         let mut out = vec![vec![0.0; close.len()]; 3];
-        assert!(MACD.calc(&view_of(&close), &params, &mut out).is_err());
+        assert!(lookup(MACD_ID)
+            .unwrap()
+            .calc(&view_of(&close), &params, &mut out)
+            .is_err());
     }
 
     #[test]
-    fn registry_size_is_derived() {
-        assert_eq!(implemented_count(), 2);
+    fn registry_ids_and_aliases() {
+        assert_eq!(implemented_count(), 11);
         assert_eq!(PLANNED_INDICATOR_COUNT, 105);
-        assert!(lookup("ma").is_some());
-        assert!(lookup("macd").is_some());
+        for id in [T01_ID, T02_ID, T03_ID, T04_ID, T05_ID, T19_ID, T20_ID, T21_ID, T22_ID, E13_ID, MACD_ID] {
+            assert!(lookup(id).is_some(), "缺少注册指标 {id}");
+        }
+        assert_eq!(lookup("ma").map(|item| item.meta().id), Some(T01_ID));
+        assert_eq!(lookup("macd").map(|item| item.meta().id), Some(MACD_ID));
         assert!(lookup("not-exist").is_none());
+    }
+
+    /// 短序列边界：不足窗口时全 NaN，且不 panic。
+    #[test]
+    fn short_series_is_all_nan_for_every_indicator() {
+        let close = vec![100.0; 3];
+        for indicator in all() {
+            let params = params(indicator.meta());
+            let mut out = vec![vec![0.0; close.len()]; indicator.meta().outputs.len()];
+            indicator
+                .calc(&view_of(&close), &params, &mut out)
+                .unwrap();
+            assert!(
+                out.iter().all(|column| column.iter().all(|v| v.is_nan())),
+                "{} 短序列应全 NaN",
+                indicator.meta().id
+            );
+        }
+    }
+
+    /// 常数序列：均线/回归退化值应稳定，不出现 NaN（BIAS 除零除外）。
+    #[test]
+    fn constant_series_is_stable_except_bias() {
+        let close = vec![10.0; 120];
+        for id in [T01_ID, T02_ID, T03_ID, T04_ID, T05_ID, T19_ID, T20_ID, T21_ID, T22_ID] {
+            let out = run(id, &close, 1);
+            let last = out[0][119];
+            assert!(last.is_finite(), "{id} 常数序列末根应有限");
+            match id {
+                T19_ID | T20_ID => assert!((last - 10.0).abs() < 1e-9, "{id} 常数序列应等于 10"),
+                T21_ID => assert!((last - 1.0).abs() < 1e-9, "T21 常数序列 R² 定义为 1"),
+                T22_ID => assert!(last.abs() < 1e-9, "T22 常数序列斜率应为 0"),
+                _ => assert!((last - 10.0).abs() < 1e-9, "{id} 常数序列应等于 10"),
+            }
+        }
+        let bias = run(E13_ID, &close, 3);
+        assert!((bias[0][119]).abs() < 1e-12, "常数 10 的 BIAS 应为 0");
+        let zeros = vec![0.0; 120];
+        let zero_bias = run(E13_ID, &zeros, 3);
+        assert!(
+            zero_bias[0][119].is_nan(),
+            "BIAS 零均值应输出 NaN 而不是 Infinity"
+        );
     }
 }

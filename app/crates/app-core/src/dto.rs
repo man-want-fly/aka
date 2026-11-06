@@ -171,6 +171,10 @@ pub struct IndicatorMetaDto {
     pub inputs: InputsDto,
     pub spec_status: SpecStatus,
     pub engine_version: u16,
+    /// 输出单位/量纲
+    pub unit: &'static str,
+    /// 口径说明（公式要点、首个有效值、边界）
+    pub notes: &'static str,
     pub warmup: usize,
     /// 骨架期注册表里只有已实现指标；目录里 105 条规划数由 `plannedCount` 给出。
     pub implemented: bool,

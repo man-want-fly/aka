@@ -12,85 +12,243 @@
   ],
   "indicators": [
     {
-      "id": "ma",
+      "id": "T01",
       "prdId": "T01",
-      "aliases": [],
-      "nameZh": "移动平均线",
-      "nameEn": "Moving Average",
+      "aliases": ["ma"],
+      "nameZh": "简单移动平均线",
+      "nameEn": "Simple Moving Average",
       "category": "trend",
       "inputs": { "close": true },
       "params": [
-        {
-          "kind": "int",
-          "key": "period",
-          "label": "周期",
-          "min": 2,
-          "max": 200,
-          "default": 20,
-          "step": 1
-        },
-        {
-          "kind": "enum",
-          "key": "maType",
-          "label": "均线类型",
-          "variants": ["sma", "ema", "wma"],
-          "default": "sma"
-        }
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
       ],
       "outputs": [
-        { "key": "ma", "labelZh": "MA", "kind": "line", "color": "var(--accent)" }
+        { "key": "sma", "labelZh": "SMA", "kind": "line", "color": "var(--accent)" }
       ],
-      "formulaRef": "docs/indicators/T01-ma.md",
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t01-sma",
       "version": 1,
-      "specStatus": "productDefined",
-      "status": "beta"
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
     },
     {
-      "id": "macd",
-      "prdId": "M06",
+      "id": "T02",
+      "prdId": "T02",
       "aliases": [],
+      "nameZh": "指数移动平均线",
+      "nameEn": "Exponential Moving Average",
+      "category": "trend",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "ema", "labelZh": "EMA", "kind": "line", "color": "var(--warn)" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t02-ema",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "前 N 根 SMA 作种子，α=2/(N+1) 递推；首个有效值 N-1，应用层按 B1 建议预热 3N 根（warmup=3N-1）。"
+    },
+    {
+      "id": "T03",
+      "prdId": "T03",
+      "aliases": [],
+      "nameZh": "加权移动平均线",
+      "nameEn": "Weighted Moving Average",
+      "category": "trend",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "wma", "labelZh": "WMA", "kind": "line", "color": "#8b5cf6" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t03-wma",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "元",
+      "notes": "权重 1..N，最新一根权重最大；前 N-1 根为 NaN。B1 标记「完整▲」，边界说明仍待补，暂标 beta。"
+    },
+    {
+      "id": "T04",
+      "prdId": "T04",
+      "aliases": [],
+      "nameZh": "双重指数移动平均线",
+      "nameEn": "Double Exponential Moving Average",
+      "category": "trend",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "dema", "labelZh": "DEMA", "kind": "line", "color": "#22d3ee" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t04-dema",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "DEMA=2·E1-E2，E2=EMA(E1,N)；首个有效值 2N-2，应用层按 B1 建议预热 3N 根（warmup=3N-1）。"
+    },
+    {
+      "id": "T05",
+      "prdId": "T05",
+      "aliases": [],
+      "nameZh": "三重指数移动平均线",
+      "nameEn": "Triple Exponential Moving Average",
+      "category": "trend",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "tema", "labelZh": "TEMA", "kind": "line", "color": "#f59e0b" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t05-tema",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "TEMA=3·E1-3·E2+E3；首个有效值 3N-3，应用层按 B1 建议预热 4.5N 根（warmup=4.5N-1）。"
+    },
+    {
+      "id": "T19",
+      "prdId": "T19",
+      "aliases": [],
+      "nameZh": "线性回归预测",
+      "nameEn": "Linear Regression Forecast",
+      "category": "stat",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "forecast", "labelZh": "LinReg 预测", "kind": "line", "color": "#60a5fa" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t19-linreg-forecast",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "元",
+      "notes": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测；该终点口径为自定，暂标 beta。"
+    },
+    {
+      "id": "T20",
+      "prdId": "T20",
+      "aliases": [],
+      "nameZh": "线性回归截距",
+      "nameEn": "Linear Regression Intercept",
+      "category": "stat",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "intercept", "labelZh": "LinReg 截距", "kind": "line", "color": "#a78bfa" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t20-linreg-intercept",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "窗口首根（x=0）的拟合值，等于 intercept。"
+    },
+    {
+      "id": "T21",
+      "prdId": "T21",
+      "aliases": [],
+      "nameZh": "线性回归 R²",
+      "nameEn": "Linear Regression R-Squared",
+      "category": "stat",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "r2", "labelZh": "R²", "kind": "line", "color": "#34d399" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t21-linreg-r2",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "无量纲",
+      "notes": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]；Syy=0（常数序列）定义为 1.0；该退化口径为自定，暂标 beta。"
+    },
+    {
+      "id": "T22",
+      "prdId": "T22",
+      "aliases": [],
+      "nameZh": "线性回归斜率",
+      "nameEn": "Linear Regression Slope",
+      "category": "stat",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "slope", "labelZh": "LinReg 斜率", "kind": "line", "color": "#f472b6" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#t22-linreg-slope",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元/根",
+      "notes": "窗口内每根 K 线的价格变化量（元/根）。"
+    },
+    {
+      "id": "E13",
+      "prdId": "E13",
+      "aliases": [],
+      "nameZh": "乖离率",
+      "nameEn": "BIAS",
+      "category": "momentum",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period1", "label": "周期 1", "min": 2, "max": 200, "default": 6, "step": 1 },
+        { "kind": "int", "key": "period2", "label": "周期 2", "min": 2, "max": 200, "default": 12, "step": 1 },
+        { "kind": "int", "key": "period3", "label": "周期 3", "min": 2, "max": 200, "default": 24, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "bias6", "labelZh": "BIAS(6)", "kind": "line", "color": "var(--accent)" },
+        { "key": "bias12", "labelZh": "BIAS(12)", "kind": "line", "color": "var(--warn)" },
+        { "key": "bias24", "labelZh": "BIAS(24)", "kind": "line", "color": "#94a3b8" }
+      ],
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#e13-bias",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "BIAS=(C-SMA_N)/SMA_N×100%；SMA=0 时输出 NaN，不产生 Infinity；warmup=min(周期)-1。"
+    },
+    {
+      "id": "M06",
+      "prdId": "M06",
+      "aliases": ["macd"],
       "nameZh": "指数平滑异同移动平均线",
       "nameEn": "MACD",
       "category": "momentum",
       "inputs": { "close": true },
       "params": [
-        {
-          "kind": "int",
-          "key": "fast",
-          "label": "快线 EMA",
-          "min": 2,
-          "max": 100,
-          "default": 12,
-          "step": 1
-        },
-        {
-          "kind": "int",
-          "key": "slow",
-          "label": "慢线 EMA",
-          "min": 2,
-          "max": 200,
-          "default": 26,
-          "step": 1
-        },
-        {
-          "kind": "int",
-          "key": "signal",
-          "label": "信号线",
-          "min": 2,
-          "max": 100,
-          "default": 9,
-          "step": 1
-        }
+        { "kind": "int", "key": "fast", "label": "快线 EMA", "min": 2, "max": 100, "default": 12, "step": 1 },
+        { "kind": "int", "key": "slow", "label": "慢线 EMA", "min": 2, "max": 200, "default": 26, "step": 1 },
+        { "kind": "int", "key": "signal", "label": "信号线", "min": 2, "max": 100, "default": 9, "step": 1 }
       ],
       "outputs": [
         { "key": "dif", "labelZh": "DIF", "kind": "line", "color": "var(--accent)" },
         { "key": "dea", "labelZh": "DEA", "kind": "line", "color": "var(--warn)" },
         { "key": "hist", "labelZh": "MACD 柱", "kind": "histogram", "color": "var(--rise)" }
       ],
-      "formulaRef": "docs/indicators/M06-macd.md",
+      "formulaRef": "docs/indicators/b1-trend-kernels.md#m06-macd",
       "version": 1,
       "specStatus": "partial",
-      "status": "beta"
+      "status": "beta",
+      "unit": "元",
+      "notes": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)；旧 id «macd» 保留 alias 一版。"
     }
   ]
 }

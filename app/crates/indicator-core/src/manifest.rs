@@ -47,6 +47,12 @@ pub struct ManifestIndicator {
     pub spec_status: String,
     /// `normal` | `beta`：beta = 口径未完成人工校对
     pub status: String,
+    /// 输出单位/量纲
+    #[serde(default)]
+    pub unit: String,
+    /// 口径说明：公式要点、首个有效值、边界规则
+    #[serde(default)]
+    pub notes: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,6 +194,8 @@ fn build_meta(id: &str, warmup: fn(&Params) -> usize) -> &'static Meta {
         },
         spec_status,
         engine_version: entry.version,
+        unit: Box::leak(entry.unit.clone().into_boxed_str()),
+        notes: Box::leak(entry.notes.clone().into_boxed_str()),
         warmup,
     }))
 }
@@ -265,9 +273,23 @@ mod tests {
         assert_eq!(manifest.schema_version, 1);
         assert!(manifest.planned_count >= manifest.indicators.len());
         let mut ids = std::collections::BTreeSet::new();
+        let mut visible = std::collections::BTreeSet::new();
         for item in &manifest.indicators {
             assert!(ids.insert(item.id.as_str()), "manifest id 重复：{}", item.id);
+            assert!(
+                visible.insert(item.id.as_str()),
+                "manifest id 与 alias 冲突：{}",
+                item.id
+            );
+            for alias in &item.aliases {
+                assert!(
+                    visible.insert(alias.as_str()),
+                    "manifest alias 重复或与 id 冲突：{alias}"
+                );
+            }
             assert!(!item.formula_ref.is_empty(), "{} 缺少公式引用", item.id);
+            assert!(!item.unit.is_empty(), "{} 缺少单位/量纲说明", item.id);
+            assert!(!item.notes.is_empty(), "{} 缺少口径说明", item.id);
         }
     }
 
@@ -282,6 +304,8 @@ mod tests {
             assert_eq!(spec_status_str(meta.spec_status), entry.spec_status, "{} specStatus 不一致", meta.id);
             assert_eq!(meta.engine_version, entry.version, "{} version 不一致", meta.id);
             assert_eq!(status_str(meta.spec_status), entry.status, "{} status 不一致", meta.id);
+            assert_eq!(meta.unit, entry.unit, "{} unit 不一致", meta.id);
+            assert_eq!(meta.notes, entry.notes, "{} notes 不一致", meta.id);
 
             assert_eq!(meta.params.len(), entry.params.len(), "{} 参数数量不一致", meta.id);
             for (spec, source) in meta.params.iter().zip(entry.params.iter()) {
