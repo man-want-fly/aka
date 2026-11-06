@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKA MVP · 模块架构图（crate / 前端 / IPC / 数据流）</title>
+<style>
+  :root{
+    --bg:#F4F6F9; --paper:#FFFFFF; --ink:#16202B; --ink2:#3C4A57; --muted:#66788A; --faint:#8A96A3;
+    --line:#DDE3EA; --line2:#C4CDD6;
+    --navy:#15364F; --brand:#2F6F8F; --brand-soft:#E8F1F5;
+    --up:#C8342B; --up-soft:#FBEDEC;
+    --down:#0F7B54; --down-soft:#EAF5F0;
+    --warn:#8A6410; --warn-soft:#FBF3DE;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding:36px 28px 64px}
+  header.doc{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:26px}
+  .kicker{font-size:11.5px;letter-spacing:.14em;color:var(--brand);font-weight:700;text-transform:uppercase}
+  h1{font-size:28px;line-height:1.35;margin:8px 0 10px;color:var(--navy);letter-spacing:.01em}
+  .sub{color:var(--muted);font-size:13.5px;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:14px;font-size:12px;color:var(--faint)}
+  .meta b{color:var(--ink2);font-weight:600}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:22px 24px;margin:18px 0}
+  h2{font-size:17px;margin:0 0 10px;color:var(--navy);letter-spacing:.01em}
+  h3{font-size:14px;margin:22px 0 8px;color:var(--ink2)}
+  h4{font-size:12.5px;margin:16px 0 6px;color:var(--ink2)}
+  p{margin:8px 0}
+  .lead{color:var(--ink2)}
+  .muted{color:var(--muted)}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .fig{border:1px solid var(--line);border-radius:10px;background:#FBFCFD;padding:14px 12px 8px;overflow:auto}
+  svg{display:block;width:100%;height:auto;min-width:960px;font-family:inherit;color:var(--ink)}
+  figcaption{font-size:12px;color:var(--muted);padding:8px 6px 2px;line-height:1.6}
+  .tbl{overflow:auto;margin:12px 0}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left}
+  th{background:#F2F6F9;color:var(--navy);font-weight:600;white-space:nowrap}
+  td code,th code,li code,p code{font-family:var(--mono);font-size:11.5px;background:#F1F4F7;border:1px solid #E3E9EE;border-radius:3px;padding:1px 5px;color:#2C3B4B}
+  pre{margin:10px 0;background:#0F1A24;color:#D7E3EC;border-radius:8px;padding:14px 16px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.6}
+  pre .c{color:#7E96A8}
+  pre .k{color:#7CC6E8}
+  pre .s{color:#B7D99B}
+  .pill{display:inline-block;font-size:10.5px;line-height:1.5;padding:1px 7px;border-radius:99px;font-weight:600;white-space:nowrap}
+  .p-mvp{background:var(--down-soft);color:var(--down);border:1px solid #BFDACE}
+  .p-later{background:var(--warn-soft);color:var(--warn);border:1px solid #E8D9AB}
+  .p-no{background:#F2F4F7;color:var(--muted);border:1px solid #DDE3EA}
+  .callout{background:var(--brand-soft);border-left:3px solid var(--brand);border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:13px;color:#234A61}
+  .callout.warn{background:var(--warn-soft);border-left-color:var(--warn);color:#5E470D}
+  .callout.up{background:var(--up-soft);border-left-color:var(--up);color:#6B2621}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:4px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px;font-size:11.5px;color:var(--faint)}
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:none;padding:0}
+    .card{border:none;padding:0;margin:12px 0;break-inside:avoid}
+    .fig{border:1px solid #ccc}
+    svg{min-width:0}
+    pre{white-space:pre-wrap}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="doc">
+  <div class="kicker">AKA · 最小 MVP · Architecture v1.0</div>
+  <h1>模块架构图：crate 划分、前端模块、IPC 边界与数据流</h1>
+  <p class="sub">Rust 单 workspace（6 crate，依赖单向）· React 分层前端 · 类型化 Tauri command · mock → 存储 → 按需计算 → UI</p>
+  <div class="meta">
+    <span>版本 <b>v1.0</b></span>
+    <span>日期 <b>2026-11-06</b></span>
+    <span>对应骨架 <b>app/</b></span>
+    <span>配套 <b>aka-project-architecture.html</b></span>
+  </div>
+</header>
+
+<div class="card">
+  <h2>0. 一句话结论</h2>
+  <p class="lead">Rust 侧只有一条依赖链：<b><code>aka-desktop → app-core → {indicator-core, data-provider, data-store}</code></b>。三个底层 crate 互不依赖，也不认识 Tauri / Arrow 之外的上层。前端按「页面 → 特性 → 组件 → lib/ipc」单向引用，页面不直接拼命令字符串。所有跨层请求都必须经过 <code>lib/ipc.ts</code> 的类型化封装，错误码与 <code>generation</code> 在同一处处理。</p>
+  <div class="callout"><b>设计取舍：</b>把 v3 中的 <code>tauri-app/</code> 与 <code>crates/desktop/</code> 合并为一个 <code>aka-desktop</code>（<code>src-tauri/</code>），命令层保持「薄」——只做反序列化、错误映射与状态注入；编排、缓存、DTO 全在 <code>app-core</code>，这样未来换壳（CLI / 服务端）不需要重写业务。</div>
+</div>
+
+<div class="card">
+  <h2>1. Rust workspace：crate 划分与依赖方向</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 1200 620" role="img" aria-label="Rust workspace crate 划分与依赖方向">
+      <defs>
+        <marker id="m1" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2F6F8F"/></marker>
+        <marker id="m2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C9A24A"/></marker>
+        <marker id="m3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C8342B"/></marker>
+      </defs>
+
+      <text x="24" y="26" font-size="9.2" letter-spacing="1.2" fill="#8A96A3">LAYER 0 · 应用壳</text>
+      <rect x="440" y="34" width="300" height="64" rx="8" fill="#EAF1F5" stroke="#9FB3C2"/>
+      <text x="590" y="56" text-anchor="middle" font-size="12" font-weight="700" fill="#15364F">aka-desktop（src-tauri/）</text>
+      <text x="590" y="73" text-anchor="middle" font-size="8.6" fill="#3C4A57">Tauri 2 壳 · 菜单/窗口 · 命令注册 · State&lt;AppCore&gt;</text>
+      <text x="590" y="88" text-anchor="middle" font-size="8.2" fill="#66788A">薄层：反序列化 → 调 app-core → 错误映射 → DTO</text>
+
+      <text x="24" y="126" font-size="9.2" letter-spacing="1.2" fill="#8A96A3">LAYER 1 · 编排</text>
+      <rect x="440" y="134" width="300" height="66" rx="8" fill="#F4F8FA" stroke="#BFD3DF"/>
+      <text x="590" y="156" text-anchor="middle" font-size="12" font-weight="700" fill="#15364F">app-core</text>
+      <text x="590" y="173" text-anchor="middle" font-size="8.6" fill="#3C4A57">查询编排 · 缓存键/世代号 · 复权归一 · DTO · 溯源</text>
+      <text x="590" y="189" text-anchor="middle" font-size="8.2" fill="#66788A">唯一知道「数据从哪来、怎么算、怎么返回 UI」的层</text>
+
+      <text x="24" y="250" font-size="9.2" letter-spacing="1.2" fill="#8A96A3">LAYER 2 · 能力（互不依赖）</text>
+
+      <rect x="90" y="258" width="300" height="106" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="240" y="280" text-anchor="middle" font-size="11.5" font-weight="700" fill="#15364F">indicator-core</text>
+      <text x="240" y="297" text-anchor="middle" font-size="8.4" fill="#3C4A57">注册表（规划 105 · 已实现 2）· ParamSpec · 内核</text>
+      <text x="240" y="313" text-anchor="middle" font-size="8.4" fill="#66788A">输入 OhlcvView&lt;&amp;[f64]&gt; · 输出 Vec&lt;f64&gt;（NaN 语义）</text>
+      <text x="240" y="329" text-anchor="middle" font-size="8.4" fill="#66788A">无 IO · 无 async · 无 Tauri · 不依赖 Arrow</text>
+      <text x="240" y="345" text-anchor="middle" font-size="8.4" fill="#C8342B">unwrap 被 lint 禁止；除零 → NaN</text>
+
+      <rect x="430" y="258" width="300" height="106" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="580" y="280" text-anchor="middle" font-size="11.5" font-weight="700" fill="#15364F">data-provider</text>
+      <text x="580" y="297" text-anchor="middle" font-size="8.4" fill="#3C4A57">DataProvider trait（4 必需 + 4 可选 + 2 运维）</text>
+      <text x="580" y="313" text-anchor="middle" font-size="8.4" fill="#66788A">MockProvider（MVP 主路径）· TushareProvider（骨架）</text>
+      <text x="580" y="329" text-anchor="middle" font-size="8.4" fill="#66788A">代码/单位/复权/停牌/涨跌停归一化 · 能力协商</text>
+      <text x="580" y="345" text-anchor="middle" font-size="8.4" fill="#66788A">每行带 provider / dataset_id / quality_flags</text>
+
+      <rect x="770" y="258" width="300" height="106" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="920" y="280" text-anchor="middle" font-size="11.5" font-weight="700" fill="#15364F">data-store</text>
+      <text x="920" y="297" text-anchor="middle" font-size="8.4" fill="#3C4A57">骨架期：内存 CandleStore（后续 Parquet）</text>
+      <text x="920" y="313" text-anchor="middle" font-size="8.4" fill="#66788A">manifest · dataset_id / data_version · sha256</text>
+      <text x="920" y="329" text-anchor="middle" font-size="8.4" fill="#66788A">内存缓存索引 · 存储模型 Candle（不依赖 provider）</text>
+      <text x="920" y="345" text-anchor="middle" font-size="8.4" fill="#66788A">不依赖 provider / 不依赖指标</text>
+
+      <!-- 依赖箭头 -->
+      <line x1="590" y1="98" x2="590" y2="134" stroke="#2F6F8F" stroke-width="1.8" marker-end="url(#m1)"/>
+      <line x1="590" y1="200" x2="240" y2="258" stroke="#2F6F8F" stroke-width="1.8" marker-end="url(#m1)"/>
+      <line x1="590" y1="200" x2="590" y2="258" stroke="#2F6F8F" stroke-width="1.8" marker-end="url(#m1)"/>
+      <line x1="590" y1="200" x2="940" y2="258" stroke="#2F6F8F" stroke-width="1.8" marker-end="url(#m1)"/>
+
+      <!-- 黄金用例 -->
+      <rect x="90" y="414" width="300" height="46" rx="6" fill="#FFFFFF" stroke="#C9A24A" stroke-dasharray="5 4"/>
+      <text x="240" y="434" text-anchor="middle" font-size="9.4" font-weight="700" fill="#8A6410">indicator-golden</text>
+      <text x="240" y="450" text-anchor="middle" font-size="7.8" fill="#8A6410">黄金用例夹具 · dev-dependency，不进产物</text>
+      <line x1="240" y1="414" x2="240" y2="364" stroke="#C9A24A" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#m2)"/>
+      <text x="250" y="392" font-size="7.4" fill="#8A6410">dev-only</text>
+
+      <!-- 禁止反向 -->
+      <path d="M 1074 340 V 167 H 744" fill="none" stroke="#C8342B" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#m3)"/>
+      <text x="1086" y="266" font-size="8.2" font-weight="700" fill="#C8342B" transform="rotate(-90 1086 266)">禁止反向依赖</text>
+      <line x1="395" y1="311" x2="425" y2="311" stroke="#C8342B" stroke-width="1.4"/>
+      <line x1="410" y1="300" x2="410" y2="322" stroke="#C8342B" stroke-width="1.4"/>
+      <text x="410" y="338" text-anchor="middle" font-size="7.2" fill="#C8342B">禁止互依</text>
+      <line x1="735" y1="311" x2="765" y2="311" stroke="#C8342B" stroke-width="1.4"/>
+      <line x1="750" y1="300" x2="750" y2="322" stroke="#C8342B" stroke-width="1.4"/>
+      <text x="750" y="338" text-anchor="middle" font-size="7.2" fill="#C8342B">禁止互依</text>
+
+      <!-- 白名单卡 -->
+      <rect x="900" y="466" width="270" height="128" rx="8" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="914" y="486" font-size="9" font-weight="700" fill="#15364F">依赖白名单（CI 用 cargo metadata 断言）</text>
+      <text x="914" y="505" font-size="7.8" fill="#3C4A57">desktop → app-core</text>
+      <text x="914" y="522" font-size="7.8" fill="#3C4A57">app-core → indicator-core / data-provider / data-store</text>
+      <text x="914" y="539" font-size="7.8" fill="#C8342B">三兄弟之间：互不依赖</text>
+      <text x="914" y="556" font-size="7.8" fill="#C8342B">其余出边：一律禁止（含 dev 配置）</text>
+      <text x="914" y="576" font-size="7.4" fill="#8A96A3">例外仅 indicator-golden → indicator-core（测试方向）</text>
+
+      <!-- 底部说明 -->
+      <text x="24" y="500" font-size="9" font-weight="700" fill="#15364F">为什么这样切</text>
+      <text x="24" y="518" font-size="8.2" fill="#3C4A57">· indicator-core 只吃切片：可单测、可 CLI 基准、可被未来服务端复用；换存储/换源/换 UI 都不碰指标代码。</text>
+      <text x="24" y="535" font-size="8.2" fill="#3C4A57">· data-provider 与 data-store 互不依赖：源模型与存储模型分离，app-core 是唯一做映射（normalize → Candle）的地方。</text>
+      <text x="24" y="552" font-size="8.2" fill="#3C4A57">· aka-desktop 不写业务：命令函数目标 &lt; 15 行，只做「参数 → app-core 调用 → DTO / AppError」。</text>
+      <text x="24" y="569" font-size="8.2" fill="#3C4A57">· indicator-golden 只以 dev-dependency 出现，release 产物不包含任何夹具与参考实现。</text>
+    </svg>
+    <figcaption><b>读图</b>：所有实线箭头都是「上层 → 下层」；红色虚线是从下层指回上层的<b>禁止路径</b>，以及三个平级 crate 之间的<b>互依禁止</b>。这套边集合会被 CI 用 <code>cargo metadata</code> 断言，而不是靠口头约定。</figcaption>
+  </figure>
+
+  <h3>1.1 crate 职责与允许依赖</h3>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>crate</th><th>路径</th><th>职责</th><th>允许依赖</th><th>明确不依赖</th></tr></thead>
+      <tbody>
+        <tr><td><b>aka-desktop</b></td><td><code>src-tauri/</code></td><td>Tauri 2 壳、窗口/菜单、命令注册、<code>State&lt;AppCore&gt;</code>、错误映射</td><td><code>app-core</code>、<code>tauri</code>、<code>serde</code></td><td>不直接依赖三个底层 crate；不写业务规则</td></tr>
+        <tr><td><b>app-core</b></td><td><code>crates/app-core/</code></td><td>查询编排、批量合并、缓存键/世代号、复权归一、DTO、溯源装配</td><td><code>indicator-core</code>、<code>data-provider</code>、<code>data-store</code></td><td>不依赖 <code>tauri</code>、不直接读写 Parquet/SQLite 细节</td></tr>
+        <tr><td><b>indicator-core</b></td><td><code>crates/indicator-core/</code></td><td>指标注册表（规划 105 id，骨架实现 MA/MACD）、<code>ParamSpec</code> 校验、纯数值内核、NaN 语义</td><td>仅 <code>serde</code>（可选，用于注册表导出）</td><td>不依赖 tokio / tauri / arrow / provider / store</td></tr>
+        <tr><td><b>data-provider</b></td><td><code>crates/data-provider/</code></td><td><code>DataProvider</code> trait、mock 生成、tushare 解析骨架、归一化、能力协商</td><td><code>async-trait</code>、<code>serde</code>、<code>thiserror</code></td><td>不依赖 store / 指标 / app-core / tauri</td></tr>
+        <tr><td><b>data-store</b></td><td><code>crates/data-store/</code></td><td>骨架期：<code>Candle</code> 模型 + 进程内 <code>CandleStore</code>；后续：Parquet 分区、SQLite 元数据、manifest / data_version</td><td>骨架期无外部依赖；后续 <code>serde</code>、<code>thiserror</code>、<code>arrow</code>/<code>parquet</code>/<code>rusqlite</code></td><td>不依赖 provider / 指标 / app-core / tauri</td></tr>
+        <tr><td><b>indicator-golden</b></td><td><code>crates/indicator-golden/</code></td><td>黄金用例夹具加载与容差断言</td><td><code>indicator-core</code>（dev-dependency）</td><td>不进 release；不被 app-core 依赖</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout warn"><b>唯一例外说明：</b><code>indicator-golden</code> 在测试配置中依赖 <code>indicator-core</code>，方向仍是「测试 → 被测」，不是反向依赖；它不会被 <code>aka-desktop</code> 或 <code>app-core</code> 引用。</div>
+</div>
+
+<div class="card">
+  <h2>2. 前端模块划分</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 1200 700" role="img" aria-label="前端模块划分与 IPC 边界">
+      <defs>
+        <marker id="f1" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2F6F8F"/></marker>
+      </defs>
+
+      <rect x="14" y="18" width="700" height="600" rx="10" fill="#F8FAFC" stroke="#9FB3C2" stroke-width="1.4"/>
+      <text x="30" y="40" font-size="11.5" font-weight="700" fill="#15364F">前端 · src/（React 18 + TypeScript）</text>
+      <text x="30" y="55" font-size="8.4" fill="#66788A">引用方向：main → app → pages / features → components → lib；页面不直接拼命令名</text>
+
+      <!-- 根 -->
+      <rect x="40" y="70" width="220" height="46" rx="6" fill="#EAF1F5" stroke="#C9D8E2"/>
+      <text x="150" y="89" text-anchor="middle" font-size="9.6" font-weight="700" fill="#15364F">main.tsx</text>
+      <text x="150" y="105" text-anchor="middle" font-size="8" fill="#66788A">createRoot · 挂载 App · 主题初始化</text>
+
+      <!-- app -->
+      <rect x="40" y="146" width="220" height="62" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="150" y="165" text-anchor="middle" font-size="9.4" font-weight="700" fill="#2C3B4B">app/</text>
+      <text x="150" y="181" text-anchor="middle" font-size="8" fill="#66788A">AppShell：左侧 rail + 导航</text>
+      <text x="150" y="195" text-anchor="middle" font-size="8" fill="#66788A">骨架单页，无 Router / Providers</text>
+
+      <!-- pages / features -->
+      <rect x="300" y="146" width="190" height="62" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="395" y="165" text-anchor="middle" font-size="9.4" font-weight="700" fill="#2C3B4B">pages/（骨架 1 页）</text>
+      <text x="395" y="181" text-anchor="middle" font-size="8" fill="#66788A">已实现：workbench</text>
+      <text x="395" y="195" text-anchor="middle" font-size="8" fill="#66788A">规划：market · watchlist · catalog · settings …</text>
+
+      <rect x="520" y="146" width="170" height="62" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="605" y="165" text-anchor="middle" font-size="9.4" font-weight="700" fill="#2C3B4B">features/</text>
+      <text x="605" y="181" text-anchor="middle" font-size="8" fill="#66788A">market · watchlist · workbench</text>
+      <text x="605" y="195" text-anchor="middle" font-size="8" fill="#66788A">indicators · settings · data-source</text>
+
+      <line x1="150" y1="116" x2="150" y2="146" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#f1)"/>
+      <line x1="260" y1="177" x2="300" y2="177" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#f1)"/>
+      <line x1="490" y1="190" x2="520" y2="190" stroke="#2F6F8F" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#f1)"/>
+      <text x="505" y="184" text-anchor="middle" font-size="7" fill="#66788A">组合</text>
+
+      <!-- components -->
+      <rect x="40" y="238" width="220" height="78" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="150" y="257" text-anchor="middle" font-size="9.4" font-weight="700" fill="#2C3B4B">components/</text>
+      <text x="150" y="273" text-anchor="middle" font-size="8" fill="#66788A">layout · CandleChart · IndicatorPanel</text>
+      <text x="150" y="287" text-anchor="middle" font-size="8" fill="#66788A">ParamPanel · SimBadge · EmptyState</text>
+      <text x="150" y="301" text-anchor="middle" font-size="8" fill="#66788A">纯展示：不 invoke、不含业务规则</text>
+
+      <rect x="300" y="238" width="190" height="78" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="395" y="257" text-anchor="middle" font-size="9.4" font-weight="700" fill="#2C3B4B">lib/</text>
+      <text x="395" y="273" text-anchor="middle" font-size="8" fill="#66788A">ipc.ts · types.ts</text>
+      <text x="395" y="287" text-anchor="middle" font-size="8" fill="#66788A">theme.ts · format.ts</text>
+      <text x="395" y="301" text-anchor="middle" font-size="8" fill="#66788A">hooks/useTheme · useSystemTheme</text>
+
+      <rect x="520" y="238" width="170" height="78" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="605" y="257" text-anchor="middle" font-size="9.4" font-weight="700" fill="#2C3B4B">styles/</text>
+      <text x="605" y="273" text-anchor="middle" font-size="8" fill="#66788A">tokens.css（深/浅两套）</text>
+      <text x="605" y="287" text-anchor="middle" font-size="8" fill="#66788A">app.css · chart.css</text>
+      <text x="605" y="301" text-anchor="middle" font-size="8" fill="#66788A">只换 data-theme，不重绘组件</text>
+
+      <line x1="150" y1="208" x2="150" y2="238" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#f1)"/>
+      <line x1="395" y1="208" x2="395" y2="238" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#f1)"/>
+      <line x1="605" y1="208" x2="605" y2="238" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#f1)"/>
+
+      <!-- ipc client -->
+      <rect x="300" y="350" width="190" height="86" rx="6" fill="#EDF5F9" stroke="#C9DCE8" stroke-width="1.4"/>
+      <text x="395" y="369" text-anchor="middle" font-size="9.4" font-weight="700" fill="#15364F">lib/ipc.ts（唯一出口）</text>
+      <text x="395" y="385" text-anchor="middle" font-size="8" fill="#4A6375">invoke&lt;T&gt; 类型化封装</text>
+      <text x="395" y="399" text-anchor="middle" font-size="8" fill="#4A6375">AppError 码 → 表单/空态</text>
+      <text x="395" y="413" text-anchor="middle" font-size="8" fill="#4A6375">generation 丢弃旧结果</text>
+      <text x="395" y="427" text-anchor="middle" font-size="8" fill="#4A6375">NaN(null) 安全读取</text>
+
+      <line x1="395" y1="316" x2="395" y2="350" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#f1)"/>
+
+      <!-- 页面模块树补充 -->
+      <rect x="40" y="350" width="220" height="86" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="150" y="369" text-anchor="middle" font-size="9.4" font-weight="700" fill="#2C3B4B">页面组合（示例）</text>
+      <text x="150" y="385" text-anchor="middle" font-size="8" fill="#66788A">WorkbenchPage</text>
+      <text x="150" y="399" text-anchor="middle" font-size="8" fill="#66788A">= QuoteHeader + MainChart</text>
+      <text x="150" y="413" text-anchor="middle" font-size="8" fill="#66788A">+ SubChart×3 + ParamPanel</text>
+      <text x="150" y="427" text-anchor="middle" font-size="8" fill="#66788A">+ IndicatorDrawer</text>
+
+      <rect x="40" y="462" width="650" height="122" rx="7" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="56" y="482" font-size="9.2" font-weight="700" fill="#15364F">渲染与状态规则</text>
+      <text x="56" y="500" font-size="8.2" fill="#3C4A57">· 参数改动：本地 150ms 防抖 → 只对受影响实例发一次批量 calc_indicators（同 id 同参去重）。</text>
+      <text x="56" y="517" font-size="8.2" fill="#3C4A57">· 缩放 / 平移 / 十字光标：只读已取回的数据与前端缓存，不发 IPC；窗口扩大时才按需补取。</text>
+      <text x="56" y="534" font-size="8.2" fill="#3C4A57">· generation：每次请求 +1，旧响应到达时直接丢弃，避免快速切周期出现旧线覆盖新线。</text>
+      <text x="56" y="551" font-size="8.2" fill="#3C4A57">· 主题：data-theme=dark/light + 语义色变量；红涨绿跌用 --up / --down 两组变量切换，图表同步。</text>
+      <text x="56" y="568" font-size="8.2" fill="#3C4A57">· 模拟标识：全局状态条 + 页面头 + 报价头 + 渠道徽标，由 dataset manifest 驱动，不可关闭。</text>
+
+      <!-- IPC 边界 -->
+      <rect x="740" y="18" width="128" height="600" rx="8" fill="#E8F0F4" stroke="#BFD3DF"/>
+      <text x="804" y="42" text-anchor="middle" font-size="10" font-weight="700" fill="#15364F">IPC 边界</text>
+      <text x="804" y="58" text-anchor="middle" font-size="7.6" fill="#4A6375">Tauri command</text>
+      <text x="804" y="72" text-anchor="middle" font-size="7.6" fill="#4A6375">JSON / 小包回退</text>
+
+      <text x="752" y="96" font-size="7.8" font-weight="700" fill="#15364F">查询</text>
+      <text x="752" y="112" font-size="7.2" fill="#4A6375">app_info</text>
+      <text x="752" y="127" font-size="7.2" fill="#4A6375">provider_status</text>
+      <text x="752" y="142" font-size="7.2" fill="#4A6375">dataset_manifest</text>
+      <text x="752" y="157" font-size="7.2" fill="#4A6375">list_securities</text>
+      <text x="752" y="172" font-size="7.2" fill="#4A6375">get_bars</text>
+      <text x="752" y="187" font-size="7.2" fill="#4A6375">indicator_registry</text>
+      <text x="752" y="202" font-size="7.2" fill="#4A6375">indicator_spec</text>
+
+      <text x="752" y="228" font-size="7.8" font-weight="700" fill="#15364F">计算</text>
+      <text x="752" y="244" font-size="7.2" fill="#4A6375">calc_indicators</text>
+      <text x="752" y="259" font-size="7.2" fill="#4A6375">（批量 / 含 generation）</text>
+
+      <text x="752" y="285" font-size="7.8" font-weight="700" fill="#15364F">状态（骨架）</text>
+      <text x="752" y="301" font-size="7.2" fill="#4A6375">load_state</text>
+      <text x="752" y="316" font-size="7.2" fill="#4A6375">save_state</text>
+
+      <text x="752" y="342" font-size="7.8" font-weight="700" fill="#15364F">运维（骨架）</text>
+      <text x="752" y="358" font-size="7.2" fill="#4A6375">quality_report</text>
+      <text x="752" y="373" font-size="7.2" fill="#4A6375">export_diagnostics</text>
+      <text x="752" y="388" font-size="7.2" fill="#4A6375">rebuild_dataset</text>
+
+      <text x="752" y="414" font-size="7.8" font-weight="700" fill="#15364F">约束</text>
+      <text x="752" y="430" font-size="7.2" fill="#4A6375">无 HTTP</text>
+      <text x="752" y="445" font-size="7.2" fill="#4A6375">无端口</text>
+      <text x="752" y="460" font-size="7.2" fill="#4A6375">无鉴权</text>
+      <text x="752" y="475" font-size="7.2" fill="#4A6375">无网络</text>
+
+      <line x1="700" y1="393" x2="740" y2="393" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#f1)"/>
+      <text x="720" y="386" text-anchor="middle" font-size="7" fill="#66788A">invoke</text>
+
+      <!-- Rust 侧 -->
+      <rect x="892" y="18" width="294" height="600" rx="8" fill="#F4F8FA" stroke="#BFD3DF"/>
+      <text x="906" y="42" font-size="10" font-weight="700" fill="#15364F">Rust 侧（命令层 → 编排）</text>
+      <text x="906" y="58" font-size="7.6" fill="#66788A">薄命令层，不做业务判断</text>
+
+      <rect x="906" y="72" width="266" height="86" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="918" y="91" font-size="8.8" font-weight="700" fill="#2C3B4B">aka-desktop/commands.rs</text>
+      <text x="918" y="107" font-size="7.6" fill="#66788A">#[tauri::command] 函数</text>
+      <text x="918" y="121" font-size="7.6" fill="#66788A">参数反序列化 · 取 State&lt;AppCore&gt;</text>
+      <text x="918" y="135" font-size="7.6" fill="#66788A">AppError → 前端结构化错误</text>
+      <text x="918" y="149" font-size="7.6" fill="#66788A">不缓存、不算指标、不读文件</text>
+
+      <line x1="1039" y1="158" x2="1039" y2="186" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#f1)"/>
+
+      <rect x="906" y="186" width="266" height="120" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="918" y="205" font-size="8.8" font-weight="700" fill="#2C3B4B">app-core</text>
+      <text x="918" y="221" font-size="7.6" fill="#66788A">quote_service：证券 / 报价 / K 线</text>
+      <text x="918" y="235" font-size="7.6" fill="#66788A">calc_service：参数校验 → 预热 → 批量</text>
+      <text x="918" y="249" font-size="7.6" fill="#66788A">cache：键 + 世代号 + 命中统计</text>
+      <text x="918" y="263" font-size="7.6" fill="#66788A">dto：NaN → null，附溯源与耗时</text>
+      <text x="918" y="277" font-size="7.6" fill="#66788A">provider_registry：能力矩阵 / 健康</text>
+      <text x="918" y="291" font-size="7.6" fill="#66788A">只有它同时认识三兄弟</text>
+
+      <rect x="906" y="322" width="266" height="120" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="918" y="341" font-size="8.8" font-weight="700" fill="#2C3B4B">DTO（serde，camelCase）</text>
+      <text x="918" y="357" font-size="7.6" fill="#66788A">AppInfo / ProviderStatus</text>
+      <text x="918" y="371" font-size="7.6" fill="#66788A">SecurityDto / BarDto / ManifestDto</text>
+      <text x="918" y="385" font-size="7.6" fill="#66788A">RegistryResponse / ParamSpecDto</text>
+      <text x="918" y="399" font-size="7.6" fill="#66788A">CalcRequest / CalcResponse</text>
+      <text x="918" y="413" font-size="7.6" fill="#66788A">AppError { code, message, retryable }</text>
+      <text x="918" y="427" font-size="7.6" fill="#66788A">serde rename_all = "camelCase"</text>
+
+      <rect x="906" y="458" width="266" height="76" rx="6" fill="#EDF5F9" stroke="#C9DCE8"/>
+      <text x="918" y="477" font-size="8.8" font-weight="700" fill="#234A61">错误语义（三类）</text>
+      <text x="918" y="493" font-size="7.6" fill="#3C5868">可纠正：PARAM_OUT_OF_RANGE / INSUFFICIENT</text>
+      <text x="918" y="507" font-size="7.6" fill="#3C5868">可重试：retryable=true + 建议等待</text>
+      <text x="918" y="521" font-size="7.6" fill="#3C5868">不可恢复：UNKNOWN_ID / 内核 panic 捕获</text>
+
+      <rect x="906" y="550" width="266" height="52" rx="6" fill="#EAF5F0" stroke="#BFDACE"/>
+      <text x="918" y="569" font-size="8.8" font-weight="700" fill="#0F7B54">MVP 前端可离线运行</text>
+      <text x="918" y="585" font-size="7.6" fill="#3C5868">所有命令均走本地状态与 mock，无 provider 网络调用</text>
+    </svg>
+    <figcaption><b>读图</b>：左侧前端按「入口 → 页面 → 特性 → 组件 → lib」分层，<code>lib/ipc.ts</code> 是唯一出口；中间狭长条是命令清单；右侧命令层只做三件事——反序列化、调用 <code>app-core</code>、把 <code>AppError</code> 映射成结构化错误。页面与组件都不直接接触命令名。</figcaption>
+  </figure>
+</div>
+
+<div class="card">
+  <h2>3. 端到端数据流（mock / 真实 provider → 存储 → 计算 → UI）</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 1200 620" role="img" aria-label="端到端数据流">
+      <defs>
+        <marker id="d1" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2F6F8F"/></marker>
+        <marker id="d2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C9A24A"/></marker>
+        <marker id="d3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#0F7B54"/></marker>
+      </defs>
+
+      <!-- 用户动作 -->
+      <rect x="24" y="18" width="470" height="58" rx="8" fill="#EAF1F5" stroke="#C9D8E2"/>
+      <text x="259" y="38" text-anchor="middle" font-size="9.6" font-weight="700" fill="#15364F">用户动作（盘后复盘）</text>
+      <text x="259" y="55" text-anchor="middle" font-size="8.2" fill="#3C4A57">打开工作台 / 切周期 / 切复权 / 改参数 / 平移缩放 / 看某根 K 线</text>
+      <line x1="494" y1="47" x2="560" y2="47" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#d1)"/>
+      <text x="527" y="40" text-anchor="middle" font-size="7.2" fill="#66788A">150ms 防抖</text>
+
+      <rect x="560" y="18" width="220" height="58" rx="8" fill="#E8F0F4" stroke="#BFD3DF"/>
+      <text x="670" y="38" text-anchor="middle" font-size="9.6" font-weight="700" fill="#15364F">IPC 请求（批量）</text>
+      <text x="670" y="55" text-anchor="middle" font-size="8.2" fill="#3C4A57">security · timeframe · adj · window · generation</text>
+
+      <!-- 管线 -->
+      <text x="24" y="112" font-size="9.2" letter-spacing="1.2" fill="#8A96A3">数据管线 · 自左向右</text>
+
+      <rect x="24" y="124" width="176" height="112" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="112" y="145" text-anchor="middle" font-size="9.2" font-weight="700" fill="#15364F">① 数据源</text>
+      <text x="112" y="163" text-anchor="middle" font-size="7.8" fill="#0F7B54">MockProvider（MVP 主路径）</text>
+      <text x="112" y="179" text-anchor="middle" font-size="7.6" fill="#66788A">确定性 seed · 120 只样本</text>
+      <text x="112" y="195" text-anchor="middle" font-size="7.6" fill="#66788A">自产 adj_factor / 停牌标记</text>
+      <text x="112" y="211" text-anchor="middle" font-size="7.6" fill="#8A6410">TushareProvider（骨架 · 不编译）</text>
+      <text x="112" y="226" text-anchor="middle" font-size="7.6" fill="#8A96A3">运行时网络请求 = 0</text>
+
+      <line x1="200" y1="180" x2="236" y2="180" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#d1)"/>
+
+      <rect x="236" y="124" width="176" height="112" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="324" y="145" text-anchor="middle" font-size="9.2" font-weight="700" fill="#15364F">② 归一化</text>
+      <text x="324" y="163" text-anchor="middle" font-size="7.6" fill="#66788A">代码 000001.SZ · 单位股/元</text>
+      <text x="324" y="179" text-anchor="middle" font-size="7.6" fill="#66788A">复权因子 · 停牌保留行</text>
+      <text x="324" y="195" text-anchor="middle" font-size="7.6" fill="#66788A">涨跌停本地推导（APPROX）</text>
+      <text x="324" y="211" text-anchor="middle" font-size="7.6" fill="#66788A">逐行溯源 provider / dataset</text>
+      <text x="324" y="226" text-anchor="middle" font-size="7.6" fill="#66788A">质量标记 quality_flags</text>
+
+      <line x1="412" y1="180" x2="448" y2="180" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#d1)"/>
+
+      <rect x="448" y="124" width="176" height="112" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="536" y="145" text-anchor="middle" font-size="9.2" font-weight="700" fill="#15364F">③ 本地存储</text>
+      <text x="536" y="163" text-anchor="middle" font-size="7.6" fill="#66788A">骨架期：内存 CandleStore</text>
+      <text x="536" y="179" text-anchor="middle" font-size="7.6" fill="#66788A">后续：data/sim Parquet 分区</text>
+      <text x="536" y="195" text-anchor="middle" font-size="7.6" fill="#66788A">manifest · dataset_id / data_version</text>
+      <text x="536" y="211" text-anchor="middle" font-size="7.6" fill="#66788A">state.db（设置 / 自选 / 收藏）</text>
+      <text x="536" y="226" text-anchor="middle" font-size="7.6" fill="#66788A">内存索引 + 只读列裁剪</text>
+
+      <line x1="624" y1="180" x2="660" y2="180" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#d1)"/>
+
+      <rect x="660" y="124" width="176" height="112" rx="8" fill="#EDF5F9" stroke="#C9DCE8" stroke-width="1.3"/>
+      <text x="748" y="145" text-anchor="middle" font-size="9.2" font-weight="700" fill="#15364F">④ app-core 编排</text>
+      <text x="748" y="163" text-anchor="middle" font-size="7.6" fill="#66788A">缓存键 = 标的+周期+复权+指标</text>
+      <text x="748" y="177" text-anchor="middle" font-size="7.6" fill="#66788A">+参数+data_version+window</text>
+      <text x="748" y="193" text-anchor="middle" font-size="7.6" fill="#66788A">可见窗口 + 预热前缀切片</text>
+      <text x="748" y="209" text-anchor="middle" font-size="7.6" fill="#66788A">generation 递增 · 旧结果丢弃</text>
+      <text x="748" y="225" text-anchor="middle" font-size="7.6" fill="#66788A">批量合并 · 同 id 同参去重</text>
+
+      <line x1="836" y1="180" x2="872" y2="180" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#d1)"/>
+
+      <rect x="872" y="124" width="176" height="112" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="960" y="145" text-anchor="middle" font-size="9.2" font-weight="700" fill="#15364F">⑤ indicator-core</text>
+      <text x="960" y="163" text-anchor="middle" font-size="7.6" fill="#66788A">注册表查 Meta / ParamSpec</text>
+      <text x="960" y="179" text-anchor="middle" font-size="7.6" fill="#66788A">参数校验（单一事实来源）</text>
+      <text x="960" y="195" text-anchor="middle" font-size="7.6" fill="#66788A">纯内核：OhlcvView → Vec&lt;f64&gt;</text>
+      <text x="960" y="211" text-anchor="middle" font-size="7.6" fill="#66788A">NaN 断线 · 不补零 · 不 panic</text>
+      <text x="960" y="226" text-anchor="middle" font-size="7.6" fill="#66788A">rayon 按指标分片并行</text>
+
+      <line x1="1048" y1="180" x2="1084" y2="180" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#d1)"/>
+
+      <rect x="1084" y="124" width="92" height="112" rx="8" fill="#EAF1F5" stroke="#9FB3C2"/>
+      <text x="1130" y="145" text-anchor="middle" font-size="8.4" font-weight="700" fill="#15364F">⑥ IPC</text>
+      <text x="1130" y="162" text-anchor="middle" font-size="7.2" fill="#3C4A57">DTO</text>
+      <text x="1130" y="177" text-anchor="middle" font-size="7.2" fill="#3C4A57">f64 NAN</text>
+      <text x="1130" y="192" text-anchor="middle" font-size="7.2" fill="#3C4A57">→ null</text>
+      <text x="1130" y="207" text-anchor="middle" font-size="7.2" fill="#3C4A57">+ 溯源</text>
+      <text x="1130" y="222" text-anchor="middle" font-size="7.2" fill="#3C4A57">+ 耗时</text>
+
+      <!-- 缓存分支 -->
+      <path d="M 780 236 V 296" fill="none" stroke="#0F7B54" stroke-width="1.5" marker-end="url(#d3)"/>
+      <rect x="560" y="296" width="376" height="70" rx="8" fill="#EAF5F0" stroke="#BFDACE"/>
+      <text x="574" y="316" font-size="8.6" font-weight="700" fill="#0F7B54">命中缓存（目标 ≥ 85%）</text>
+      <text x="574" y="333" font-size="7.6" fill="#3C5868">直接返回 DTO：不读 Parquet、不重新计算；平移/缩放/十字光标走这条路。</text>
+      <text x="574" y="349" font-size="7.6" fill="#3C5868">命中率与耗时写入页脚「计算元信息」，关于页可查看累计统计。</text>
+
+      <path d="M 700 236 V 266 H 380 V 296" fill="none" stroke="#C9A24A" stroke-width="1.5" marker-end="url(#d2)"/>
+      <rect x="184" y="296" width="360" height="70" rx="8" fill="#FBF9F2" stroke="#E8D9AB"/>
+      <text x="198" y="316" font-size="8.6" font-weight="700" fill="#8A6410">未命中：冷算路径</text>
+      <text x="198" y="333" font-size="7.6" fill="#5E470D">读 bars（含 warmup 前缀）→ 批量计算 → 写缓存 → 返回 DTO。</text>
+      <text x="198" y="349" font-size="7.6" fill="#5E470D">目标：首屏 3 副图 × 2000 根 ≤ 120ms；单参变更 ≤ 60ms。</text>
+
+      <!-- 渲染 -->
+      <rect x="24" y="392" width="1152" height="64" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="40" y="412" font-size="9" font-weight="700" fill="#15364F">⑦ 前端渲染</text>
+      <text x="40" y="429" font-size="7.8" fill="#3C4A57">主图 K 线 + 最多 2 个叠加 · 副图最多 3 格 · NaN 处断线 · 停牌仅时间轴占位 · 数据不足显示「需要 N 根，当前 M 根」</text>
+      <text x="40" y="445" font-size="7.8" fill="#3C4A57">页脚：dataset_id / engine_version / 计算耗时 / 缓存命中；K 线点击：provider / batch / ts / adj_mode / quality_flags</text>
+
+      <!-- 重要约束 -->
+      <rect x="24" y="474" width="1152" height="118" rx="8" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="40" y="494" font-size="9" font-weight="700" fill="#15364F">四条硬规则（数据流层面）</text>
+      <text x="40" y="512" font-size="8" fill="#3C4A57">① 计算只发生在 app-core 的「未命中」分支；UI 不持有任何指标公式。</text>
+      <text x="40" y="529" font-size="8" fill="#3C4A57">② 同一 (标的, 周期, 复权) 的 bars 在一次批量请求内只读一次；多个指标共享同一借用视图。</text>
+      <text x="40" y="546" font-size="8" fill="#3C4A57">③ 指标实例参数只在当前会话生效（D-14）：重启回注册表默认值；持久化的是自选/收藏/设置。</text>
+      <text x="40" y="563" font-size="8" fill="#3C4A57">④ sim / real 用不同 dataset_id 与目录，缓存键含 dataset_id；切换数据源必须让旧缓存整体失效。</text>
+      <text x="40" y="580" font-size="7.6" fill="#8A96A3">MVP 中 data/real 不创建；tushare 仅骨架，任何「真实行情」路径在 UI 上不可达。</text>
+    </svg>
+    <figcaption><b>读图</b>：上半段是「一次冷请求」的完整链路；下半段是缓存分支。重点不是六个方框，而是两条分叉——<b>命中路径不读盘、不算指标</b>，<b>未命中路径才进入内核</b>。用户平移/缩放/移动十字光标时，只在前端消费已有数据，不产生 IPC。</figcaption>
+  </figure>
+</div>
+
+<div class="card">
+  <h2>4. IPC 命令清单（请求 / 响应形状）</h2>
+  <p class="muted" style="font-size:12px">骨架期 <code>src-tauri/src/commands.rs</code> 只注册了 <b>4 条</b>命令（表中前四行）；其余为接口规划，Rust 未注册、前端未调用。</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>命令</th><th>请求</th><th>响应</th><th>错误码</th><th>骨架状态</th></tr></thead>
+      <tbody>
+        <tr><td><code>list_securities</code></td><td><code>{ market?, limit? }</code></td><td><code>SecurityDto[]</code>（code / name / market / board / isIndex / basePrice）</td><td>—</td><td><span class="pill p-mvp">已实现（mock 120 只）</span></td></tr>
+        <tr><td><code>get_bars</code></td><td><code>{ security, timeframe: "D", adj: "none"|"qfq"|"hfq", from?, to? }</code>（from/to 为数组下标）</td><td><code>BarsResponse { security, timeframe, adj, datasetId, totalBars, bars: BarDto[], provenance }</code></td><td><code>UNKNOWN_SECURITY</code> / <code>INVALID_ARGUMENT</code></td><td><span class="pill p-mvp">已实现（仅 D / mock）</span></td></tr>
+        <tr><td><code>indicator_registry</code></td><td><code>RegistryRequest { category? }</code></td><td><code>RegistryResponse { plannedCount, implementedCount, indicators: IndicatorMetaDto[] }</code></td><td>—</td><td><span class="pill p-mvp">已实现（2 个示例）</span></td></tr>
+        <tr><td><code>calc_indicators</code></td><td><code>CalcRequest { security, timeframe, adj, from?, to?, generation, instances: InstanceRequest[] }</code></td><td><code>CalcResponse { generation, datasetId, engineVersion, computedMs, cacheHit, barCount, series: SeriesDto[] }</code></td><td><code>PARAM_OUT_OF_RANGE</code> / <code>UNKNOWN_INDICATOR</code> / <code>INSUFFICIENT_DATA</code> / <code>INVALID_ARGUMENT</code></td><td><span class="pill p-mvp">已实现（MA / MACD）</span></td></tr>
+        <tr><td><code>app_info</code></td><td>无</td><td><code>AppInfo { version, engineVersion, registryCount, platform, isFree }</code></td><td>—</td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+        <tr><td><code>provider_status</code></td><td>无</td><td><code>ProviderStatus { active, providers: ProviderCard[], networkEnabled: false }</code></td><td>—</td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+        <tr><td><code>dataset_manifest</code></td><td>无</td><td><code>ManifestDto { datasetId, provider, generatedAt, securityCount, barCount, from, to, seed, sim, sha256 }</code></td><td><code>DATASET_MISSING</code></td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+        <tr><td><code>indicator_spec</code></td><td><code>{ id }</code></td><td><code>IndicatorSpecDto</code>（口径页四段 + 版本 + 黄金用例摘要）</td><td><code>UNKNOWN_INDICATOR</code></td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+        <tr><td><code>load_state</code></td><td><code>{ scope }</code></td><td><code>AppStateDto</code>（settings / watchlist / favorites）</td><td><code>STATE_READ_FAILED</code></td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+        <tr><td><code>save_state</code></td><td><code>{ scope, patch }</code></td><td><code>{ ok: true }</code></td><td><code>STATE_WRITE_FAILED</code></td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+        <tr><td><code>quality_report</code></td><td><code>{ datasetId? }</code></td><td><code>QualityReportDto</code>（6 项检查 / 标记 / 过期）</td><td><code>DATASET_MISSING</code></td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+        <tr><td><code>export_diagnostics</code></td><td><code>{ includeLogs: bool }</code></td><td><code>{ path, bytes, excluded: string[] }</code></td><td><code>EXPORT_FAILED</code></td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+        <tr><td><code>rebuild_dataset</code></td><td><code>{ seed, securityCount }</code></td><td><code>ManifestDto</code></td><td><code>REBUILD_FAILED</code></td><td><span class="pill p-later">规划（未注册）</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="font-size:12px">约定：请求与响应字段全部 <code>camelCase</code>；时间戳为 epoch 秒；价格/量/额均为 <code>f64</code>；NaN 在 DTO 边界转 <code>null</code>，前端不得把 <code>null</code> 当 0 渲染。</p>
+</div>
+
+<div class="card">
+  <h2>5. 关键接口契约</h2>
+
+  <h3>5.1 DataProvider（<code>crates/data-provider/src/trait.rs</code>）</h3>
+  <pre><span class="c">// 4 必需 + 4 可选 + 2 运维；能力声明为 true 才允许调用</span>
+<span class="k">#[async_trait]</span>
+<span class="k">pub trait</span> DataProvider: Send + Sync {
+    <span class="k">fn</span> id(&amp;self) -&gt; ProviderId;                    <span class="c">// Mock | Tushare | Baostock</span>
+    <span class="k">fn</span> capabilities(&amp;self) -&gt; Capabilities;
+
+    <span class="k">async fn</span> securities(&amp;self, as_of: Date) -&gt; Result&lt;SecurityMaster, ProviderError&gt;;
+    <span class="k">async fn</span> trading_calendar(&amp;self, from: Date, to: Date) -&gt; Result&lt;Vec&lt;Date&gt;, ProviderError&gt;;
+    <span class="k">async fn</span> daily_bars(&amp;self, req: BarRequest) -&gt; Result&lt;BarBatch, ProviderError&gt;;
+    <span class="k">async fn</span> adjust_factors(&amp;self, req: FactorRequest) -&gt; Result&lt;FactorBatch, ProviderError&gt;;
+
+    <span class="k">async fn</span> index_members(&amp;self, index: &amp;str, as_of: Date) -&gt; Result&lt;Vec&lt;String&gt;, NotSupported&gt;;
+    <span class="k">async fn</span> industry(&amp;self, as_of: Date) -&gt; Result&lt;Vec&lt;IndustryRow&gt;, NotSupported&gt;;
+    <span class="k">async fn</span> limit_flags(&amp;self, req: BarRequest) -&gt; Result&lt;LimitFlags, NotSupported&gt;;
+    <span class="k">async fn</span> minute_bars(&amp;self, req: BarRequest) -&gt; Result&lt;BarBatch, NotSupported&gt;;
+
+    <span class="k">fn</span> rate_policy(&amp;self) -&gt; RatePolicy;             <span class="c">// 契约，不是可选</span>
+    <span class="k">async fn</span> health(&amp;self) -&gt; Health;                <span class="c">// 可达性 + 最近错误 + 配额</span>
+}</pre>
+
+  <h3>5.2 指标注册表与 ParamSpec（<code>crates/indicator-core/</code>）</h3>
+  <pre><span class="k">pub enum</span> ParamSpec {
+    Int   { key: &amp;<span class="k">'static</span> str, label: &amp;<span class="k">'static</span> str, min: i64, max: i64, default: i64, step: i64 },
+    Float { key: &amp;<span class="k">'static</span> str, label: &amp;<span class="k">'static</span> str, min: f64, max: f64, default: f64, step: f64, unit: Option&lt;&amp;<span class="k">'static</span> str&gt; },
+    Enum  { key: &amp;<span class="k">'static</span> str, label: &amp;<span class="k">'static</span> str, variants: &amp;<span class="k">'static</span> [&amp;<span class="k">'static</span> str], default: &amp;<span class="k">'static</span> str },
+    Bool  { key: &amp;<span class="k">'static</span> str, label: &amp;<span class="k">'static</span> str, default: bool },
+}
+
+<span class="k">pub struct</span> Meta {
+    <span class="k">pub</span> id: &amp;<span class="k">'static</span> str,              <span class="c">// "ma" / "macd"</span>
+    <span class="k">pub</span> name_zh: &amp;<span class="k">'static</span> str,
+    <span class="k">pub</span> category: Category,            <span class="c">// Trend/Momentum/Volatility/Volume/Stat/Breadth</span>
+    <span class="k">pub</span> params: &amp;<span class="k">'static</span> [ParamSpec],
+    <span class="k">pub</span> outputs: &amp;<span class="k">'static</span> [OutputSpec],
+    <span class="k">pub</span> warmup: <span class="k">fn</span>(&amp;Params) -&gt; <span class="k">usize</span>,
+    <span class="k">pub</span> inputs: InputReq,
+    <span class="k">pub</span> spec_status: SpecStatus,       <span class="c">// ManualComplete / Partial / ProductDefined</span>
+    <span class="k">pub</span> engine_version: <span class="k">u16</span>,         <span class="c">// 公式变更 +1，进缓存 key</span>
+}
+
+<span class="k">pub trait</span> Indicator: Send + Sync {
+    <span class="k">fn</span> meta(&amp;self) -&gt; &amp;<span class="k">'static</span> Meta;
+    <span class="k">fn</span> calc(&amp;self, view: &amp;OhlcvView, params: &amp;Params, out: &amp;<span class="k">mut</span> [Vec&lt;f64&gt;]) -&gt; Result&lt;(), CalcError&gt;;
+}
+
+<span class="c">// 静态注册表；目录行数由已实现注册表派生，绝不硬编码 105</span>
+<span class="k">pub fn</span> all() -&gt; &amp;<span class="k">'static</span> [&amp;<span class="k">'static dyn</span> Indicator];
+<span class="k">pub fn</span> lookup(id: &amp;str) -&gt; Option&lt;&amp;<span class="k">'static dyn</span> Indicator&gt;;</pre>
+
+  <h3>5.3 IPC 请求 / 响应（TS ↔ Rust）</h3>
+  <pre><span class="c">// 前端：@tauri-apps/api/core invoke</span>
+<span class="k">await</span> invoke&lt;CalcResponse&gt;(<span class="s">"calc_indicators"</span>, {
+  req: {
+    security: <span class="s">"600519.SH"</span>, timeframe: <span class="s">"D"</span>, adj: <span class="s">"qfq"</span>,
+    from: 0, to: 399, generation: 7,
+    instances: [
+      { instanceId: <span class="s">"main-ma"</span>, indicatorId: <span class="s">"ma"</span>, params: { period: 20, maType: <span class="s">"sma"</span> } },
+      { instanceId: <span class="s">"sub-macd"</span>, indicatorId: <span class="s">"macd"</span>, params: { fast: 12, slow: 26, signal: 9 } },
+      { instanceId: <span class="s">"vol"</span>, indicatorId: <span class="s">"volume"</span>, params: {} }
+    ]
+  }
+});
+
+<span class="c">// 统一错误（Rust serde → TS）</span>
+<span class="c">// { code: "PARAM_OUT_OF_RANGE", message: "周期需在 2~200 之间",</span>
+<span class="c">//   retryable: false, indicatorId: "ma", field: "period", got: 1, min: 2, max: 200 }</span></pre>
+
+  <div class="callout"><b>单一事实来源：</b>参数范围、默认值、步长只写在 Rust 注册表。<code>indicator_registry</code> 把 <code>ParamSpec</code> 原样序列化给前端，前端据此渲染控件；<code>calc_indicators</code> 用同一份规格校验。前端不复制一份限制，避免「前端 2~200、后端崩在 0」。</div>
+</div>
+
+<div class="card">
+  <h2>6. 骨架目录映射（与图一一对应）</h2>
+  <pre>app/
+├─ Cargo.toml                     <span class="c"># workspace：6 个成员</span>
+├─ package.json  vite.config.ts  tsconfig.json  index.html
+├─ src/                           <span class="c"># 前端（React 18 + TS）</span>
+│  ├─ main.tsx  App.tsx
+│  ├─ app/                        <span class="c"># Shell / Sidebar / TopBar / Router</span>
+│  ├─ pages/workbench/            <span class="c"># MVP 唯一可运行页面（其余页面留占位索引）</span>
+│  ├─ features/workbench/         <span class="c"># 数据获取、参数、图表组合逻辑</span>
+│  ├─ components/                 <span class="c"># CandleChart / ParamPanel / SimBadge</span>
+│  ├─ lib/ipc.ts  types.ts  theme.ts  format.ts
+│  └─ styles/tokens.css  app.css
+├─ src-tauri/                     <span class="c"># aka-desktop：Tauri 2 壳 + 命令层</span>
+│  ├─ Cargo.toml  build.rs  tauri.conf.json
+│  ├─ capabilities/default.json
+│  └─ src/main.rs  lib.rs  commands.rs  state.rs
+├─ crates/
+│  ├─ app-core/                   <span class="c"># 编排、缓存、DTO、错误</span>
+│  ├─ indicator-core/             <span class="c"># 注册表 + MA / MACD + 单测</span>
+│  ├─ indicator-golden/           <span class="c"># 夹具加载骨架（dev-only）</span>
+│  ├─ data-provider/              <span class="c"># trait + mock + tushare 骨架</span>
+│  └─ data-store/                 <span class="c"># Candle 模型 + 内存缓存骨架</span>
+├─ data/                          <span class="c"># 运行时生成（不提交）</span>
+│  ├─ sim/  manifest.json
+│  └─ real/                       <span class="c"># MVP 不创建</span>
+└─ README.md</pre>
+  <p class="muted" style="font-size:12px">骨架范围：<b>只打通「一个页面 + 一个 mock provider + MA/MACD 两个指标 + 一条 IPC 链路」</b>。其余页面、Parquet/SQLite 落盘、105 个指标、tushare 传输层均为后续 Sprint，代码中以 <code>TODO(sprint-*)</code> 标注，不伪造实现。</p>
+</div>
+
+<div class="card">
+  <h2>7. 依赖守卫与评审清单</h2>
+  <div class="grid2">
+    <div>
+      <h3>自动化守卫</h3>
+      <ul>
+        <li><code>cargo metadata</code> 提取每个 crate 的依赖出边，白名单外即失败。</li>
+        <li><code>cargo check --workspace</code> + <code>cargo test -p indicator-core</code>（MA/MACD 单测）。</li>
+        <li>前端 <code>tsc --noEmit</code> + <code>vite build</code>；IPC 类型与 Rust DTO 字段名对齐（camelCase）。</li>
+        <li>注册表计数由 <code>all().len()</code> 派生；CI 断言「目录行数 = 已实现数」。</li>
+      </ul>
+    </div>
+    <div>
+      <h3>人工评审三问</h3>
+      <ul>
+        <li>这个改动是否让底层 crate 认识了 Tauri / SQLite / provider？如果是，停。</li>
+        <li>新命令是否只是「反序列化 + 调 app-core + 错误映射」？如果超过 15 行，业务应下沉。</li>
+        <li>新指标是否只加在 <code>indicator-core</code> 并注册 Meta？如果改了 app-core 分支，说明抽象漏了。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<footer>
+  AKA · 模块架构图 v1.0 · 2026-11-06 · 与 <code>app/</code> 骨架一一对应。<br>
+  本文件离线自包含（内联 SVG，无 CDN、无外链图片），可直接在浏览器打开或打印为 PDF。
+</footer>
+</div>
+</body>
+</html>

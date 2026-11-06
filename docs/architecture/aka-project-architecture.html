@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKA MVP · 项目架构图（系统上下文与部署视角）</title>
+<style>
+  :root{
+    --bg:#F4F6F9; --paper:#FFFFFF; --ink:#16202B; --ink2:#3C4A57; --muted:#66788A; --faint:#8A96A3;
+    --line:#DDE3EA; --line2:#C4CDD6;
+    --navy:#15364F; --brand:#2F6F8F; --brand-soft:#E8F1F5;
+    --up:#C8342B; --up-soft:#FBEDEC;
+    --down:#0F7B54; --down-soft:#EAF5F0;
+    --warn:#8A6410; --warn-soft:#FBF3DE;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding:36px 28px 64px}
+  header.doc{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:26px}
+  .kicker{font-size:11.5px;letter-spacing:.14em;color:var(--brand);font-weight:700;text-transform:uppercase}
+  h1{font-size:28px;line-height:1.35;margin:8px 0 10px;color:var(--navy);letter-spacing:.01em}
+  .sub{color:var(--muted);font-size:13.5px;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:14px;font-size:12px;color:var(--faint)}
+  .meta b{color:var(--ink2);font-weight:600}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:22px 24px;margin:18px 0}
+  h2{font-size:17px;margin:0 0 10px;color:var(--navy);letter-spacing:.01em}
+  h3{font-size:14px;margin:22px 0 8px;color:var(--ink2)}
+  p{margin:8px 0}
+  .lead{color:var(--ink2)}
+  .muted{color:var(--muted)}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .fig{border:1px solid var(--line);border-radius:10px;background:#FBFCFD;padding:14px 12px 8px;overflow:auto}
+  svg{display:block;width:100%;height:auto;min-width:960px;font-family:inherit;color:var(--ink)}
+  figcaption{font-size:12px;color:var(--muted);padding:8px 6px 2px;line-height:1.6}
+  .tbl{overflow:auto;margin:12px 0}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top;text-align:left}
+  th{background:#F2F6F9;color:var(--navy);font-weight:600;white-space:nowrap}
+  td code,th code,li code,p code{font-family:var(--mono);font-size:11.5px;background:#F1F4F7;border:1px solid #E3E9EE;border-radius:3px;padding:1px 5px;color:#2C3B4B}
+  .pill{display:inline-block;font-size:10.5px;line-height:1.5;padding:1px 7px;border-radius:99px;font-weight:600;white-space:nowrap}
+  .p-mvp{background:var(--down-soft);color:var(--down);border:1px solid #BFDACE}
+  .p-later{background:var(--warn-soft);color:var(--warn);border:1px solid #E8D9AB}
+  .p-no{background:#F2F4F7;color:var(--muted);border:1px solid #DDE3EA}
+  .callout{background:var(--brand-soft);border-left:3px solid var(--brand);border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:13px;color:#234A61}
+  .callout.warn{background:var(--warn-soft);border-left-color:var(--warn);color:#5E470D}
+  .callout.up{background:var(--up-soft);border-left-color:var(--up);color:#6B2621}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:4px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--muted);padding:4px 6px 0}
+  .lg{display:inline-flex;align-items:center;gap:6px}
+  .lg i{display:inline-block;width:26px;height:0;border-top:2px solid #2F6F8F}
+  .lg i.dash{border-top:2px dashed #9FB3C2}
+  .lg i.dot{border-top:2px dotted #0F7B54}
+  .lg i.box{height:12px;width:16px;border:1px solid #9FB3C2;background:#fff;border-radius:3px}
+  footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px;font-size:11.5px;color:var(--faint)}
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:none;padding:0}
+    .card{border:none;padding:0;margin:12px 0;break-inside:avoid}
+    .fig{border:1px solid #ccc}
+    svg{min-width:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="doc">
+  <div class="kicker">AKA · 最小 MVP · Architecture v1.0</div>
+  <h1>项目架构图：系统上下文与部署视角</h1>
+  <p class="sub">单进程 macOS 桌面应用 · Tauri 2 + React + Rust 指标引擎 · 离线优先 · 无账户 / 无支付 / 无云控制面</p>
+  <div class="meta">
+    <span>版本 <b>v1.0</b></span>
+    <span>日期 <b>2026-11-06</b></span>
+    <span>范围 <b>MVP（P0 84 指标 / 120 只样本）</b></span>
+    <span>依据 <b>PRD v0.1 · 技术架构 v3</b></span>
+    <span>配套 <b>aka-module-architecture.html</b></span>
+  </div>
+</header>
+
+<div class="card">
+  <h2>0. 一句话结论</h2>
+  <p class="lead">AKA 是一个<b>单进程、双宿主（WebView UI + Rust 计算）</b>的 macOS 应用：UI 与计算之间只有一条类型化的 Tauri IPC 边界；数据只落在本机 <code>state.db</code> 与 <code>data/sim</code>；MVP 不发起任何网络请求，外部数据源与更新通道只是<b>预留边界</b>，诊断包是唯一会离开本机的产物，且由用户手动导出。</p>
+  <p class="muted" style="font-size:12px"><b>骨架期差异：</b>首版骨架的 mock 行情在进程内生成、只保存在内存 <code>CandleStore</code>，尚未创建 <code>state.db</code> / <code>data/sim</code>；Parquet + SQLite 按本图规划在后续 Sprint 落地。</p>
+  <div class="callout up"><b>部署红线：</b>没有 Python、没有 sidecar、没有本地 HTTP 端口、没有云端账号体系。安装包即全部运行时；断网可完成「首装 → 行情 → 工作台 → 指标改参」全链路。</div>
+</div>
+
+<div class="card">
+  <h2>1. 项目架构图（系统上下文 / 部署）</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 1200 810" role="img" aria-label="AKA 项目架构图：系统上下文与部署">
+      <defs>
+        <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="#2F6F8F"/>
+        </marker>
+        <marker id="arGray" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="#93A7B5"/>
+        </marker>
+        <marker id="arGreen" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="#0F7B54"/>
+        </marker>
+        <marker id="arRed" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="#C8342B"/>
+        </marker>
+      </defs>
+
+      <!-- 用户 -->
+      <rect x="380" y="6" width="440" height="44" rx="8" fill="#EAF1F5" stroke="#C9D8E2"/>
+      <text x="600" y="26" text-anchor="middle" font-size="12.5" font-weight="700" fill="#15364F">用户空间 · 盘后复盘</text>
+      <text x="600" y="42" text-anchor="middle" font-size="9.5" fill="#3C4A57">个人投资者 / 研究型散户 / 投顾 · 研究员</text>
+
+      <!-- 进程边界 -->
+      <rect x="18" y="62" width="838" height="646" rx="12" fill="#F8FAFC" stroke="#9FB3C2" stroke-width="1.5"/>
+      <text x="34" y="84" font-size="12" font-weight="700" fill="#15364F">① macOS 13+ 桌面应用 · 单进程（arm64 / x86_64）</text>
+      <text x="34" y="99" font-size="9" fill="#66788A">无 Python sidecar · 无本地端口 · 无跨语言 IPC · 安装包即全部运行时</text>
+
+      <!-- WebView -->
+      <rect x="34" y="112" width="210" height="500" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="44" y="134" font-size="11" font-weight="700" fill="#15364F">Tauri 2 · WebView</text>
+      <text x="44" y="149" font-size="9" fill="#66788A">React 18 + TypeScript + Vite</text>
+
+      <rect x="44" y="160" width="190" height="88" rx="6" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="54" y="179" font-size="9.8" font-weight="700" fill="#2C3B4B">页面与组件层</text>
+      <text x="54" y="195" font-size="8.4" fill="#66788A">6 个一级入口 / 12 个页面</text>
+      <text x="54" y="210" font-size="8.4" fill="#66788A">工作台 · 行情 · 指标目录</text>
+      <text x="54" y="225" font-size="8.4" fill="#66788A">口径页 · 指数 · 设置 · 数据源</text>
+      <text x="54" y="240" font-size="8.4" fill="#66788A">空态 / 错误态 / 搜索浮层</text>
+
+      <rect x="44" y="256" width="190" height="82" rx="6" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="54" y="275" font-size="9.8" font-weight="700" fill="#2C3B4B">图表渲染</text>
+      <text x="54" y="291" font-size="8.4" fill="#66788A">K 线 SVG/Canvas · 主图 2 叠加</text>
+      <text x="54" y="306" font-size="8.4" fill="#66788A">副图 3 格 · 十字光标 · 缩放</text>
+      <text x="54" y="321" font-size="8.4" fill="#66788A">NaN 断线 · 数据不足提示</text>
+
+      <rect x="44" y="346" width="190" height="70" rx="6" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="54" y="365" font-size="9.8" font-weight="700" fill="#2C3B4B">主题与显示偏好</text>
+      <text x="54" y="381" font-size="8.4" fill="#66788A">深 / 浅 / 跟随系统</text>
+      <text x="54" y="396" font-size="8.4" fill="#66788A">红涨绿跌可切换 · 数字等宽</text>
+
+      <rect x="44" y="424" width="190" height="72" rx="6" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="54" y="443" font-size="9.8" font-weight="700" fill="#2C3B4B">前端状态</text>
+      <text x="54" y="459" font-size="8.4" fill="#66788A">UI 缓存 · 参数会话态</text>
+      <text x="54" y="474" font-size="8.4" fill="#66788A">generation 丢弃旧结果</text>
+
+      <rect x="44" y="504" width="190" height="70" rx="6" fill="#EDF5F9" stroke="#C9DCE8"/>
+      <text x="54" y="523" font-size="9.8" font-weight="700" fill="#2C3B4B">IPC 客户端（lib/ipc）</text>
+      <text x="54" y="539" font-size="8.4" fill="#66788A">类型化 invoke 封装</text>
+      <text x="54" y="554" font-size="8.4" fill="#66788A">NaN → null · 错误码映射</text>
+
+      <rect x="44" y="584" width="190" height="16" rx="8" fill="#EAF5F0" stroke="#BFDACE"/>
+      <text x="139" y="595" text-anchor="middle" font-size="8.6" font-weight="600" fill="#0F7B54">MVP：不发起任何网络请求</text>
+
+      <!-- IPC 边界 -->
+      <rect x="258" y="112" width="96" height="500" rx="8" fill="#E8F0F4" stroke="#BFD3DF"/>
+      <text x="306" y="134" text-anchor="middle" font-size="10.5" font-weight="700" fill="#15364F">IPC 边界</text>
+      <text x="306" y="152" text-anchor="middle" font-size="8.2" fill="#4A6375">Tauri command</text>
+      <text x="306" y="168" text-anchor="middle" font-size="8.2" fill="#4A6375">类型化 DTO</text>
+      <text x="306" y="184" text-anchor="middle" font-size="8.2" fill="#4A6375">serde 序列化</text>
+      <text x="306" y="218" text-anchor="middle" font-size="8.2" fill="#8A96A3">calc_indicators</text>
+      <text x="306" y="234" text-anchor="middle" font-size="8.2" fill="#8A96A3">get_bars</text>
+      <text x="306" y="250" text-anchor="middle" font-size="8.2" fill="#8A96A3">list_securities</text>
+      <text x="306" y="266" text-anchor="middle" font-size="8.2" fill="#8A96A3">indicator_registry</text>
+      <text x="306" y="282" text-anchor="middle" font-size="8.2" fill="#8A96A3">provider_status</text>
+      <text x="306" y="298" text-anchor="middle" font-size="8.2" fill="#8A96A3">dataset_manifest</text>
+      <text x="306" y="316" text-anchor="middle" font-size="8.2" fill="#8A96A3">app_info</text>
+      <text x="306" y="352" text-anchor="middle" font-size="8.2" fill="#8A96A3">无 HTTP</text>
+      <text x="306" y="368" text-anchor="middle" font-size="8.2" fill="#8A96A3">无端口</text>
+      <text x="306" y="384" text-anchor="middle" font-size="8.2" fill="#8A96A3">无鉴权</text>
+      <text x="306" y="420" text-anchor="middle" font-size="8.2" fill="#8A96A3">大载荷可走</text>
+      <text x="306" y="436" text-anchor="middle" font-size="8.2" fill="#8A96A3">Arrow / 二进制</text>
+      <text x="306" y="452" text-anchor="middle" font-size="8.2" fill="#8A96A3">&lt;64KB 回退 JSON</text>
+
+      <line x1="244" y1="300" x2="258" y2="300" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="354" y1="470" x2="366" y2="470" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="252" y="294" text-anchor="middle" font-size="7.5" fill="#66788A">invoke</text>
+      <text x="360" y="464" text-anchor="middle" font-size="7.5" fill="#66788A">DTO</text>
+
+      <!-- Rust 主进程 -->
+      <rect x="366" y="112" width="468" height="500" rx="8" fill="#F4F8FA" stroke="#BFD3DF"/>
+      <text x="380" y="134" font-size="11" font-weight="700" fill="#15364F">② Rust 主进程</text>
+      <text x="380" y="149" font-size="9" fill="#66788A">tokio 运行时 · rayon 计算线程池 · 单一可执行文件</text>
+
+      <rect x="380" y="160" width="440" height="46" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="392" y="178" font-size="10.2" font-weight="700" fill="#2C3B4B">aka-desktop（src-tauri）｜应用壳 + 命令层</text>
+      <text x="392" y="195" font-size="8.4" fill="#66788A">窗口/菜单 · 参数反序列化 · 错误映射 · State&lt;AppCore&gt;（薄层，不含业务）</text>
+
+      <rect x="380" y="214" width="440" height="56" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="392" y="232" font-size="10.2" font-weight="700" fill="#2C3B4B">app-core｜编排与查询服务</text>
+      <text x="392" y="249" font-size="8.4" fill="#66788A">批量合并 · 缓存键/世代号 · 复权归一 · 可见窗口切片 · DTO · 溯源装配</text>
+      <text x="392" y="263" font-size="8.4" fill="#66788A">行情查询 · 指标批量计算 · 数据源状态 · 数据集清单</text>
+
+      <!-- 三列 crate -->
+      <rect x="380" y="286" width="140" height="92" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="450" y="304" text-anchor="middle" font-size="9.6" font-weight="700" fill="#2C3B4B">indicator-core</text>
+      <text x="450" y="320" text-anchor="middle" font-size="8" fill="#66788A">指标计算内核</text>
+      <text x="450" y="336" text-anchor="middle" font-size="8" fill="#66788A">注册表（规划 105 · 已实现 2）</text>
+      <text x="450" y="351" text-anchor="middle" font-size="8" fill="#66788A">纯计算 &amp;[f64] · NaN 语义</text>
+      <text x="450" y="366" text-anchor="middle" font-size="8" fill="#66788A">无 IO · 无 async · 无 Tauri</text>
+
+      <rect x="530" y="286" width="140" height="92" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="600" y="304" text-anchor="middle" font-size="9.6" font-weight="700" fill="#2C3B4B">data-provider</text>
+      <text x="600" y="320" text-anchor="middle" font-size="8" fill="#66788A">DataProvider trait</text>
+      <text x="600" y="336" text-anchor="middle" font-size="8" fill="#66788A">4 必需 + 4 可选 + 2 运维</text>
+      <text x="600" y="351" text-anchor="middle" font-size="8" fill="#66788A">mock 主路径 / tushare 骨架</text>
+      <text x="600" y="366" text-anchor="middle" font-size="8" fill="#66788A">归一化 · 能力协商 · 溯源</text>
+
+      <rect x="680" y="286" width="140" height="92" rx="6" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="750" y="304" text-anchor="middle" font-size="9.6" font-weight="700" fill="#2C3B4B">data-store</text>
+      <text x="750" y="320" text-anchor="middle" font-size="8" fill="#66788A">骨架期：内存缓存</text>
+      <text x="750" y="336" text-anchor="middle" font-size="8" fill="#66788A">后续：Parquet 分区</text>
+      <text x="750" y="351" text-anchor="middle" font-size="8" fill="#66788A">SQLite state.db · manifest</text>
+      <text x="750" y="366" text-anchor="middle" font-size="8" fill="#66788A">data_version · 缓存索引</text>
+
+      <rect x="380" y="394" width="440" height="36" rx="6" fill="#FFFFFF" stroke="#C9A24A" stroke-dasharray="5 4"/>
+      <text x="392" y="416" font-size="9" fill="#8A6410">indicator-golden｜黄金用例夹具（dev-dependency，只进测试，不进产物）</text>
+
+      <!-- 关键不变量卡片 -->
+      <rect x="380" y="442" width="440" height="156" rx="7" fill="#EDF5F9" stroke="#C9DCE8"/>
+      <text x="392" y="461" font-size="9.8" font-weight="700" fill="#234A61">关键不变量（MVP 验收口径）</text>
+      <text x="392" y="480" font-size="8.6" fill="#3C5868">· 单进程：UI 在 WebView，Rust 侧 tokio 接命令、rayon 并行批量指标</text>
+      <text x="392" y="498" font-size="8.6" fill="#3C5868">· 指标按需计算：可见窗口 + 预热前缀，不预计算全市场全指标</text>
+      <text x="392" y="516" font-size="8.6" fill="#3C5868">· 缓存键 = 标的 + 周期 + 复权 + 指标 + 参数 + data_version + 窗口</text>
+      <text x="392" y="534" font-size="8.6" fill="#3C5868">· 参数变更只重算受影响实例；旧 generation 结果一律丢弃</text>
+      <text x="392" y="552" font-size="8.6" fill="#3C5868">· 每根 K 线携带 provider / dataset_id / quality_flags / adj_mode</text>
+      <text x="392" y="570" font-size="8.6" fill="#3C5868">· NaN 不补零、不前向填充；指标线在 NaN 处断开</text>
+      <text x="392" y="588" font-size="8.6" fill="#3C5868">· 105 个指标 id；v0.1 发布门槛 P0 84 个可用、可改参、有口径页</text>
+
+      <!-- Rust 内部依赖箭头 -->
+      <line x1="600" y1="206" x2="600" y2="214" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#ar)"/>
+      <line x1="450" y1="270" x2="450" y2="286" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#ar)"/>
+      <line x1="600" y1="270" x2="600" y2="286" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#ar)"/>
+      <line x1="750" y1="270" x2="750" y2="286" stroke="#2F6F8F" stroke-width="1.6" marker-end="url(#ar)"/>
+      <line x1="450" y1="394" x2="450" y2="378" stroke="#C9A24A" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arGray)"/>
+
+      <!-- 本地存储 -->
+      <rect x="34" y="622" width="800" height="70" rx="8" fill="#FFFFFF" stroke="#C9D8E2"/>
+      <text x="46" y="641" font-size="10.5" font-weight="700" fill="#15364F">③ 本地存储（唯一持久层 · 无云同步）</text>
+
+      <rect x="46" y="650" width="180" height="32" rx="5" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="56" y="663" font-size="9" font-weight="700" fill="#2C3B4B">state.db（SQLite）</text>
+      <text x="56" y="676" font-size="7.6" fill="#66788A">设置 / 自选 / 分组 / 收藏（参数不持久）</text>
+
+      <rect x="236" y="650" width="190" height="32" rx="5" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="246" y="663" font-size="9" font-weight="700" fill="#2C3B4B">data/sim（Parquet + manifest）</text>
+      <text x="246" y="676" font-size="7.6" fill="#66788A">样本 120 只 · dataset_id · sha256</text>
+
+      <rect x="436" y="650" width="170" height="32" rx="5" fill="#FBFBFC" stroke="#D9E4EC" stroke-dasharray="4 3"/>
+      <text x="446" y="663" font-size="9" font-weight="700" fill="#66788A">data/real（未启用）</text>
+      <text x="446" y="676" font-size="7.6" fill="#8A96A3">物理隔离 · MVP 不创建</text>
+
+      <rect x="616" y="650" width="206" height="32" rx="5" fill="#F7FAFC" stroke="#D9E4EC"/>
+      <text x="626" y="663" font-size="9" font-weight="700" fill="#2C3B4B">诊断包（zip，按需导出）</text>
+      <text x="626" y="676" font-size="7.6" fill="#66788A">版本 / 日志 / 注册表 / 系统信息 · 不含持仓</text>
+
+      <!-- data-store → 存储 -->
+      <line x1="826" y1="378" x2="826" y2="620" stroke="#0F7B54" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#arGreen)"/>
+      <text x="836" y="560" font-size="7.5" fill="#0F7B54" transform="rotate(90 836 560)">读写 · 版本号</text>
+
+      <!-- 外部边界 -->
+      <text x="872" y="88" font-size="11.5" font-weight="700" fill="#15364F">④ 外部边界（MVP 全部关闭）</text>
+
+      <rect x="872" y="100" width="306" height="112" rx="8" fill="#FFFFFF" stroke="#C9A24A" stroke-dasharray="5 4"/>
+      <text x="886" y="120" font-size="10.5" font-weight="700" fill="#8A6410">tushare Pro（主源 · 仅骨架）</text>
+      <text x="886" y="138" font-size="8.5" fill="#66788A">feature = "live-tushare" 默认不编译</text>
+      <text x="886" y="154" font-size="8.5" fill="#66788A">请求构造 / 响应解析 / 字段映射齐全</text>
+      <text x="886" y="170" font-size="8.5" fill="#66788A">限流策略对象完整，未接真实计时器</text>
+      <text x="886" y="186" font-size="8.5" fill="#66788A">MVP：token 不落盘、开关不可启用</text>
+      <text x="886" y="202" font-size="8.5" font-weight="600" fill="#C8342B">运行时网络请求 = 0</text>
+
+      <rect x="872" y="222" width="306" height="76" rx="8" fill="#FBFBFC" stroke="#DDE3EA"/>
+      <text x="886" y="242" font-size="10.5" font-weight="700" fill="#66788A">baostock / akshare（评估位）</text>
+      <text x="886" y="259" font-size="8.5" fill="#8A96A3">仅接口占位，不实现、不打包</text>
+      <text x="886" y="275" font-size="8.5" fill="#8A96A3">切换真实源总欠账 ≈ 8.5 人周</text>
+      <text x="886" y="291" font-size="8.5" fill="#8A96A3">（回填管线 2.5 + 限流 1 为硬骨头）</text>
+
+      <rect x="872" y="312" width="306" height="104" rx="8" fill="#FFFFFF" stroke="#C9D8E2" stroke-dasharray="4 3"/>
+      <text x="886" y="332" font-size="10.5" font-weight="700" fill="#15364F">更新通道（MVP 关闭）</text>
+      <text x="886" y="350" font-size="8.5" fill="#66788A">不检查更新 · 不发起任何联网</text>
+      <text x="886" y="366" font-size="8.5" fill="#66788A">未来：签名 dmg → 公证 → 更新源</text>
+      <text x="886" y="382" font-size="8.5" fill="#66788A">更新包校验（签名 + 版本单调）</text>
+      <text x="886" y="400" font-size="8.5" fill="#8A96A3">首发 macOS 13+，双架构构建</text>
+
+      <rect x="872" y="430" width="306" height="112" rx="8" fill="#FFFFFF" stroke="#BFDACE"/>
+      <text x="886" y="450" font-size="10.5" font-weight="700" fill="#0F7B54">诊断包（唯一对外产物）</text>
+      <text x="886" y="468" font-size="8.5" fill="#66788A">本地生成 zip：版本 / 最近 200 条命令</text>
+      <text x="886" y="484" font-size="8.5" fill="#66788A">注册表摘要 / 数据集 manifest / 日志</text>
+      <text x="886" y="500" font-size="8.5" fill="#66788A">排除：行情原始数据、自选代码、持仓</text>
+      <text x="886" y="516" font-size="8.5" fill="#66788A">用户自己决定发给谁 · 无遥测上传</text>
+      <text x="886" y="532" font-size="8.5" font-weight="600" fill="#0F7B54">默认关闭 · 需用户点击导出</text>
+
+      <rect x="872" y="556" width="306" height="80" rx="8" fill="#EAF5F0" stroke="#BFDACE"/>
+      <text x="886" y="576" font-size="10.5" font-weight="700" fill="#0F7B54">MVP 网络与隐私边界</text>
+      <text x="886" y="594" font-size="8.5" fill="#3C5868">无账户 · 无登录 · 无支付 · 无订阅</text>
+      <text x="886" y="610" font-size="8.5" fill="#3C5868">无云控制面 · 无遥测 · 无自动更新</text>
+      <text x="886" y="626" font-size="8.5" fill="#3C5868">首装与运行时：抓包 0 外部请求</text>
+
+      <!-- 外部数据源虚线 -->
+      <path d="M 820 300 H 845 V 156 H 872" fill="none" stroke="#93A7B5" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arGray)"/>
+      <text x="839" y="252" font-size="7.2" fill="#8A96A3" transform="rotate(-90 839 252)">未来接入</text>
+      <path d="M 834 674 H 848 V 500 H 872" fill="none" stroke="#0F7B54" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arGreen)"/>
+      <text x="852" y="588" font-size="7.2" fill="#0F7B54" transform="rotate(-90 852 588)">手动导出</text>
+
+      <!-- 用户 ↔ 应用 -->
+      <line x1="600" y1="50" x2="600" y2="62" stroke="#2F6F8F" stroke-width="1.5" marker-end="url(#ar)"/>
+
+      <!-- 图例 -->
+      <line x1="34" y1="722" x2="60" y2="722" stroke="#2F6F8F" stroke-width="2"/>
+      <text x="66" y="726" font-size="8.8" fill="#66788A">已实现 / MVP 主路径</text>
+      <line x1="200" y1="722" x2="226" y2="722" stroke="#93A7B5" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="232" y="726" font-size="8.8" fill="#66788A">骨架 / 未启用 / 未来</text>
+      <line x1="380" y1="722" x2="406" y2="722" stroke="#0F7B54" stroke-width="2" stroke-dasharray="2 3"/>
+      <text x="412" y="726" font-size="8.8" fill="#66788A">本地读写 / 手动导出</text>
+      <text x="620" y="726" font-size="8.8" fill="#8A96A3">读图：左侧是 UI，右侧是外部边界；中间狭长条是唯一的 IPC 边界，任何计算都不经过网络。</text>
+
+      <text x="34" y="756" font-size="8.2" fill="#8A96A3">说明：图中虚线框表示 MVP 不存在或未启用的边界；所有实线框都在单进程内，安装包即运行时。</text>
+    </svg>
+    <figcaption><b>读图</b>：整个应用只有一个进程边界。UI 只通过狭长的 Tauri IPC 条与 Rust 通信；Rust 侧的 <code>app-core</code> 是唯一的编排者，向下只依赖三个平级 crate。右侧三块（tushare、更新通道、诊断包）是<b>已定义但默认关闭</b>的外部边界，MVP 中不会产生任何网络请求。</figcaption>
+  </figure>
+</div>
+
+<div class="card">
+  <h2>2. 部署单元与运行时职责</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>部署单元</th><th>形态</th><th>职责</th><th>MVP 边界</th></tr></thead>
+      <tbody>
+        <tr><td><b>AKA.app</b></td><td>单个 macOS 应用包（arm64 + x86_64）</td><td>WebView 宿主、Rust 主进程、本地数据目录、菜单与窗口</td><td>签名 + 公证后分发；无 helper / 无 sidecar / 无 XPC 服务</td></tr>
+        <tr><td><b>WebView 运行时</b></td><td>系统 WKWebView（Tauri 2 内置）</td><td>12 个页面、图表渲染、主题、交互状态</td><td>不加载任何外网资源；字体与图标全部本地</td></tr>
+        <tr><td><b>Rust 主进程</b></td><td>应用包内单一可执行文件</td><td>IPC 命令、查询编排、指标计算、数据归一化、存储访问</td><td>指标计算在主进程内完成，不 fork、不起服务</td></tr>
+        <tr><td><b>本地数据目录</b></td><td><code>~/Library/Application Support/aka/</code></td><td><code>state.db</code>、<code>data/sim</code>、<code>data/real</code>（未启用）、日志、诊断包</td><td>无云同步；sim 与 real 物理隔离子目录</td></tr>
+        <tr><td><b>外部数据源</b></td><td>tushare / baostock / akshare</td><td>真实行情接入（后续 Sprint）</td><td>MVP 仅保留 trait 与 tushare 解析骨架，传输层不编译</td></tr>
+        <tr><td><b>更新通道</b></td><td>签名 dmg + 更新清单</td><td>版本分发与升级</td><td>MVP 关闭，不检查更新；后续再引入签名校验</td></tr>
+        <tr><td><b>诊断包</b></td><td>本地 zip，用户手动导出</td><td>排障与反馈</td><td>唯一会离开本机的产物；不含行情数据与自选代码</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>3. 上下文边界与不可变约束</h2>
+  <div class="grid2">
+    <div>
+      <h3>进程内边界</h3>
+      <ul>
+        <li><b>UI ↔ Rust</b>：只有 Tauri IPC；命令名与请求/响应形状在模块架构图第 3 节列出。</li>
+        <li><b>app-core ↔ 计算</b>：<code>indicator-core</code> 只吃切片，不认识 Arrow、tokio、SQLite、provider。</li>
+        <li><b>app-core ↔ 数据</b>：<code>data-provider</code> 产出源模型，<code>data-store</code> 只存归一化后的列式数据；两者互不依赖。</li>
+        <li><b>反向依赖禁止</b>：<code>indicator-core</code> / <code>data-provider</code> / <code>data-store</code> 不得依赖 <code>app-core</code> 或 <code>aka-desktop</code>。</li>
+      </ul>
+    </div>
+    <div>
+      <h3>进程外边界</h3>
+      <ul>
+        <li><b>外部数据源</b>：MVP 不联网；tushare 只保留请求构造与响应解析，传输层由 <code>feature = "live-tushare"</code> 控制。</li>
+        <li><b>更新通道</b>：MVP 不检查更新；未来采用签名 dmg + 公证，更新前校验签名与版本单调。</li>
+        <li><b>诊断包</b>：本地生成、用户手动发送；排除行情原始数据、自选代码、持仓成本。</li>
+        <li><b>无云控制面</b>：无账户、无登录、无支付、无订阅、无遥测上传。</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout warn"><b>范围守门：</b>任何「云同步、账户、支付、自动更新、实时行情」需求都必须先改 PRD 的冻结决策（D-02 / D-09 / D-10），不能在实现阶段悄悄塞进架构。</div>
+</div>
+
+<footer>
+  AKA · 项目架构图 v1.0 · 2026-11-06 · 依据 <code>docs/prd/aka-prd-v0.1.md</code> 与 <code>architecture-report-mvp-v3.html</code>。<br>
+  本文件离线自包含（内联 SVG，无 CDN、无外链图片），可直接在浏览器打开或打印为 PDF。
+</footer>
+</div>
+</body>
+</html>

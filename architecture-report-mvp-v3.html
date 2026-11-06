@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>最小 MVP · 产品与技术架构 v3（Rust 指标引擎 · 按需计算）</title>
+<style>
+:root{
+  --ink:#0E1A26; --ink2:#2C3B4B; --muted:#6C7A8A; --muted2:#8D99A8;
+  --line:#E2E8EF; --line2:#EFF3F7; --bg:#FFFFFF; --soft:#F6F8FA; --soft2:#FBFCFD;
+  --up:#BE3A2E; --up-soft:#FCF2F0; --down:#1B7F5A; --down-soft:#EEF7F3;
+  --brand:#15364F; --brand2:#2B6489; --brand-soft:#EDF3F8;
+  --warn:#8A6410; --warn-soft:#FCF7EA;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:76px}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+  font-size:15px; line-height:1.78; -webkit-font-smoothing:antialiased;
+}
+img,svg{max-width:100%}
+a{color:var(--brand2); text-decoration:none}
+a:hover{text-decoration:underline}
+
+.nav{
+  position:sticky; top:0; z-index:50; backdrop-filter:saturate(160%) blur(8px);
+  background:rgba(255,255,255,.9); border-bottom:1px solid var(--line);
+}
+.nav-in{max-width:1180px; margin:0 auto; padding:0 28px; height:58px; display:flex; align-items:center; gap:26px}
+.nav-brand{font-weight:700; letter-spacing:.02em; color:var(--ink); font-size:14px; white-space:nowrap}
+.nav-brand i{display:inline-block; width:8px; height:8px; border-radius:2px; background:var(--up); margin-right:8px; vertical-align:1px}
+.nav-links{display:flex; gap:4px; flex-wrap:wrap}
+.nav-links a{color:var(--muted); font-size:13px; padding:6px 11px; border-radius:7px; transition:background .18s,color .18s}
+.nav-links a:hover{background:var(--soft); color:var(--ink); text-decoration:none}
+.nav-meta{margin-left:auto; font-size:12px; color:var(--muted2); white-space:nowrap}
+
+.hero{
+  position:relative; overflow:hidden; color:#EAF1F6;
+  background:radial-gradient(1200px 500px at 18% -10%, #1D4A6B 0%, #14344B 45%, #0E2436 100%);
+}
+.hero-grid{
+  position:absolute; inset:0; opacity:.28;
+  background-image:linear-gradient(rgba(255,255,255,.09) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,.09) 1px, transparent 1px);
+  background-size:46px 46px; mask-image:linear-gradient(180deg, rgba(0,0,0,.9), transparent 78%);
+}
+.hero-in{position:relative; max-width:1180px; margin:0 auto; padding:60px 28px 50px}
+.kicker{font-size:12px; letter-spacing:.22em; color:#7FA6C0; text-transform:uppercase; margin-bottom:18px}
+.hero h1{font-size:37px; line-height:1.24; margin:0 0 14px; font-weight:700; letter-spacing:-.01em}
+.hero h1 span{color:#F0B7AE}
+.hero-sub{font-size:15.5px; color:#B9CDDB; max-width:840px; margin:0 0 28px}
+.hero-facts{display:flex; flex-wrap:wrap; gap:10px 34px; font-size:13px; color:#9FB6C6; border-top:1px solid rgba(255,255,255,.14); padding-top:20px}
+.hero-facts b{color:#E6EEF4; font-weight:600; margin-left:6px}
+.hero-bars{display:flex; gap:4px; margin-top:26px; height:3px}
+.hero-bars i{flex:1; background:rgba(255,255,255,.16); border-radius:2px}
+.hero-bars i:nth-child(2){background:rgba(190,58,46,.75)}
+.hero-bars i:nth-child(4){background:rgba(27,127,90,.7)}
+
+.wrap{max-width:1180px; margin:0 auto; padding:0 28px}
+section{padding:56px 0; border-bottom:1px solid var(--line2)}
+section:last-of-type{border-bottom:none}
+.sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:8px}
+.sec-num{font-size:12px; font-weight:700; color:#fff; background:var(--brand); border-radius:6px; padding:3px 9px; letter-spacing:.08em; transform:translateY(-2px)}
+h2{font-size:26px; margin:0; letter-spacing:-.01em; font-weight:700}
+.sec-lead{color:var(--muted); font-size:14px; margin:0 0 28px; max-width:920px}
+h3{font-size:19px; margin:36px 0 12px; font-weight:700; letter-spacing:-.005em}
+h3 .bar{display:inline-block; width:3px; height:15px; background:var(--brand2); margin-right:10px; vertical-align:-1px; border-radius:2px}
+h4{font-size:15px; margin:22px 0 8px; color:var(--ink2)}
+p{margin:0 0 14px; color:var(--ink2)}
+ul,ol{margin:0 0 16px; padding-left:22px; color:var(--ink2)}
+li{margin:5px 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; background:var(--soft); border:1px solid var(--line); border-radius:5px; padding:1px 5px; color:#25455E}
+.mono{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; line-height:1.7;
+  background:var(--soft2); border:1px solid var(--line); border-radius:var(--r);
+  padding:16px 18px; overflow-x:auto; white-space:pre; color:#2B3F51; margin:0 0 18px
+}
+
+.grid{display:grid; gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:20px 22px; box-shadow:0 1px 2px rgba(16,32,48,.03)}
+.card h4{margin:0 0 8px; font-size:15px; display:flex; align-items:center; gap:8px}
+.card p:last-child,.card ul:last-child{margin-bottom:0}
+.tldr{display:grid; gap:12px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:6px}
+.tldr .card{border-top:3px solid var(--brand)}
+.tldr .card.up{border-top-color:var(--up)}
+.tldr .card.down{border-top-color:var(--down)}
+.tldr .k{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted2); margin-bottom:8px}
+.tldr .v{font-size:15px; font-weight:700; color:var(--ink); line-height:1.55; margin-bottom:6px}
+.tldr .d{font-size:12.5px; color:var(--muted); line-height:1.7}
+
+.pill{display:inline-block; font-size:11px; line-height:1.5; padding:1px 7px; border-radius:99px; white-space:nowrap; font-weight:600}
+.p-core{background:var(--brand-soft); color:var(--brand2); border:1px solid #CFDFEC}
+.p-later{background:var(--soft); color:var(--muted); border:1px solid var(--line)}
+.p-cost{background:var(--warn-soft); color:var(--warn); border:1px solid #EBDCB4}
+.p-no{background:var(--up-soft); color:var(--up); border:1px solid #EFD2CD}
+.p-mvp{background:#E9F1F7; color:#1E4E6E; border:1px solid #C9DCEA}
+.p-beta{background:#F4F1FA; color:#5B4A8A; border:1px solid #DCD4EC}
+
+.tbl-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r); background:#fff}
+table{width:100%; border-collapse:collapse; font-size:13px; line-height:1.65}
+thead th{background:var(--soft); color:var(--ink); text-align:left; font-weight:600; font-size:12.5px; padding:11px 14px; border-bottom:1px solid var(--line); white-space:nowrap}
+tbody td{padding:10px 14px; border-bottom:1px solid var(--line2); vertical-align:top; color:var(--ink2)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:nth-child(even){background:var(--soft2)}
+td.num,th.num{text-align:center; white-space:nowrap; color:var(--muted); font-variant-numeric:tabular-nums}
+td b{color:var(--ink); font-weight:600}
+.tbl-note{font-size:12px; color:var(--muted); margin:8px 0 0}
+table.dense{font-size:12.3px; line-height:1.55}
+table.dense tbody td{padding:7px 10px}
+table.dense thead th{padding:8px 10px; font-size:12px}
+
+.callout{border-left:3px solid var(--brand2); background:var(--brand-soft); border-radius:0 var(--r) var(--r) 0; padding:16px 20px; margin:18px 0; font-size:14px}
+.callout p{margin:0 0 8px}
+.callout p:last-child{margin:0}
+.callout.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.callout.up{border-left-color:var(--up); background:var(--up-soft)}
+.callout.down{border-left-color:var(--down); background:var(--down-soft)}
+.callout b{color:var(--ink)}
+
+figure{margin:22px 0 26px; border:1px solid var(--line); border-radius:var(--r); background:#fff; overflow:hidden}
+.fig-head{display:flex; align-items:center; gap:10px; padding:12px 18px; border-bottom:1px solid var(--line2); background:var(--soft2)}
+.fig-head .no{font-size:11px; font-weight:700; letter-spacing:.08em; color:var(--brand2)}
+.fig-head .ttl{font-size:13px; font-weight:600; color:var(--ink)}
+.fig-head .hint{margin-left:auto; font-size:11px; color:var(--muted2)}
+.fig-body{padding:18px 18px 6px; overflow-x:auto}
+.fig-body svg{display:block; width:100%; min-width:720px; height:auto}
+figcaption{padding:10px 18px 16px; font-size:12.5px; color:var(--muted); line-height:1.7}
+figcaption b{color:var(--ink2)}
+
+.journey{border:1px solid var(--line); border-radius:var(--r); background:#fff; margin-bottom:14px; overflow:hidden}
+.j-head{display:flex; align-items:center; gap:10px; padding:12px 18px; background:var(--soft2); border-bottom:1px solid var(--line2)}
+.j-head .tag{font-size:11px; font-weight:700; color:#fff; background:var(--brand2); border-radius:5px; padding:2px 7px}
+.j-head .jt{font-weight:600; font-size:14px}
+.j-body{padding:16px 18px}
+.steps{display:flex; flex-wrap:wrap; gap:8px; align-items:stretch; margin-bottom:12px}
+.step{flex:1 1 130px; background:var(--soft); border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:12.3px; line-height:1.6; color:var(--ink2); position:relative}
+.step b{display:block; font-size:10.5px; color:var(--muted2); letter-spacing:.08em; margin-bottom:2px; font-weight:600}
+.step.risk{background:var(--up-soft); border-color:#EFD2CD}
+.step.risk b{color:var(--up)}
+.step.sim{background:var(--warn-soft); border-color:#EADFC0}
+.step.sim b{color:var(--warn)}
+.j-note{font-size:12.5px; color:var(--muted); border-top:1px dashed var(--line); padding-top:10px}
+.j-note strong{color:var(--ink2); font-weight:600}
+
+.split{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+.do{border-top:3px solid var(--down)}
+.dont{border-top:3px solid var(--up)}
+.do h4,.dont h4{margin-bottom:10px}
+.checklist{list-style:none; padding:0; margin:0}
+.checklist li{padding-left:22px; position:relative; font-size:13px; color:var(--ink2); margin:7px 0}
+.checklist li:before{position:absolute; left:0; top:0; font-size:12px; font-weight:700}
+.checklist.ok li:before{content:"✓"; color:var(--down)}
+.checklist.no li:before{content:"—"; color:var(--muted2)}
+.checklist.no li{color:var(--muted)}
+.quote{font-size:17px; line-height:1.7; color:var(--ink); font-weight:600; border-left:3px solid var(--brand); padding:4px 0 4px 18px; margin:10px 0 22px}
+.footer{background:var(--brand); color:#B9CDDB; padding:40px 0 46px; font-size:12.5px}
+.footer .wrap{display:flex; flex-wrap:wrap; gap:18px; align-items:baseline}
+.footer b{color:#E6EEF4}
+.footer .sp{margin-left:auto}
+.fade{animation:fadeUp .55s ease both}
+@keyframes fadeUp{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){ .fade{animation:none} html{scroll-behavior:auto} }
+@media (max-width:860px){
+  .hero h1{font-size:27px}
+  .g2,.g3,.tldr,.split{grid-template-columns:1fr}
+  .nav-links{display:none}
+  .wrap{padding:0 18px}
+  .hero-in{padding:44px 18px 40px}
+  section{padding:40px 0}
+}
+@media print{
+  .nav{display:none} .hero{background:#fff; color:#0E1A26} .hero-grid{display:none}
+  .hero h1 span{color:#BE3A2E} .hero-sub,.hero-facts{color:#4A5A6B}
+  section{page-break-inside:avoid} figure{page-break-inside:avoid}
+  body{font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <div class="nav-brand"><i></i>最小 MVP · 架构 v3</div>
+    <div class="nav-links">
+      <a href="#summary">结论</a>
+      <a href="#constraint">一 · 硬约束</a>
+      <a href="#product">二 · 产品</a>
+      <a href="#engine">三 · 指标引擎</a>
+      <a href="#provider">四 · 数据源</a>
+      <a href="#rest">五 · 其余架构</a>
+      <a href="#risk">六 · 工作量与风险</a>
+      <a href="#decision">七 · 决策</a>
+    </div>
+    <div class="nav-meta">v3.0 · 仅设计 · 2026-11-06</div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-in">
+    <div class="kicker fade">Minimal Viable Product · Architecture v3</div>
+    <h1 class="fade">指标引擎写在 Rust 里，只在需要时才算<br><span>按 5 条硬约束重做的最小 MVP 架构</span></h1>
+    <p class="hero-sub fade">这一版推翻上一版的两块地基：<b>去掉 Python sidecar</b>，指标引擎改为纯 Rust、参数可改；<b>指标从 30 个扩到 105 个</b>，且从「预计算」改为「按需计算 + 分层缓存」。数据侧改为 <b>DataProvider 适配层</b>，tushare 是主源，但 MVP 只跑模拟源。首发仅 macOS，免费、无账户、无支付。</p>
+    <div class="hero-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="hero-facts fade">
+      <div>指标 <b>105 个 / 6 类</b></div>
+      <div>引擎 <b>Rust · 按需</b></div>
+      <div>包体 <b>≈30MB DMG</b></div>
+      <div>冷启 <b>≤1.5s</b></div>
+      <div>工作量 <b>52 人周 · 14 周不成立</b></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section id="summary">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">00</span><h2>结论先行</h2></div>
+    <p class="sec-lead">先把最不受欢迎的三句话说清楚，再给依据。</p>
+    <div class="tldr">
+      <div class="card up">
+        <div class="k">Schedule</div>
+        <div class="v">14 周不成立，差距不是 10%</div>
+        <div class="d">105 个 Rust 指标 + 黄金用例验证本身就要 ≈26 人周（占总量一半）。加上引擎内核、数据层、前端与打包，总量 52 人周。14 周需要 3.7 FTE，不是 1.5 FTE。</div>
+      </div>
+      <div class="card">
+        <div class="k">Engine</div>
+        <div class="v">按需计算成立，但必须先砍缓存复杂度</div>
+        <div class="d">按「数据版本 + 参数哈希 + 可见窗口」做 key，只缓存可见区间；命中即返回，未命中回算 warmup 前缀。不做全市场预计算。</div>
+      </div>
+      <div class="card down">
+        <div class="k">Data</div>
+        <div class="v">MVP 只有模拟源，真实源是骨架</div>
+        <div class="d">tushare provider 在 MVP 中实现 trait 与解析、跑录制回放测试，但默认不编译 HTTP 传输；切换只需打开 feature 与填 token，工作量后置。</div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <p><b>必须直说的一点</b>：手册给的是「指标百科」，不是「规格说明书」。105 个指标里，<b>78 个能直接从手册推出完整公式</b>，<b>19 个只有部分参数或需补默认值</b>，<b>8 个基本没有可复现定义</b>（SCTR 打分权重、CTM 六框架、CMB、Special K、PMO 平滑阶数、RRG 归一化、Pring 系列、ITBM/ITVM/STO、Traffic Light）。这 27 个要么自定口径并在口径页标注「本产品定义」，要么不进首发。数量达标与「每个都可复现」是两件事，不能混为一谈。</p>
+    </div>
+
+    <p><b>另外两条判断</b>：① 去掉 Python sidecar 之后，包体从 ≈150MB 降到 ≈30MB、冷启从 4s 降到 1.2s、公证从「主包 + 内嵌解释器 + 动态库」变成「单一签名」，这几项是净收益；代价是指标迭代速度变慢、Rust 指标生态薄，必须自建黄金用例体系。② 105 个指标对 MVP 是<b>负资产而不是卖点</b>——它把关键路径从「画图 + 数据」变成「数学正确性」，而后者用户看不见、验收却最严。</p>
+  </div>
+</section>
+
+<section id="constraint">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">01</span><h2>五条硬约束与由此产生的范围</h2></div>
+    <p class="sec-lead">约束优先级高于本报告此前的任何推荐。凡是与约束冲突的旧设计，一律作废并在此列明。</p>
+
+    <h3><span class="bar"></span>1.1 约束 → 架构后果</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>#</th><th>硬约束</th><th>架构后果</th><th>被否掉的旧方案</th></tr></thead>
+      <tbody>
+        <tr><td class="num">C1</td><td><b>首发仅 macOS</b></td><td>只做 <code>aarch64-apple-darwin</code> + <code>x86_64-apple-darwin</code> 通用包；无 Windows 签名/WebView2 适配；CI 仅 macOS runner</td><td>v2 的「双端同步、Windows 延后一轮」</td></tr>
+        <tr><td class="num">C2</td><td><b>指标引擎必须 Rust、参数可改</b></td><td>指标计算进主进程（或 rayon 线程池），无跨语言 IPC、无 sidecar 生命周期；参数进注册表元数据，含范围/默认值/步长</td><td><b>Python sidecar + FastAPI + polars</b>（v2 核心）</td></tr>
+        <tr><td class="num">C3</td><td><b>≥80 指标、按需计算</b></td><td>注册表 105 个 id；请求驱动计算 + 分层缓存；不做全市场预计算、不做指标物化表</td><td>v2「30 个指标 + 自选池/指数预计算」</td></tr>
+        <tr><td class="num">C4</td><td><b>多平台数据适配、tushare 为主、MVP 只用 mock</b></td><td>统一 <code>DataProvider</code> trait + 能力协商 + 溯源字段；mock 为一等 provider，与真实源同接口、同校验</td><td>v2「tushare 增量 + baostock 首装全量」直接耦合</td></tr>
+        <tr><td class="num">C5</td><td><b>免费、无账户、无支付</b></td><td>无云端账户体系、无授权校验、无支付 SDK；更新走签名静态清单，崩溃上报本地优先</td><td>v2 已有此结论（保留）</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>1.2 指标数量的计数口径（必须先定义）</h3>
+    <div class="callout">
+      <p>「至少 80 个」按<b>注册表条目（indicator id）</b>计数：一个 id 可以有多个输出线（MACD 3 条、一目均衡 5 条、KDJ 3 条、Aroon 3 条）。按此口径本版 <b>105 个 id / ≈150 条输出线</b>，两种数法都过 80。</p>
+      <p>如果按「输出线」计数，则只需 55 个左右 id 即可达标——本版仍按 id 口径做，因为 id 才对应「一个公式 + 一组参数 + 一份口径页」，是按需计算与缓存的最小单位。</p>
+    </div>
+
+    <h3><span class="bar"></span>1.3 仍在 MVP 范围内、但降级处理的能力</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>能力</th><th>v2 定位</th><th>v3 定位</th><th>原因</th></tr></thead>
+      <tbody>
+        <tr><td><b>广度/市场类指标（16 个）</b></td><td>未列</td><td><span class="pill p-core">做引擎，数据受限</span></td><td>公式与实现进 MVP；mock 只有 120~300 只，结果标注「样本口径」，切真实源后才有全市场意义</td></tr>
+        <tr><td><b>27 个「手册无完整公式」指标</b></td><td>未列</td><td><span class="pill p-beta">自定口径 · 标 beta</span></td><td>19 个需补默认参数、8 个只有概念；口径页必须写明「本产品定义、与 TradingView 可能不一致」，且不进黄金用例强校验</td></tr>
+        <tr><td><b>分钟线</b></td><td>全砍</td><td><span class="pill p-no">仍不做</span></td><td>只影响 benchmark 口径（29 万根按 1 分钟 5 年估算），不影响产品范围</td></tr>
+        <tr><td><b>全市场预计算 / 选股器</b></td><td>不做</td><td><span class="pill p-no">仍不做</span></td><td>与「按需计算」直接冲突；且 5,400 只 × 105 指标物化不可维护</td></tr>
+        <tr><td><b>tushare 实盘接入</b></td><td>主链路</td><td><span class="pill p-later">骨架 + 回放测试</span></td><td>约束 C4 明确 MVP 只用 mock；真实源代码保留接口与解析，默认关闭</td></tr>
+        <tr><td><b>Windows / 移动端</b></td><td>延后 / 不做</td><td><span class="pill p-no">不做</span></td><td>约束 C1</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>1.4 约束之间的真实冲突</h3>
+    <div class="callout up">
+      <p><b>C2 × C3 是这一版最贵的一处组合。</b>「Rust 写」意味着没有 pandas-ta / TA-Lib 的现成函数可调，也没有 NumPy 向量化兜底；「105 个 + 按需」意味着每个指标都要能接受任意窗口、任意范围、任意数据版本，还要能被缓存与增量。两条叠起来，单个指标的成本从「0.3 天」变成「0.8~2 天」，且每个都要配黄金用例。<b>这是工作量结论的直接来源</b>，不是估算保守。</p>
+    </div>
+  </div>
+</section>
+
+<section id="product">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">02</span><h2>产品架构：80+ 指标如何不把界面压垮</h2></div>
+    <p class="sec-lead">指标从 30 到 105，界面不是「多一个列表」，而是多出三层：选择器、参数面板、口径页。三者都必须在工作台内完成，不能让用户跳页。</p>
+
+    <h3><span class="bar"></span>2.1 功能地图</h3>
+
+    <figure>
+      <div class="fig-head"><span class="no">FIG 01</span><span class="ttl">MVP 功能地图（6 层 · 26 项 · 指标层扩为 4 项）</span><span class="hint">实线=必做 / 虚线=可延后</span></div>
+      <div class="fig-body">
+        <svg viewBox="0 0 1120 700" role="img" aria-label="MVP 功能地图">
+          <defs>
+            <style>.fb{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}</style>
+          </defs>
+          <!-- A -->
+          <rect x="20" y="14" width="132" height="92" rx="8" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <rect x="32" y="26" width="20" height="18" rx="4" fill="#2B6489"/>
+          <text class="fb" x="42" y="39.5" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">A</text>
+          <text class="fb" x="58" y="40" font-size="12.5" font-weight="700" fill="#15364F">行情基础</text>
+          <text class="fb" x="32" y="64" font-size="9" fill="#6C7A8A">日线最小粒度</text>
+          <text class="fb" x="32" y="78" font-size="9" fill="#8D99A8">周/月线由日线聚合</text>
+          <text class="fb" x="32" y="92" font-size="9" fill="#8D99A8">MVP 数据全部来自 sim</text>
+
+          <rect x="168" y="20" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="20" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="182" y="39.5" font-size="11.5" fill="#2C3B4B">A1 日线（mock 300 只 + 8 指数）</text>
+          <text class="fb" x="456" y="39.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="480" y="20" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="20" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="494" y="39.5" font-size="11.5" fill="#2C3B4B">A2 周线 / 月线聚合</text>
+          <text class="fb" x="768" y="39.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="792" y="20" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="792" y="20" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="806" y="39.5" font-size="11.5" fill="#2C3B4B">A3 个股 / 指数详情页</text>
+          <text class="fb" x="1080" y="39.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="168" y="58" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="58" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="182" y="77.5" font-size="11.5" fill="#2C3B4B">A4 代码 / 名称 / 拼音搜索</text>
+          <text class="fb" x="456" y="77.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="480" y="58" width="300" height="30" rx="7" fill="#FBFCFD" stroke="#E2E8EF" stroke-dasharray="4 3"/>
+          <text class="fb" x="494" y="77.5" font-size="11.5" fill="#6C7A8A">A5 列表排序（涨幅 / 成交额）</text>
+          <text class="fb" x="768" y="77.5" text-anchor="end" font-size="10" font-weight="700" fill="#93A1B0">可延后</text>
+
+          <!-- B -->
+          <rect x="20" y="116" width="132" height="92" rx="8" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <rect x="32" y="128" width="20" height="18" rx="4" fill="#2B6489"/>
+          <text class="fb" x="42" y="141.5" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">B</text>
+          <text class="fb" x="58" y="142" font-size="12.5" font-weight="700" fill="#15364F">图表工作台</text>
+          <text class="fb" x="32" y="166" font-size="9" fill="#6C7A8A">唯一重交互页</text>
+          <text class="fb" x="32" y="180" font-size="9" fill="#8D99A8">副图 3 格 / 主图叠加 2</text>
+          <text class="fb" x="32" y="194" font-size="9" fill="#8D99A8">改参数即重算</text>
+
+          <rect x="168" y="122" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="122" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="182" y="141.5" font-size="11.5" fill="#2C3B4B">B1 主图三形态（蜡烛 / 棒 / 折线）</text>
+          <text class="fb" x="456" y="141.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="480" y="122" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="122" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="494" y="141.5" font-size="11.5" fill="#2C3B4B">B2 副图 3 格 + 主图叠加 2 个</text>
+          <text class="fb" x="768" y="141.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="792" y="122" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="792" y="122" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="806" y="141.5" font-size="11.5" fill="#2C3B4B">B3 指标选择器（105 个 · 分类 / 搜索）</text>
+          <text class="fb" x="1080" y="141.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="168" y="160" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="160" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="182" y="179.5" font-size="11.5" fill="#2C3B4B">B4 参数面板（范围 / 默认 / 校验 / 重置）</text>
+          <text class="fb" x="456" y="179.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="480" y="160" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="160" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="494" y="179.5" font-size="11.5" fill="#2C3B4B">B5 批量加载 / 计算中可取消</text>
+          <text class="fb" x="768" y="179.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="792" y="160" width="300" height="30" rx="7" fill="#FBFCFD" stroke="#E2E8EF" stroke-dasharray="4 3"/>
+          <text class="fb" x="806" y="179.5" font-size="11.5" fill="#6C7A8A">B6 画线（趋势 / 水平 / 通道 / 斐波）</text>
+          <text class="fb" x="1080" y="179.5" text-anchor="end" font-size="10" font-weight="700" fill="#93A1B0">可延后</text>
+
+          <!-- C -->
+          <rect x="20" y="220" width="132" height="92" rx="8" fill="#E9F1F7" stroke="#C9DCEA"/>
+          <rect x="32" y="232" width="20" height="18" rx="4" fill="#1E4E6E"/>
+          <text class="fb" x="42" y="245.5" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">C</text>
+          <text class="fb" x="58" y="246" font-size="12.5" font-weight="700" fill="#15364F">指标体系</text>
+          <text class="fb" x="32" y="270" font-size="9" fill="#6C7A8A">105 个 id / 150 条线</text>
+          <text class="fb" x="32" y="284" font-size="9" fill="#8D99A8">参数可改 · 公式只读</text>
+          <text class="fb" x="32" y="298" font-size="9" fill="#8D99A8">每个都有口径页</text>
+
+          <rect x="168" y="226" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="226" width="3" height="30" rx="1.5" fill="#1E4E6E"/>
+          <text class="fb" x="182" y="245.5" font-size="11.5" fill="#2C3B4B">C1 指标目录 105 个（6 类）</text>
+          <text class="fb" x="456" y="245.5" text-anchor="end" font-size="10" font-weight="700" fill="#1E4E6E">必做</text>
+
+          <rect x="480" y="226" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="226" width="3" height="30" rx="1.5" fill="#1E4E6E"/>
+          <text class="fb" x="494" y="245.5" font-size="11.5" fill="#2C3B4B">C2 口径页（公式 / 参数 / 适用 / 陷阱）</text>
+          <text class="fb" x="768" y="245.5" text-anchor="end" font-size="10" font-weight="700" fill="#1E4E6E">必做</text>
+
+          <rect x="168" y="264" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="264" width="3" height="30" rx="1.5" fill="#1E4E6E"/>
+          <text class="fb" x="182" y="283.5" font-size="11.5" fill="#2C3B4B">C3 数据要求徽标（预热 / 复权 / 横截面）</text>
+          <text class="fb" x="456" y="283.5" text-anchor="end" font-size="10" font-weight="700" fill="#1E4E6E">必做</text>
+
+          <rect x="480" y="264" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="264" width="3" height="30" rx="1.5" fill="#1E4E6E"/>
+          <text class="fb" x="494" y="283.5" font-size="11.5" fill="#2C3B4B">C4 收藏 / 指标组合（最多 5 套）</text>
+          <text class="fb" x="768" y="283.5" text-anchor="end" font-size="10" font-weight="700" fill="#1E4E6E">必做</text>
+
+          <rect x="792" y="264" width="300" height="30" rx="7" fill="#FBFCFD" stroke="#E2E8EF" stroke-dasharray="4 3"/>
+          <text class="fb" x="806" y="283.5" font-size="11.5" fill="#6C7A8A">C5 指标对比视图（同图多参）</text>
+          <text class="fb" x="1080" y="283.5" text-anchor="end" font-size="10" font-weight="700" fill="#93A1B0">可延后</text>
+
+          <!-- D -->
+          <rect x="20" y="324" width="132" height="92" rx="8" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <rect x="32" y="336" width="20" height="18" rx="4" fill="#2B6489"/>
+          <text class="fb" x="42" y="349.5" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">D</text>
+          <text class="fb" x="58" y="350" font-size="12.5" font-weight="700" fill="#15364F">自选股</text>
+          <text class="fb" x="32" y="374" font-size="9" fill="#6C7A8A">分组 / 拖拽排序</text>
+          <text class="fb" x="32" y="388" font-size="9" fill="#8D99A8">单组 ≤500 只</text>
+          <text class="fb" x="32" y="402" font-size="9" fill="#8D99A8">模拟模式下同样可用</text>
+
+          <rect x="168" y="330" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="330" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="182" y="349.5" font-size="11.5" fill="#2C3B4B">D1 分组（默认 3 组）</text>
+          <text class="fb" x="456" y="349.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="480" y="330" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="330" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="494" y="349.5" font-size="11.5" fill="#2C3B4B">D2 增删 / 拖拽排序</text>
+          <text class="fb" x="768" y="349.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="792" y="330" width="300" height="30" rx="7" fill="#FBFCFD" stroke="#E2E8EF" stroke-dasharray="4 3"/>
+          <text class="fb" x="806" y="349.5" font-size="11.5" fill="#6C7A8A">D3 CSV 导入导出（带 SIM 标记）</text>
+          <text class="fb" x="1080" y="349.5" text-anchor="end" font-size="10" font-weight="700" fill="#93A1B0">可延后</text>
+
+          <!-- E -->
+          <rect x="20" y="428" width="132" height="92" rx="8" fill="#FCFAF4" stroke="#EADFC0"/>
+          <rect x="32" y="440" width="20" height="18" rx="4" fill="#8A6410"/>
+          <text class="fb" x="42" y="453.5" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">E</text>
+          <text class="fb" x="58" y="454" font-size="12.5" font-weight="700" fill="#5B4A1A">数据与环境</text>
+          <text class="fb" x="32" y="478" font-size="9" fill="#6C7A8A">模拟为一等 provider</text>
+          <text class="fb" x="32" y="492" font-size="9" fill="#8D99A8">真实库与 sim 两套目录</text>
+          <text class="fb" x="32" y="506" font-size="9" fill="#8D99A8">每行数据可溯源</text>
+
+          <rect x="168" y="434" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="434" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="182" y="453.5" font-size="11.5" fill="#2C3B4B">E1 模拟环境（样本包 / 按需生成 / seed）</text>
+          <text class="fb" x="456" y="453.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="480" y="434" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="434" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="494" y="453.5" font-size="11.5" fill="#2C3B4B">E2 SIM 全局标识 + 导出烧录</text>
+          <text class="fb" x="768" y="453.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="792" y="434" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="792" y="434" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="806" y="453.5" font-size="11.5" fill="#2C3B4B">E3 数据质量报告（缺日 / 复权 / 停牌）</text>
+          <text class="fb" x="1080" y="453.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="168" y="472" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="472" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="182" y="491.5" font-size="11.5" fill="#2C3B4B">E4 Provider 状态与切换开关</text>
+          <text class="fb" x="456" y="491.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="480" y="472" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="472" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="494" y="491.5" font-size="11.5" fill="#2C3B4B">E5 浅 / 深 / 跟随系统主题</text>
+          <text class="fb" x="768" y="491.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <!-- F -->
+          <rect x="20" y="532" width="132" height="76" rx="8" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <rect x="32" y="544" width="20" height="18" rx="4" fill="#2B6489"/>
+          <text class="fb" x="42" y="557.5" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">F</text>
+          <text class="fb" x="58" y="558" font-size="12.5" font-weight="700" fill="#15364F">平台与运维</text>
+          <text class="fb" x="32" y="582" font-size="9" fill="#6C7A8A">无账户 · 无服务端</text>
+          <text class="fb" x="32" y="596" font-size="9" fill="#8D99A8">签名清单 + 本地诊断</text>
+
+          <rect x="168" y="538" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="168" y="538" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="182" y="557.5" font-size="11.5" fill="#2C3B4B">F1 自动更新（签名清单 + 渠道）</text>
+          <text class="fb" x="456" y="557.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="480" y="538" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="480" y="538" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="494" y="557.5" font-size="11.5" fill="#2C3B4B">F2 崩溃日志 + 一键诊断包</text>
+          <text class="fb" x="768" y="557.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <rect x="792" y="538" width="300" height="30" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="792" y="538" width="3" height="30" rx="1.5" fill="#2B6489"/>
+          <text class="fb" x="806" y="557.5" font-size="11.5" fill="#2C3B4B">F3 关于 / 许可证 / 数据来源声明</text>
+          <text class="fb" x="1080" y="557.5" text-anchor="end" font-size="10" font-weight="700" fill="#2B6489">必做</text>
+
+          <line x1="20" y1="640" x2="1100" y2="640" stroke="#EFF3F7" stroke-width="1"/>
+          <rect x="20" y="654" width="12" height="12" rx="3" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <text class="fb" x="38" y="664" font-size="10.5" fill="#6C7A8A">必做：MVP 验收范围（23 项）</text>
+          <rect x="236" y="654" width="12" height="12" rx="3" fill="#FBFCFD" stroke="#E2E8EF" stroke-dasharray="3 2"/>
+          <text class="fb" x="254" y="664" font-size="10.5" fill="#6C7A8A">可延后：MVP 内最后补齐（3 项）</text>
+          <text class="fb" x="1100" y="664" text-anchor="end" font-size="10.5" fill="#93A1B0">C 层是本版新增的重心：105 个指标必须有目录、可搜索、可改参、可解释</text>
+        </svg>
+      </div>
+      <figcaption><b>读图</b>：与 v2 相比，A 层收窄（真实源缺席，只剩模拟数据）、C 层仍是 5 项但内容完全不同（30 个预置 → 105 个可检索 + 参数 + 口径）、E 层由「数据同步」变成「模拟环境 + Provider 状态」。B 层新增「选择器、参数面板、批量取消」三项，这是 80+ 指标带给界面的直接成本。</figcaption>
+    </figure>
+
+    <h3><span class="bar"></span>2.2 指标如何被选中、改参与解释</h3>
+    <div class="grid g3">
+      <div class="card">
+        <h4>① 选择器</h4>
+        <p>左侧抽屉，6 个分类折叠 + 关键词搜索（中文名/英文缩写/口径关键词）。每项显示「主图/副图、所需预热根数、是否需横截面」。已选列表在底部，最多 3 个副图 + 2 个主图叠加。不做拖拽排序，用上下箭头。</p>
+      </div>
+      <div class="card">
+        <h4>② 参数面板</h4>
+        <p>每个已选指标一张折叠卡：整数用步进器（受 <code>min/max/step</code> 约束）、浮点用输入框 + 单位、枚举用分段控件。改值 150ms 防抖后发一次批量请求；越界在前端就标红，不发请求。每卡有「恢复默认」。</p>
+      </div>
+      <div class="card">
+        <h4>③ 口径页</h4>
+        <p>固定四段：公式（含预热长度）、参数含义与取值建议、怎么读（含 A 股钝化提示）、什么时候不准（数据不足/一字板/停牌/复权切换）。底部显示「本产品实现版本 + 黄金用例来源」。</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <p><b>界面必须承认的三件事</b>：① 105 个指标里有 27 个（19 个部分口径 + 8 个仅概念）不是照手册就能直接实现，口径页顶部有 <span class="pill p-beta">beta</span> 标记，且不允许被加入默认组合；② 广度类 16 个指标在模拟数据上会显示「样本口径（300 只）」，数值不可与真实大盘比较；③ 数据不足时画不出线是<b>正常状态</b>，必须显示「需要 N 根，当前 M 根」，不能画一条平线糊弄。</p>
+    </div>
+
+    <h3><span class="bar"></span>2.3 信息架构与页面清单</h3>
+    <p>一级入口仍为 6 个，页面从 10 增到 <b>12</b>：新增「指标目录」与「指标口径页」两个独立页（原 v2 是嵌在指标库里的单页）。</p>
+
+    <figure>
+      <div class="fig-head"><span class="no">FIG 02</span><span class="ttl">信息架构（单窗口 · 6 入口 · 12 页）</span><span class="hint">深色 = 重交互页</span></div>
+      <div class="fig-body">
+        <svg viewBox="0 0 1120 340" role="img" aria-label="信息架构图">
+          <rect x="430" y="8" width="260" height="34" rx="8" fill="#15364F"/>
+          <text class="fb" x="560" y="30" text-anchor="middle" font-size="12.5" font-weight="700" fill="#FFFFFF">应用主窗口（单窗口）</text>
+          <line x1="560" y1="42" x2="560" y2="66" stroke="#B9C9D6" stroke-width="1.4"/>
+          <line x1="125" y1="66" x2="995" y2="66" stroke="#B9C9D6" stroke-width="1.4"/>
+
+          <line x1="125" y1="66" x2="125" y2="84" stroke="#B9C9D6" stroke-width="1.4"/>
+          <rect x="50" y="84" width="150" height="34" rx="7" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <text class="fb" x="125" y="106" text-anchor="middle" font-size="12" font-weight="700" fill="#15364F">行情</text>
+
+          <line x1="299" y1="66" x2="299" y2="84" stroke="#B9C9D6" stroke-width="1.4"/>
+          <rect x="224" y="84" width="150" height="34" rx="7" fill="#15364F"/>
+          <text class="fb" x="299" y="106" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">图表工作台</text>
+
+          <line x1="473" y1="66" x2="473" y2="84" stroke="#B9C9D6" stroke-width="1.4"/>
+          <rect x="398" y="84" width="150" height="34" rx="7" fill="#E9F1F7" stroke="#C9DCEA"/>
+          <text class="fb" x="473" y="106" text-anchor="middle" font-size="12" font-weight="700" fill="#15364F">指标库</text>
+
+          <line x1="647" y1="66" x2="647" y2="84" stroke="#B9C9D6" stroke-width="1.4"/>
+          <rect x="572" y="84" width="150" height="34" rx="7" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <text class="fb" x="647" y="106" text-anchor="middle" font-size="12" font-weight="700" fill="#15364F">自选</text>
+
+          <line x1="821" y1="66" x2="821" y2="84" stroke="#B9C9D6" stroke-width="1.4"/>
+          <rect x="746" y="84" width="150" height="34" rx="7" fill="#FCFAF4" stroke="#EADFC0"/>
+          <text class="fb" x="821" y="106" text-anchor="middle" font-size="12" font-weight="700" fill="#5B4A1A">数据与模拟</text>
+
+          <line x1="995" y1="66" x2="995" y2="84" stroke="#B9C9D6" stroke-width="1.4"/>
+          <rect x="920" y="84" width="150" height="34" rx="7" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <text class="fb" x="995" y="106" text-anchor="middle" font-size="12" font-weight="700" fill="#15364F">设置</text>
+
+          <!-- 行情 -->
+          <line x1="125" y1="118" x2="125" y2="228" stroke="#D5E0E9" stroke-width="1.2"/>
+          <rect x="50" y="130" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="125" y="147" text-anchor="middle" font-size="10.5" fill="#4A5A6B">市场列表</text>
+          <rect x="50" y="164" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="125" y="181" text-anchor="middle" font-size="10.5" fill="#4A5A6B">指数概览</text>
+          <rect x="50" y="198" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="125" y="215" text-anchor="middle" font-size="10.5" fill="#4A5A6B">搜索</text>
+
+          <!-- 工作台 -->
+          <line x1="299" y1="118" x2="299" y2="262" stroke="#9FB6C6" stroke-width="1.2"/>
+          <rect x="224" y="130" width="150" height="26" rx="5" fill="#F4F9FC" stroke="#C9DCEA"/><text class="fb" x="299" y="147" text-anchor="middle" font-size="10.5" fill="#25455E">个股 / 指数详情</text>
+          <rect x="224" y="164" width="150" height="26" rx="5" fill="#F4F9FC" stroke="#C9DCEA"/><text class="fb" x="299" y="181" text-anchor="middle" font-size="10.5" fill="#25455E">指标选择抽屉</text>
+          <rect x="224" y="198" width="150" height="26" rx="5" fill="#F4F9FC" stroke="#C9DCEA"/><text class="fb" x="299" y="215" text-anchor="middle" font-size="10.5" fill="#25455E">参数面板（内嵌）</text>
+          <rect x="224" y="232" width="150" height="26" rx="5" fill="#F4F9FC" stroke="#C9DCEA"/><text class="fb" x="299" y="249" text-anchor="middle" font-size="10.5" fill="#25455E">周期切换 / 图例</text>
+
+          <!-- 指标库 -->
+          <line x1="473" y1="118" x2="473" y2="228" stroke="#C9DCEA" stroke-width="1.2"/>
+          <rect x="398" y="130" width="150" height="26" rx="5" fill="#F2F7FB" stroke="#C9DCEA"/><text class="fb" x="473" y="147" text-anchor="middle" font-size="10.5" fill="#25455E">指标目录（105）</text>
+          <rect x="398" y="164" width="150" height="26" rx="5" fill="#F2F7FB" stroke="#C9DCEA"/><text class="fb" x="473" y="181" text-anchor="middle" font-size="10.5" fill="#25455E">指标口径页</text>
+          <rect x="398" y="198" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="473" y="215" text-anchor="middle" font-size="10.5" fill="#4A5A6B">收藏 / 组合</text>
+
+          <!-- 自选 -->
+          <line x1="647" y1="118" x2="647" y2="190" stroke="#D5E0E9" stroke-width="1.2"/>
+          <rect x="572" y="130" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="647" y="147" text-anchor="middle" font-size="10.5" fill="#4A5A6B">分组列表</text>
+          <rect x="572" y="164" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="647" y="181" text-anchor="middle" font-size="10.5" fill="#4A5A6B">组内列表</text>
+
+          <!-- 数据 -->
+          <line x1="821" y1="118" x2="821" y2="262" stroke="#EADFC0" stroke-width="1.2"/>
+          <rect x="746" y="130" width="150" height="26" rx="5" fill="#FCFAF4" stroke="#EADFC0"/><text class="fb" x="821" y="147" text-anchor="middle" font-size="10.5" fill="#6B5417">模拟数据环境</text>
+          <rect x="746" y="164" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="821" y="181" text-anchor="middle" font-size="10.5" fill="#4A5A6B">Provider 配置</text>
+          <rect x="746" y="198" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="821" y="215" text-anchor="middle" font-size="10.5" fill="#4A5A6B">质量报告</text>
+          <rect x="746" y="232" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="821" y="249" text-anchor="middle" font-size="10.5" fill="#4A5A6B">存储与备份</text>
+
+          <!-- 设置 -->
+          <line x1="995" y1="118" x2="995" y2="228" stroke="#D5E0E9" stroke-width="1.2"/>
+          <rect x="920" y="130" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="995" y="147" text-anchor="middle" font-size="10.5" fill="#4A5A6B">外观主题</text>
+          <rect x="920" y="164" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="995" y="181" text-anchor="middle" font-size="10.5" fill="#4A5A6B">更新</text>
+          <rect x="920" y="198" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#E2E8EF"/><text class="fb" x="995" y="215" text-anchor="middle" font-size="10.5" fill="#4A5A6B">诊断 / 关于</text>
+
+          <line x1="20" y1="300" x2="1100" y2="300" stroke="#EFF3F7" stroke-width="1"/>
+          <text class="fb" x="20" y="322" font-size="10.5" fill="#8D99A8">规则：一级入口固定 6 个；参数面板与选择抽屉属于工作台内部组件，不占独立页面；口径页可被任意入口深度链接。</text>
+        </svg>
+      </div>
+      <figcaption><b>读图</b>：页面从 9 增到 12（+3），另有两个抽屉挂在工作台内部、不占独立入口。真正的复杂度在「工作台」——它同时承载选择、改参、计算状态与错误提示。其余页面仍是低频。</figcaption>
+    </figure>
+
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>页面</th><th>职责</th><th>与本版新增相关</th></tr></thead>
+      <tbody>
+        <tr><td><b>个股 / 指数详情（工作台）</b></td><td>主图 + 副图 + 选择抽屉 + 参数面板</td><td>3 个副图并存时仍需 ≤120ms 首屏；改参后只重算受影响指标</td></tr>
+        <tr><td><b>指标目录</b></td><td>105 个指标的分类浏览、搜索、收藏</td><td>显示「公式完备度 / 是否 beta / 数据要求」三个徽标</td></tr>
+        <tr><td><b>指标口径页</b></td><td>公式、参数、A 股适配、已知偏差</td><td>展示「本实现版本 + 黄金用例来源 + 容差」</td></tr>
+        <tr><td><b>模拟数据环境</b></td><td>样本包状态、seed、生成进度、重建</td><td>可查看生成器版本与校验结果；一键重建</td></tr>
+        <tr><td><b>Provider 配置</b></td><td>选择 mock / tushare（未启用时置灰并说明）</td><td>能力矩阵可见；tushare 显示「骨架 · 未启用」</td></tr>
+        <tr><td><b>质量报告</b></td><td>缺日、异常价、复权因子、停牌标记</td><td>模拟与真实数据跑同一套校验</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>2.4 两条关键旅程</h3>
+
+    <div class="journey">
+      <div class="j-head"><span class="tag">J1</span><span class="jt">首次启动 —— 全链路必须零等待跑通</span></div>
+      <div class="j-body">
+        <div class="steps">
+          <div class="step"><b>01</b>双击安装，启动 ≤1.5s</div>
+          <div class="step sim"><b>02</b>无账户、无 token，直接进入模拟环境</div>
+          <div class="step sim"><b>03</b>载入样本包（120 只 × 2 年）≤1s</div>
+          <div class="step"><b>04</b>搜索并打开一只股票，看到 K 线</div>
+          <div class="step"><b>05</b>加 MACD + RSI，改 RSI 周期 14→9</div>
+        </div>
+        <div class="j-note"><strong>关键节点：</strong>从安装到看见「改参数生效」≤3 分钟。没有「等回填 26 小时」这一步——这是去掉真实源依赖后最大的体验收益，也是模拟模块继续作为一等模块的原因。</div>
+      </div>
+    </div>
+
+    <div class="journey">
+      <div class="j-head"><span class="tag">J2</span><span class="jt">105 个指标里找到想要的，并相信它算得对</span></div>
+      <div class="j-body">
+        <div class="steps">
+          <div class="step"><b>01</b>指标目录搜「量比」→ 命中 RVOL</div>
+          <div class="step"><b>02</b>口径页看公式、预热 1 根、A 股用法</div>
+          <div class="step"><b>03</b>加入副图，参数面板改窗口 5→20</div>
+          <div class="step"><b>04</b>150ms 后新曲线出现，旧曲线不闪断</div>
+          <div class="step"><b>05</b>看到「口径页 · 黄金用例：TA-Lib 0.4.0 / 容差 1e-9」</div>
+        </div>
+        <div class="j-note"><strong>关键节点：</strong>「相信它算得对」不能靠文案。口径页必须能追到用例来源与容差；这是 105 个指标唯一的可信度抓手。</div>
+      </div>
+    </div>
+
+    <h3><span class="bar"></span>2.5 验收口径</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>#</th><th>验收项</th><th>判定标准</th><th>验证方式</th></tr></thead>
+      <tbody>
+        <tr><td class="num">V1</td><td><b>指标覆盖</b></td><td>注册表 ≥80 个 id 可被 UI 选中并画出线；105 个中至少 78 个通过强校验</td><td>注册表快照测试</td></tr>
+        <tr><td class="num">V2</td><td><b>指标正确</b></td><td>78 个有完整公式的指标全部有黄金用例；核心 12 个与 TA-Lib 相对误差 ≤1e-9（纯算术 1e-12）</td><td>CI 回归</td></tr>
+        <tr><td class="num">V3</td><td><b>按需计算</b></td><td>切换标的/参数才触发计算；缓存命中率在「反复看同一只」场景 ≥85%</td><td>引擎埋点</td></tr>
+        <tr><td class="num">V4</td><td><b>性能</b></td><td>3 个副图 × 2,000 根首屏 ≤120ms；改参重算 ≤60ms；29 万根单指标 ≤150ms</td><td>基准脚本 P95</td></tr>
+        <tr><td class="num">V5</td><td><b>内存</b></td><td>连续切 50 只 × 5 指标，RSS ≤600MB；缓存不超预算</td><td>压力脚本</td></tr>
+        <tr><td class="num">V6</td><td><b>边界诚实</b></td><td>数据不足显示「需 N 根」，常数序列不出 NaN 崩溃，零成交量指标有定义</td><td>边界用例集</td></tr>
+        <tr><td class="num">V7</td><td><b>口径完整</b></td><td>105 个指标全部有口径页，无占位；27 个部分/概念口径有明确 beta 标注</td><td>清单核对</td></tr>
+        <tr><td class="num">V8</td><td><b>Provider 可替换</b></td><td>mock 与 tushare 骨架实现同一 trait，切换开关只改一处配置</td><td>编译期 + 单测</td></tr>
+        <tr><td class="num">V9</td><td><b>溯源</b></td><td>任一行 K 线可读出 provider、批次、抓取时间、复权方式</td><td>查询断言</td></tr>
+        <tr><td class="num">V10</td><td><b>模拟隔离</b></td><td>sim 与真实目录互不写入；导出与截图带 SIM 标记</td><td>路径断言 + 手测</td></tr>
+        <tr><td class="num">V11</td><td><b>离线</b></td><td>断网启动、看图、改参、画线全部可用</td><td>断网手测</td></tr>
+        <tr><td class="num">V12</td><td><b>冷启</b></td><td>干净机器 ≤1.5s 到可交互</td><td>干净机器计时</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+<section id="engine">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Rust 指标引擎：结构、契约与按需计算</h2></div>
+    <p class="sec-lead">这一节回答四个问题：代码怎么放、参数怎么描述、输入输出用什么形状、什么时候算以及算完放哪。</p>
+
+    <h3><span class="bar"></span>3.1 crate 与模块结构</h3>
+    <p>单个 Cargo workspace，6 个 crate。核心原则是<b>计算内核不依赖 IO、不依赖 Tauri、不认识数据库</b>，这样它可以被单测、被 CLI 基准、被未来的服务端复用。</p>
+
+    <div class="mono">tauri-app/                     # 应用壳（Tauri 2）+ 命令注册
+crates/
+  ├─ indicator-core/           # 纯计算，无 IO、无 async、无全局状态
+  │   src/
+  │     lib.rs
+  │     registry.rs            # 静态注册表：id → Meta/参数规格/输出规格/warmup
+  │     param.rs               # ParamSpec / ParamValue / 校验与规范化
+  │     input.rs               # OhlcvView（切片视图）与 Bar
+  │     output.rs              # OutputSpec / OutputBufs（NaN 语义）
+  │     kernel/                # 可复用数值内核
+  │       rolling.rs           #   前缀和、单调队列（max/min）
+  │       ma.rs                #   sma/ema/rma/wma/hma 递推
+  │       stat.rs              #   回归斜率/截距/R²、相关系数
+  │       guard.rs             #   除零/常数序列/非有限值防护
+  │     indicators/
+  │       trend.rs momentum.rs volatility.rs volume.rs stat.rs breadth.rs
+  │     tests/                 # 单测（就地）
+  ├─ indicator-golden/         # 黄金用例夹具加载 + 容差断言（仅 dev-dependency 使用）
+  ├─ data-provider/            # DataProvider trait + provider 实现
+  │   src/ trait.rs mock/ tushare/ normalize.rs error.rs rate.rs
+  ├─ data-store/               # Parquet 读写 + SQLite 元数据 + 版本号
+  ├─ app-core/                 # 编排：批量请求、缓存、失效、错误映射、DTO
+  └─ desktop/                  # Tauri commands（薄层，只做参数转换）
+bench/                         # criterion 基准（29 万根）
+fixtures/golden/               # JSON 黄金用例（离线生成，随仓库提交）
+docs/indicator-spec/           # 105 份口径定义（与 UI 口径页同源）</div>
+
+    <p class="tbl-note">依赖方向严格单向：<code>desktop → app-core → {indicator-core, data-store, data-provider}</code>。<code>indicator-core</code> 不依赖 Arrow、不依赖 tokio、不依赖任何 provider。这条约束保证「换 provider、换存储、换 UI」都不碰指标代码。</p>
+
+    <h3><span class="bar"></span>3.2 参数类型系统</h3>
+    <p>参数不是 <code>HashMap&lt;String, f64&gt;</code>。每个指标在注册表里声明参数规格，UI 直接由规格渲染控件，引擎用同一份规格校验——<b>单一事实来源</b>，避免「前端限制 2~200、后端崩在 0」。</p>
+
+    <div class="mono">pub enum ParamSpec {
+    Int   { key: &amp;'static str, label: &amp;'static str, min: i64, max: i64, default: i64, step: i64 },
+    Float { key: &amp;'static str, label: &amp;'static str, min: f64, max: f64, default: f64, step: f64, unit: Option&lt;&amp;'static str&gt; },
+    Enum  { key: &amp;'static str, label: &amp;'static str, variants: &amp;'static [&amp;'static str], default: &amp;'static str },
+    Bool  { key: &amp;'static str, label: &amp;'static str, default: bool },
+}
+
+// 周期窗口 = Int + 语义标记，便于 UI 显示「周期」而非「整数」
+pub struct Period { pub min: u32, pub max: u32, pub default: u32, pub ma_type: MaType }
+
+// 规范化：排序键 + 定点格式化 → 稳定哈希（跨构建、跨平台一致）
+pub fn params_hash(v: &amp;BTreeMap&lt;&amp;'static str, ParamValue&gt;) -&gt; u64;
+
+pub struct Meta {
+    pub id: &amp;'static str,              // "macd"
+    pub name_zh: &amp;'static str,         // "指数平滑异同移动平均"
+    pub category: Category,             // Trend / Momentum / Volatility / Volume / Stat / Breadth
+    pub params: &amp;'static [ParamSpec],
+    pub outputs: &amp;'static [OutputSpec],
+    pub warmup: fn(&amp;Params) -&gt; usize,   // 首个有效值所需的根数
+    pub inputs: InputReq,               // OHLCV / 需基准 / 需横截面 / 需复权因子
+    pub complexity: Complexity,          // O(n) / O(n·k) / O(n log n)
+    pub tolerance: Tolerance,           // Abs(f64) / Rel(f64) —— 黄金用例断言用
+    pub spec_status: SpecStatus,        // ManualComplete / Partial / ProductDefined(beta)
+    pub engine_version: u16,            // 公式变更即 +1，缓存 key 含此值
+}</div>
+
+    <p>四类参数之外，还有两个「非参数但影响结果」的维度必须显式进入缓存 key：<b>复权方式</b>（none/qfq/hfq）与<b>时间周期</b>（日/周/月）。它们不是指标参数，但换一个就必须重算——这是最容易漏的缓存 bug 来源。</p>
+
+    <h3><span class="bar"></span>3.3 输入输出契约：内核用切片，边界用 Arrow</h3>
+    <p>结论先说：<b>计算内核吃切片（<code>&amp;[f64]</code>），Arrow 只出现在边界</b>（IPC 传输、Parquet 落盘）。理由不是「Arrow 不好」，而是这三条：</p>
+    <ul>
+      <li><b>数据类型单一</b>。行情只有 f64 与 i64 时间戳，没有字符串/字典/嵌套列，Arrow 的列式优势在这个形状上退化成一个「等长的 f64 数组」。</li>
+      <li><b>零拷贝本来就成立</b>。<code>Float64Array::values()</code> 返回 <code>&amp;[f64]</code>，直接喂给内核即可；中间再加一层 Arrow 只会多一次 validity bitmap 判断与 builder 开销。</li>
+      <li><b>内核要保持无依赖</b>。让 <code>indicator-core</code> 依赖 <code>arrow</code>，等于把「存储格式」泄漏进「数学库」，未来换格式要重编全部指标。</li>
+    </ul>
+
+    <div class="mono">pub struct OhlcvView&lt;'a&gt; {
+    pub open:   &amp;'a [f64],
+    pub high:   &amp;'a [f64],
+    pub low:    &amp;'a [f64],
+    pub close:  &amp;'a [f64],
+    pub volume: &amp;'a [f64],   // 股（统一单位后）
+    pub amount: &amp;'a [f64],   // 元
+    pub ts:     &amp;'a [i64],    // epoch 秒，用于对齐与去重校验
+}
+
+// 边界适配：RecordBatch → 切片视图（不复制数据）
+impl&lt;'a&gt; OhlcvView&lt;'a&gt; {
+    pub fn from_batch(b: &amp;'a RecordBatch) -&gt; Result&lt;Self, ShapeError&gt;;
+}
+
+// 输出：调用方预分配，避免每次计算反复分配
+pub struct OutputBufs&lt;'a&gt; { pub bufs: &amp;'a mut [Vec&lt;f64&gt;] }
+
+pub trait Indicator {
+    const META: &amp;'static Meta;
+    fn calc(&amp;self, v: &amp;OhlcvView, span: Span, p: &amp;Params, out: &amp;mut OutputBufs) -&gt; Result&lt;(), CalcError&gt;;
+}</div>
+
+    <p><b>NaN 语义</b>：预热期、不可计算（除零、全零量、常数序列下的 %B）、停牌无数据，一律输出 <code>f64::NAN</code>，<b>绝不补 0</b>。前端渲染时跳过 NaN 段并用虚线断开——这条规则决定了「看起来没线」是可解释的，而不是 bug。</p>
+
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>边界</th><th>格式</th><th>为什么</th></tr></thead>
+      <tbody>
+        <tr><td>内核 ↔ 编排</td><td>切片 + 预分配 <code>Vec&lt;f64&gt;</code></td><td>零拷贝、无依赖、可 benchmark</td></tr>
+        <tr><td>编排 ↔ 前端</td><td>Arrow IPC 字节（&lt;64KB 时退回 JSON）</td><td>一次批量返回 3~8 条线，二进制省解析时间；小包用 JSON 便于调试</td></tr>
+        <tr><td>存储 ↔ 编排</td><td>Parquet（按标的 + 年分区）</td><td>只读所需列（OHLCV），压缩比 ~5x，mmap 友好</td></tr>
+        <tr><td>参数 ↔ 缓存</td><td>规范化字符串 + FNV-1a u64</td><td>跨进程/跨构建稳定；不用 <code>DefaultHasher</code>（不保证稳定）</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>3.4 增量与全量的统一：只允许一个入口</h3>
+    <p>不设计两套算法。对外只有一个 <code>calc(span)</code>，内部按 <code>from - warmup</code> 向前多取一段，保证<b>结果与全量计算在这个区间上逐位一致</b>（同一内核，同一顺序，无并行归约）。</p>
+
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>场景</th><th>调用方式</th><th>实际计算量</th><th>一致性</th></tr></thead>
+      <tbody>
+        <tr><td><b>首屏全量</b></td><td><code>calc(0..n)</code></td><td>n 根</td><td>基准</td></tr>
+        <tr><td><b>追加一根</b></td><td><code>calc(n-1..n)</code></td><td>warmup + 1 根（如 EMA200 取 601 根）</td><td>与全量逐位一致</td></tr>
+        <tr><td><b>缩放/平移</b></td><td>不计算</td><td>0（只重绘）</td><td>—</td></tr>
+        <tr><td><b>改参数</b></td><td>新 key，<code>calc(0..n)</code> 或可见窗口</td><td>可见窗口 + warmup</td><td>与全量一致（同参数）</td></tr>
+        <tr><td><b>流式白名单</b></td><td><code>calc_step(state, bar)</code></td><td>1 根</td><td>需等价性测试（容差 0）</td></tr>
+      </tbody>
+    </table></div>
+
+    <p><b>流式白名单只有 12 个</b>：EMA、RSI、ATR、MACD、PPO、PVO、OBV、A/D、Chaikin、CMF（递推和）、TRIX、KAMA。它们的状态可以 O(1) 保存（前值 + 少量累加器）。其余指标一律走「前缀重算」——不是因为懒，而是因为<b>两套实现必然分叉</b>，而分叉在金融数值上是不可接受的维护成本。前缀重算的代价是固定的 warmup（典型 200~600 根），在 2,000 根可见窗口下只多 10~30% 计算量，换来「永不分叉」。</p>
+
+    <div class="callout">
+      <p><b>EMA 族的种子必须写进口径页</b>：以首 N 根 SMA 作种子（TA-Lib 约定）还是以首根收盘价作种子（部分库约定），会导致前 2~3 个周期内出现 1e-3 级差异。手册没有规定，必须由本产品声明，并让黄金用例按同一约定生成。这是 105 个指标里最常见的「看起来都对、就是不一样」来源。</p>
+    </div>
+
+    <h3><span class="bar"></span>3.5 按需计算：一次请求如何变成一次计算</h3>
+
+    <figure>
+      <div class="fig-head"><span class="no">FIG 03</span><span class="ttl">Rust 指标引擎分层（6 层 · 计算与 IO 彻底分开）</span><span class="hint">自上而下 = 调用方向</span></div>
+      <div class="fig-body">
+        <svg viewBox="0 0 1120 620" role="img" aria-label="Rust 指标引擎分层">
+          <defs>
+            <marker id="e1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9BCCB"/></marker>
+          </defs>
+
+          <!-- L1 -->
+          <rect x="20" y="14" width="112" height="76" rx="8" fill="#15364F"/>
+          <text class="fb" x="32" y="44" font-size="12.5" font-weight="700" fill="#FFFFFF">调用契约</text>
+          <text class="fb" x="32" y="60" font-size="8.5" fill="#B9CDDB">Tauri command</text>
+          <text class="fb" x="32" y="74" font-size="8.5" fill="#8FAFC4">薄层，不做计算</text>
+          <rect x="146" y="14" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="158" y="38" font-size="10.5" font-weight="600" fill="#2C3B4B">DTO / 序列化</text><text class="fb" x="158" y="54" font-size="8.5" fill="#8D99A8">批量请求 + 生成号</text><text class="fb" x="158" y="68" font-size="8.5" fill="#8D99A8">Arrow 字节 / 小包 JSON</text>
+          <rect x="338" y="14" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="350" y="38" font-size="10.5" font-weight="600" fill="#2C3B4B">参数规范化</text><text class="fb" x="350" y="54" font-size="8.5" fill="#8D99A8">范围校验 · 默认回填</text><text class="fb" x="350" y="68" font-size="8.5" fill="#8D99A8">params_hash</text>
+          <rect x="530" y="14" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="542" y="38" font-size="10.5" font-weight="600" fill="#2C3B4B">错误映射</text><text class="fb" x="542" y="54" font-size="8.5" fill="#8D99A8">code / 参数名 / 明细</text><text class="fb" x="542" y="68" font-size="8.5" fill="#8D99A8">可直接渲染成表单错误</text>
+          <rect x="722" y="14" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="734" y="38" font-size="10.5" font-weight="600" fill="#2C3B4B">取消与超时</text><text class="fb" x="734" y="54" font-size="8.5" fill="#8D99A8">新请求顶掉旧请求</text><text class="fb" x="734" y="68" font-size="8.5" fill="#8D99A8">generation id 比对</text>
+          <rect x="914" y="14" width="178" height="76" rx="7" fill="#FBFCFD" stroke="#E8EDF2"/><text class="fb" x="926" y="38" font-size="10.5" font-weight="600" fill="#4A5A6B">前端 api 客户端</text><text class="fb" x="926" y="54" font-size="8.5" fill="#8D99A8">150ms 防抖 · 去重</text>
+
+          <line x1="600" y1="90" x2="600" y2="98" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#e1)"/>
+
+          <!-- L2 -->
+          <rect x="20" y="100" width="112" height="76" rx="8" fill="#2B6489"/>
+          <text class="fb" x="32" y="130" font-size="12.5" font-weight="700" fill="#FFFFFF">编排层</text>
+          <text class="fb" x="32" y="146" font-size="8.5" fill="#D5E6F0">app-core</text>
+          <text class="fb" x="32" y="160" font-size="8.5" fill="#AFD0E2">只调度，不做数学</text>
+          <rect x="146" y="100" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="158" y="124" font-size="10.5" font-weight="600" fill="#2C3B4B">请求合并</text><text class="fb" x="158" y="140" font-size="8.5" fill="#8D99A8">同标的同周期同复权 → 一组</text><text class="fb" x="158" y="154" font-size="8.5" fill="#8D99A8">O(n) 只读一次</text>
+          <rect x="338" y="100" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="350" y="124" font-size="10.5" font-weight="600" fill="#2C3B4B">范围裁剪</text><text class="fb" x="350" y="140" font-size="8.5" fill="#8D99A8">可见窗口 + warmup</text><text class="fb" x="350" y="154" font-size="8.5" fill="#8D99A8">不返回全历史</text>
+          <rect x="530" y="100" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="542" y="124" font-size="10.5" font-weight="600" fill="#2C3B4B">去重与并行</text><text class="fb" x="542" y="140" font-size="8.5" fill="#8D99A8">同参同段只算一次</text><text class="fb" x="542" y="154" font-size="8.5" fill="#8D99A8">rayon：按指标分片</text>
+          <rect x="722" y="100" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="734" y="124" font-size="10.5" font-weight="600" fill="#2C3B4B">共享派生输入</text><text class="fb" x="734" y="140" font-size="8.5" fill="#8D99A8">典型价 / TR / 收益率</text><text class="fb" x="734" y="154" font-size="8.5" fill="#8D99A8">每请求只算一次</text>
+          <rect x="914" y="100" width="178" height="76" rx="7" fill="#FBFCFD" stroke="#E8EDF2"/><text class="fb" x="926" y="124" font-size="10.5" font-weight="600" fill="#4A5A6B">装配输出</text><text class="fb" x="926" y="140" font-size="8.5" fill="#8D99A8">列名 = id:out</text><text class="fb" x="926" y="154" font-size="8.5" fill="#8D99A8">附带版本与耗时</text>
+
+          <line x1="600" y1="176" x2="600" y2="184" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#e1)"/>
+
+          <!-- L3 -->
+          <rect x="20" y="186" width="112" height="76" rx="8" fill="#4A6B80"/>
+          <text class="fb" x="32" y="216" font-size="12.5" font-weight="700" fill="#FFFFFF">缓存层</text>
+          <text class="fb" x="32" y="232" font-size="8.5" fill="#CFDDE6">内存 LRU</text>
+          <text class="fb" x="32" y="246" font-size="8.5" fill="#AFC4D2">不落盘</text>
+          <rect x="146" y="186" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="158" y="210" font-size="10.5" font-weight="600" fill="#2C3B4B">缓存 key</text><text class="fb" x="158" y="226" font-size="8.5" fill="#8D99A8">dataset · 标的 · 周期 · 复权</text><text class="fb" x="158" y="240" font-size="8.5" fill="#8D99A8">· id · 参数哈希 · 数据版本</text>
+          <rect x="338" y="186" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="350" y="210" font-size="10.5" font-weight="600" fill="#2C3B4B">命中判定</text><text class="fb" x="350" y="226" font-size="8.5" fill="#8D99A8">全覆盖 / 尾部缺 / 未命中</text><text class="fb" x="350" y="240" font-size="8.5" fill="#8D99A8">尾部缺 → 只补增量</text>
+          <rect x="530" y="186" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="542" y="210" font-size="10.5" font-weight="600" fill="#2C3B4B">失效</text><text class="fb" x="542" y="226" font-size="8.5" fill="#8D99A8">数据版本 +1 → 按标的逐出</text><text class="fb" x="542" y="240" font-size="8.5" fill="#8D99A8">复权因子变 → 全部逐出</text>
+          <rect x="722" y="186" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="734" y="210" font-size="10.5" font-weight="600" fill="#2C3B4B">内存预算</text><text class="fb" x="734" y="226" font-size="8.5" fill="#8D99A8">全局 256MB · 单标的 32MB</text><text class="fb" x="734" y="240" font-size="8.5" fill="#8D99A8">按字节估算 evict</text>
+          <rect x="914" y="186" width="178" height="76" rx="7" fill="#FBFCFD" stroke="#E8EDF2"/><text class="fb" x="926" y="210" font-size="10.5" font-weight="600" fill="#4A5A6B">只缓存可见窗口</text><text class="fb" x="926" y="226" font-size="8.5" fill="#8D99A8">默认 2,000 根，不缓存 29 万</text>
+
+          <line x1="600" y1="262" x2="600" y2="270" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#e1)"/>
+
+          <!-- L4 -->
+          <rect x="20" y="272" width="112" height="76" rx="8" fill="#15364F"/>
+          <text class="fb" x="32" y="302" font-size="12.5" font-weight="700" fill="#FFFFFF">注册表</text>
+          <text class="fb" x="32" y="318" font-size="8.5" fill="#B9CDDB">静态 · 编译期</text>
+          <text class="fb" x="32" y="332" font-size="8.5" fill="#8FAFC4">105 条元数据</text>
+          <rect x="146" y="272" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="158" y="296" font-size="10.5" font-weight="600" fill="#2C3B4B">Meta / 分类</text><text class="fb" x="158" y="312" font-size="8.5" fill="#8D99A8">id · 中文名 · 6 类 · 排序</text>
+          <rect x="338" y="272" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="350" y="296" font-size="10.5" font-weight="600" fill="#2C3B4B">参数规格</text><text class="fb" x="350" y="312" font-size="8.5" fill="#8D99A8">Int/Float/Enum/Bool + 周期</text><text class="fb" x="350" y="326" font-size="8.5" fill="#8D99A8">min/max/step/default</text>
+          <rect x="530" y="272" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="542" y="296" font-size="10.5" font-weight="600" fill="#2C3B4B">输出规格</text><text class="fb" x="542" y="312" font-size="8.5" fill="#8D99A8">线 / 柱 / 带 / 水平位</text><text class="fb" x="542" y="326" font-size="8.5" fill="#8D99A8">主图或副图 · 量纲</text>
+          <rect x="722" y="272" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="734" y="296" font-size="10.5" font-weight="600" fill="#2C3B4B">warmup / 容差</text><text class="fb" x="734" y="312" font-size="8.5" fill="#8D99A8">首个有效根数 · abs/rel</text><text class="fb" x="734" y="326" font-size="8.5" fill="#8D99A8">spec 状态（完整/部分/beta）</text>
+          <rect x="914" y="272" width="178" height="76" rx="7" fill="#FBFCFD" stroke="#E8EDF2"/><text class="fb" x="926" y="296" font-size="10.5" font-weight="600" fill="#4A5A6B">口径文档同源</text><text class="fb" x="926" y="312" font-size="8.5" fill="#8D99A8">docs/indicator-spec/*.md</text><text class="fb" x="926" y="326" font-size="8.5" fill="#8D99A8">编译时嵌入，UI 直接读</text>
+
+          <line x1="600" y1="348" x2="600" y2="356" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#e1)"/>
+
+          <!-- L5 -->
+          <rect x="20" y="358" width="112" height="76" rx="8" fill="#2B6489"/>
+          <text class="fb" x="32" y="388" font-size="12.5" font-weight="700" fill="#FFFFFF">数值内核</text>
+          <text class="fb" x="32" y="404" font-size="8.5" fill="#D5E6F0">kernel/</text>
+          <text class="fb" x="32" y="418" font-size="8.5" fill="#AFD0E2">被所有指标复用</text>
+          <rect x="146" y="358" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="158" y="382" font-size="10.5" font-weight="600" fill="#2C3B4B">滚动窗口</text><text class="fb" x="158" y="398" font-size="8.5" fill="#8D99A8">单调队列 max/min O(n)</text><text class="fb" x="158" y="412" font-size="8.5" fill="#8D99A8">前缀和 O(1)/bar</text>
+          <rect x="338" y="358" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="350" y="382" font-size="10.5" font-weight="600" fill="#2C3B4B">均线族</text><text class="fb" x="350" y="398" font-size="8.5" fill="#8D99A8">sma / ema / rma / wma</text><text class="fb" x="350" y="412" font-size="8.5" fill="#8D99A8">种子约定统一</text>
+          <rect x="530" y="358" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="542" y="382" font-size="10.5" font-weight="600" fill="#2C3B4B">回归与相关</text><text class="fb" x="542" y="398" font-size="8.5" fill="#8D99A8">前缀 Σx/Σx²/Σxy/Σy²</text><text class="fb" x="542" y="412" font-size="8.5" fill="#8D99A8">斜率 · 截距 · R² · ρ</text>
+          <rect x="722" y="358" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="734" y="382" font-size="10.5" font-weight="600" fill="#2C3B4B">数值防护</text><text class="fb" x="734" y="398" font-size="8.5" fill="#8D99A8">除零 · 常数序列 · 非有限</text><text class="fb" x="734" y="412" font-size="8.5" fill="#8D99A8">显式 NaN 而非静默 0</text>
+          <rect x="914" y="358" width="178" height="76" rx="7" fill="#FBFCFD" stroke="#E8EDF2"/><text class="fb" x="926" y="382" font-size="10.5" font-weight="600" fill="#4A5A6B">增量状态</text><text class="fb" x="926" y="398" font-size="8.5" fill="#8D99A8">仅 12 个白名单</text><text class="fb" x="926" y="412" font-size="8.5" fill="#8D99A8">其余前缀重算</text>
+
+          <line x1="600" y1="434" x2="600" y2="442" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#e1)"/>
+
+          <!-- L6 -->
+          <rect x="20" y="444" width="112" height="76" rx="8" fill="#15364F"/>
+          <text class="fb" x="32" y="474" font-size="12.5" font-weight="700" fill="#FFFFFF">指标实现</text>
+          <text class="fb" x="32" y="490" font-size="8.5" fill="#B9CDDB">6 个模块</text>
+          <text class="fb" x="32" y="504" font-size="8.5" fill="#8FAFC4">105 个 id</text>
+          <rect x="146" y="444" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="158" y="468" font-size="10.5" font-weight="600" fill="#2C3B4B">trend  24</text><text class="fb" x="158" y="484" font-size="8.5" fill="#8D99A8">均线 / 通道 / 回归 / 云图</text>
+          <rect x="338" y="444" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="350" y="468" font-size="10.5" font-weight="600" fill="#2C3B4B">momentum  26</text><text class="fb" x="350" y="484" font-size="8.5" fill="#8D99A8">RSI / KDJ / MACD / CCI…</text>
+          <rect x="530" y="444" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="542" y="468" font-size="10.5" font-weight="600" fill="#2C3B4B">volatility  10</text><text class="fb" x="542" y="484" font-size="8.5" fill="#8D99A8">ATR / σ / 带宽 / 挤压</text>
+          <rect x="722" y="444" width="178" height="76" rx="7" fill="#FFFFFF" stroke="#DCE5EC"/><text class="fb" x="734" y="468" font-size="10.5" font-weight="600" fill="#2C3B4B">volume  15</text><text class="fb" x="734" y="484" font-size="8.5" fill="#8D99A8">OBV / MFI / 量比 / VWAP</text>
+          <rect x="914" y="444" width="178" height="76" rx="7" fill="#FBFCFD" stroke="#E8EDF2"/><text class="fb" x="926" y="468" font-size="10.5" font-weight="600" fill="#4A5A6B">stat 14 / breadth 16</text><text class="fb" x="926" y="484" font-size="8.5" fill="#8D99A8">相对强弱 / 宽度（需横截面）</text>
+
+          <line x1="20" y1="540" x2="1100" y2="540" stroke="#EFF3F7" stroke-width="1"/>
+          <text class="fb" x="20" y="562" font-size="10.5" fill="#8D99A8">边界：内核不依赖 Arrow / tokio / Tauri / 任何 provider；编排层不做数学；缓存只在内存，不落盘（落盘的是行情，不是指标）。</text>
+          <text class="fb" x="20" y="580" font-size="10.5" fill="#8D99A8">正确性闭环在层外：fixtures/golden（离线生成）+ bench/（29 万根）+ docs/indicator-spec（口径）。三者与实现同仓库、同 CI。</text>
+          <text class="fb" x="20" y="598" font-size="10.5" fill="#93A1B0">合计 105 个 id：trend 24 · momentum 26 · volatility 10 · volume 15 · stat 14 · breadth 16。</text>
+        </svg>
+      </div>
+      <figcaption><b>读图</b>：这六层是「一个请求从进入 Tauri 到拿到一条线」的完整路径。注意 <b>L3 缓存只缓存可见窗口</b>——如果按 29 万根缓存 5 条输出线，单指标就占 11.6MB，105 个指标 × 多标的会瞬间击穿内存预算。这个选择决定了「按需计算」能否真的省内存，而不只是省磁盘。</figcaption>
+    </figure>
+
+    <figure>
+      <div class="fig-head"><span class="no">FIG 04</span><span class="ttl">按需计算的数据流（含缓存命中 / 部分命中 / 失效三条路径）</span><span class="hint">实线=计算路径 / 虚线=失效或回退</span></div>
+      <div class="fig-body">
+        <svg viewBox="0 0 1120 540" role="img" aria-label="按需计算数据流">
+          <defs>
+            <marker id="f1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9BCCB"/></marker>
+            <marker id="f2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C9A24A"/></marker>
+          </defs>
+
+          <!-- 1 -->
+          <rect x="20" y="60" width="196" height="96" rx="8" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="20" y="60" width="196" height="24" rx="8" fill="#EDF3F8"/>
+          <text class="fb" x="32" y="77" font-size="10.5" font-weight="700" fill="#15364F">① UI 事件</text>
+          <text class="fb" x="32" y="100" font-size="9" fill="#4A5A6B">切股 / 改参数 / 切周期 / 加指标</text>
+          <text class="fb" x="32" y="116" font-size="9" fill="#8D99A8">150ms 防抖 · 只保留最新一次</text>
+          <text class="fb" x="32" y="132" font-size="9" fill="#8D99A8">缩放平移不触发计算</text>
+          <text class="fb" x="32" y="148" font-size="9" fill="#93A1B0">带 generation id</text>
+
+          <line x1="216" y1="108" x2="238" y2="108" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#f1)"/>
+
+          <!-- 2 -->
+          <rect x="240" y="60" width="196" height="96" rx="8" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="240" y="60" width="196" height="24" rx="8" fill="#EDF3F8"/>
+          <text class="fb" x="252" y="77" font-size="10.5" font-weight="700" fill="#15364F">② 一次批量 IPC</text>
+          <text class="fb" x="252" y="100" font-size="9" fill="#4A5A6B">Vec&lt;请求&gt;：3 副图 + 2 主图</text>
+          <text class="fb" x="252" y="116" font-size="9" fill="#8D99A8">标的 / 周期 / 复权 / 区间</text>
+          <text class="fb" x="252" y="132" font-size="9" fill="#8D99A8">每个指标 id + 参数</text>
+          <text class="fb" x="252" y="148" font-size="9" fill="#93A1B0">不是 5 次调用</text>
+
+          <line x1="436" y1="108" x2="458" y2="108" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#f1)"/>
+
+          <!-- 3 -->
+          <rect x="460" y="60" width="196" height="96" rx="8" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="460" y="60" width="196" height="24" rx="8" fill="#EDF3F8"/>
+          <text class="fb" x="472" y="77" font-size="10.5" font-weight="700" fill="#15364F">③ 合并与裁剪</text>
+          <text class="fb" x="472" y="100" font-size="9" fill="#4A5A6B">按 (标的,周期,复权) 分组</text>
+          <text class="fb" x="472" y="116" font-size="9" fill="#8D99A8">OHLCV 只读一次</text>
+          <text class="fb" x="472" y="132" font-size="9" fill="#8D99A8">区间 = 可见窗口 + warmup</text>
+          <text class="fb" x="472" y="148" font-size="9" fill="#93A1B0">同 id 同参去重</text>
+
+          <line x1="656" y1="108" x2="678" y2="108" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#f1)"/>
+
+          <!-- 4 -->
+          <rect x="680" y="60" width="196" height="96" rx="8" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="680" y="60" width="196" height="24" rx="8" fill="#EDF3F8"/>
+          <text class="fb" x="692" y="77" font-size="10.5" font-weight="700" fill="#15364F">④ 缓存查找</text>
+          <text class="fb" x="692" y="100" font-size="9" fill="#4A5A6B">key = 数据集 · 标的 · 周期 · 复权</text>
+          <text class="fb" x="692" y="114" font-size="9" fill="#4A5A6B">· 指标 id · 参数哈希 · 数据版本</text>
+          <text class="fb" x="692" y="134" font-size="9" fill="#8D99A8">全命中 → 直接 ⑥</text>
+          <text class="fb" x="692" y="150" font-size="9" fill="#8D99A8">尾部缺 → 只补最后一根</text>
+
+          <line x1="876" y1="108" x2="898" y2="108" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#f1)"/>
+
+          <!-- 5 -->
+          <rect x="900" y="60" width="200" height="96" rx="8" fill="#15364F"/>
+          <text class="fb" x="914" y="84" font-size="10.5" font-weight="700" fill="#FFFFFF">⑥ 输出与渲染</text>
+          <text class="fb" x="914" y="104" font-size="9" fill="#B9CDDB">Arrow 列：id:输出名</text>
+          <text class="fb" x="914" y="120" font-size="9" fill="#B9CDDB">NaN 段断开 · 不补零</text>
+          <text class="fb" x="914" y="136" font-size="9" fill="#8FACC0">附带 耗时 / 命中 / 版本</text>
+          <text class="fb" x="914" y="152" font-size="9" fill="#8FACC0">KLineChart setData</text>
+
+          <!-- 未命中分支 -->
+          <line x1="778" y1="156" x2="778" y2="196" stroke="#C9A24A" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#f2)"/>
+          <text class="fb" x="788" y="180" font-size="9" fill="#8A6410">未命中 / 过期</text>
+
+          <rect x="680" y="198" width="196" height="86" rx="8" fill="#FCFAF4" stroke="#EADFC0"/>
+          <text class="fb" x="692" y="218" font-size="10" font-weight="700" fill="#5B4A1A">⑤a 读取行情片段</text>
+          <text class="fb" x="692" y="234" font-size="9" fill="#6B5417">Parquet 按标的+年分区</text>
+          <text class="fb" x="692" y="248" font-size="9" fill="#6B5417">只读 OHLCV 五列</text>
+          <text class="fb" x="692" y="262" font-size="9" fill="#8D7A45">含 warmup 前置段</text>
+
+          <line x1="680" y1="241" x2="658" y2="241" stroke="#C9A24A" stroke-width="1.6" marker-end="url(#f2)"/>
+
+          <rect x="460" y="198" width="196" height="86" rx="8" fill="#FCFAF4" stroke="#EADFC0"/>
+          <text class="fb" x="472" y="218" font-size="10" font-weight="700" fill="#5B4A1A">⑤b 计算内核</text>
+          <text class="fb" x="472" y="234" font-size="9" fill="#6B5417">切片输入 · 预分配输出</text>
+          <text class="fb" x="472" y="248" font-size="9" fill="#6B5417">单调队列 / 前缀和 / 递推</text>
+          <text class="fb" x="472" y="262" font-size="9" fill="#8D7A45">105 个指标统一入口</text>
+
+          <line x1="460" y1="241" x2="438" y2="241" stroke="#C9A24A" stroke-width="1.6" marker-end="url(#f2)"/>
+
+          <rect x="240" y="198" width="196" height="86" rx="8" fill="#FCFAF4" stroke="#EADFC0"/>
+          <text class="fb" x="252" y="218" font-size="10" font-weight="700" fill="#5B4A1A">⑤c 写缓存</text>
+          <text class="fb" x="252" y="234" font-size="9" fill="#6B5417">只存可见窗口（默认 2,000 根）</text>
+          <text class="fb" x="252" y="248" font-size="9" fill="#6B5417">LRU + 字节预算 evict</text>
+          <text class="fb" x="252" y="262" font-size="9" fill="#8D7A45">全局 256MB / 单标的 32MB</text>
+
+          <line x1="240" y1="241" x2="222" y2="241" stroke="#C9A24A" stroke-width="1.6" marker-end="url(#f2)"/>
+          <rect x="20" y="198" width="196" height="86" rx="8" fill="#FCFAF4" stroke="#EADFC0"/>
+          <text class="fb" x="32" y="218" font-size="10" font-weight="700" fill="#5B4A1A">失效来源</text>
+          <text class="fb" x="32" y="234" font-size="9" fill="#6B5417">数据版本 +1（补历史/修数）</text>
+          <text class="fb" x="32" y="248" font-size="9" fill="#6B5417">复权因子变更 → 整标的逐出</text>
+          <text class="fb" x="32" y="262" font-size="9" fill="#8D7A45">引擎版本 bump → 全量逐出</text>
+
+          <!-- 时间线 -->
+          <line x1="20" y1="316" x2="1100" y2="316" stroke="#EFF3F7" stroke-width="1"/>
+          <text class="fb" x="20" y="338" font-size="10.5" font-weight="700" fill="#15364F">一条请求的三段耗时（预算）</text>
+
+          <rect x="20" y="352" width="356" height="52" rx="7" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <text class="fb" x="34" y="372" font-size="10" font-weight="700" fill="#15364F">防抖 150ms</text>
+          <text class="fb" x="34" y="390" font-size="9" fill="#4A5A6B">连续改参数只算最后一次；期间旧曲线保持，不闪白</text>
+
+          <rect x="386" y="352" width="356" height="52" rx="7" fill="#EEF7F3" stroke="#CFE7DC"/>
+          <text class="fb" x="400" y="372" font-size="10" font-weight="700" fill="#1B7F5A">命中 8ms / 部分命中 25ms</text>
+          <text class="fb" x="400" y="390" font-size="9" fill="#3D6B5A">内存读 + Arrow 编码 + IPC 往返</text>
+
+          <rect x="752" y="352" width="348" height="52" rx="7" fill="#FCF7EA" stroke="#EADFC0"/>
+          <text class="fb" x="766" y="372" font-size="10" font-weight="700" fill="#8A6410">冷算 120ms（2,000 根 × 3 指标）</text>
+          <text class="fb" x="766" y="390" font-size="9" fill="#7A6224">含 Parquet 读 40ms + 计算 30ms + 编码</text>
+
+          <text class="fb" x="20" y="428" font-size="10.5" fill="#8D99A8">关键设计：① 同一批请求里所有指标共享一次 OHLCV 读取；② 缓存按「可见窗口」而非全历史，避免 105 个指标 × 29 万根撑爆内存；③ 命中判定区分「全覆盖 / 尾部缺 / 未命中」，尾部缺只补增量，不重算全段。</text>
+          <text class="fb" x="20" y="450" font-size="10.5" fill="#93A1B0">不做的事：不预计算全市场、不物化指标表、不把指标结果落盘、不在缩放/平移时重算。</text>
+        </svg>
+      </div>
+      <figcaption><b>读图</b>：这张图的重点是<b>三处时间成本被分开计</b>——防抖是产品选择（150ms 可调）、命中是缓存收益、冷算是真实预算。如果只盯着「计算 30ms」就会低估冷路径：Parquet 读与 IPC 编码各占三分之一。</figcaption>
+    </figure>
+
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>维度</th><th>设计</th><th>为什么这样</th></tr></thead>
+      <tbody>
+        <tr><td><b>缓存 key</b></td><td><code>(dataset_id, security, timeframe, adj_mode, indicator_id, params_hash, data_version, engine_version)</code></td><td>少一项就会串数据。最容易漏的是 <code>adj_mode</code> 与 <code>engine_version</code></td></tr>
+        <tr><td><b>缓存粒度</b></td><td>按 (标的, 指标) 一条记录，内含各输出线；记录内记 <code>last_ts</code></td><td>同一标的多个指标共享读；尾部追加可判定</td></tr>
+        <tr><td><b>失效策略</b></td><td>数据版本变化 → 该标的全逐出；复权因子变 → 全逐出；参数变 → 新 key（旧条目留给 LRU）</td><td>保守优先：宁可多算一次，不可显示旧值</td></tr>
+        <tr><td><b>内存上限</b></td><td>全局 256MB，单标的 32MB，单条记录 ≤4MB；超限按 LRU + 体积加权逐出</td><td>2,000 根 × 3 线 × 8B ≈ 48KB/记录，可容 5,000 条</td></tr>
+        <tr><td><b>批量合并</b></td><td>一次 IPC 携带全部指标；同 (标的,周期,复权) 只读一次行情；同 id 同参去重</td><td>5 个指标 5 次调用会把 IPC 往返从 1 次变 5 次，首屏直接超预算</td></tr>
+        <tr><td><b>取消语义</b></td><td>generation id 单调递增；旧请求返回时若 id 落后则丢弃结果，不写缓存</td><td>改参数时用户连续输入，不能出现「后发先至」的旧曲线</td></tr>
+      </tbody>
+    </table></div>
+    <h3><span class="bar"></span>3.6 指标清单：105 个 id 的逐项交代</h3>
+    <p>下表是这一版最硬的交付物。四列判断标准统一说明如下：</p>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>标记</th><th>含义</th><th>对工程的影响</th></tr></thead>
+      <tbody>
+        <tr><td><b>✓ 完整</b></td><td>手册给出了可直接实现的完整公式与参数</td><td>必做强校验（黄金用例 + 容差断言），共 <b>78 个</b></td></tr>
+        <tr><td><b>◐ 部分</b></td><td>手册给出概念与部分参数，细节需自定并写入口径页</td><td>弱校验（结构/单调性/边界），共 <b>19 个</b></td></tr>
+        <tr><td><b>○ 概念</b></td><td>手册只有描述性定义，无权重/窗口/归一化方式</td><td>不参与黄金用例，UI 标 <span class="pill p-beta">beta</span>，共 <b>8 个</b></td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>A · 趋势与通道（24 个）</h4>
+    <div class="tbl-scroll"><table class="dense">
+      <thead><tr><th>ID</th><th>指标（输出线）</th><th>手册公式</th><th>A 股口径注意</th><th>复杂度</th><th>可派生 / 验证</th></tr></thead>
+      <tbody>
+        <tr><td class="num">T01</td><td><b>SMA</b> 简单均线</td><td>✓ N 日算术均值</td><td>无；但除权日必须用复权价，否则均线断裂</td><td>O(n) 前缀</td><td>基础 · 强校验</td></tr>
+        <tr><td class="num">T02</td><td><b>EMA</b> 指数均线</td><td>✓ α=2/(N+1)，需声明种子</td><td>跳空直接进权重，涨停连板时均线快速抬升</td><td>O(n) 递推</td><td>基础 · 强校验</td></tr>
+        <tr><td class="num">T03</td><td>WMA 加权均线</td><td>◐ 手册未单列，HMA 中隐含</td><td>无</td><td>O(n) 前缀</td><td>给 HMA 复用 · 弱校验</td></tr>
+        <tr><td class="num">T04</td><td><b>DEMA</b> 双指数</td><td>✓ 2EMA−EMA(EMA)</td><td>无</td><td>O(n)</td><td>EMA · 强校验</td></tr>
+        <tr><td class="num">T05</td><td>TEMA 三指数</td><td>✓ 3E1−3E2+E3</td><td>无</td><td>O(n)</td><td>EMA · 强校验</td></tr>
+        <tr><td class="num">T06</td><td>HMA 赫尔均线</td><td>◐ 需定 √N 取整与嵌套 WMA</td><td>涨停跳空放大滞后修正，易误读为拐点</td><td>O(n)</td><td>WMA · 弱校验</td></tr>
+        <tr><td class="num">T07</td><td>KAMA 自适应均线</td><td>◐ ER 与平滑常数需自定</td><td>横盘钝化，适合 A 股箱体；需固定 10/2/30</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">T08</td><td>MA Envelopes 均线包络</td><td>✓ MA×(1±p%)</td><td>趋势股长期贴轨，不能当反转信号</td><td>O(n)</td><td>SMA · 强校验</td></tr>
+        <tr><td class="num">T09</td><td><b>BOLL</b> 布林带（3 线）</td><td>✓ 20 日 ±2σ；σ 样本/总体需声明</td><td>骑轨 ≠ 卖点；一字板时带宽骤缩</td><td>O(n) 前缀</td><td>基础 · 强校验</td></tr>
+        <tr><td class="num">T10</td><td><b>Keltner</b> 肯特纳通道</td><td>✓ EMA ± 2ATR</td><td>与 BOLL 合成挤压信号</td><td>O(n)</td><td>EMA+ATR · 强校验</td></tr>
+        <tr><td class="num">T11</td><td><b>Donchian</b> 唐奇安通道</td><td>✓ N 日高/低</td><td>一字板突破无法成交，需「开板确认」提示</td><td>O(n) 单调队列</td><td>基础 · 强校验</td></tr>
+        <tr><td class="num">T12</td><td>ATR Bands</td><td>✓ SMA ± k·ATR</td><td>同 T11</td><td>O(n)</td><td>ATR · 强校验</td></tr>
+        <tr><td class="num">T13</td><td>ATR Trailing Stop</td><td>✓ 吊灯止损的变体</td><td>T+1 与涨跌停导致止损价常不可执行，倍数建议 3~4</td><td>O(n)</td><td>ATR · 强校验</td></tr>
+        <tr><td class="num">T14</td><td>Chandelier Exit</td><td>✓ HH−k·ATR / LL+k·ATR</td><td>只做多头版</td><td>O(n)</td><td>ATR · 强校验</td></tr>
+        <tr><td class="num">T15</td><td><b>Ichimoku</b> 一目均衡（5 线）</td><td>✓ 9/26/52，位移规则需声明</td><td>26/52 对 A 股偏慢，参数可调 10/30/60</td><td>O(n) 队列</td><td>强校验</td></tr>
+        <tr><td class="num">T16</td><td>PSAR 抛物线转向</td><td>✓ AF 初值/步长/上限需声明</td><td>震荡市假信号密集，需 ADX 过滤</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">T17</td><td>Alligator 鳄鱼线（3 线）</td><td>◐ SMMA 与 8 根位移未给全</td><td>「睡觉」区间判定有用</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">T18</td><td>ZigZag 之字转向</td><td>◐ 反转阈值与确认规则需自定</td><td>涨跌停跳空造成假转折；不可用于实时信号（需回溯确认）</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">T19</td><td><b>LinReg Forecast</b></td><td>✓ 最小二乘外推</td><td>无</td><td>O(n) 前缀</td><td>回归族 · 强校验</td></tr>
+        <tr><td class="num">T20</td><td>LinReg Intercept</td><td>✓ b = ȳ − m x̄</td><td>无</td><td>与 T19 同算</td><td>强校验</td></tr>
+        <tr><td class="num">T21</td><td><b>LinReg R²</b></td><td>✓ 判定系数</td><td>R²&lt;0.5 时趋势类指标全部失效——建议做成全局过滤开关</td><td>与 T19 同算</td><td>强校验</td></tr>
+        <tr><td class="num">T22</td><td>Slope 斜率</td><td>✓ 单位：元/根</td><td>需按价格归一（否则高价股斜率天然大）</td><td>与 T19 同算</td><td>强校验</td></tr>
+        <tr><td class="num">T23</td><td>Pivot Points 轴心点</td><td>✓ P/R1/S1… 5 线</td><td>静态价位，A 股参考价值弱于期货</td><td>O(1)/bar</td><td>强校验</td></tr>
+        <tr><td class="num">T24</td><td><b>HHV / LLV</b></td><td>✓ N 日最高/最低</td><td>突破位与止损位的基础，需处理停牌缺日</td><td>O(n) 队列</td><td>基础 · 强校验</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>B · 动量与摆动（26 个）</h4>
+    <div class="tbl-scroll"><table class="dense">
+      <thead><tr><th>ID</th><th>指标（输出线）</th><th>手册公式</th><th>A 股口径注意</th><th>复杂度</th><th>可派生 / 验证</th></tr></thead>
+      <tbody>
+        <tr><td class="num">M01</td><td><b>RSI</b>（3 线可选）</td><td>✓ Wilder RMA；种子需声明</td><td>连板时长期 &gt;80 钝化，不能机械超买卖</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">M02</td><td><b>KDJ</b>（K/D/J）</td><td>◐ K、D 有；J=3K−2D 手册未给（A 股约定）</td><td>J&gt;100 / &lt;0 是常态；单边市失效</td><td>O(n) 队列</td><td>强校验（K/D）</td></tr>
+        <tr><td class="num">M03</td><td>StochRSI</td><td>◐ %K/%D 平滑窗口未给</td><td>假信号多，需趋势过滤</td><td>O(n)</td><td>RSI · 弱校验</td></tr>
+        <tr><td class="num">M04</td><td><b>Williams %R</b></td><td>✓ −100×(HH−C)/(HH−LL)</td><td>与 KDJ 高度重叠，选一个</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">M05</td><td><b>CCI</b></td><td>✓ 0.015 常数 + 平均绝对偏差</td><td>一字板时极端化，±200 常见</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">M06</td><td><b>MACD</b>（DIF/DEA/HIST）</td><td>✓ 12/26/9</td><td>A 股第一指标；零轴二次金叉比单次可靠</td><td>O(n)</td><td>EMA · 强校验</td></tr>
+        <tr><td class="num">M07</td><td>MACD-V 归一化</td><td>◐ 手册说「用 ATR 归一化」，除数未给</td><td>跨股价可比的 MACD，值得做</td><td>O(n)</td><td>MACD+ATR · 弱校验</td></tr>
+        <tr><td class="num">M08</td><td><b>PPO</b></td><td>✓ (EMA12−EMA26)/EMA26×100</td><td>跨股比较</td><td>O(n)</td><td>EMA · 强校验</td></tr>
+        <tr><td class="num">M09</td><td><b>ROC</b></td><td>✓ (C−C₋ₙ)/C₋ₙ×100</td><td>无</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">M10</td><td>Momentum 动量</td><td>✓ C−C₋ₙ</td><td>无</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">M11</td><td>TRIX</td><td>◐ 三次 EMA 后 ROC；信号线周期未给</td><td>中线，假信号少</td><td>O(n)</td><td>EMA · 弱校验</td></tr>
+        <tr><td class="num">M12</td><td>DPO 去趋势</td><td>◐ 位移 n/2+1 未明示</td><td>周期性识别，短周期噪音大</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">M13</td><td>PMO</td><td>○ 多重 EMA 阶数与权重全缺</td><td>可作 MACD 低噪替代</td><td>O(n)</td><td><span class="pill p-beta">beta</span> · 无校验</td></tr>
+        <tr><td class="num">M14</td><td>Coppock Curve</td><td>◐ ROC14+ROC11 加 WMA10 未列全</td><td>月线抄底用，日线噪音大</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">M15</td><td>KST 知识节奏</td><td>◐ 四周期与权重未给（标准 10/15/20/30 × 1/2/3/4）</td><td>中线确认</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">M16</td><td>Ultimate Oscillator</td><td>◐ 7/14/28 与 4/2/1 权重未列全</td><td>背离比 RSI 可靠</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">M17</td><td>TSI 真实强度</td><td>◐ 25/13 双 EMA + 13 信号未给全</td><td>与 MACD 同源</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">M18</td><td>ConnorsRSI</td><td>○ 三成分权重与窗口全缺</td><td>强势股急跌抢反弹；跌停不可成交</td><td>O(n)</td><td><span class="pill p-beta">beta</span></td></tr>
+        <tr><td class="num">M19</td><td><b>Aroon</b>（Up/Down/Osc）</td><td>✓ 25 日新高/新低距离</td><td>判断「在不在趋势里」比方向更可靠</td><td>O(n) 队列</td><td>强校验</td></tr>
+        <tr><td class="num">M20</td><td>Vortex VI+/VI−</td><td>✓ VM 定义可推</td><td>趋势启动确认</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">M21</td><td>CMO</td><td>✓ 钱德动量摆动</td><td>RSI 的高敏替代</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">M22</td><td>CMB 综合</td><td>○ 无公式</td><td>研究向，不建议首发</td><td>O(n)</td><td><span class="pill p-beta">beta</span></td></tr>
+        <tr><td class="num">M23</td><td>Chande Trend Meter</td><td>○ 六框架打分无定义</td><td>可作趋势闸门，但需自研权重</td><td>O(n·k)</td><td><span class="pill p-beta">beta</span></td></tr>
+        <tr><td class="num">M24</td><td>Mass Index</td><td>◐ EMA9 + 25 日累加需声明</td><td>波动骤增后的反转预警</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">M25</td><td>Elder Impulse</td><td>✓ MACD 柱斜率 + EMA13 方向</td><td>纯可视化，无独立数值意义</td><td>O(n)</td><td>派生 · 强校验</td></tr>
+        <tr><td class="num">M26</td><td>NR7 窄幅日</td><td>✓ 7 日 TR 最小</td><td>缩量窄幅后的变盘，需结合量比</td><td>O(n) 队列</td><td>强校验</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>C · 波动率（10 个）</h4>
+    <div class="tbl-scroll"><table class="dense">
+      <thead><tr><th>ID</th><th>指标（输出线）</th><th>手册公式</th><th>A 股口径注意</th><th>复杂度</th><th>可派生 / 验证</th></tr></thead>
+      <tbody>
+        <tr><td class="num">V01</td><td><b>ATR</b></td><td>✓ Wilder；与 SMA 版差异需声明</td><td>风控基石；涨跌停日 TR 被人为压缩</td><td>O(n)</td><td>基础 · 强校验</td></tr>
+        <tr><td class="num">V02</td><td><b>ATRP</b> 归一化 ATR</td><td>✓ ATR/C×100</td><td>跨股价比较的唯一正确方式</td><td>O(n)</td><td>ATR · 强校验</td></tr>
+        <tr><td class="num">V03</td><td><b>Standard Deviation</b></td><td>✓ 样本/总体需声明</td><td>无</td><td>O(n) 前缀</td><td>基础 · 强校验</td></tr>
+        <tr><td class="num">V04</td><td><b>BB Width</b></td><td>✓ (上轨−下轨)/中轨×100</td><td>收窄→突破，是 A 股最实用的形态前置</td><td>O(n)</td><td>BOLL · 强校验</td></tr>
+        <tr><td class="num">V05</td><td><b>%B</b></td><td>✓ (C−下轨)/(上轨−下轨)</td><td>连续 &gt;1 表示骑轨持有，不是卖出</td><td>O(n)</td><td>BOLL · 强校验</td></tr>
+        <tr><td class="num">V06</td><td>TTM Squeeze</td><td>◐ 挤压判定与动能色块需定</td><td>缩量横盘→突破，适合 A 股变盘</td><td>O(n)</td><td>BOLL+Keltner · 弱校验</td></tr>
+        <tr><td class="num">V07</td><td>Ulcer Index</td><td>✓ √(ΣDD²/N)</td><td>回撤体验评估，适合做组合页</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">V08</td><td>GAPO</td><td>✓ log(H−L)/log(N)</td><td>波动风格刻画</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">V09</td><td>High Minus Low</td><td>✓ H−L</td><td>ATR 原料，停牌日无值</td><td>O(n)</td><td>派生 · 强校验</td></tr>
+        <tr><td class="num">V10</td><td>True Range</td><td>✓ max(H−L, |H−C₋₁|, |L−C₋₁|)；首根用 H−L</td><td>跳空缺口计入，A 股除权日需用复权价</td><td>O(n)</td><td>基础 · 强校验</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>D · 成交量与资金（15 个）</h4>
+    <div class="tbl-scroll"><table class="dense">
+      <thead><tr><th>ID</th><th>指标（输出线）</th><th>手册公式</th><th>A 股口径注意</th><th>复杂度</th><th>可派生 / 验证</th></tr></thead>
+      <tbody>
+        <tr><td class="num">D01</td><td><b>OBV</b></td><td>✓ 按收盘涨跌累加量</td><td>平盘日不计，需明确规则</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">D02</td><td><b>A/D Line</b></td><td>✓ CLV×V 累加</td><td>低位吸筹/高位派发</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">D03</td><td><b>CMF</b></td><td>✓ Σ(CLV×V)/ΣV (N 日)</td><td>资金净流入，需与 D02 区分（存量 vs 流量）</td><td>O(n) 前缀</td><td>强校验</td></tr>
+        <tr><td class="num">D04</td><td>Chaikin Oscillator</td><td>✓ EMA3(A/D)−EMA10(A/D)</td><td>资金流动量</td><td>O(n)</td><td>A/D · 强校验</td></tr>
+        <tr><td class="num">D05</td><td><b>MFI</b></td><td>✓ 典型价×量的 RSI</td><td>带量的 RSI，超买卖更可信</td><td>O(n)</td><td>典型价 · 强校验</td></tr>
+        <tr><td class="num">D06</td><td>Force Index</td><td>✓ (C−C₋₁)×V，常配 EMA13</td><td>突破力度</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">D07</td><td>EOM / EMV</td><td>✓ 位移×价格变化/量；区间归一除数需声明</td><td>缩量上涨 vs 放量滞涨的最佳刻画</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">D08</td><td>NVI 负量指标</td><td>✓ 量减日累乘</td><td>缩量回调的健康度</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">D09</td><td>PVI 正量指标</td><td>✓ 量增日累乘</td><td>散户情绪代理</td><td>O(n)</td><td>弱校验</td></tr>
+        <tr><td class="num">D10</td><td>PVO</td><td>✓ 量能的 PPO</td><td>量能扩张/萎缩</td><td>O(n)</td><td>EMA · 强校验</td></tr>
+        <tr><td class="num">D11</td><td><b>RVOL 量比</b></td><td>✓ V / MA(V,5)；分母口径需声明</td><td>A 股打板核心前置；需处理开盘 5 分钟推算</td><td>O(n) 前缀</td><td>强校验</td></tr>
+        <tr><td class="num">D12</td><td>BOP 多空力量</td><td>✓ (C−O)/(H−L)</td><td>单日多空，开盘集合竞价影响大</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">D13</td><td><b>VWAP</b></td><td>✓ Σ(典型价×V)/ΣV；日内 vs 累计需声明</td><td>T+1 下只作强弱判断，不作交易价</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">D14</td><td><b>Anchored VWAP</b></td><td>✓ 任意锚点起算</td><td>锚定涨停日/除权日/财报日，A 股很有用</td><td>O(n)</td><td>派生 · 强校验</td></tr>
+        <tr><td class="num">D15</td><td>Volume Profile</td><td>○ 分箱规则与 POC 定义需自定</td><td>筹码峰；分箱方式影响极大</td><td>O(n+bins)</td><td><span class="pill p-beta">beta</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>E · 统计与相对强弱（14 个）</h4>
+    <div class="tbl-scroll"><table class="dense">
+      <thead><tr><th>ID</th><th>指标（输出线）</th><th>手册公式</th><th>A 股口径注意</th><th>复杂度</th><th>可派生 / 验证</th></tr></thead>
+      <tbody>
+        <tr><td class="num">E01</td><td><b>Price Relative RS</b></td><td>✓ 个股/基准 比值</td><td>基准建议沪深 300；除权需同步</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">E02</td><td>RS 分位（横截面）</td><td>◐ 分位窗口需定</td><td>板块内排序，需横截面数据</td><td>O(n log n)</td><td>RS · 弱校验</td></tr>
+        <tr><td class="num">E03</td><td>SCTR 综合评分</td><td>○ 权重不公开</td><td>可用自建等权评分替代，须标注「本产品定义」</td><td>O(n·k)</td><td><span class="pill p-beta">beta</span></td></tr>
+        <tr><td class="num">E04</td><td>RRG RS-Ratio</td><td>○ 归一化算法未公开</td><td>板块轮动，需全板块数据</td><td>O(n)</td><td><span class="pill p-beta">beta</span></td></tr>
+        <tr><td class="num">E05</td><td>RRG RS-Momentum</td><td>○ 同上</td><td>同上</td><td>O(n)</td><td><span class="pill p-beta">beta</span></td></tr>
+        <tr><td class="num">E06</td><td>Performance Spread</td><td>✓ 收益差</td><td>超额收益展示</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">E07</td><td>Correlation Coefficient</td><td>✓ Pearson ρ</td><td>分散/配对，A 股同板块高相关</td><td>O(n) 前缀</td><td>强校验</td></tr>
+        <tr><td class="num">E08</td><td>Median Price</td><td>✓ (H+L)/2</td><td>原料</td><td>O(n)</td><td>基础 · 强校验</td></tr>
+        <tr><td class="num">E09</td><td>Typical Price</td><td>✓ (H+L+C)/3</td><td>原料</td><td>O(n)</td><td>基础 · 强校验</td></tr>
+        <tr><td class="num">E10</td><td>Weighted Close</td><td>✓ (H+L+2C)/4</td><td>原料</td><td>O(n)</td><td>强校验</td></tr>
+        <tr><td class="num">E11</td><td>Distance From High</td><td>✓ (C−HH)/HH×100</td><td>窗口建议 3/6/9/12 月，A 股牛短熊长</td><td>O(n) 队列</td><td>强校验</td></tr>
+        <tr><td class="num">E12</td><td>Distance From Low</td><td>✓ (C−LL)/LL×100</td><td>超跌反弹度量</td><td>O(n) 队列</td><td>强校验</td></tr>
+        <tr><td class="num">E13</td><td><b>BIAS</b> 乖离率</td><td>✓ (C−MA)/MA×100</td><td>A 股 ±8% 常见回归阈值，需按波动率自适应</td><td>O(n)</td><td>SMA · 强校验</td></tr>
+        <tr><td class="num">E14</td><td>Seasonality 季节效应</td><td>◐ 月统计窗口需定</td><td>「春季躁动」等，统计稳定性弱，样本少</td><td>O(n)</td><td>弱校验</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>F · 市场广度与情绪（16 个）</h4>
+    <p class="tbl-note">这一类的共同前提是<b>横截面数据</b>：需要同一交易日的全市场（或样本池）涨跌家数、站上均线家数、新高新低家数。mock 只有 300 只，因此→ 数值可算但标注「样本口径（300 只）」；接真实源后才具备全市场意义。</p>
+    <div class="tbl-scroll"><table class="dense">
+      <thead><tr><th>ID</th><th>指标（输出线）</th><th>手册公式</th><th>A 股口径注意</th><th>复杂度</th><th>可派生 / 验证</th></tr></thead>
+      <tbody>
+        <tr><td class="num">F01</td><td><b>ADL</b> 涨跌线</td><td>✓ Σ(涨家数−跌家数)</td><td>需剔除停牌与新股；二八分化顶部信号</td><td>O(N 只)</td><td>强校验（样本）</td></tr>
+        <tr><td class="num">F02</td><td>AD Percent</td><td>✓ (涨−跌)/(涨+跌)</td><td>普涨/普跌判别，A 股常见 90% 单边日</td><td>O(N)</td><td>强校验</td></tr>
+        <tr><td class="num">F03</td><td>AD Volume Line</td><td>✓ Σ(涨量−跌量)</td><td>资金真实流向，比家数更敏感</td><td>O(N)</td><td>强校验</td></tr>
+        <tr><td class="num">F04</td><td>AD Volume Percent</td><td>✓ 归一化</td><td>同上</td><td>O(N)</td><td>弱校验</td></tr>
+        <tr><td class="num">F05</td><td>McClellan Oscillator</td><td>✓ EMA19−EMA39</td><td>短期情绪温度</td><td>O(N)</td><td>强校验</td></tr>
+        <tr><td class="num">F06</td><td>McClellan Summation</td><td>✓ 累加</td><td>中期宽度</td><td>O(N)</td><td>强校验</td></tr>
+        <tr><td class="num">F07</td><td><b>BPI</b> 站上均线占比</td><td>✓ A 股用 20/60 日</td><td>市场冷暖最直观，需全市场</td><td>O(N·k)</td><td>强校验（样本）</td></tr>
+        <tr><td class="num">F08</td><td>High-Low Index</td><td>✓ N 日新高/(新高+新低)</td><td>A 股需自定义「新高」窗口（250 日）</td><td>O(N) 队列</td><td>强校验</td></tr>
+        <tr><td class="num">F09</td><td>High-Low Percent</td><td>✓ 新高占比−新低占比</td><td>同上</td><td>O(N)</td><td>强校验</td></tr>
+        <tr><td class="num">F10</td><td>Net New Highs</td><td>✓ 新高−新低家数</td><td>情绪拐点</td><td>O(N)</td><td>弱校验</td></tr>
+        <tr><td class="num">F11</td><td>Percent Above MA</td><td>✓ 站上 MA50 占比</td><td>牛熊分界，A 股用 20/60 更贴合</td><td>O(N·k)</td><td>强校验（样本）</td></tr>
+        <tr><td class="num">F12</td><td>Record High Percent</td><td>✓ 与 F09 同源</td><td>同上</td><td>O(N)</td><td>弱校验</td></tr>
+        <tr><td class="num">F13</td><td>TRIN / Arms Index</td><td>✓ (涨/跌家数)/(涨量/跌量)</td><td>恐慌/狂热读数</td><td>O(N)</td><td>强校验</td></tr>
+        <tr><td class="num">F14</td><td>Pring Diffusion</td><td>◐ 扩散定义需定</td><td>趋势广泛性</td><td>O(N·k)</td><td>弱校验</td></tr>
+        <tr><td class="num">F15</td><td>涨跌停家数比</td><td>✓ 涨停/跌停家数（A 股特有）</td><td>最直观的情绪温度计，需 ST/一字板区分</td><td>O(N)</td><td>强校验（样本）</td></tr>
+        <tr><td class="num">F16</td><td>Breadth Thrust</td><td>✓ AD Percent 10 日均值的突刺</td><td>底部反转确认，A 股脉冲式行情适用</td><td>O(N)</td><td>弱校验</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout warn">
+      <p><b>清单的诚实结论</b>：105 个 id 里真正「照手册就能写、还能和 TA-Lib 对上」的是 78 个；19 个要自定口径（口径页必须写明「本产品定义」）；8 个只有概念，只能做近似实现并标 beta。<b>数量达标不等于质量达标</b>——如果对外宣称「支持 105 个指标」，而其中 27 个口径是本产品自定，这是需要提前想好怎么说的事。</p>
+    </div>
+
+    <h3><span class="bar"></span>3.7 正确性保障：黄金用例、容差与边界</h3>
+    <p>Rust 没有成熟的 TA 指标库（<code>ta</code> / <code>ta-rs</code> / <code>indicators</code> 三个 crate 加起来覆盖不到 40 个，且口径不一致），所以<b>正确性不能靠「参考某个库」，只能靠「自己建立参考系」</b>。</p>
+
+    <h4>三层验证</h4>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>层</th><th>做什么</th><th>覆盖</th><th>失败即阻塞</th></tr></thead>
+      <tbody>
+        <tr><td><b>L1 黄金用例</b></td><td>离线用 TA-Lib / pandas-ta / TradingView 导出参考序列为 JSON，提交进仓库；Rust 测试逐点比对</td><td>78 个「✓完整」指标 × 5 组输入</td><td>是</td></tr>
+        <tr><td><b>L2 恒等式与结构</b></td><td>不依赖外部参考的数学性质：MACD 柱 = DIF−DEA；%B 与 BB 带宽互补；Aroon Up+Down 关系；RSI ∈ [0,100]；OBV 单调性</td><td>全部 105 个</td><td>是</td></tr>
+        <tr><td><b>L3 边界与鲁棒</b></td><td>7 类病态输入（见下）不 panic、不产生 Inf、NaN 位置正确</td><td>全部 105 个</td><td>是</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>输入组</th><th>构造</th><th>验证什么</th></tr></thead>
+      <tbody>
+        <tr><td>A 趋势</td><td>线性上涨 + 轻微噪声，2,000 根</td><td>趋势类指标方向与量级</td></tr>
+        <tr><td>B 周期</td><td>正弦 + 噪声，周期 20/50 混合</td><td>摆动类指标的极值与滞后</td></tr>
+        <tr><td>C 常数</td><td>全序列同一价格、同一成交量</td><td>σ=0 → %B 必须 NaN；RSI 定义需明确（0/0→50 还是 NaN）</td></tr>
+        <tr><td>D 零量</td><td>价格为真、成交量全 0</td><td>MFI / CMF / EMV / OBV / 量比 的显式定义</td></tr>
+        <tr><td>E 跳空涨停</td><td>连续 3 个 +10% 一字板，H=L=C</td><td>TR、ATR、KDJ 的除零与分母退化</td></tr>
+        <tr><td>F 除权</td><td>一日价格腰斩 + adj_factor 变 2.0</td><td>复权切换是否断裂；未复权时指标是否该报警</td></tr>
+        <tr><td>G 极短</td><td>1 根、3 根、warmup−1 根</td><td>数据不足必须返回 NaN 而非垃圾值；错误码正确</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>容差怎么定</h4>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>指标族</th><th>容差</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td>纯算术（SMA / HHV / ROC / TR / 典型价）</td><td><b>相对 1e-12</b></td><td>只是加减乘除，差异仅来自求和顺序；前缀和与逐项求和都可控</td></tr>
+        <tr><td>递推类（EMA / RSI / ATR / MACD / KAMA / PSAR）</td><td><b>相对 1e-9</b>（前 3 个周期放宽到 1e-6）</td><td>递推累积误差；种子约定不同会放大，需在口径页写明种子</td></tr>
+        <tr><td>有界摆动（RSI / %R / CCI / MFI / UO）</td><td><b>绝对 1e-6</b>（值域 −100~100）</td><td>相对误差在 0 附近无意义</td></tr>
+        <tr><td>涉及除法/开方（%B / 带宽 / 相关 / R²）</td><td><b>绝对 1e-9</b> + 分母保护断言</td><td>分母趋零时相对误差会爆炸，必须同时断言 NaN</td></tr>
+        <tr><td>派生/视觉类（Elder Impulse / 色块）</td><td>离散枚举相等</td><td>本身就是分类，不存在浮点容差</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout">
+      <p><b>参考源与授权</b>：TA-Lib 为 BSD 许可，仅<b>离线生成夹具</b>使用，产物是 JSON 数值、不随产品分发，也不链接其 C 库（避免构建链引入 C 工具链与体积）。pandas-ta 为 MIT，同样只离线用。TradingView 的 Pine 参考值仅作交叉核对，不复制其源码。<b>产品内不含任何第三方指标实现</b>，这是去掉 sidecar 后的额外收益：没有 Python 依赖树，也就没有对应的许可证清单与 CVE 面。</p>
+    </div>
+
+    <h3><span class="bar"></span>3.8 性能目标与必须优化的项</h3>
+    <p>基准口径先定义清楚：<b>29 万根 ≈ 5 年 1 分钟线</b>（242 交易日 × 240 根 × 5 年 ≈ 290,400）。日线单标的 3 年只有 726 根，讨论性能没有意义；只有按分钟级长度压测才能暴露 O(n·k) 的问题。</p>
+
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>类别</th><th>单指标 29 万根目标（P95）</th><th>内存预算</th><th>典型指标</th></tr></thead>
+      <tbody>
+        <tr><td>O(n) 内核</td><td><b>≤ 8ms</b></td><td>输入 5 列 ≈ 11.6MB（共享）+ 输出 ≤ 2.3MB/线</td><td>SMA / EMA / ATR / ROC / OBV</td></tr>
+        <tr><td>O(n) + 队列</td><td><b>≤ 12ms</b></td><td>同 + 队列 ≤ 8B×N</td><td>Donchian / Aroon / KDJ / NR7</td></tr>
+        <tr><td>O(n) 多通道</td><td><b>≤ 20ms</b></td><td>输出 3~5 线 ≈ 7~12MB</td><td>BOLL / Ichimoku / PSAR</td></tr>
+        <tr><td>O(n log n)</td><td><b>≤ 30ms</b></td><td>临时排序缓冲 ≤ 2.3MB</td><td>RS 分位 / 分箱类</td></tr>
+        <tr><td>O(n·k) 朴素窗口</td><td><b>≤ 120ms</b>，超限即视为缺陷</td><td>不可接受额外分配</td><td>凡未用队列/前缀和的窗口统计</td></tr>
+        <tr><td>横截面（300 只日线）</td><td><b>≤ 40ms</b>（单日全市场聚合）</td><td>1 日 × 300 行可忽略</td><td>ADL / BPI / 涨跌停家数</td></tr>
+        <tr><td>增量一根（白名单）</td><td><b>≤ 50µs</b></td><td>O(1) 状态</td><td>EMA / RSI / ATR / OBV</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>必须做算法优化的 8 类</h4>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>问题</th><th>朴素做法</th><th>正确做法</th><th>受影响指标</th></tr></thead>
+      <tbody>
+        <tr><td>窗口极值</td><td>每根重扫 N 根 → O(n·k)</td><td><b>单调双端队列</b> O(n)</td><td>Donchian、HHV/LLV、KDJ、%R、Aroon、NR7、Distance</td></tr>
+        <tr><td>窗口求和/均值</td><td>每根累加</td><td><b>前缀和</b>（注意浮点漂移，定期重算）</td><td>SMA、CMF、RVOL、VWAP</td></tr>
+        <tr><td>窗口方差</td><td>两遍扫描</td><td>前缀平方和，或 Welford 递推（推荐后者，数值更稳）</td><td>σ、BOLL、带宽</td></tr>
+        <tr><td>线性回归</td><td>每根解方程</td><td><b>前缀 Σx/Σx²/Σxy/Σy²</b>，O(1)/根</td><td>LinReg 族、Slope、R²、相关</td></tr>
+        <tr><td>WMA/HMA</td><td>每根加权求和</td><td>前缀加权和（Σi·xᵢ 双前缀）</td><td>WMA、HMA</td></tr>
+        <tr><td>EMA 链复用</td><td>每个指标各算一遍</td><td>一次请求内 <b>EMA 结果表</b>按 (周期, 源序列) 缓存</td><td>MACD、PPO、TRIX、DEMA、TEMA、KST</td></tr>
+        <tr><td>派生输入重复</td><td>每个指标各算典型价/TR</td><td>请求级 <b>DerivedInputs</b> 只算一次</td><td>全部量能与波动类</td></tr>
+        <tr><td>批量并行</td><td>串行 5 个指标</td><td>rayon 按指标分片（同一 OHLCV 只读引用）</td><td>多指标同屏</td></tr>
+      </tbody>
+    </table></div>
+
+    <p><b>内存预算的另一半</b>：29 万根 × 5 列 × 8B ≈ 11.6MB 是共享输入；如果 5 个指标各持一份输入副本就是 58MB。因此 <code>OhlcvView</code> 必须是<b>借用视图</b>，且编排层对同一 (标的,周期,复权) 只加载一次。batch 结束后输入即释放，只留输出。</p>
+
+    <h3><span class="bar"></span>3.9 前端怎么调：Tauri command，不用本地 HTTP</h3>
+    <div class="split">
+      <div class="card do">
+        <h4>选 Tauri command（推荐）</h4>
+        <ul class="checklist ok">
+          <li>无 sidecar，就不需要端口、不需要 CORS、不需要本地鉴权</li>
+          <li>无进程间握手与 health check，冷启动路径更短</li>
+          <li>参数与返回值走类型化 DTO，编译期就能发现字段错配</li>
+          <li>大载荷可用 <code>tauri::ipc::Response</code> 直接回二进制，避开 JSON 解析</li>
+          <li>取消可用 generation id + 前端丢弃，无需断开连接</li>
+        </ul>
+      </div>
+      <div class="card dont">
+        <h4>不选本地 HTTP</h4>
+        <ul class="checklist no">
+          <li>为一个单机单用户应用引入 HTTP 栈，只增加攻击面</li>
+          <li>端口冲突、防火墙弹窗、随机端口发现都要额外处理</li>
+          <li>需要另建一层错误码/鉴权/超时约定，收益为零</li>
+          <li>未来若要做服务端复用，<code>app-core</code> 本身就是库，换壳即可</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mono">// 前端（TS）— 一次批量取 5 个指标
+await invoke&lt;ArrayBuffer&gt;("calc_indicators", {
+  req: {
+    security: "000001.SZ", timeframe: "D", adj: "qfq",
+    from: 0, to: 2000, generation: 17,
+    batch: [
+      { id: "macd", params: { fast: 12, slow: 26, signal: 9 } },
+      { id: "rsi",  params: { period: 9, ma_type: "wilder" } },
+    ]
+  }
+});
+
+// 后端错误（Rust）→ 前端表单错误（TS）
+// { code: "PARAM_OUT_OF_RANGE", indicator: "rsi", param: "period",
+//   min: 2, max: 200, got: 1, message: "周期需在 2~200 之间" }</div>
+
+    <p>错误分三类，回传语义不同：<b>可纠正</b>（参数越界、数据不足）→ 结构化字段，前端直接标红并给出可用范围；<b>可重试</b>（数据文件被占用、临时 IO 错误）→ 带 <code>retryable: true</code> 与建议等待；<b>不可恢复</b>（注册表 id 不存在、内核 panic 被捕获）→ 上报诊断包并提示重启。指标计算<b>不 panic</b>：所有 <code>unwrap</code> 在 <code>indicator-core</code> 内被 lint 禁止，除零走 NaN 分支。</p>
+  </div>
+</section>
+
+<section id="provider">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">04</span><h2>数据源适配层：tushare 是主源，但 MVP 只跑 mock</h2></div>
+    <p class="sec-lead">约束 C4 的真实含义不是「先做个假数据糊弄」，而是「把多源适配的骨架先立起来，让 mock 成为第一个合格实现」。这决定了切换真实源时是「打开开关」，还是「重写一半代码」。</p>
+
+    <h3><span class="bar"></span>4.1 统一 trait：必须实现的方法与能力协商</h3>
+
+    <div class="mono">#[async_trait]
+pub trait DataProvider: Send + Sync {
+    fn id(&amp;self) -&gt; ProviderId;                  // "mock" | "tushare" | "baostock"
+    fn capabilities(&amp;self) -&gt; Capabilities;       // 见下：能力协商
+
+    // —— 必需：MVP 只需这四个 ——
+    async fn securities(&amp;self, as_of: Date) -&gt; Result&lt;SecurityMaster, ProviderError&gt;;
+    async fn trading_calendar(&amp;self, from: Date, to: Date) -&gt; Result&lt;Vec&lt;Date&gt;, ProviderError&gt;;
+    async fn daily_bars(&amp;self, req: BarRequest) -&gt; Result&lt;BarBatch, ProviderError&gt;;
+    async fn adjust_factors(&amp;self, req: FactorRequest) -&gt; Result&lt;FactorBatch, ProviderError&gt;;
+
+    // —— 可选：能力声明为 true 才可调用 ——
+    async fn index_members(&amp;self, index: &amp;str, as_of: Date) -&gt; Result&lt;Vec&lt;String&gt;, NotSupported&gt;;
+    async fn industry(&amp;self, as_of: Date) -&gt; Result&lt;Vec&lt;IndustryRow&gt;, NotSupported&gt;;
+    async fn limit_flags(&amp;self, req: BarRequest) -&gt; Result&lt;LimitFlags, NotSupported&gt;;
+    async fn minute_bars(&amp;self, req: BarRequest) -&gt; Result&lt;BarBatch, NotSupported&gt;;
+
+    // —— 运维语义：不是可选，是契约 ——
+    fn rate_policy(&amp;self) -&gt; RatePolicy;          // 最小间隔 / 每日配额 / 并发度
+    async fn health(&amp;self) -&gt; Health;             // 可达性 + 最近错误 + 配额余量
+}
+
+pub struct Capabilities {
+    pub timeframes:   BitFlags,   // D | W | M            （MVP 仅 D，W/M 由本地聚合）
+    pub adjust:       BitFlags,   // none | qfq | hfq
+    pub financials:   bool,
+    pub index_members: bool,
+    pub industry:     bool,
+    pub limit_flags:  bool,       // 涨跌停/停牌标记
+    pub realtime:     bool,
+    pub max_lookback: Option&lt;u32&gt;,// 年
+    pub max_batch:    usize,       // 单次请求最大标的数
+}</div>
+
+    <div class="callout">
+      <p><b>能力协商的意义</b>：UI 不该对「这个源做不到」的功能报错，而应<b>在选中时就知道</b>。例如 mock 声明 <code>timeframes = D</code>，则周/月线按钮走本地聚合；tushare 声明 <code>limit_flags = false</code>（免费额度不含涨跌停标记），则「一字板标记」由本地按 <code>|涨跌幅| ≈ 上限 且 H=L</code> 近似推导，并在质量报告中标注「approximated」。能力矩阵直接驱动 UI 置灰与提示文案。</p>
+    </div>
+
+    <h3><span class="bar"></span>4.2 provider 清单与能力对照</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>provider</th><th>MVP 定位</th><th>日线</th><th>复权</th><th>分钟</th><th>涨跌停/停牌</th><th>指数成分</th><th>财务</th><th>限流</th></tr></thead>
+      <tbody>
+        <tr><td><b>mock（模拟源）</b></td><td><span class="pill p-mvp">主路径</span> 一等模块，默认启用</td><td>✓ 本地生成</td><td>✓ 自产 adj_factor</td><td>—</td><td>✓ 生成时打标</td><td>✓ 8 个合成指数</td><td>—</td><td>无</td></tr>
+        <tr><td><b>tushare</b></td><td><span class="pill p-later">骨架</span> 默认不编译传输层</td><td>✓</td><td>✓ qfq/hfq 因子</td><td>✓（需积分）</td><td>◐ 需自行推导</td><td>✓</td><td>✓</td><td>每交易日 2 次、间隔 ≥65s</td></tr>
+        <tr><td><b>baostock</b></td><td><span class="pill p-later">仅接口占位</span> 不实现</td><td>✓</td><td>✓</td><td>✓ 5/15/30/60m</td><td>◐</td><td>◐</td><td>✓</td><td>免费、无明确配额</td></tr>
+        <tr><td><b>akshare</b></td><td><span class="pill p-no">评估位</span> 不实现</td><td>✓</td><td>◐</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>爬虫式，稳定性差</td></tr>
+        <tr><td><b>本地文件导入</b></td><td><span class="pill p-no">不做</span></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>「MVP 只用 mock」的具体含义（逐条划界）</h4>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>工作项</th><th>MVP 做到什么程度</th><th>切回真实源要补什么</th><th>预估</th></tr></thead>
+      <tbody>
+        <tr><td>trait 定义与注册</td><td><b>完整</b>，两源同接口，编译期强制一致</td><td>无</td><td>—</td></tr>
+        <tr><td>tushare 请求构造</td><td><b>完整</b>，含字段映射、分页、日期切片</td><td>无</td><td>—</td></tr>
+        <tr><td>tushare 响应解析</td><td><b>完整</b>，用录制回放（VCR 夹具）跑单测</td><td>无</td><td>—</td></tr>
+        <tr><td>HTTP 传输层</td><td><b>不编译</b>（<code>feature = "live-tushare"</code>）</td><td>打开 feature + token 管理 + 代理设置</td><td>0.5 人周</td></tr>
+        <tr><td>限流与重试</td><td><b>策略对象完整</b>，未接真实计时器</td><td>校准时延、失败退避、配额耗尽提示</td><td>1 人周</td></tr>
+        <tr><td>复权因子获取</td><td><b>接口 + 计算完整</b>，mock 自产</td><td>对齐 tushare 的 qfq/hfq 语义差异，验证除权日</td><td>1 人周</td></tr>
+        <tr><td>停牌/涨跌停标记</td><td><b>接口完整</b>，mock 生成时打标</td><td>推导规则、与官方口径对齐、边界日核对</td><td>1.5 人周</td></tr>
+        <tr><td>首次全量回填</td><td><b>不做</b>（MVP 无真实源）</td><td>26 小时回填管线、断点续传、进度 UI、失败重试</td><td>2.5 人周</td></tr>
+        <tr><td>增量同步调度</td><td><b>不做</b></td><td>交易日历驱动、每日 2 次请求、幂等写入</td><td>1.5 人周</td></tr>
+        <tr><td>数据质量核对</td><td><b>校验函数完整</b>，mock 与真实共用</td><td>接真实样本跑一遍，修口径差异</td><td>0.5 人周</td></tr>
+        <tr><td colspan="3"><b>切换真实源的总欠账</b></td><td><b>≈8.5 人周</b></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout up">
+      <p><b>这条边界必须写进合同/计划</b>：「MVP 只跑模拟数据」不等于「真实源已经准备好了」。上面 8.5 人周是明确欠账，其中回填管线（2.5）与限流（1）是硬骨头。如果对外说「接上 tushare 就能用」，交付时会被打回。</p>
+    </div>
+
+    <h3><span class="bar"></span>4.3 多源切换、合并与溯源</h3>
+
+    <figure>
+      <div class="fig-head"><span class="no">FIG 05</span><span class="ttl">DataProvider 适配层（mock 为主路径，真实源为同接口骨架）</span><span class="hint">实线=已实现 / 虚线=骨架或未启用</span></div>
+      <div class="fig-body">
+        <svg viewBox="0 0 1120 600" role="img" aria-label="DataProvider 适配层">
+          <defs>
+            <marker id="p1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#A9BCCB"/></marker>
+            <marker id="p2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C9A24A"/></marker>
+          </defs>
+
+          <!-- 消费方 -->
+          <text class="fb" x="20" y="24" font-size="9.5" letter-spacing="1.4" fill="#8D99A8">消费方</text>
+          <rect x="20" y="32" width="250" height="52" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <text class="fb" x="34" y="54" font-size="10.5" font-weight="600" fill="#2C3B4B">指标引擎 / 查询服务</text>
+          <text class="fb" x="34" y="70" font-size="8.5" fill="#8D99A8">只要 OHLCV 切片，不关心来源</text>
+          <rect x="290" y="32" width="250" height="52" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <text class="fb" x="304" y="54" font-size="10.5" font-weight="600" fill="#2C3B4B">同步 / 回填任务</text>
+          <text class="fb" x="304" y="70" font-size="8.5" fill="#8D99A8">MVP 无此任务（mock 本地生成）</text>
+          <rect x="560" y="32" width="250" height="52" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <text class="fb" x="574" y="54" font-size="10.5" font-weight="600" fill="#2C3B4B">设置 / Provider 配置页</text>
+          <text class="fb" x="574" y="70" font-size="8.5" fill="#8D99A8">读能力矩阵 · 切换开关</text>
+          <rect x="830" y="32" width="270" height="52" rx="7" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <text class="fb" x="844" y="54" font-size="10.5" font-weight="600" fill="#2C3B4B">质量报告</text>
+          <text class="fb" x="844" y="70" font-size="8.5" fill="#8D99A8">读溯源字段与 quality_flags</text>
+
+          <line x1="560" y1="84" x2="560" y2="102" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#p1)"/>
+
+          <!-- 中间层 -->
+          <text class="fb" x="20" y="120" font-size="9.5" letter-spacing="1.4" fill="#8D99A8">适配层</text>
+          <rect x="20" y="128" width="250" height="84" rx="7" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <text class="fb" x="34" y="150" font-size="10.5" font-weight="700" fill="#15364F">ProviderRegistry</text>
+          <text class="fb" x="34" y="168" font-size="8.5" fill="#4A5A6B">注册 · 能力查询 · 健康探测</text>
+          <text class="fb" x="34" y="184" font-size="8.5" fill="#8D99A8">同一 trait，编译期强一致</text>
+          <text class="fb" x="34" y="200" font-size="8.5" fill="#93A1B0">按 dataset 绑定，不混用</text>
+
+          <rect x="290" y="128" width="250" height="84" rx="7" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <text class="fb" x="304" y="150" font-size="10.5" font-weight="700" fill="#15364F">SourcePolicy</text>
+          <text class="fb" x="304" y="168" font-size="8.5" fill="#4A5A6B">primary = mock（MVP）</text>
+          <text class="fb" x="304" y="184" font-size="8.5" fill="#8D99A8">fallback 列表为空</text>
+          <text class="fb" x="304" y="200" font-size="8.5" fill="#93A1B0">按区间路由：不跨源拼接同段</text>
+
+          <rect x="560" y="128" width="250" height="84" rx="7" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <text class="fb" x="574" y="150" font-size="10.5" font-weight="700" fill="#15364F">Normalizer 归一化</text>
+          <text class="fb" x="574" y="168" font-size="8.5" fill="#4A5A6B">代码 → 000001.SZ</text>
+          <text class="fb" x="574" y="184" font-size="8.5" fill="#8D99A8">vol 手→股（×100）· 元 · 日期</text>
+          <text class="fb" x="574" y="200" font-size="8.5" fill="#93A1B0">复权按 adj_mode 查询时计算</text>
+
+          <rect x="830" y="128" width="270" height="84" rx="7" fill="#EDF3F8" stroke="#CFDFEC"/>
+          <text class="fb" x="844" y="150" font-size="10.5" font-weight="700" fill="#15364F">Provenance 溯源</text>
+          <text class="fb" x="844" y="168" font-size="8.5" fill="#4A5A6B">每行带 provider / batch / ts</text>
+          <text class="fb" x="844" y="184" font-size="8.5" fill="#8D99A8">quality_flags 位标记</text>
+          <text class="fb" x="844" y="200" font-size="8.5" fill="#93A1B0">导出与截图可回溯</text>
+
+          <line x1="560" y1="212" x2="560" y2="230" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#p1)"/>
+
+          <!-- trait 契约 -->
+          <rect x="20" y="236" width="1080" height="86" rx="8" fill="#FFFFFF" stroke="#C9DCEA"/>
+          <rect x="20" y="236" width="1080" height="24" rx="8" fill="#E9F1F7"/>
+          <text class="fb" x="34" y="253" font-size="10.5" font-weight="700" fill="#15364F">trait DataProvider —— 必需 4 个 · 可选 4 个 · 运维 2 个</text>
+          <text class="fb" x="34" y="278" font-size="9" fill="#4A5A6B">必需：securities · trading_calendar · daily_bars · adjust_factors</text>
+          <text class="fb" x="34" y="296" font-size="9" fill="#6C7A8A">可选：index_members · industry · limit_flags · minute_bars（能力为 false 时返回 NotSupported，不 panic）</text>
+          <text class="fb" x="34" y="314" font-size="9" fill="#6C7A8A">运维：rate_policy（最小间隔/配额/并发）· health（可达性 + 最近错误 + 配额余量）</text>
+
+          <text class="fb" x="560" y="278" font-size="9" fill="#8D99A8">错误语义（7 类）：Auth · QuotaExceeded · RateLimited</text>
+          <text class="fb" x="560" y="296" font-size="9" fill="#8D99A8">· NotSupported · DataGap · Partial · UpstreamDown</text>
+          <text class="fb" x="560" y="314" font-size="9" fill="#93A1B0">每类都带 retryable / retry_after / 明细</text>
+
+          <line x1="560" y1="322" x2="560" y2="342" stroke="#A9BCCB" stroke-width="1.6" marker-end="url(#p1)"/>
+
+          <!-- providers -->
+          <text class="fb" x="20" y="360" font-size="9.5" letter-spacing="1.4" fill="#8D99A8">实现</text>
+
+          <rect x="20" y="368" width="250" height="128" rx="8" fill="#15364F"/>
+          <text class="fb" x="34" y="392" font-size="11" font-weight="700" fill="#FFFFFF">mock · 模拟源</text>
+          <text class="fb" x="34" y="410" font-size="9" fill="#B9CDDB">MVP 唯一启用 · 默认</text>
+          <text class="fb" x="34" y="428" font-size="8.5" fill="#8FACC0">确定性种子 → 样本包 / 按需生成</text>
+          <text class="fb" x="34" y="444" font-size="8.5" fill="#8FACC0">同接口 · 同校验 · 独立目录</text>
+          <text class="fb" x="34" y="460" font-size="8.5" fill="#8FACC0">自产 adj_factor / 限价 / 停牌标记</text>
+          <text class="fb" x="34" y="476" font-size="8.5" fill="#7F9FB4">无网络 · 无配额 · 毫秒级</text>
+
+          <rect x="290" y="368" width="250" height="128" rx="8" fill="#FBFCFD" stroke="#E2E8EF" stroke-dasharray="4 3"/>
+          <text class="fb" x="304" y="392" font-size="11" font-weight="700" fill="#2C3B4B">tushare · 主数据源</text>
+          <text class="fb" x="304" y="410" font-size="9" fill="#8A6410">骨架 · feature 关闭时不编译</text>
+          <text class="fb" x="304" y="428" font-size="8.5" fill="#6C7A8A">请求构造 + 解析 + 字段映射：已完成</text>
+          <text class="fb" x="304" y="444" font-size="8.5" fill="#6C7A8A">录制回放夹具跑单测</text>
+          <text class="fb" x="304" y="460" font-size="8.5" fill="#6C7A8A">限流：每交易日 2 次 / 间隔 ≥65s</text>
+          <text class="fb" x="304" y="476" font-size="8.5" fill="#93A1B0">缺口：回填 · 增量 · 真实限流</text>
+
+          <rect x="560" y="368" width="250" height="128" rx="8" fill="#FBFCFD" stroke="#E2E8EF" stroke-dasharray="4 3"/>
+          <text class="fb" x="574" y="392" font-size="11" font-weight="700" fill="#4A5A6B">baostock · 备选</text>
+          <text class="fb" x="574" y="410" font-size="9" fill="#8D99A8">仅接口占位（NotSupported 全集）</text>
+          <text class="fb" x="574" y="428" font-size="8.5" fill="#93A1B0">MVP 不实现，只为证明 trait 可扩展</text>
+          <text class="fb" x="574" y="444" font-size="8.5" fill="#93A1B0">优点：免费、分钟线齐</text>
+          <text class="fb" x="574" y="460" font-size="8.5" fill="#93A1B0">缺点：Python 生态为主，需另建协议</text>
+
+          <rect x="830" y="368" width="270" height="128" rx="8" fill="#FBFCFD" stroke="#E2E8EF" stroke-dasharray="4 3"/>
+          <text class="fb" x="844" y="392" font-size="11" font-weight="700" fill="#4A5A6B">akshare · 评估位</text>
+          <text class="fb" x="844" y="410" font-size="9" fill="#8D99A8">不实现，仅记录评估结论</text>
+          <text class="fb" x="844" y="428" font-size="8.5" fill="#93A1B0">数据全但无 SLA、爬虫式接口</text>
+          <text class="fb" x="844" y="444" font-size="8.5" fill="#93A1B0">作为「最后手段」保留，不做主源</text>
+          <text class="fb" x="844" y="460" font-size="8.5" fill="#93A1B0">若启用，只用于一次性补缺</text>
+
+          <!-- 切换开关 -->
+          <line x1="560" y1="496" x2="560" y2="514" stroke="#C9A24A" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#p2)"/>
+          <rect x="20" y="520" width="1080" height="62" rx="8" fill="#FCFAF4" stroke="#EADFC0"/>
+          <text class="fb" x="34" y="542" font-size="10" font-weight="700" fill="#5B4A1A">切换开关只有一处</text>
+          <text class="fb" x="34" y="560" font-size="9" fill="#6B5417">config.toml：provider = "mock" | "tushare"（MVP 构建里 tushare 置灰）；数据目录随之切到 data/sim 或 data/real，两者物理隔离、禁止跨目录读写。</text>
+          <text class="fb" x="34" y="576" font-size="9" fill="#8D7A45">任何一行的 src_provider 与 dataset_id 都写入存储；指标缓存 key 含 dataset_id，切源必然换 key，不会串数据。</text>
+        </svg>
+      </div>
+      <figcaption><b>读图</b>：三层结构里，<b>归一化与溯源是这一版新增的重量级组件</b>。多源真正的难点不是「调哪个 API」，而是「tushare 的成交量单位是手、baostock 是股、复权方式各不同」——如果不在这里统一，指标引擎会被迫写三套分支。</figcaption>
+    </figure>
+
+    <h4>字段口径差异（真实源接入时最容易踩的坑）</h4>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>字段</th><th>常见差异</th><th>本产品统一口径</th></tr></thead>
+      <tbody>
+        <tr><td><b>成交量</b></td><td>tushare 日线 <code>vol</code> 单位为「手」（100 股）；baostock 为「股」；部分源为「千股」</td><td>一律换算为<b>股</b>，换算系数写在 provider 元数据里，不散落在代码里</td></tr>
+        <tr><td><b>成交额</b></td><td>tushare 为「千元」，baostock 为「元」</td><td>一律<b>元</b>（f64 精度足够覆盖 2^53 ≈ 9e15）</td></tr>
+        <tr><td><b>复权</b></td><td>有的直接给 qfq 价、有的只给因子；qfq/hfq 的基准日不同</td><td>存储<b>原始价 + adj_factor</b>，查询时按 <code>adj_mode</code> 现算；因子语义统一为「后复权累计因子」</td></tr>
+        <tr><td><b>股票代码</b></td><td><code>000001</code> / <code>000001.SZ</code> / <code>sz000001</code> / <code>SH600000</code></td><td>规范为 <code>000001.SZ</code>；导入时做一次映射并持久化 <code>provider_code</code></td></tr>
+        <tr><td><b>停牌</b></td><td>有的返回空行、有的返回 O=H=L=C 且量 0、有的给标记位</td><td>统一为「保留行 + <code>SUSPENDED</code> 标记」，指标计算时按缺失处理，不 forward-fill 价格</td></tr>
+        <tr><td><b>涨跌停</b></td><td>多数源不直接给标记</td><td>当地没有标记时按规则推导：主板 10%、创业/科创 20%、ST 5%、北交所 30%；并标 <code>APPROXIMATED</code></td></tr>
+        <tr><td><b>日期与时间</b></td><td>时区、是否含盘后、交易日历差异</td><td>统一 <code>Asia/Shanghai</code> 的交易日；日历以 provider 声明为准，冲突时不合并</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>多源切换与合并策略</h4>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>场景</th><th>策略</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td>MVP（只有 mock）</td><td><code>primary=mock</code>，<code>fallback=[]</code>，硬失败直接报错</td><td>模拟数据不会失败；保留 fallback 代码路径但无可选源，避免「假装有容灾」</td></tr>
+        <tr><td>真实源接入后：主源限流</td><td>等待而非切换（<code>retry_after</code> 驱动），仅在连续失败 3 次后标记不可用</td><td>两源复权口径不同，中途切换会造成同一序列内价格基准跳变</td></tr>
+        <tr><td>历史区间缺口</td><td>允许<b>按区间</b>回退到备源，并在区间边界写 <code>source_segment</code></td><td>同一条序列内允许分段来源，但必须显式标记，指标计算时给出「跨源拼接」警告</td></tr>
+        <tr><td>字段冲突</td><td>主源优先，冲突行进入质量报告，不静默覆盖</td><td>静默覆盖会让「同一只股票两次打开数字不同」变成无法解释的 bug</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>4.4 存储：为什么把 DuckDB 换掉</h3>
+    <p>v2 用 DuckDB 做分析库，在「预计算 + 横截面 SQL」的场景下是对的。v3 的场景变了：<b>按需计算、只读单标的窗口、无复杂 SQL</b>。此时 DuckDB 的代价（静态链接约 +35MB、需 C++ 构建链、启动打开 catalog 的延迟）开始大于收益。</p>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>方案</th><th>包体增量</th><th>读 2,000 根耗时</th><th>横截面聚合</th><th>结论</th></tr></thead>
+      <tbody>
+        <tr><td>DuckDB（v2）</td><td>≈+35MB</td><td>≈15ms</td><td>强（SQL）</td><td><span class="pill p-later">延后</span> 横截面需求出现且数据到全市场时再引入</td></tr>
+        <tr><td><b>Parquet + SQLite（v3）</b></td><td>≈+6MB</td><td>≈8ms（单文件单标的分区）</td><td>中（rayon 扫 300 只 ≈ 40ms）</td><td><span class="pill p-mvp">采用</span> 满足 MVP，构建简单</td></tr>
+        <tr><td>纯 SQLite 行存</td><td>≈+2MB</td><td>≈20ms</td><td>弱</td><td>可行但列读放大，不选</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>目录布局</b>（模拟与真实物理隔离，互不 ATTACH、互不引用路径）：</p>
+    <div class="mono">~/Library/Application Support/&lt;App&gt;/
+  data/
+    sim/                       # 模拟数据集（MVP 唯一使用）
+      bars/000001.SZ/2024.parquet
+      factors/000001.SZ.parquet
+      master.parquet
+      dataset.json             # dataset_id · seed · 生成器版本 · 覆盖区间
+    real/                      # 真实数据集（MVP 为空，切源后写入）
+    sim.duckdb                 # 不存在；v3 不再使用
+  state.db                     # SQLite：自选、设置、缓存无关的元数据
+  state_sim.db                 # 模拟环境的独立状态（seed/进度）
+  logs/</div>
+    <p><b>为什么不是 schema 隔离</b>：两个物理目录可以做到「删错一个不影响另一个」「备份只备份真实库」「导出时不误带模拟数据」。schema 隔离靠代码自律，目录隔离靠文件系统。</p>
+  </div>
+</section>
+
+<section id="rest">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">05</span><h2>连带变化：包体、部署与产品界面</h2></div>
+    <p class="sec-lead">去掉 sidecar、去掉账户与支付，不是「少写几个模块」，而是把交付形态从「双进程 + 云控制面」压回「单进程 + 静态清单」。这一节把连带账算清楚。</p>
+
+    <h3><span class="bar"></span>5.1 去掉 Python sidecar 后的交付形态</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>维度</th><th>v2（Python sidecar）</th><th>v3（Rust 单进程）</th><th>变化性质</th></tr></thead>
+      <tbody>
+        <tr><td><b>DMG 体积</b></td><td>≈150MB（Tauri ≈12MB + Python 运行时 + polars/numpy/pyarrow ≈60MB + PyInstaller 引导 + 数据样本）</td><td><b>≈30MB</b>（Tauri ≈12MB + 引擎与依赖 ≈10MB + 前端资源 ≈5MB + 内置样本包 ≈3MB）</td><td><span class="pill p-core">净收益</span></td></tr>
+        <tr><td><b>冷启到可交互</b></td><td>≈4.0s（WebView 0.8 + 拉起 sidecar 1.5 + 依赖导入 1.2 + 端口/健康检查 0.5）</td><td><b>≈1.2s</b>（WebView 0.8 + SQLite 0.1 + Parquet footer 0.2 + 首屏渲染）</td><td><span class="pill p-core">净收益</span></td></tr>
+        <tr><td><b>常驻内存基线</b></td><td>≈330MB（主进程 180 + Python 90~150）</td><td><b>≈180MB</b></td><td><span class="pill p-core">净收益</span></td></tr>
+        <tr><td><b>进程模型</b></td><td>双进程；需处理孤儿进程、端口占用、崩溃重启、多开互斥</td><td><b>单进程</b>；崩溃即整体退出，无需生命周期管理</td><td><span class="pill p-core">复杂度 -1 层</span></td></tr>
+        <tr><td><b>调用路径</b></td><td>HTTP over 127.0.0.1 + 一次性 token（含 JSON 序列化两次）</td><td><b>Tauri command 直调</b>；大数据走 Arrow 字节，小数据走 JSON</td><td><span class="pill p-core">延迟与攻击面双降</span></td></tr>
+        <tr><td><b>打包</b></td><td>PyInstaller 产 sidecar → 塞进 <code>.app/Contents/Resources</code> → 对 sidecar 单独签名 → 主包再签名</td><td><b>单一 <code>.app</code> 签名</b>；无嵌套二进制</td><td><span class="pill p-core">工序减少</span></td></tr>
+        <tr><td><b>公证</b></td><td>notarytool 提交主包；内嵌解释器与动态库需逐一满足 hardened runtime</td><td>notarytool 提交单一包；仅需 <code>com.apple.security.cs.allow-jit</code>（WebView 需要）</td><td><span class="pill p-core">失败面收窄</span></td></tr>
+        <tr><td><b>CI</b></td><td>需 Python 3.11 + PyInstaller + 依赖锁 + 体积裁剪，构建 20~30 分钟</td><td>仅 Rust toolchain + Node；<b>构建 8~12 分钟</b></td><td><span class="pill p-core">成本下降</span></td></tr>
+        <tr><td><b>版本一致性</b></td><td>主包与 sidecar 两个版本号，需握手校验</td><td>单版本号；<code>engine_version</code> 只影响缓存 key</td><td><span class="pill p-core">消除一类故障</span></td></tr>
+        <tr><td><b>指标迭代速度</b></td><td>改一行公式 → 重启 sidecar，秒级验证</td><td>改一行公式 → <b>重编译 40~90s</b>（增量编译）</td><td><span class="pill p-no">代价</span></td></tr>
+        <tr><td><b>可用生态</b></td><td>pandas-ta / NumPy / TA-Lib 现成函数</td><td><b>无成熟 Rust 指标库</b>；只能自建 + 自验</td><td><span class="pill p-no">代价（最大一项）</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>启动路径对比</h4>
+    <div class="mono">v2:  Launch → WebView 就绪 → spawn sidecar → 等 /health(最多 5s 超时)
+         → 加载 Python 依赖 → FastAPI 绑定端口 → 窗口才可交互
+v3:  Launch → WebView 就绪 → 打开 state.db → 读 sim 数据集清单
+         → 拉首屏 2,000 根 Parquet → 渲染 → 可交互
+         无外部进程、无端口、无握手</div>
+
+    <p><b>成本口径的变化</b>：打包与签名从 ≈3.5 人周降到 <b>≈1.5 人周</b>（省 2 人周）；但指标实现从「30 个 × 0.3 天」变成「105 个 × 0.8~2 天」，<b>净增 ≈21 人周</b>。也就是说，去 sidecar 省下来的工程成本，远小于 80+ 指标带来的新增成本——<b>省的是分发，贵的是数学</b>。</p>
+
+    <h3><span class="bar"></span>5.2 无账户、无支付后的最小部署形态</h3>
+    <div class="grid g2">
+      <div class="card do">
+        <h4>需要保留的（3 项）</h4>
+        <ul class="checklist ok">
+          <li><b>更新清单托管</b>：一个静态 JSON + 签名，放对象存储或 Releases</li>
+          <li><b>更新检查</b>：启动后延迟 30s 静默检查，失败不打扰</li>
+          <li><b>崩溃本地留存</b>：panic hook + 环形日志，保留 14 天</li>
+        </ul>
+      </div>
+      <div class="card dont">
+        <h4>明确不需要的（6 项）</h4>
+        <ul class="checklist no">
+          <li>云控制面 / API 网关 / 鉴权服务</li>
+          <li>用户表、设备指纹、授权码、订阅状态</li>
+          <li>支付 SDK、对账、发票、退款链路</li>
+          <li>远程配置中心（配置全部编译进包）</li>
+          <li>强制度量上报（默认关闭）</li>
+          <li>灰度发布（MVP 只有 stable / beta 两条清单）</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>问题</th><th>v3 做法</th><th>代价 / 说明</th></tr></thead>
+      <tbody>
+        <tr><td><b>托管在哪</b></td><td>首选对象存储静态桶（国内可达）+ CDN；GitHub Releases 作为备份通道</td><td>静态文件，无计算；1GB 存储 + 月出网几十 GB，月成本 &lt;¥20</td></tr>
+        <tr><td><b>更新清单字段</b></td><td><code>version</code> / <code>pub_date</code> / <code>platforms.darwin-aarch64</code> 与 <code>darwin-x86_64</code> 各自的 <code>url</code> + <code>signature</code> / <code>notes</code> / <code>minimum_os</code></td><td>两条架构分别签名；<code>minimum_os</code> 用于阻止旧系统升级到不兼容版本</td></tr>
+        <tr><td><b>密钥管理</b></td><td>minisign 私钥存 CI Secret；公钥编译进 App；轮换需发一个包含新公钥的版本</td><td>无服务端，密钥泄露只能靠「发新包换公钥」补救，需写进运维手册</td></tr>
+        <tr><td><b>崩溃上报</b></td><td>本地优先：panic 消息 + 最近 200 条命令 + 版本 + 系统信息 → 一键生成 zip 诊断包，用户自己决定发给谁</td><td>可选匿名 Sentry（首次启动询问，默认关）；<b>不含行情数据与自选代码</b></td></tr>
+        <tr><td><b>如何知道有多少人用</b></td><td><b>不知道。</b>只能靠可选的匿名「一次安装一次」计数，或内测问卷</td><td>这是「无账户」的真实代价：留存无法自动度量，验收只能依赖 10 人内测面板</td></tr>
+        <tr><td><b>版本回滚</b></td><td>清单保留上一版 url；应用内提供「降级到上一版」入口</td><td>降级后 <code>engine_version</code> 变化会整体失效缓存，需在发布说明中提示</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout warn">
+      <p><b>一句话</b>：无账户无支付把部署压到「一个静态桶 + 两份清单」，但同时也把「产品是否被使用」变成盲区。MVP 可以接受这个盲区，因为它的目标不是增长，而是<b>用 10 个人验证「指标可信 + 看图顺手」</b>。如果后续要做增长，第一个要补的不是支付，而是<b>可选遥测</b>。</p>
+    </div>
+
+    <h3><span class="bar"></span>5.3 产品侧的连带变化</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>项</th><th>v2</th><th>v3</th><th>为什么变</th></tr></thead>
+      <tbody>
+        <tr><td><b>页面数</b></td><td>9</td><td><b>12</b></td><td>新增「指标目录」「指标口径页」「模拟数据环境」三个独立页；原「数据源配置」并入 Provider 配置页</td></tr>
+        <tr><td><b>指标入口</b></td><td>指标库单页 + 分类标签</td><td>目录（105 条，分类 + 搜索 + 收藏）+ 独立口径页</td><td>105 个无法在一页内浏览；口径内容也从一段话变成一页</td></tr>
+        <tr><td><b>叠加能力</b></td><td>主图 2 + 副图 3</td><td>不变，但<b>每个副图可独立改参</b>，且支持「同 id 多实例」（如 MA5 与 MA20 各一条）</td><td>按需计算天然支持同 id 不同参数，缓存 key 已含 <code>params_hash</code></td></tr>
+        <tr><td><b>参数面板</b></td><td>简单输入框</td><td>带范围、步长、默认值、非法值即时提示、恢复默认；枚举型参数用下拉（如均线类型 SMA/EMA/WMA）</td><td>ParamSpec 驱动 UI，前端不硬编码任何指标参数</td></tr>
+        <tr><td><b>数据源配置</b></td><td>选源 + 填 token + 同步按钮</td><td>能力矩阵 + 源状态（mock 启用 / tushare 置灰「骨架 · 未启用」）；<b>无 token 输入</b></td><td>MVP 不接真实源，留输入框只会误导</td></tr>
+        <tr><td><b>新增标识</b></td><td>无</td><td>「样本口径」「beta」「需 N 根」「SIM」四类标识</td><td>数据与公式的诚实度必须显式可见，不能靠文档</td></tr>
+        <tr><td><b>移除</b></td><td>同步中心、计算服务状态、账户占位</td><td>同步中心改为「模拟数据环境」；无账户占位</td><td>mock 无需同步；无账户不画灰按钮</td></tr>
+      </tbody>
+    </table></div>
+
+    <p><b>验收增量的落点</b>：v2 的 V1（数据完整）、V2（复权正确）、V7（首次体验）在 MVP 内<b>不适用</b>（无真实源、无回填）；替换为 v3 的 V1（指标覆盖）、V2（指标正确）、V9（溯源，仅 mock 也必须有）、V10（模拟隔离）。V8（可解释）从「30 个」升到「105 个」，是这一版验收成本最高的单项。</p>
+  </div>
+</section>
+
+<section id="risk">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">06</span><h2>工作量与风险：14 周不成立</h2></div>
+    <p class="sec-lead">先给数字，再给结论，最后给三条可选路径。所有数字按「1 人周 = 5 个有效工作日」估算，已含自测，不含请假与上下文切换。</p>
+
+    <h3><span class="bar"></span>6.1 人周拆解</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>模块</th><th class="num">人周</th><th class="num">占比</th><th>包含什么</th><th>估算依据</th></tr></thead>
+      <tbody>
+        <tr><td><b>引擎内核</b></td><td class="num">5.0</td><td class="num">9.6%</td><td>注册表、ParamSpec、Meta、<code>calc(span)</code> 统一入口、批量合并、缓存（key/失效/预算）、rayon 调度</td><td>无现成参照，骨架 + 三轮返工</td></tr>
+        <tr><td><b>105 个指标实现</b></td><td class="num">19.2</td><td class="num">36.9%</td><td>78 个完整公式 ×1.2 天 + 19 个补口径 ×2 天 + 8 个概念 ×2 天</td><td>单个 Rust 指标含窗口/边界/首次 K 线，≈1.5~2 天</td></tr>
+        <tr><td><b>黄金用例与三层验证</b></td><td class="num">6.9</td><td class="num">13.3%</td><td>夹具生成器（离线 Python，不进包）、78 份用例、恒等式与边界集、容差裁定、CI 回归</td><td>每指标 ≈0.4 天 + 基础设施 2.2 人周</td></tr>
+        <tr><td><b>数据层</b></td><td class="num">8.0</td><td class="num">15.4%</td><td>DataProvider trait 与能力协商、mock 生成器、归一化（代码/单位/复权/停牌/涨跌停）、Parquet + SQLite、溯源字段、质量校验</td><td>mock 要「真实感」，不是随机数</td></tr>
+        <tr><td><b>前端</b></td><td class="num">10.0</td><td class="num">19.2%</td><td>12 页、K 线画布、选择器、参数面板、口径页渲染、多指标叠加、状态与 IPC 客户端</td><td>工作台占 4.5 人周，其余页面合计 5.5</td></tr>
+        <tr><td><b>打包 / 签名 / 公证 / 更新</b></td><td class="num">2.5</td><td class="num">4.8%</td><td>双架构通用包、notarytool、清单签名、更新器接线、降级路径</td><td>无 sidecar 后已降 2 人周</td></tr>
+        <tr><td><b>测试 / 性能 / 边界</b></td><td class="num">4.0</td><td class="num">7.7%</td><td>29 万根基准、内存压力、7 类病态输入、50 只切换稳定性</td><td>性能目标需要真实基准，不能靠看</td></tr>
+        <tr><td><b>项目管理 / 口径文案</b></td><td class="num">2.4</td><td class="num">4.6%</td><td>105 份口径页的撰写与校对、里程碑、评审</td><td>口径文案按每人天 6~8 份</td></tr>
+        <tr><td><b>合计</b></td><td class="num"><b>52.0</b></td><td class="num">100%</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout up">
+      <p><b>指标相关工作量 = 19.2 + 6.9 = 26.1 人周，占 50.2%。</b>再加口径文案的一半，实质是 <b>≈27 人周、过半</b>。也就是说：只要 105 个指标的范围不动，这个 MVP 就不是「做个看图工具顺便带指标」，而是「做一个指标库顺便带个图」。<b>14 周 × 1.5 FTE = 21 人周，只覆盖总量的 40%</b>；要装下 52 人周，14 周需要 <b>≈3.7 FTE</b>。</p>
+    </div>
+
+    <h4>三条可选路径（都必须改时间线或改范围）</h4>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>方案</th><th>人力</th><th>日历时间</th><th>指标范围</th><th>代价</th><th>结论</th></tr></thead>
+      <tbody>
+        <tr><td><b>A（推荐）</b></td><td>2 FTE（1 Rust + 1 前端，Rust 侧兼数据层）</td><td><b>26 周</b></td><td>105 个全保留，27 个标 beta</td><td>需要 2 人都有 Rust 经验；前端在 W3~W5 会等引擎骨架</td><td><span class="pill p-core">可行</span></td></tr>
+        <tr><td><b>B</b></td><td>3 FTE（2 Rust 并行拆指标 + 1 前端）</td><td>18~20 周</td><td>105 个</td><td>指标拆分与口径统一有协调成本，实测人周涨到 ≈60；3 个 Rust 人不易凑</td><td><span class="pill p-cost">更快但更贵</span></td></tr>
+        <tr><td><b>C</b></td><td>1.5 FTE（保持当前配置）</td><td><b>24 周</b></td><td><b>砍到 48 个</b>（只保留手册有完整公式的指标，放弃 27 个部分/概念口径，再从 78 里选 48）</td><td>对外不能宣称 80+；与用户已拍板的 C3 冲突，需重新拍板</td><td><span class="pill p-no">需改约束</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <p><b>结论</b>：在 5 条硬约束（尤其 C2 + C3）不变的前提下，<b>14 周无论如何都不成立</b>。最短可行是方案 C 的 24 周，但那要砍指标并违反 C3；保持 C3 就必须接受方案 A 的 26 周与 2 FTE。<b>没有「既 105 个、又 14 周、又 1.5 人」的组合</b>——这不是估算保守，是 105 个指标的数学性质决定的。</p>
+
+    <h3><span class="bar"></span>6.2 里程碑与依赖（按方案 A · 26 周）</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th class="num">周</th><th>里程碑</th><th>交付物</th><th>退出标准</th><th>依赖 / 风险</th></tr></thead>
+      <tbody>
+        <tr><td class="num">W1–W2</td><td><b>M0 · 技术验证</b></td><td>8 项 P0 spike 结论（见 6.3）</td><td>≥6 项通过；未通过的项有明确降级方案</td><td>失败则范围或架构要改，必须在 W2 末拍板</td></tr>
+        <tr><td class="num">W3–W5</td><td><b>M1 · 骨架贯通</b></td><td>引擎内核 + 12 个指标 + 黄金框架 + mock 生成器 v0 + 一条 EMA 画在图上</td><td>端到端可跑：请求 → 计算 → 缓存 → 渲染；EMA 与 TA-Lib 差异 ≤1e-9</td><td>前端此时只做一条线，不等完整工作台</td></tr>
+        <tr><td class="num">W6–W9</td><td><b>M2 · 可用工作台</b></td><td>45 个指标 + 主图/副图/选择器/参数面板 + Parquet 只读 + 缓存命中</td><td>3 副图 × 2,000 根 ≤120ms；改参 ≤60ms；切换标的不重算其他指标</td><td>指标进度是唯一关键路径；前端可先用占位指标</td></tr>
+        <tr><td class="num">W10–W14</td><td><b>M3 · 指标满编</b></td><td>105 个指标 + 105 份口径页 + 批量合并 + 三层验证全绿</td><td>78 个强校验全过；27 个 beta 有标注；CI 全绿</td><td>口径文案与实现必须同人负责，否则会脱节</td></tr>
+        <tr><td class="num">W15–W18</td><td><b>M4 · 数据可信</b></td><td>溯源字段、质量报告、sim/real 隔离、Provider 切换开关、tushare 回放测试</td><td>任一行可溯源；切开关只改一处配置；回放 12 用例通过</td><td>不依赖真实网络，可在 CI 跑</td></tr>
+        <tr><td class="num">W19–W22</td><td><b>M5 · 可交付</b></td><td>双架构 dmg + 公证 + 更新清单 + 诊断包 + 12 页收口</td><td>干净机器安装通过 Gatekeeper；能从 beta 升到 stable 并回滚</td><td>Apple 开发者账号与 2FA 需提前 2 周准备</td></tr>
+        <tr><td class="num">W23–W26</td><td><b>M6 · 硬化与内测</b></td><td>性能与内存达标、7 类边界通过、10 人内测 2 周</td><td>V1–V12 全过；内测无 P0 缺陷</td><td>内测反馈可能触发指标口径返工，留 1 周缓冲</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>6.3 P0 spike 清单（W1–W2 必须做完）</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th class="num">#</th><th>要验证什么</th><th>判定标准</th><th class="num">预算</th><th>不通过怎么办</th></tr></thead>
+      <tbody>
+        <tr><td class="num">S1</td><td><b>内核保真度</b>：EMA/RSI/MACD 与 TA-Lib 逐点对比</td><td>递推类相对 ≤1e-9（前 3 周期 ≤1e-6）；纯算术 ≤1e-12</td><td class="num">3 天</td><td>若差异来自种子约定，写入口径页并重生成夹具；若来自算法，重写</td></tr>
+        <tr><td class="num">S2</td><td><b>Parquet → Arrow → 切片零拷贝</b>：29 万根读取</td><td>端到端 ≤40ms，无整列复制（用分配计数验证）</td><td class="num">3 天</td><td>退回「Arrow 列直读 + 仅 OHLCV 五列投影」，放弃零拷贝声明</td></tr>
+        <tr><td class="num">S3</td><td><b>IPC 二进制载荷</b>：2,000 根 × 6 条线</td><td>≤64KB 走二进制，往返 ≤8ms；超过阈值自动退回 JSON</td><td class="num">2 天</td><td>全量 JSON + gzip；性能目标放宽到 ≤15ms</td></tr>
+        <tr><td class="num">S4</td><td><b>缓存预算</b>：50 只 × 5 指标循环</td><td>RSS 增量 ≤180MB，命中率 ≥85%，无泄漏</td><td class="num">2 天</td><td>降为「单标的 32MB + LRU 20 只」并接受命中率下降</td></tr>
+        <tr><td class="num">S5</td><td><b>前端渲染</b>：2,000 根 + 5 副图平移缩放</td><td>60fps 下 100 帧丢帧 ≤2；首屏 ≤120ms</td><td class="num">3 天</td><td>副图上限从 3 降到 2；或改 Canvas 分层重绘</td></tr>
+        <tr><td class="num">S6</td><td><b>mock 跨架构确定性</b></td><td>同 seed 在 arm64 / x86_64 生成字节一致（SHA256 相同）</td><td class="num">2 天</td><td>改用整数化/定点生成；若仍不一致，只保证单架构并在文档声明</td></tr>
+        <tr><td class="num">S7</td><td><b>签名 / 公证 / 更新闭环</b></td><td>干净机器装 dmg 通过 Gatekeeper；beta→stable 升级与回滚成功</td><td class="num">3 天</td><td>更新改为「手动下载覆盖」，成本 +0.5 人周</td></tr>
+        <tr><td class="num">S8</td><td><b>tushare 录制回放</b></td><td>无网络跑通 12 个用例；字段映射覆盖 100%；手→股、千元→元 换算正确</td><td class="num">3 天</td><td>回放只覆盖日线与复权因子，其余能力标「未验证」</td></tr>
+      </tbody>
+    </table></div>
+    <p class="tbl-note">S1、S2、S4 是最可能改变架构的三项。若 S1 不通过，说明「Rust 自研指标」的正确性风险高于预期，应考虑把 105 缩到 48（方案 C）。</p>
+
+    <h3><span class="bar"></span>6.4 风险登记册</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th class="num">#</th><th>风险</th><th class="num">概率</th><th class="num">影响</th><th>触发信号</th><th>缓解</th></tr></thead>
+      <tbody>
+        <tr><td class="num">R1</td><td><b>手册公式不完整</b>（27 个）</td><td class="num">高</td><td class="num">高</td><td>实现时发现参数含义无法确定</td><td>一律标 beta + 自定口径写进页面；不进强校验；不进默认组合</td></tr>
+        <tr><td class="num">R2</td><td><b>Rust 指标生态薄</b></td><td class="num">确定</td><td class="num">高</td><td>无库可参考，只能照公式手写</td><td>自建黄金用例体系（离线 Python 生成夹具）；核心 12 个先做</td></tr>
+        <tr><td class="num">R3</td><td><b>A 股特殊情形</b>：涨跌停、停牌、除权、ST、北交所 30%</td><td class="num">中</td><td class="num">高</td><td>指标在除权日出现异常跳变</td><td>归一化层统一处理；每类写专门用例；涨跌停推导标 APPROXIMATED</td></tr>
+        <tr><td class="num">R4</td><td><b>参考实现授权污染</b></td><td class="num">中</td><td class="num">中</td><td>想把 TA-Lib 源码直接翻译进 Rust</td><td>只用 BSD/MIT 项目的离线数值做夹具，不链接、不分发；TradingView 数值不抓</td></tr>
+        <tr><td class="num">R5</td><td><b>浮点跨架构不一致</b>（FMA / 求和顺序）</td><td class="num">中</td><td class="num">中</td><td>同参数在 M 系列与 Intel 上末位不同</td><td>关键累加用 Kahan 或固定顺序；容差按相对误差而非逐位相等</td></tr>
+        <tr><td class="num">R6</td><td><b>105 个是负资产</b>：用户只用 5 个</td><td class="num">高</td><td class="num">中</td><td>内测时选择器使用率集中在 &lt;10 个</td><td>默认组合只放 8 个；目录做搜索与收藏；不做「全部展示」</td></tr>
+        <tr><td class="num">R7</td><td><b>29 万根基准与 MVP 无关</b>（日线仅 1,250 根）</td><td class="num">低</td><td class="num">中</td><td>性能优化投入超出收益</td><td>基准仅用于架构验证；产品目标按 2,000 根定；不为分钟线预优化</td></tr>
+        <tr><td class="num">R8</td><td><b>无账户 → 无法度量留存</b></td><td class="num">确定</td><td class="num">中</td><td>发布后不知道有没有人用</td><td>10 人内测 + 可选匿名计数 + 问卷；明确接受盲区</td></tr>
+        <tr><td class="num">R9</td><td><b>切回真实源时的欠账</b>（≈8.5 人周）</td><td class="num">中</td><td class="num">高</td><td>上线后要求「接入真数据」</td><td>MVP 内把解析与映射写完并回放测试；传输层留 feature 开关</td></tr>
+        <tr><td class="num">R10</td><td><b>公证失败 / 账号准备不足</b></td><td class="num">低</td><td class="num">高</td><td>W19 才发现没有 Apple 开发者账号</td><td>W1 就申请；S7 提前验证</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>6.5 仍然开放的问题</h3>
+    <ol>
+      <li><b>105 个是否首发全上</b>，还是首发 48 个 + 后续版本补？这是唯一能改变时间线的问题，必须由产品拍板。</li>
+      <li><b>广度类 16 个在 mock 下是否有意义</b>：样本 300 只算出的「腾落线」是否只会误导用户？是否应标记为「演示」而非可用指标？</li>
+      <li><b>参数范围谁定</b>：手册大多只给默认值，不给上下界。范围过宽会让用户算出无意义结果，过窄会限制研究。</li>
+      <li><b>口径页写到什么深度</b>：公式 + 参数 + A 股口径 + 陷阱 + 用例来源，105 份按每份 200~400 字，约 3 万字。</li>
+      <li><b>「指标组合」是否要能保存</b>：多 id + 多参数 + 主副图位置的组合，是 v2「收藏」的升级版，工作量 +1 人周。</li>
+      <li><b>复权默认口径</b>：前复权锚点选「最新交易日」还是「上市首日」？前者会随新数据整体平移，影响画线锚点与缓存失效。</li>
+      <li><b>mock 的「真实感」由谁验收</b>：涨跌停比例、停牌比例、除权频率，这些统计特征需要有对照基准，否则无法判定。</li>
+      <li><b>更新通道国内可达性</b>：GitHub Releases 在国内不稳定，首发是否直接上对象存储 + CDN（成本略增）。</li>
+      <li><b>诊断包隐私边界</b>：是否包含用户自选代码？包含则可能泄露持仓偏好，不包含则难以定位问题。</li>
+      <li><b>29 万根基准是否保留</b>：MVP 无分钟线，这个基准只服务架构验证。是否值得为它投入 4 人周的性能工作？</li>
+    </ol>
+  </div>
+</section>
+
+<section id="decision">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">07</span><h2>决策清单与变更记录</h2></div>
+    <p class="sec-lead">以下 11 条是本版定稿的架构决策；如需推翻，请连带修改对应章节与验收项。</p>
+
+    <h3><span class="bar"></span>7.1 架构决策（D1–D11）</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th class="num">#</th><th>决策</th><th>理由</th><th>被否方案</th></tr></thead>
+      <tbody>
+        <tr><td class="num">D1</td><td><b>指标计算在主进程，走 Tauri command</b></td><td>单进程、零端口、错误可直接映射为 Rust <code>Result</code>；大数据走 Arrow 字节</td><td>本地 HTTP（v2）</td></tr>
+        <tr><td class="num">D2</td><td><b>内核用 <code>&amp;[f64]</code> 切片，边界用 Arrow / Parquet</b></td><td>数值代码简洁、可内联、无分配；Arrow 只在跨层时用，避免内核被数据结构绑死</td><td>内核直接用 <code>Float64Array</code>（v3 早期草案）</td></tr>
+        <tr><td class="num">D3</td><td><b>唯一入口 <code>calc(span)</code>，增量 = 前缀重算</b></td><td>杜绝两套实现分叉；只对 12 个递推指标开流式白名单</td><td>每个指标各写增量版（维护成本不可控）</td></tr>
+        <tr><td class="num">D4</td><td><b>缓存 key 七元组，只缓存可见窗口</b></td><td>2,000 根 × 105 指标可控；29 万根全缓存会击穿内存</td><td>全历史缓存 / 物化表（v2 预计算）</td></tr>
+        <tr><td class="num">D5</td><td><b>指标按 id 计数，共 105 个；27 个标 beta</b></td><td>id = 一个公式 + 一组参数 + 一份口径页，是缓存与验收的最小单位</td><td>按输出线计数（会虚高）</td></tr>
+        <tr><td class="num">D6</td><td><b>DataProvider：4 必需 + 4 可选 + 2 运维；MVP 只跑 mock</b></td><td>能力协商让「不支持」变成显式错误而非隐式脏数据</td><td>每源一套独立接口（v2）</td></tr>
+        <tr><td class="num">D7</td><td><b>存储 Parquet（标的+年分区）+ SQLite</b></td><td>按需只读单标的窗口，列存投影足够；去掉 DuckDB 省 35MB 与 C++ 构建链</td><td>DuckDB（v2）</td></tr>
+        <tr><td class="num">D8</td><td><b><code>data/sim</code> 与 <code>data/real</code> 物理隔离</b></td><td>文件系统级隔离，误删/误备份/误导出都可防</td><td>同库加 <code>dataset_id</code> 列（代码自律）</td></tr>
+        <tr><td class="num">D9</td><td><b>无云控制面；更新走签名静态清单</b></td><td>无账户即无鉴权需求；静态桶月成本 &lt;¥20</td><td>自建更新服务（v2 备选）</td></tr>
+        <tr><td class="num">D10</td><td><b>崩溃本地优先，Sentry 可选 opt-in</b></td><td>无账户体系下强制度量会引发信任问题；诊断包由用户主动发送</td><td>默认开启崩溃上报</td></tr>
+        <tr><td class="num">D11</td><td><b>首发仅 macOS 双架构，不做 Windows</b></td><td>约束 C1；省下 WebView2 适配与签名差异</td><td>双端同步（v2）</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>7.2 与上一版的关键差异</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>维度</th><th>v2</th><th>v3</th></tr></thead>
+      <tbody>
+        <tr><td><b>指标引擎</b></td><td>Python sidecar + FastAPI + polars</td><td><b>Rust crate，主进程内，Tauri command 直调</b></td></tr>
+        <tr><td><b>指标数量</b></td><td>30 个，预计算 / 自选池物化</td><td><b>105 个 id / ≈150 条线，按需计算 + 可见窗口缓存</b></td></tr>
+        <tr><td><b>数据源</b></td><td>tushare 主链路 + baostock 首装全量，直接耦合</td><td><b>DataProvider trait + 能力协商；MVP 只用 mock；tushare 只留解析骨架</b></td></tr>
+        <tr><td><b>存储</b></td><td>DuckDB + Parquet + SQLite（三件套）</td><td><b>Parquet + SQLite（去掉 DuckDB）</b>；sim/real 物理隔离</td></tr>
+        <tr><td><b>交付形态</b></td><td>双进程 + sidecar 签名 + 嵌套公证</td><td><b>单进程 + 单包签名</b>；包体 150MB→30MB，冷启 4s→1.2s</td></tr>
+        <tr><td><b>部署</b></td><td>无账户，但有「同步中心」主链路</td><td><b>无账户 + 无同步</b>；只有静态更新清单与本地诊断包</td></tr>
+        <tr><td><b>产品界面</b></td><td>9 页，指标库单页</td><td><b>12 页</b>，新增指标目录、口径页、模拟数据环境；参数面板由 ParamSpec 驱动</td></tr>
+        <tr><td><b>工作量结论</b></td><td>≈20 人周，1.5 FTE × 14 周可行</td><td><b>52 人周，14 周不成立</b>；需 2 FTE × 26 周（或砍指标到 48 + 24 周）</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="bar"></span>7.3 变更记录</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>版本</th><th>日期</th><th>变更</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>v0.1</td><td>2026-11-05</td><td><code>architecture-report.html</code> / <code>.md</code>：范围过宽，含实时、分钟、选股器、账户支付</td><td><span class="pill p-later">作废</span></td></tr>
+        <tr><td>v0.2</td><td>2026-11-06</td><td><code>architecture-report-mvp.html</code> / <code>.md</code>：收敛到 30 指标 + Python sidecar + tushare 主链路</td><td><span class="pill p-later">被 v3 取代</span></td></tr>
+        <tr><td>v0.3</td><td>2026-11-06</td><td><code>architecture-report-mvp-v3.html</code> / <code>.md</code>：按 5 条硬约束重做；Rust 引擎、105 指标按需、DataProvider、去 sidecar、无账户部署</td><td><span class="pill p-core">当前版本</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout">
+      <p><b>阅读顺序建议</b>：决策者看 §00 与 §06.1 的三条路径；技术评审看 §03 与 §04；产品评审看 §02 与 §05.3。§06.3 的 8 项 spike 是 W1–W2 的验收清单，建议直接当任务卡使用。</p>
+    </div>
+
+    <div class="quote">105 个指标不是 105 个功能，而是 105 份需要被验证的数学承诺。承诺越多，能兑现的时间就越长。</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div><b>最小 MVP · 产品与技术架构设计 v3</b></div>
+    <div>依据 5 条硬约束重做 · 仅设计，未写代码</div>
+    <div>指标口径参考：《技术指标全能手册 · ChartSchool 全解与 A股适用指南》</div>
+    <div class="sp">2026-11-06 · 52 人周 · 14 周不成立</div>
+  </div>
+</footer>
+
+</body>
+</html>
