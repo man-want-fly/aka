@@ -90,6 +90,10 @@ export function WorkbenchPage({
   const [subId, setSubId] = useState<string>(DEFAULT_SUB_ID);
   const [bars, setBars] = useState<BarsResponse | null>(null);
   const [calc, setCalc] = useState<CalcResponse | null>(null);
+  // 供 diag 逐根比对读取「当前渲染帧」的引擎结果（effect 闭包不会随后续 render 更新）
+  const calcRef = useRef<CalcResponse | null>(null);
+  const barsRef = useRef<BarsResponse | null>(null);
+  const rangeRef = useRef(120);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const generation = useRef(0);
@@ -198,7 +202,9 @@ export function WorkbenchPage({
         .then(([nextBars, nextCalc]) => {
           if (current !== generation.current) return;
           setBars(nextBars);
+          barsRef.current = nextBars;
           setCalc(nextCalc);
+          calcRef.current = nextCalc;
           setLoading(false);
 
           if (phaseAtIssue !== "debounce" && phaseAtIssue !== "cold" && phaseAtIssue !== "warm") {
@@ -299,6 +305,11 @@ export function WorkbenchPage({
             };
           },
           write: (payload) => ipc.diagWrite(payload),
+          snapshot: () => ({
+            calc: calcRef.current,
+            barsLength: barsRef.current?.bars.length ?? 0,
+            windowSize: rangeRef.current,
+          }),
         });
         if (!alive) return;
         const written = String(report.writtenTo ?? "");
@@ -471,7 +482,10 @@ export function WorkbenchPage({
                     key={item.value}
                     type="button"
                     aria-pressed={range === item.value}
-                    onClick={() => setRange(item.value)}
+                    onClick={() => {
+                      setRange(item.value);
+                      rangeRef.current = item.value;
+                    }}
                   >
                     {item.label}
                   </button>

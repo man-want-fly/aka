@@ -54,6 +54,12 @@ export interface DiagHooks {
     timeframe: TimeframeCode,
   ) => Promise<{ timeframe: string; barCount: number; datasetId: string }>;
   write: (payload: string) => Promise<string>;
+  /** 渲染层逐根比对用：当前引擎结果 + 可见窗口参数 */
+  snapshot: () => {
+    calc: CalcResponse | null;
+    barsLength: number;
+    windowSize: number;
+  };
 }
 
 export const DEBOUNCE_INPUT_GAP_MS = 40;
@@ -117,7 +123,7 @@ function resolveColor(variable: string): string {
 }
 
 /** 渲染层证据：直接读真实 DOM（Tauri WebView 内），不依赖截图权限。 */
-async function collectRenderChecks(): Promise<Record<string, unknown>> {
+async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unknown>> {
   const attrs = (selector: string, name: string) =>
     Array.from(document.querySelectorAll(selector)).map(
       (element) => element.getAttribute(name) ?? "",
@@ -212,6 +218,70 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
     }
   }
 
+  // 逐根等值：tooltip/读数条显示值 vs 引擎 series（AC-03.04-05，容差 0）
+  let tooltipParity: Record<string, unknown> = { sampled: 0, mismatches: [], ok: false };
+  const snapshot = hooks.snapshot();
+  if (svg && snapshot.calc) {
+    const count = Math.min(snapshot.windowSize, snapshot.barsLength);
+    const offset = snapshot.barsLength - count;
+    const candles = Array.from(
+      document.querySelectorAll<SVGElement>("[data-candle][data-index]"),
+    );
+    const sma =
+      snapshot.calc.series.find((item) => item.indicatorId === "T01")?.outputs[0]?.values ?? [];
+    const dif =
+      snapshot.calc.series
+        .find((item) => item.indicatorId === "M06")
+        ?.outputs.find((output) => output.key === "dif")?.values ?? [];
+    const ratio = [0, 0.2, 0.4, 0.6, 0.8, 1];
+    const picks = Array.from(
+      new Set(ratio.map((r) => Math.min(count - 1, Math.round((count - 1) * r))).filter((i) => i >= 0)),
+    );
+    const rows: Array<Record<string, unknown>> = [];
+    for (const visible of picks) {
+      const candle =
+        candles.find((element) => Number(element.getAttribute("data-index")) === visible) ??
+        candles[visible];
+      if (!candle) continue;
+      const box = candle.getBoundingClientRect();
+      svg.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: box.left + box.width / 2,
+          clientY: box.top + box.height / 2,
+        }),
+      );
+      await sleep(70);
+      const absolute = offset + visible;
+      const shownSma =
+        document.querySelector("[data-readout='ma-T01']")?.getAttribute("data-value") ?? "";
+      const shownDif =
+        document.querySelector("[data-readout='sub-M06-dif']")?.getAttribute("data-value") ?? "";
+      const engineSma = sma[absolute] ?? null;
+      const engineDif = dif[absolute] ?? null;
+      const smaOk = engineSma === null ? shownSma === "" : Number(shownSma) === engineSma;
+      const difOk = engineDif === null ? shownDif === "" : Number(shownDif) === engineDif;
+      rows.push({
+        bar: absolute,
+        engineSma,
+        shownSma,
+        engineDif,
+        shownDif,
+        ok: smaOk && difOk,
+      });
+    }
+    tooltipParity = {
+      tolerance: 0,
+      enginePoints: sma.length,
+      sampled: rows.length,
+      samples: rows,
+      mismatches: rows.filter((row) => row.ok !== true).map((row) => row.bar),
+      ok: rows.length >= 6 && rows.every((row) => row.ok === true),
+    };
+    svg.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+    await sleep(60);
+  }
+
   const unitLabels = Array.from(
     document.querySelectorAll("[data-readout='T21-r2'] [data-unit], [data-readout^='E13-'] [data-unit]"),
   ).map((element) => element.getAttribute("data-unit") ?? "");
@@ -256,6 +326,7 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
     maTooltipCount: tooltipBefore,
     maTooltip: maEntries,
     decimalsOk,
+    tooltipParity,
     hoverError,
     ok:
       Boolean(svg) &&
@@ -269,6 +340,7 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
       tooltipBefore >= 8 &&
       hoverIndex !== "" &&
       decimalsOk &&
+      tooltipParity.ok === true &&
       maEntries.every((entry) => entry.value !== "" && entry.unit !== ""),
   };
 }
@@ -468,6 +540,11 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     const burst = hooks.drainSamples();
     const after = await hooks.telemetry();
     const computeDelta = (after.counts["compute.count"] ?? 0) - countBefore;
+    // 事件原文：cacheKey / paramsHash / datasetId / barCount 等字段逐字落盘
+    const computeEvent =
+      [...(after.recent ?? [])]
+        .reverse()
+        .find((event) => event.name === "indicator.compute") ?? null;
     return {
       label,
       inputs: values,
@@ -475,6 +552,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
       quietMs: DEBOUNCE_QUIET_MS,
       requestsIssued: burst.length,
       computeCountEvents: computeDelta,
+      computeEvent,
       samples: burst,
       passed: burst.length === 1,
     };
@@ -498,6 +576,9 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     notes.push(
       `连键 ${burst60.label} 异常：请求 ${burst60.requestsIssued} / compute.count ${burst60.computeCountEvents}`,
     );
+  }
+  if (!burst60.computeEvent) {
+    notes.push("连键 1→12→60 缺少 indicator.compute 事件原文（cacheKey/paramsHash/datasetId/barCount）");
   }
   await resetToBase();
 
@@ -608,7 +689,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   hooks.setTimeframe("D");
   await sleep(600);
 
-  const renderLayer = await collectRenderChecks();
+  const renderLayer = await collectRenderChecks(hooks);
   const b2Render = await collectB2RenderChecks();
   const catalog = await collectCatalogCheck();
   if (!renderLayer.ok) notes.push("渲染层 DOM 断言未通过，见 verification.renderLayer");
@@ -625,6 +706,8 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     },
     debounce: {
       target: "1→12→120（台账判据）+ 1→12→60（成功单次 compute 佐证）",
+      computeCountSemantics:
+        "compute.count 为请求批次计数：一条 calc 请求可含多个实例（本项目 12 个），事件 count=本批实算实例数；连键断言的是「请求只发 1 次」，不是「只算 1 个实例」",
       burst120,
       burst60,
       telemetry: {

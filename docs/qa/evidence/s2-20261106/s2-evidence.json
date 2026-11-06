@@ -1,13 +1,14 @@
 {
   "schemaVersion": 1,
   "kind": "aka-s2-evidence",
-  "generatedAt": "2026-11-06T13:41:13.887Z",
+  "generatedAt": "2026-11-06T14:54:26.527Z",
   "engine": {
     "engineVersion": "aka-engine-0.1.0",
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)"
   },
   "debounce": {
     "target": "1→12→120（台账判据）+ 1→12→60（成功单次 compute 佐证）",
+    "computeCountSemantics": "compute.count 为请求批次计数：一条 calc 请求可含多个实例（本项目 12 个），事件 count=本批实算实例数；连键断言的是「请求只发 1 次」，不是「只算 1 个实例」",
     "burst120": {
       "label": "1→12→120",
       "inputs": [
@@ -19,6 +20,22 @@
       "quietMs": 120,
       "requestsIssued": 1,
       "computeCountEvents": 0,
+      "computeEvent": {
+        "tsMs": 1793976848322,
+        "name": "indicator.compute",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T04|{\"period\":120}|2023-01-02~2024-12-27",
+          "computeMs": 0.097564,
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T04",
+          "paramsHash": "ea09afd3fecd201d",
+          "security": "300750.SZ",
+          "timeframe": "D"
+        }
+      },
       "samples": [
         {
           "phase": "debounce",
@@ -27,7 +44,7 @@
           "adj": "qfq",
           "barsMs": null,
           "calcMs": null,
-          "totalMs": 14,
+          "totalMs": 16,
           "cacheHit": false,
           "computedMs": null,
           "barCount": 0,
@@ -49,27 +66,43 @@
       "quietMs": 120,
       "requestsIssued": 1,
       "computeCountEvents": 1,
+      "computeEvent": {
+        "tsMs": 1793976849757,
+        "name": "indicator.compute",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{\"period\":60}|2023-01-02~2024-12-27",
+          "computeMs": 0.09594899999999999,
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T05",
+          "paramsHash": "0d154e14a228d636",
+          "security": "300750.SZ",
+          "timeframe": "D"
+        }
+      },
       "samples": [
         {
           "phase": "debounce",
           "security": "300750.SZ",
           "timeframe": "D",
           "adj": "qfq",
-          "barsMs": 11.00000000000091,
-          "calcMs": 15,
-          "totalMs": 18,
+          "barsMs": 18.999999999999545,
+          "calcMs": 40,
+          "totalMs": 45.999999999999545,
           "cacheHit": false,
-          "computedMs": 0.57,
+          "computedMs": 0.74,
           "barCount": 520,
-          "seriesHash": "1ccf8fcd",
-          "seriesPoints": 7575
+          "seriesHash": "a824099a",
+          "seriesPoints": 26154
         }
       ],
       "passed": true
     },
     "telemetry": {
       "computeCount": 44,
-      "indicatorCompute": 350
+      "indicatorCompute": 970
     }
   },
   "cold": {
@@ -108,402 +141,402 @@
       "601014.SH"
     ],
     "allMiss": true,
-    "p95CalcMs": 28,
-    "p95TotalMs": 31,
-    "p95BarsMs": 20,
-    "maxTotalMs": 67,
-    "telemetryColdSamples": 350,
-    "telemetryColdP95Ms": 0.65,
+    "p95CalcMs": 64,
+    "p95TotalMs": 70,
+    "p95BarsMs": 21,
+    "maxTotalMs": 83,
+    "telemetryColdSamples": 970,
+    "telemetryColdP95Ms": 0.88,
     "samples": [
       {
         "security": "600519.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 26,
-        "totalMs": 28,
+        "barsMs": 18,
+        "calcMs": 59,
+        "totalMs": 65,
         "cacheHit": false,
-        "computedMs": 2.79,
+        "computedMs": 10.43,
         "barCount": 520,
-        "seriesHash": "89c928db",
-        "seriesPoints": 7935
+        "seriesHash": "12549d2c",
+        "seriesPoints": 26518
       },
       {
         "security": "002594.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 24,
-        "totalMs": 26,
+        "barsMs": 19,
+        "calcMs": 55,
+        "totalMs": 61,
         "cacheHit": false,
-        "computedMs": 2.86,
+        "computedMs": 10.46,
         "barCount": 520,
-        "seriesHash": "22ca8714",
-        "seriesPoints": 7935
+        "seriesHash": "d228a61d",
+        "seriesPoints": 26517
       },
       {
         "security": "601318.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 22,
-        "totalMs": 25,
+        "barsMs": 18,
+        "calcMs": 55,
+        "totalMs": 61,
         "cacheHit": false,
-        "computedMs": 2.59,
+        "computedMs": 9.73,
         "barCount": 520,
-        "seriesHash": "309323f0",
-        "seriesPoints": 7935
+        "seriesHash": "038a37f0",
+        "seriesPoints": 26512
       },
       {
         "security": "600036.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 23,
-        "totalMs": 25,
+        "barsMs": 19,
+        "calcMs": 54,
+        "totalMs": 59,
         "cacheHit": false,
-        "computedMs": 2.58,
+        "computedMs": 10.95,
         "barCount": 520,
-        "seriesHash": "c5bd26e1",
-        "seriesPoints": 7935
+        "seriesHash": "5f2b26f1",
+        "seriesPoints": 26510
       },
       {
         "security": "000858.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 21,
-        "totalMs": 23,
+        "barsMs": 18,
+        "calcMs": 54,
+        "totalMs": 59,
         "cacheHit": false,
-        "computedMs": 2.61,
+        "computedMs": 10.2,
         "barCount": 520,
-        "seriesHash": "d77fa28c",
-        "seriesPoints": 7935
+        "seriesHash": "bf240578",
+        "seriesPoints": 26517
       },
       {
         "security": "688981.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 20,
-        "calcMs": 22,
-        "totalMs": 24,
+        "barsMs": 19,
+        "calcMs": 58,
+        "totalMs": 63,
         "cacheHit": false,
-        "computedMs": 2.8,
+        "computedMs": 9.29,
         "barCount": 520,
-        "seriesHash": "e278d58c",
-        "seriesPoints": 7935
+        "seriesHash": "628a42a4",
+        "seriesPoints": 26513
       },
       {
         "security": "300059.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 21,
-        "totalMs": 23,
+        "barsMs": 21,
+        "calcMs": 64,
+        "totalMs": 69,
         "cacheHit": false,
-        "computedMs": 2.78,
+        "computedMs": 16.51,
         "barCount": 520,
-        "seriesHash": "da0c344e",
-        "seriesPoints": 7935
+        "seriesHash": "b72fc3a9",
+        "seriesPoints": 26511
       },
       {
         "security": "601899.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 13,
-        "calcMs": 16,
-        "totalMs": 18,
+        "barsMs": 16,
+        "calcMs": 56,
+        "totalMs": 62,
         "cacheHit": false,
-        "computedMs": 3.28,
+        "computedMs": 9.9,
         "barCount": 520,
-        "seriesHash": "b615032a",
-        "seriesPoints": 7935
+        "seriesHash": "ef8c5b35",
+        "seriesPoints": 26519
       },
       {
         "security": "002415.SZ",
         "timeframe": "D",
         "adj": "qfq",
         "barsMs": 16,
-        "calcMs": 24,
-        "totalMs": 26,
+        "calcMs": 56,
+        "totalMs": 62,
         "cacheHit": false,
-        "computedMs": 3.01,
+        "computedMs": 9.83,
         "barCount": 520,
-        "seriesHash": "e7c32582",
-        "seriesPoints": 7935
+        "seriesHash": "454c9eaf",
+        "seriesPoints": 26520
       },
       {
         "security": "600030.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 23,
-        "totalMs": 25,
+        "barsMs": 19,
+        "calcMs": 55,
+        "totalMs": 62,
         "cacheHit": false,
-        "computedMs": 2.65,
+        "computedMs": 10.11,
         "barCount": 520,
-        "seriesHash": "0b15d02f",
-        "seriesPoints": 7935
+        "seriesHash": "bafc27a2",
+        "seriesPoints": 26517
       },
       {
         "security": "601012.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 16,
-        "calcMs": 21,
-        "totalMs": 24,
+        "barsMs": 20,
+        "calcMs": 58,
+        "totalMs": 63,
         "cacheHit": false,
-        "computedMs": 3.68,
+        "computedMs": 12.52,
         "barCount": 520,
-        "seriesHash": "73034597",
-        "seriesPoints": 7935
+        "seriesHash": "83ec9647",
+        "seriesPoints": 26514
       },
       {
         "security": "000651.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 24,
-        "totalMs": 27,
+        "barsMs": 11,
+        "calcMs": 42,
+        "totalMs": 47,
         "cacheHit": false,
-        "computedMs": 3.53,
+        "computedMs": 7.07,
         "barCount": 520,
-        "seriesHash": "219866ee",
-        "seriesPoints": 7935
+        "seriesHash": "ba56122c",
+        "seriesPoints": 26515
       },
       {
         "security": "600900.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 21,
-        "totalMs": 24,
+        "barsMs": 21,
+        "calcMs": 60,
+        "totalMs": 66,
         "cacheHit": false,
-        "computedMs": 2.55,
+        "computedMs": 12.42,
         "barCount": 520,
-        "seriesHash": "46194d9f",
-        "seriesPoints": 7935
+        "seriesHash": "a2f24391",
+        "seriesPoints": 26520
       },
       {
         "security": "000001.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 13,
-        "calcMs": 19,
-        "totalMs": 21,
+        "barsMs": 21,
+        "calcMs": 63,
+        "totalMs": 69,
         "cacheHit": false,
-        "computedMs": 1.84,
+        "computedMs": 10.82,
         "barCount": 520,
-        "seriesHash": "04bb79a4",
-        "seriesPoints": 7935
+        "seriesHash": "cf50327f",
+        "seriesPoints": 26516
       },
       {
         "security": "399001.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 20,
-        "calcMs": 27,
-        "totalMs": 29,
+        "barsMs": 15,
+        "calcMs": 59,
+        "totalMs": 66,
         "cacheHit": false,
-        "computedMs": 3.63,
+        "computedMs": 10.52,
         "barCount": 520,
-        "seriesHash": "a019a5a2",
-        "seriesPoints": 7935
+        "seriesHash": "1750c301",
+        "seriesPoints": 26515
       },
       {
         "security": "399006.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 23,
-        "totalMs": 25,
+        "barsMs": 14,
+        "calcMs": 56,
+        "totalMs": 62,
         "cacheHit": false,
-        "computedMs": 2.95,
+        "computedMs": 9.84,
         "barCount": 520,
-        "seriesHash": "76390f54",
-        "seriesPoints": 7935
+        "seriesHash": "7825e31d",
+        "seriesPoints": 26510
       },
       {
         "security": "601000.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 25,
-        "totalMs": 28,
+        "barsMs": 19,
+        "calcMs": 59,
+        "totalMs": 65,
         "cacheHit": false,
-        "computedMs": 3.08,
+        "computedMs": 10.16,
         "barCount": 520,
-        "seriesHash": "5a0cbf59",
-        "seriesPoints": 7935
+        "seriesHash": "5901354f",
+        "seriesPoints": 26517
       },
       {
         "security": "601001.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 28,
-        "totalMs": 31,
+        "barsMs": 19,
+        "calcMs": 79,
+        "totalMs": 83,
         "cacheHit": false,
-        "computedMs": 5.31,
+        "computedMs": 10.38,
         "barCount": 520,
-        "seriesHash": "943c2963",
-        "seriesPoints": 7935
+        "seriesHash": "397f6b99",
+        "seriesPoints": 26520
       },
       {
         "security": "601002.SH",
         "timeframe": "D",
         "adj": "qfq",
         "barsMs": 16,
-        "calcMs": 24,
-        "totalMs": 27,
+        "calcMs": 58,
+        "totalMs": 65,
         "cacheHit": false,
-        "computedMs": 4.79,
+        "computedMs": 9.49,
         "barCount": 520,
-        "seriesHash": "1d7c47c8",
-        "seriesPoints": 7935
+        "seriesHash": "aa1f68ec",
+        "seriesPoints": 26517
       },
       {
         "security": "601003.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 66,
-        "totalMs": 67,
+        "barsMs": 21,
+        "calcMs": 61,
+        "totalMs": 68,
         "cacheHit": false,
-        "computedMs": 5.52,
+        "computedMs": 9.89,
         "barCount": 520,
-        "seriesHash": "912d37ce",
-        "seriesPoints": 7935
+        "seriesHash": "8774acd0",
+        "seriesPoints": 26515
       },
       {
         "security": "601004.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 23,
-        "totalMs": 25,
+        "barsMs": 21,
+        "calcMs": 64,
+        "totalMs": 70,
         "cacheHit": false,
-        "computedMs": 3,
+        "computedMs": 11.8,
         "barCount": 520,
-        "seriesHash": "21ed7716",
-        "seriesPoints": 7935
+        "seriesHash": "bae7b81d",
+        "seriesPoints": 26518
       },
       {
         "security": "601005.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 16,
-        "calcMs": 22,
-        "totalMs": 24,
+        "barsMs": 18,
+        "calcMs": 62,
+        "totalMs": 67,
         "cacheHit": false,
-        "computedMs": 2.85,
+        "computedMs": 10.98,
         "barCount": 520,
-        "seriesHash": "d6d0fa6a",
-        "seriesPoints": 7935
+        "seriesHash": "9730e6df",
+        "seriesPoints": 26518
       },
       {
         "security": "601006.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 16,
-        "calcMs": 25,
-        "totalMs": 27,
+        "barsMs": 17,
+        "calcMs": 55,
+        "totalMs": 60,
         "cacheHit": false,
-        "computedMs": 2.83,
+        "computedMs": 9.47,
         "barCount": 520,
-        "seriesHash": "7680b120",
-        "seriesPoints": 7935
+        "seriesHash": "7ae61d90",
+        "seriesPoints": 26517
       },
       {
         "security": "601007.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 23,
-        "totalMs": 25,
+        "barsMs": 16,
+        "calcMs": 55,
+        "totalMs": 60,
         "cacheHit": false,
-        "computedMs": 2.66,
+        "computedMs": 9.12,
         "barCount": 520,
-        "seriesHash": "1ba93fda",
-        "seriesPoints": 7935
+        "seriesHash": "5e86915f",
+        "seriesPoints": 26518
       },
       {
         "security": "601008.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 24,
-        "totalMs": 26,
+        "barsMs": 16,
+        "calcMs": 55,
+        "totalMs": 61,
         "cacheHit": false,
-        "computedMs": 2.61,
+        "computedMs": 9.73,
         "barCount": 520,
-        "seriesHash": "bec28f71",
-        "seriesPoints": 7935
+        "seriesHash": "22f34e2a",
+        "seriesPoints": 26517
       },
       {
         "security": "601009.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 22,
-        "totalMs": 24,
+        "barsMs": 13,
+        "calcMs": 42,
+        "totalMs": 46,
         "cacheHit": false,
-        "computedMs": 2.15,
+        "computedMs": 7.24,
         "barCount": 520,
-        "seriesHash": "f2ea0200",
-        "seriesPoints": 7935
+        "seriesHash": "458594a4",
+        "seriesPoints": 26525
       },
       {
         "security": "601010.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 20,
-        "calcMs": 25,
-        "totalMs": 27,
+        "barsMs": 16,
+        "calcMs": 54,
+        "totalMs": 59,
         "cacheHit": false,
-        "computedMs": 2.79,
+        "computedMs": 9.49,
         "barCount": 520,
-        "seriesHash": "daaa5bd2",
-        "seriesPoints": 7935
+        "seriesHash": "a19813fe",
+        "seriesPoints": 26523
       },
       {
         "security": "601011.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 16,
-        "calcMs": 25,
-        "totalMs": 28,
+        "barsMs": 13,
+        "calcMs": 46,
+        "totalMs": 49,
         "cacheHit": false,
-        "computedMs": 4.64,
+        "computedMs": 6.85,
         "barCount": 520,
-        "seriesHash": "8f231b1b",
-        "seriesPoints": 7935
+        "seriesHash": "eef61272",
+        "seriesPoints": 26516
       },
       {
         "security": "601013.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 26,
-        "totalMs": 27,
+        "barsMs": 14,
+        "calcMs": 41,
+        "totalMs": 44,
         "cacheHit": false,
-        "computedMs": 2.89,
+        "computedMs": 8.8,
         "barCount": 520,
-        "seriesHash": "d369a945",
-        "seriesPoints": 7935
+        "seriesHash": "017bb213",
+        "seriesPoints": 26516
       },
       {
         "security": "601014.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 19,
-        "calcMs": 25,
-        "totalMs": 26,
+        "barsMs": 14,
+        "calcMs": 46,
+        "totalMs": 51,
         "cacheHit": false,
-        "computedMs": 3.23,
+        "computedMs": 7.85,
         "barCount": 520,
-        "seriesHash": "940d60af",
-        "seriesPoints": 7935
+        "seriesHash": "4248829b",
+        "seriesPoints": 26517
       }
     ]
   },
@@ -512,129 +545,129 @@
     "sampleCount": 10,
     "allCacheHit": true,
     "allPointwiseMatch": true,
-    "p95TotalMs": 21,
-    "maxTotalMs": 21,
-    "maxCalcMs": 20,
+    "p95TotalMs": 229,
+    "maxTotalMs": 229,
+    "maxCalcMs": 224,
     "samples": [
       {
         "security": "600519.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 19,
-        "totalMs": 21,
+        "barsMs": 135,
+        "calcMs": 224,
+        "totalMs": 229,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "89c928db",
-        "seriesPoints": 7935
+        "seriesHash": "12549d2c",
+        "seriesPoints": 26518
       },
       {
         "security": "002594.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 20,
-        "totalMs": 21,
+        "barsMs": 16,
+        "calcMs": 37,
+        "totalMs": 42,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "22ca8714",
-        "seriesPoints": 7935
+        "seriesHash": "d228a61d",
+        "seriesPoints": 26517
       },
       {
         "security": "601318.SH",
         "timeframe": "D",
         "adj": "qfq",
         "barsMs": 17,
-        "calcMs": 18,
-        "totalMs": 21,
+        "calcMs": 43,
+        "totalMs": 48,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "309323f0",
-        "seriesPoints": 7935
+        "seriesHash": "038a37f0",
+        "seriesPoints": 26512
       },
       {
         "security": "600036.SH",
         "timeframe": "D",
         "adj": "qfq",
         "barsMs": 17,
-        "calcMs": 19,
-        "totalMs": 21,
+        "calcMs": 38,
+        "totalMs": 43,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "c5bd26e1",
-        "seriesPoints": 7935
+        "seriesHash": "5f2b26f1",
+        "seriesPoints": 26510
       },
       {
         "security": "000858.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 18,
-        "totalMs": 19,
+        "barsMs": 18,
+        "calcMs": 38,
+        "totalMs": 42,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "d77fa28c",
-        "seriesPoints": 7935
+        "seriesHash": "bf240578",
+        "seriesPoints": 26517
       },
       {
         "security": "688981.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 11,
-        "calcMs": 18,
-        "totalMs": 20,
+        "barsMs": 18,
+        "calcMs": 41,
+        "totalMs": 46,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "e278d58c",
-        "seriesPoints": 7935
+        "seriesHash": "628a42a4",
+        "seriesPoints": 26513
       },
       {
         "security": "300059.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 13,
-        "calcMs": 14,
-        "totalMs": 16,
+        "barsMs": 15,
+        "calcMs": 42,
+        "totalMs": 46,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "da0c344e",
-        "seriesPoints": 7935
+        "seriesHash": "b72fc3a9",
+        "seriesPoints": 26511
       },
       {
         "security": "601899.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 18,
-        "totalMs": 20,
+        "barsMs": 16,
+        "calcMs": 37,
+        "totalMs": 42,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "b615032a",
-        "seriesPoints": 7935
+        "seriesHash": "ef8c5b35",
+        "seriesPoints": 26519
       },
       {
         "security": "002415.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 17,
-        "totalMs": 19,
+        "barsMs": 16,
+        "calcMs": 35,
+        "totalMs": 39,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "e7c32582",
-        "seriesPoints": 7935
+        "seriesHash": "454c9eaf",
+        "seriesPoints": 26520
       },
       {
         "security": "600030.SH",
         "timeframe": "D",
         "adj": "qfq",
         "barsMs": 16,
-        "calcMs": 17,
-        "totalMs": 19,
+        "calcMs": 36,
+        "totalMs": 40,
         "cacheHit": true,
         "matchesCold": true,
-        "seriesHash": "0b15d02f",
-        "seriesPoints": 7935
+        "seriesHash": "bafc27a2",
+        "seriesPoints": 26517
       }
     ]
   },
@@ -650,22 +683,22 @@
         "security": "600030.SH",
         "barCount": 104,
         "cacheHit": false,
-        "barsMs": 10,
-        "calcMs": 15,
-        "totalMs": 15,
-        "seriesHash": "1766e23e",
-        "seriesPoints": 1279
+        "barsMs": 11,
+        "calcMs": 24,
+        "totalMs": 26,
+        "seriesHash": "eaa53469",
+        "seriesPoints": 4459
       },
       {
         "timeframe": "D",
         "security": "600030.SH",
         "barCount": 520,
         "cacheHit": true,
-        "barsMs": 18,
-        "calcMs": 19,
-        "totalMs": 21,
-        "seriesHash": "0b15d02f",
-        "seriesPoints": 7935
+        "barsMs": 15,
+        "calcMs": 35,
+        "totalMs": 40,
+        "seriesHash": "bafc27a2",
+        "seriesPoints": 26517
       }
     ],
     "aggregationOrdered": true,
@@ -686,7 +719,7 @@
         "datasetId": "sim-default"
       }
     ],
-    "monthlyNote": "当前模拟数据集仅 520 根日线（≈24 个月），M 周期下 11 个 B1 指标均未达预热阈值，只取证到行情层聚合"
+    "monthlyNote": "当前模拟数据集仅 520 根日线（≈24 个月）；M 周期按 warmup+1 门：T02/T04/T05/M06 共 4 项不可算，T01/T03/T19/T20/T21/T22/E13 共 7 项可算；本次 M 只取证到行情层聚合"
   },
   "verification": {
     "renderLayer": {
@@ -699,14 +732,32 @@
         "T05",
         "T19",
         "T20",
-        "T22"
+        "T22",
+        "T09",
+        "T09",
+        "T09",
+        "T24",
+        "T24"
       ],
-      "overlayCount": 8,
+      "overlayCount": 13,
       "macd": [
         "dif",
-        "dea"
+        "dea",
+        "hist"
       ],
-      "macdCount": 2,
+      "macdCount": 3,
+      "macdHistCount": 120,
+      "colorSamples": {
+        "posToken": "rgb(228, 72, 63)",
+        "negToken": "rgb(23, 166, 115)",
+        "upCandleStroke": "rgb(228, 72, 63)",
+        "downCandleStroke": "rgb(23, 166, 115)",
+        "histPosFill": "rgb(228, 72, 63)",
+        "histNegFill": "rgb(23, 166, 115)",
+        "chgFirst": "pos|rgb(228, 72, 63)|▲ +2.74%",
+        "chgSecond": "neg|rgb(23, 166, 115)|▼ -9.98%"
+      },
+      "colorOk": true,
       "statisticalReadouts": [
         "T21-r2",
         "E13-bias6",
@@ -720,6 +771,8 @@
         "%",
         "%"
       ],
+      "t21Text": "R² 0.30无量纲",
+      "t21TwoDecimals": true,
       "readoutHost": 1,
       "hoverIndex": "76",
       "maTooltipCount": 8,
@@ -774,7 +827,551 @@
         }
       ],
       "decimalsOk": true,
+      "tooltipParity": {
+        "tolerance": 0,
+        "enginePoints": 520,
+        "sampled": 6,
+        "samples": [
+          {
+            "bar": 400,
+            "engineSma": 28.598500000000023,
+            "shownSma": "28.598500000000023",
+            "engineDif": -0.3196567024370367,
+            "shownDif": "-0.3196567024370367",
+            "ok": true
+          },
+          {
+            "bar": 424,
+            "engineSma": 24.459500000000027,
+            "shownSma": "24.459500000000027",
+            "engineDif": -0.9945938248652979,
+            "shownDif": "-0.9945938248652979",
+            "ok": true
+          },
+          {
+            "bar": 448,
+            "engineSma": 23.354000000000024,
+            "shownSma": "23.354000000000024",
+            "engineDif": 0.22627546445831825,
+            "shownDif": "0.22627546445831825",
+            "ok": true
+          },
+          {
+            "bar": 471,
+            "engineSma": 25.662500000000033,
+            "shownSma": "25.662500000000033",
+            "engineDif": 0.24550294416331653,
+            "shownDif": "0.24550294416331653",
+            "ok": true
+          },
+          {
+            "bar": 495,
+            "engineSma": 25.49200000000003,
+            "shownSma": "25.49200000000003",
+            "engineDif": -0.035523560401216514,
+            "shownDif": "-0.035523560401216514",
+            "ok": true
+          },
+          {
+            "bar": 519,
+            "engineSma": 23.301500000000036,
+            "shownSma": "23.301500000000036",
+            "engineDif": -0.4880104611366427,
+            "shownDif": "-0.4880104611366427",
+            "ok": true
+          }
+        ],
+        "mismatches": [],
+        "ok": true
+      },
       "hoverError": null,
+      "ok": true
+    },
+    "b2Render": {
+      "cardCount": 8,
+      "cards": [
+        {
+          "card": "S-03.05-01",
+          "kind": "overlay",
+          "selected": true,
+          "expected": {
+            "T08": 3,
+            "T09": 3,
+            "T11": 2,
+            "T24": 2
+          },
+          "samples": {
+            "T08": {
+              "nodes": 3,
+              "paint": "rgb(228, 72, 63)",
+              "points": 1666
+            },
+            "T09": {
+              "nodes": 3,
+              "paint": "rgb(228, 72, 63)",
+              "points": 1666
+            },
+            "T11": {
+              "nodes": 2,
+              "paint": "rgb(228, 72, 63)",
+              "points": 1666
+            },
+            "T24": {
+              "nodes": 2,
+              "paint": "rgb(228, 72, 63)",
+              "points": 1666
+            }
+          },
+          "readouts": {
+            "T08": [
+              {
+                "readout": "b2-overlay-T08-upper",
+                "value": "23.884037500000034",
+                "unit": "元",
+                "text": "T08·upper 23.88 元"
+              },
+              {
+                "readout": "b2-overlay-T08-middle",
+                "value": "23.301500000000036",
+                "unit": "元",
+                "text": "T08·middle 23.30 元"
+              },
+              {
+                "readout": "b2-overlay-T08-lower",
+                "value": "22.718962500000035",
+                "unit": "元",
+                "text": "T08·lower 22.72 元"
+              }
+            ],
+            "T09": [
+              {
+                "readout": "b2-overlay-T09-upper",
+                "value": "25.932435595042826",
+                "unit": "元",
+                "text": "T09·upper 25.93 元"
+              },
+              {
+                "readout": "b2-overlay-T09-middle",
+                "value": "23.301500000000036",
+                "unit": "元",
+                "text": "T09·middle 23.30 元"
+              },
+              {
+                "readout": "b2-overlay-T09-lower",
+                "value": "20.670564404957247",
+                "unit": "元",
+                "text": "T09·lower 20.67 元"
+              }
+            ],
+            "T11": [
+              {
+                "readout": "b2-overlay-T11-upper",
+                "value": "26.33",
+                "unit": "元",
+                "text": "T11·upper 26.33 元"
+              },
+              {
+                "readout": "b2-overlay-T11-lower",
+                "value": "21.51",
+                "unit": "元",
+                "text": "T11·lower 21.51 元"
+              }
+            ],
+            "T24": [
+              {
+                "readout": "b2-overlay-T24-hhv",
+                "value": "26.33",
+                "unit": "元",
+                "text": "T24·hhv 26.33 元"
+              },
+              {
+                "readout": "b2-overlay-T24-llv",
+                "value": "21.51",
+                "unit": "元",
+                "text": "T24·llv 21.51 元"
+              }
+            ]
+          },
+          "ok": true
+        },
+        {
+          "card": "S-03.05-03",
+          "kind": "overlay",
+          "selected": true,
+          "expected": {
+            "T10": 3,
+            "T12": 3,
+            "T13": 2,
+            "T14": 2
+          },
+          "samples": {
+            "T10": {
+              "nodes": 3,
+              "paint": "rgb(228, 72, 63)",
+              "points": 1666
+            },
+            "T12": {
+              "nodes": 3,
+              "paint": "rgb(228, 72, 63)",
+              "points": 1666
+            },
+            "T13": {
+              "nodes": 2,
+              "paint": "rgb(228, 72, 63)",
+              "points": 853
+            },
+            "T14": {
+              "nodes": 2,
+              "paint": "rgb(228, 72, 63)",
+              "points": 1666
+            }
+          },
+          "readouts": {
+            "T10": [
+              {
+                "readout": "b2-overlay-T10-upper",
+                "value": "24.625224819616715",
+                "unit": "元",
+                "text": "T10·upper 24.63 元"
+              },
+              {
+                "readout": "b2-overlay-T10-middle",
+                "value": "23.391778670741395",
+                "unit": "元",
+                "text": "T10·middle 23.39 元"
+              },
+              {
+                "readout": "b2-overlay-T10-lower",
+                "value": "22.158332521866075",
+                "unit": "元",
+                "text": "T10·lower 22.16 元"
+              }
+            ],
+            "T12": [
+              {
+                "readout": "b2-overlay-T12-upper",
+                "value": "24.534946148875356",
+                "unit": "元",
+                "text": "T12·upper 24.53 元"
+              },
+              {
+                "readout": "b2-overlay-T12-middle",
+                "value": "23.301500000000036",
+                "unit": "元",
+                "text": "T12·middle 23.30 元"
+              },
+              {
+                "readout": "b2-overlay-T12-lower",
+                "value": "22.068053851124716",
+                "unit": "元",
+                "text": "T12·lower 22.07 元"
+              }
+            ],
+            "T13": [
+              {
+                "readout": "b2-overlay-T13-long",
+                "value": "",
+                "unit": "元",
+                "text": "T13·long — 元"
+              },
+              {
+                "readout": "b2-overlay-T13-short",
+                "value": "23.781521702108606",
+                "unit": "元",
+                "text": "T13·short 23.78 元"
+              }
+            ],
+            "T14": [
+              {
+                "readout": "b2-overlay-T14-long",
+                "value": "24.492297696139946",
+                "unit": "元",
+                "text": "T14·long 24.49 元"
+              },
+              {
+                "readout": "b2-overlay-T14-short",
+                "value": "23.347702303860054",
+                "unit": "元",
+                "text": "T14·short 23.35 元"
+              }
+            ]
+          },
+          "ok": true
+        },
+        {
+          "card": "S-03.05-04",
+          "kind": "overlay",
+          "selected": true,
+          "expected": {
+            "T15": 5
+          },
+          "samples": {
+            "T15": {
+              "nodes": 5,
+              "paint": "rgb(96, 165, 250)",
+              "points": 1666
+            }
+          },
+          "readouts": {
+            "T15": [
+              {
+                "readout": "b2-overlay-T15-tenkan",
+                "value": "22.67",
+                "unit": "元",
+                "text": "T15·tenkan 22.67 元"
+              },
+              {
+                "readout": "b2-overlay-T15-kijun",
+                "value": "23.92",
+                "unit": "元",
+                "text": "T15·kijun 23.92 元"
+              },
+              {
+                "readout": "b2-overlay-T15-senkouA",
+                "value": "25.560000000000002",
+                "unit": "元",
+                "text": "T15·senkouA 25.56 元"
+              },
+              {
+                "readout": "b2-overlay-T15-senkouB",
+                "value": "24.63",
+                "unit": "元",
+                "text": "T15·senkouB 24.63 元"
+              },
+              {
+                "readout": "b2-overlay-T15-chikou",
+                "value": "",
+                "unit": "元",
+                "text": "T15·chikou — 元"
+              }
+            ]
+          },
+          "ok": true
+        },
+        {
+          "card": "S-03.05-05",
+          "kind": "overlay",
+          "selected": true,
+          "expected": {
+            "T16": 1
+          },
+          "samples": {
+            "T16": {
+              "nodes": 1,
+              "paint": "rgb(245, 158, 11)",
+              "points": 120
+            }
+          },
+          "readouts": {
+            "T16": [
+              {
+                "readout": "b2-overlay-T16-psar",
+                "value": "21.73391296",
+                "unit": "元",
+                "text": "T16·psar 21.73 元"
+              }
+            ]
+          },
+          "ok": true
+        },
+        {
+          "card": "S-03.05-06",
+          "kind": "overlay",
+          "selected": true,
+          "expected": {
+            "T23": 3
+          },
+          "samples": {
+            "T23": {
+              "nodes": 3,
+              "paint": "rgb(79, 163, 199)",
+              "points": 1666
+            }
+          },
+          "readouts": {
+            "T23": [
+              {
+                "readout": "b2-overlay-T23-pivot",
+                "value": "23.16333333333333",
+                "unit": "元",
+                "text": "T23·pivot 23.16 元"
+              },
+              {
+                "readout": "b2-overlay-T23-r1",
+                "value": "23.47666666666666",
+                "unit": "元",
+                "text": "T23·r1 23.48 元"
+              },
+              {
+                "readout": "b2-overlay-T23-s1",
+                "value": "22.59666666666666",
+                "unit": "元",
+                "text": "T23·s1 22.60 元"
+              }
+            ]
+          },
+          "ok": true
+        },
+        {
+          "card": "S-03.05-02",
+          "kind": "sub",
+          "expected": {
+            "V01": 1,
+            "V02": 1,
+            "V09": 1,
+            "V10": 1
+          },
+          "samples": {
+            "V01": {
+              "nodes": 1,
+              "paint": "rgb(245, 158, 11)",
+              "points": 1786
+            },
+            "V02": {
+              "nodes": 1,
+              "paint": "rgb(34, 211, 238)",
+              "points": 1786
+            },
+            "V09": {
+              "nodes": 1,
+              "paint": "rgb(96, 165, 250)",
+              "points": 1786
+            },
+            "V10": {
+              "nodes": 1,
+              "paint": "rgb(148, 163, 184)",
+              "points": 1786
+            }
+          },
+          "readouts": {
+            "V01": [
+              {
+                "readout": "b2-sub-V01-atr",
+                "value": "0.6353399617584122",
+                "unit": "元",
+                "text": "V01·atr 0.64 元"
+              }
+            ],
+            "V02": [
+              {
+                "readout": "b2-sub-V02-atrp",
+                "value": "0.026898389574869272",
+                "unit": "无量纲",
+                "text": "V02·atrp 0.03 无量纲"
+              }
+            ],
+            "V09": [
+              {
+                "readout": "b2-sub-V09-amplitude",
+                "value": "1.0500000000000007",
+                "unit": "元",
+                "text": "V09·amplitude 1.05 元"
+              }
+            ],
+            "V10": [
+              {
+                "readout": "b2-sub-V10-tr",
+                "value": "1.0500000000000007",
+                "unit": "元",
+                "text": "V10·tr 1.05 元"
+              }
+            ]
+          },
+          "ok": true
+        },
+        {
+          "card": "S-03.05-07",
+          "kind": "sub",
+          "expected": {
+            "V03": 1,
+            "V04": 1,
+            "V05": 1
+          },
+          "samples": {
+            "V03": {
+              "nodes": 1,
+              "paint": "rgb(167, 139, 250)",
+              "points": 1786
+            },
+            "V04": {
+              "nodes": 1,
+              "paint": "rgb(148, 163, 184)",
+              "points": 1786
+            },
+            "V05": {
+              "nodes": 1,
+              "paint": "rgb(52, 211, 153)",
+              "points": 1786
+            }
+          },
+          "readouts": {
+            "V03": [
+              {
+                "readout": "b2-sub-V03-std",
+                "value": "1.3154677975213944",
+                "unit": "元",
+                "text": "V03·std 1.32 元"
+              }
+            ],
+            "V04": [
+              {
+                "readout": "b2-sub-V04-width",
+                "value": "0.22581684398367355",
+                "unit": "无量纲",
+                "text": "V04·width 0.23 无量纲"
+              }
+            ],
+            "V05": [
+              {
+                "readout": "b2-sub-V05-percentB",
+                "value": "0.5605297979547814",
+                "unit": "无量纲",
+                "text": "V05·percentB 0.56 无量纲"
+              }
+            ]
+          },
+          "ok": true
+        },
+        {
+          "card": "S-03.05-08",
+          "kind": "sub",
+          "expected": {
+            "V07": 1,
+            "V08": 1
+          },
+          "samples": {
+            "V07": {
+              "nodes": 1,
+              "paint": "rgb(244, 114, 182)",
+              "points": 1786
+            },
+            "V08": {
+              "nodes": 1,
+              "paint": "rgb(245, 158, 11)",
+              "points": 1786
+            }
+          },
+          "readouts": {
+            "V07": [
+              {
+                "readout": "b2-sub-V07-ulcer",
+                "value": "5.125130556960944",
+                "unit": "%",
+                "text": "V07·ulcer 5.13 %"
+              }
+            ],
+            "V08": [
+              {
+                "readout": "b2-sub-V08-gapo",
+                "value": "-15.739604938942339",
+                "unit": "%",
+                "text": "V08·gapo -15.74 %"
+              }
+            ]
+          },
+          "ok": true
+        }
+      ],
       "ok": true
     },
     "catalog": {
@@ -791,415 +1388,162 @@
         "T21",
         "T22",
         "E13",
-        "M06"
+        "M06",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T23",
+        "T24",
+        "V01",
+        "V02",
+        "V03",
+        "V04",
+        "V05",
+        "V07",
+        "V08",
+        "V09",
+        "V10"
       ],
-      "itemCount": 11,
+      "itemCount": 31,
       "sections": [
         "formula",
         "params",
         "warmup",
         "boundary"
       ],
-      "betaCount": 4,
+      "betaIds": [
+        "T03",
+        "T19",
+        "T21",
+        "M06",
+        "T16"
+      ],
+      "betaCount": 5,
       "ok": true
     }
   },
   "telemetry": {
     "path": "/Users/sixmillion/Library/Application Support/aka/logs/telemetry.jsonl",
-    "total": 1277,
+    "total": 3397,
     "counts": {
-      "cache.hit": 138,
-      "cache.miss": 350,
+      "cache.hit": 398,
+      "cache.miss": 970,
       "compute.count": 44,
       "compute.skip": 45,
-      "indicator.cold_ms": 350,
-      "indicator.compute": 350
+      "indicator.cold_ms": 970,
+      "indicator.compute": 970
     },
-    "coldSamples": 350,
-    "coldP95Ms": 0.65,
+    "coldSamples": 970,
+    "coldP95Ms": 0.88,
     "recent": [
       {
-        "tsMs": 1793972471229,
+        "tsMs": 1793976859061,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|V04|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V04",
+          "paramsHash": "2058501d9d30925e",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859062,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|V05|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V05",
+          "paramsHash": "2058501d9d30925e",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859062,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|V07|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V07",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859062,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|V08|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V08",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859062,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|V09|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V09",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859062,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|V10|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V10",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859062,
         "name": "compute.count",
         "fields": {
           "cacheHit": true,
           "count": 0,
-          "instances": 12,
+          "instances": 32,
           "skip": 1
         }
       },
       {
-        "tsMs": 1793972471394,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T01",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471394,
-        "name": "compute.skip",
-        "fields": {
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
-          "indicatorId": "T01",
-          "instanceId": "overlay-T01",
-          "reason": "duplicateKey"
-        }
-      },
-      {
-        "tsMs": 1793972471394,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T02|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T02",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471395,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T03|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T03",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471395,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T04|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T04",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471395,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T05|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T05",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471395,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T19",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471395,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T20",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471395,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T21",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471396,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T22",
-          "paramsHash": "e928aa148d72e042",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471396,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "E13",
-          "paramsHash": "049603ad72311beb",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471396,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "M06",
-          "paramsHash": "cc530a4de7afed5c",
-          "security": "601899.SH",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471396,
-        "name": "compute.count",
-        "fields": {
-          "cacheHit": true,
-          "count": 0,
-          "instances": 12,
-          "skip": 1
-        }
-      },
-      {
-        "tsMs": 1793972471563,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T01",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471564,
-        "name": "compute.skip",
-        "fields": {
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
-          "indicatorId": "T01",
-          "instanceId": "overlay-T01",
-          "reason": "duplicateKey"
-        }
-      },
-      {
-        "tsMs": 1793972471564,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T02|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T02",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471564,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T03|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T03",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471564,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T04|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T04",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471564,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T05|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T05",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471564,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T19",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471564,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T20",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471565,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T21",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471565,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "T22",
-          "paramsHash": "e928aa148d72e042",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471565,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "E13",
-          "paramsHash": "049603ad72311beb",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471565,
-        "name": "cache.hit",
-        "fields": {
-          "adj": "qfq",
-          "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
-          "datasetGeneration": 1,
-          "datasetId": "sim-default",
-          "indicatorId": "M06",
-          "paramsHash": "cc530a4de7afed5c",
-          "security": "002415.SZ",
-          "timeframe": "D"
-        }
-      },
-      {
-        "tsMs": 1793972471566,
-        "name": "compute.count",
-        "fields": {
-          "cacheHit": true,
-          "count": 0,
-          "instances": 12,
-          "skip": 1
-        }
-      },
-      {
-        "tsMs": 1793972471729,
+        "tsMs": 1793976859236,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1214,7 +1558,7 @@
         }
       },
       {
-        "tsMs": 1793972471729,
+        "tsMs": 1793976859236,
         "name": "compute.skip",
         "fields": {
           "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
@@ -1224,7 +1568,7 @@
         }
       },
       {
-        "tsMs": 1793972471729,
+        "tsMs": 1793976859237,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1239,7 +1583,7 @@
         }
       },
       {
-        "tsMs": 1793972471729,
+        "tsMs": 1793976859237,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1254,7 +1598,7 @@
         }
       },
       {
-        "tsMs": 1793972471729,
+        "tsMs": 1793976859237,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1269,7 +1613,7 @@
         }
       },
       {
-        "tsMs": 1793972471730,
+        "tsMs": 1793976859237,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1284,7 +1628,7 @@
         }
       },
       {
-        "tsMs": 1793972471730,
+        "tsMs": 1793976859237,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1299,7 +1643,7 @@
         }
       },
       {
-        "tsMs": 1793972471730,
+        "tsMs": 1793976859237,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1314,7 +1658,7 @@
         }
       },
       {
-        "tsMs": 1793972471730,
+        "tsMs": 1793976859238,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1329,7 +1673,7 @@
         }
       },
       {
-        "tsMs": 1793972471730,
+        "tsMs": 1793976859238,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1344,7 +1688,7 @@
         }
       },
       {
-        "tsMs": 1793972471731,
+        "tsMs": 1793976859238,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1359,7 +1703,7 @@
         }
       },
       {
-        "tsMs": 1793972471731,
+        "tsMs": 1793976859238,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
@@ -1374,18 +1718,319 @@
         }
       },
       {
-        "tsMs": 1793972471731,
+        "tsMs": 1793976859238,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T08|{\"pct\":2.5,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T08",
+          "paramsHash": "84688a996eb80282",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859238,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T09|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T09",
+          "paramsHash": "2058501d9d30925e",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859239,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T10|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T10",
+          "paramsHash": "2058501d9d30925e",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859239,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T11|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T11",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859239,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T12|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T12",
+          "paramsHash": "2058501d9d30925e",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859239,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T13|{\"mult\":3.5,\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T13",
+          "paramsHash": "0c36bf4e54fbc39f",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859239,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T14|{\"mult\":3.0,\"period\":22}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T14",
+          "paramsHash": "e91a1244413544bd",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859240,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T15|{\"displacement\":26,\"kijun\":26,\"senkou\":52,\"tenkan\":9}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T15",
+          "paramsHash": "0f10292179b46ef7",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859240,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T16|{\"increment\":0.02,\"max\":0.2,\"step\":0.02}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T16",
+          "paramsHash": "ded8d99ed383318c",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859241,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T23|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T23",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859241,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T24|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T24",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859241,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V01|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V01",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859242,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V02|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V02",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859242,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V03|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V03",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859243,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V04|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V04",
+          "paramsHash": "2058501d9d30925e",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859243,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V05|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V05",
+          "paramsHash": "2058501d9d30925e",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859243,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V07|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V07",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859243,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V08|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V08",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859244,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V09|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V09",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859244,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V10|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V10",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793976859244,
         "name": "compute.count",
         "fields": {
           "cacheHit": true,
           "count": 0,
-          "instances": 12,
+          "instances": 32,
           "skip": 1
         }
       }
     ]
   },
   "notes": [
-    "连键 1→12→120 的结果：INSUFFICIENT_DATA: 三重指数移动平均线 需要至少 540 根 K 线（预热 539），当前 520 根"
+    "连键 1→12→120 的结果：INSUFFICIENT_DATA: 三重指数移动平均线 需要至少 540 根 K 线（预热 539），当前 520 根",
+    "回切异常：样本 10 / cacheHit true / 逐点一致 true / max 229ms"
   ]
 }
