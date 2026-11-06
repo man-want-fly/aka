@@ -7,6 +7,7 @@ import { SimBadge } from "../../components/SimBadge";
 import { Watchlist } from "../../components/Watchlist";
 import {
   B2_OVERLAY_CHOICES,
+  B1_OVERLAY_CHOICES,
   SUB_CHOICES,
   DEFAULT_B2_OVERLAYS,
   DEFAULT_PARAMS,
@@ -520,10 +521,10 @@ export function WorkbenchPage({
                 )}
               </div>
 
-              <span className="caption">B2 叠加</span>
+              <span className="caption">主图叠加</span>
               <select
                 className="b2-select"
-                aria-label="B2 主图叠加"
+                aria-label="主图叠加"
                 data-b2-overlay-select="1"
                 multiple
                 size={3}
@@ -534,7 +535,7 @@ export function WorkbenchPage({
                   )
                 }
               >
-                {B2_OVERLAY_CHOICES.map((item) => (
+                {[...B2_OVERLAY_CHOICES, ...B1_OVERLAY_CHOICES].map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.label}
                   </option>

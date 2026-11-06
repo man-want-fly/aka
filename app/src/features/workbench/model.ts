@@ -62,7 +62,15 @@ export const B3_SUB_CHOICES: Array<{ id: string; label: string }> = [
   { id: "M26", label: "M26 NR7" },
 ];
 
-export const SUB_CHOICES = [...B2_SUB_CHOICES, ...B3_SUB_CHOICES];
+export const SUB_CHOICES = [...B2_SUB_CHOICES, ...B3_SUB_CHOICES, { id: "E13", label: "E13 BIAS" }];
+
+/** B1 回归族与 BIAS：AC-03.04-11 / -15 要求自 B2 起可上图（T19/T21 为 beta，带徽标、不进默认）。 */
+export const B1_OVERLAY_CHOICES: Array<{ id: string; label: string }> = [
+  { id: "T19", label: "T19 回归预测（beta）" },
+  { id: "T20", label: "T20 回归截距" },
+  { id: "T21", label: "T21 回归 R²（beta）" },
+  { id: "T22", label: "T22 回归斜率" },
+];
 
 export const DEFAULT_B2_OVERLAYS = ["T09", "T24"];
 export const DEFAULT_SUB_ID = "M06";
@@ -75,6 +83,9 @@ const B2_IDS = [
 const B3_IDS = [
   "M01", "M02", "M04", "M05", "M08", "M09", "M10", "M19", "M20", "M21", "M24", "M25", "M26",
 ] as const;
+
+/** B1 回归族 + BIAS，补齐 AC-03.04-11 / -15 的上图范围。 */
+const B1_CHART_IDS = ["T19", "T20", "T21", "T22", "E13"] as const;
 
 /** 前端只做「表单 → 实例」的装配；范围校验以后端 ParamSpec 为准。 */
 export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
@@ -120,6 +131,11 @@ export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
     // B3 全量 13 个：全部为副图候选，参数留空走 manifest 默认值。
     ...B3_IDS.map((indicatorId) => ({
       instanceId: `b3-${indicatorId}`,
+      indicatorId,
+      params: {},
+    })),
+    ...B1_CHART_IDS.map((indicatorId) => ({
+      instanceId: `b1x-${indicatorId}`,
       indicatorId,
       params: {},
     })),
