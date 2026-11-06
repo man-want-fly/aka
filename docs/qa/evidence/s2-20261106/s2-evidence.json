@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "kind": "aka-s2-evidence",
-  "generatedAt": "2026-11-06T15:49:23.236Z",
+  "generatedAt": "2026-11-06T16:50:18.641Z",
   "engine": {
     "engineVersion": "aka-engine-0.1.0",
     "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)"
   },
   "debounce": {
     "target": "1→12→120（台账判据）+ 1→12→60（成功单次 compute 佐证）",
-    "computeCountSemantics": "compute.count 为请求批次计数：一条 calc 请求可含多个实例（本项目 12 个），事件 count=本批实算实例数；连键断言的是「请求只发 1 次」，不是「只算 1 个实例」",
+    "computeCountSemantics": "compute.count 为请求批次计数：一条 calc 请求可含多个实例（本项目 50 个），事件 count=本批实算实例数；连键断言的是「请求只发 1 次」，不是「只算 1 个实例」",
     "burst120": {
       "label": "1→12→120",
       "inputs": [
@@ -21,13 +21,13 @@
       "requestsIssued": 1,
       "computeCountEvents": 0,
       "computeEvent": {
-        "tsMs": 1793980133603,
+        "tsMs": 1793983774827,
         "name": "indicator.compute",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
           "cacheKey": "v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T04|{\"period\":120}|2023-01-02~2024-12-27",
-          "computeMs": 0.09797900000000001,
+          "computeMs": 0.010845,
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T04",
@@ -44,7 +44,7 @@
           "adj": "qfq",
           "barsMs": null,
           "calcMs": null,
-          "totalMs": 17,
+          "totalMs": 16,
           "cacheHit": false,
           "computedMs": null,
           "barCount": 0,
@@ -67,13 +67,13 @@
       "requestsIssued": 1,
       "computeCountEvents": 1,
       "computeEvent": {
-        "tsMs": 1793980135071,
+        "tsMs": 1793983776257,
         "name": "indicator.compute",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
           "cacheKey": "v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{\"period\":60}|2023-01-02~2024-12-27",
-          "computeMs": 0.096888,
+          "computeMs": 0.014794999999999999,
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T05",
@@ -88,11 +88,11 @@
           "security": "300750.SZ",
           "timeframe": "D",
           "adj": "qfq",
-          "barsMs": 19,
-          "calcMs": 91,
-          "totalMs": 98,
+          "barsMs": 17,
+          "calcMs": 24,
+          "totalMs": 32,
           "cacheHit": false,
-          "computedMs": 0.81,
+          "computedMs": 0.14,
           "barCount": 520,
           "seriesHash": "c84fa833",
           "seriesPoints": 39182
@@ -101,7 +101,7 @@
       "passed": true
     },
     "telemetry": {
-      "computeCount": 44,
+      "computeCount": 64,
       "indicatorCompute": 1373
     }
   },
@@ -141,22 +141,22 @@
       "601014.SH"
     ],
     "allMiss": true,
-    "p95CalcMs": 188,
-    "p95TotalMs": 196,
-    "p95BarsMs": 20,
-    "maxTotalMs": 268,
+    "p95CalcMs": 25,
+    "p95TotalMs": 34,
+    "p95BarsMs": 15,
+    "maxTotalMs": 41,
     "telemetryColdSamples": 1373,
-    "telemetryColdP95Ms": 0.81,
+    "telemetryColdP95Ms": 0.12,
     "samples": [
       {
         "security": "600519.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 10,
-        "calcMs": 74,
-        "totalMs": 82,
+        "barsMs": 12,
+        "calcMs": 22,
+        "totalMs": 31,
         "cacheHit": false,
-        "computedMs": 15.83,
+        "computedMs": 2.65,
         "barCount": 520,
         "seriesHash": "95c14bfe",
         "seriesPoints": 39546
@@ -165,11 +165,11 @@
         "security": "002594.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 20,
-        "calcMs": 84,
-        "totalMs": 92,
+        "barsMs": 15,
+        "calcMs": 25,
+        "totalMs": 34,
         "cacheHit": false,
-        "computedMs": 13.36,
+        "computedMs": 2,
         "barCount": 520,
         "seriesHash": "ef23792e",
         "seriesPoints": 39545
@@ -178,11 +178,11 @@
         "security": "601318.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 82,
-        "totalMs": 89,
+        "barsMs": 13,
+        "calcMs": 25,
+        "totalMs": 33,
         "cacheHit": false,
-        "computedMs": 14.11,
+        "computedMs": 1.67,
         "barCount": 520,
         "seriesHash": "2897f0ae",
         "seriesPoints": 39540
@@ -191,11 +191,11 @@
         "security": "600036.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 86,
-        "totalMs": 94,
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 24,
         "cacheHit": false,
-        "computedMs": 15.71,
+        "computedMs": 1.66,
         "barCount": 520,
         "seriesHash": "a229e4b2",
         "seriesPoints": 39538
@@ -204,11 +204,11 @@
         "security": "000858.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 85,
-        "totalMs": 93,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 25,
         "cacheHit": false,
-        "computedMs": 14.56,
+        "computedMs": 1.58,
         "barCount": 520,
         "seriesHash": "8c629b00",
         "seriesPoints": 39545
@@ -217,11 +217,11 @@
         "security": "688981.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 79,
-        "totalMs": 86,
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 21,
         "cacheHit": false,
-        "computedMs": 13.68,
+        "computedMs": 1.41,
         "barCount": 520,
         "seriesHash": "746c7682",
         "seriesPoints": 39541
@@ -230,11 +230,11 @@
         "security": "300059.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 83,
-        "totalMs": 91,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 25,
         "cacheHit": false,
-        "computedMs": 13.71,
+        "computedMs": 1.63,
         "barCount": 520,
         "seriesHash": "2fdc0b03",
         "seriesPoints": 39539
@@ -243,11 +243,11 @@
         "security": "601899.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 84,
-        "totalMs": 91,
+        "barsMs": 14,
+        "calcMs": 23,
+        "totalMs": 32,
         "cacheHit": false,
-        "computedMs": 13.5,
+        "computedMs": 1.56,
         "barCount": 520,
         "seriesHash": "2700a7a0",
         "seriesPoints": 39547
@@ -256,11 +256,11 @@
         "security": "002415.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 20,
-        "calcMs": 97,
-        "totalMs": 104,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 25,
         "cacheHit": false,
-        "computedMs": 12.88,
+        "computedMs": 1.6,
         "barCount": 520,
         "seriesHash": "23a23d2c",
         "seriesPoints": 39548
@@ -269,11 +269,11 @@
         "security": "600030.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 126,
-        "totalMs": 133,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 25,
         "cacheHit": false,
-        "computedMs": 15.45,
+        "computedMs": 1.51,
         "barCount": 520,
         "seriesHash": "63506b3f",
         "seriesPoints": 39545
@@ -282,11 +282,11 @@
         "security": "601012.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 16,
-        "calcMs": 154,
-        "totalMs": 161,
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 21,
         "cacheHit": false,
-        "computedMs": 16.69,
+        "computedMs": 1.16,
         "barCount": 520,
         "seriesHash": "879e4403",
         "seriesPoints": 39542
@@ -295,11 +295,11 @@
         "security": "000651.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 141,
-        "totalMs": 148,
+        "barsMs": 14,
+        "calcMs": 24,
+        "totalMs": 34,
         "cacheHit": false,
-        "computedMs": 14.51,
+        "computedMs": 1.74,
         "barCount": 520,
         "seriesHash": "93337d6e",
         "seriesPoints": 39543
@@ -308,11 +308,11 @@
         "security": "600900.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 14,
-        "calcMs": 143,
-        "totalMs": 149,
+        "barsMs": 13,
+        "calcMs": 23,
+        "totalMs": 31,
         "cacheHit": false,
-        "computedMs": 12.84,
+        "computedMs": 1.64,
         "barCount": 520,
         "seriesHash": "9bc6c50b",
         "seriesPoints": 39548
@@ -321,11 +321,11 @@
         "security": "000001.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 153,
-        "totalMs": 160,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 26,
         "cacheHit": false,
-        "computedMs": 13,
+        "computedMs": 1.73,
         "barCount": 520,
         "seriesHash": "b2574d87",
         "seriesPoints": 39544
@@ -334,11 +334,11 @@
         "security": "399001.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 188,
-        "totalMs": 196,
+        "barsMs": 15,
+        "calcMs": 20,
+        "totalMs": 28,
         "cacheHit": false,
-        "computedMs": 14.15,
+        "computedMs": 1.94,
         "barCount": 520,
         "seriesHash": "f2022a9f",
         "seriesPoints": 39543
@@ -347,11 +347,11 @@
         "security": "399006.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 86,
-        "totalMs": 93,
+        "barsMs": 13,
+        "calcMs": 24,
+        "totalMs": 33,
         "cacheHit": false,
-        "computedMs": 15.74,
+        "computedMs": 1.55,
         "barCount": 520,
         "seriesHash": "f12a6dba",
         "seriesPoints": 39538
@@ -360,11 +360,11 @@
         "security": "601000.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 91,
-        "totalMs": 98,
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 22,
         "cacheHit": false,
-        "computedMs": 13.27,
+        "computedMs": 1.33,
         "barCount": 520,
         "seriesHash": "afe11848",
         "seriesPoints": 39545
@@ -373,11 +373,11 @@
         "security": "601001.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 79,
-        "totalMs": 86,
+        "barsMs": 14,
+        "calcMs": 33,
+        "totalMs": 41,
         "cacheHit": false,
-        "computedMs": 13.78,
+        "computedMs": 2.28,
         "barCount": 520,
         "seriesHash": "3c203aa6",
         "seriesPoints": 39548
@@ -386,11 +386,11 @@
         "security": "601002.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 18,
-        "calcMs": 105,
-        "totalMs": 112,
+        "barsMs": 13,
+        "calcMs": 23,
+        "totalMs": 31,
         "cacheHit": false,
-        "computedMs": 15.54,
+        "computedMs": 1.63,
         "barCount": 520,
         "seriesHash": "8b803503",
         "seriesPoints": 39545
@@ -399,11 +399,11 @@
         "security": "601003.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 149,
-        "calcMs": 262,
-        "totalMs": 268,
+        "barsMs": 13,
+        "calcMs": 22,
+        "totalMs": 30,
         "cacheHit": false,
-        "computedMs": 22.78,
+        "computedMs": 1.94,
         "barCount": 520,
         "seriesHash": "42986894",
         "seriesPoints": 39543
@@ -412,11 +412,11 @@
         "security": "601004.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 19,
-        "calcMs": 144,
-        "totalMs": 150,
+        "barsMs": 12,
+        "calcMs": 22,
+        "totalMs": 29,
         "cacheHit": false,
-        "computedMs": 15,
+        "computedMs": 1.57,
         "barCount": 520,
         "seriesHash": "3835785e",
         "seriesPoints": 39546
@@ -425,11 +425,11 @@
         "security": "601005.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 80,
-        "totalMs": 87,
+        "barsMs": 10,
+        "calcMs": 12,
+        "totalMs": 18,
         "cacheHit": false,
-        "computedMs": 14.33,
+        "computedMs": 1.11,
         "barCount": 520,
         "seriesHash": "1a5cd922",
         "seriesPoints": 39546
@@ -438,11 +438,11 @@
         "security": "601006.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 14,
-        "calcMs": 80,
-        "totalMs": 88,
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 24,
         "cacheHit": false,
-        "computedMs": 15.1,
+        "computedMs": 1.49,
         "barCount": 520,
         "seriesHash": "09fca578",
         "seriesPoints": 39545
@@ -451,11 +451,11 @@
         "security": "601007.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 19,
-        "calcMs": 79,
-        "totalMs": 87,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 25,
         "cacheHit": false,
-        "computedMs": 13.64,
+        "computedMs": 1.6,
         "barCount": 520,
         "seriesHash": "8f282914",
         "seriesPoints": 39546
@@ -465,10 +465,10 @@
         "timeframe": "D",
         "adj": "qfq",
         "barsMs": 14,
-        "calcMs": 83,
-        "totalMs": 91,
+        "calcMs": 18,
+        "totalMs": 25,
         "cacheHit": false,
-        "computedMs": 13.76,
+        "computedMs": 1.64,
         "barCount": 520,
         "seriesHash": "9a12c5b1",
         "seriesPoints": 39545
@@ -477,11 +477,11 @@
         "security": "601009.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 14,
-        "calcMs": 66,
-        "totalMs": 73,
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 24,
         "cacheHit": false,
-        "computedMs": 10.54,
+        "computedMs": 1.59,
         "barCount": 520,
         "seriesHash": "7535988b",
         "seriesPoints": 39553
@@ -490,11 +490,11 @@
         "security": "601010.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 79,
-        "totalMs": 86,
+        "barsMs": 13,
+        "calcMs": 23,
+        "totalMs": 31,
         "cacheHit": false,
-        "computedMs": 12.13,
+        "computedMs": 1.53,
         "barCount": 520,
         "seriesHash": "b1c48363",
         "seriesPoints": 39551
@@ -503,11 +503,11 @@
         "security": "601011.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 15,
-        "calcMs": 79,
-        "totalMs": 87,
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
         "cacheHit": false,
-        "computedMs": 11.88,
+        "computedMs": 1.13,
         "barCount": 520,
         "seriesHash": "78d9983a",
         "seriesPoints": 39544
@@ -516,11 +516,11 @@
         "security": "601013.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 15,
-        "calcMs": 81,
-        "totalMs": 89,
+        "barsMs": 14,
+        "calcMs": 23,
+        "totalMs": 31,
         "cacheHit": false,
-        "computedMs": 13.02,
+        "computedMs": 1.53,
         "barCount": 520,
         "seriesHash": "02e13699",
         "seriesPoints": 39544
@@ -529,11 +529,11 @@
         "security": "601014.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 14,
-        "calcMs": 91,
-        "totalMs": 99,
+        "barsMs": 13,
+        "calcMs": 23,
+        "totalMs": 31,
         "cacheHit": false,
-        "computedMs": 15.02,
+        "computedMs": 1.59,
         "barCount": 520,
         "seriesHash": "4ed20a27",
         "seriesPoints": 39545
@@ -541,21 +541,25 @@
     ]
   },
   "warm": {
-    "targetCount": 10,
-    "sampleCount": 10,
+    "targetCount": 30,
+    "criterion": "全部 cacheHit 且逐点一致，且 totalMs max ≤ 120ms（max 口径，不改判据）",
+    "sampleCount": 30,
     "allCacheHit": true,
     "allPointwiseMatch": true,
-    "p95TotalMs": 132,
-    "maxTotalMs": 132,
-    "maxCalcMs": 125,
+    "p50TotalMs": 24,
+    "p50CalcMs": 17,
+    "p95TotalMs": 34,
+    "maxTotalMs": 40,
+    "maxCalcMs": 34,
     "samples": [
       {
         "security": "600519.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 11,
-        "calcMs": 47,
-        "totalMs": 55,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 26,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "95c14bfe",
@@ -565,9 +569,10 @@
         "security": "002594.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 9,
-        "calcMs": 37,
-        "totalMs": 42,
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 24,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "ef23792e",
@@ -577,9 +582,10 @@
         "security": "601318.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 49,
-        "totalMs": 57,
+        "barsMs": 10,
+        "calcMs": 13,
+        "totalMs": 18,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "2897f0ae",
@@ -589,9 +595,10 @@
         "security": "600036.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 51,
-        "totalMs": 58,
+        "barsMs": 13,
+        "calcMs": 16,
+        "totalMs": 21,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "a229e4b2",
@@ -601,9 +608,10 @@
         "security": "000858.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 11,
-        "calcMs": 48,
-        "totalMs": 56,
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 22,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "8c629b00",
@@ -613,9 +621,10 @@
         "security": "688981.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 54,
-        "totalMs": 61,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 25,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "746c7682",
@@ -625,9 +634,10 @@
         "security": "300059.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 125,
-        "totalMs": 132,
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 23,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "2fdc0b03",
@@ -637,9 +647,10 @@
         "security": "601899.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 16,
-        "calcMs": 90,
-        "totalMs": 97,
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 25,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "2700a7a0",
@@ -649,9 +660,10 @@
         "security": "002415.SZ",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 65,
-        "totalMs": 73,
+        "barsMs": 34,
+        "calcMs": 34,
+        "totalMs": 40,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "23a23d2c",
@@ -661,12 +673,273 @@
         "security": "600030.SH",
         "timeframe": "D",
         "adj": "qfq",
-        "barsMs": 17,
-        "calcMs": 87,
-        "totalMs": 94,
+        "barsMs": 11,
+        "calcMs": 13,
+        "totalMs": 18,
+        "engineMs": 0,
         "cacheHit": true,
         "matchesCold": true,
         "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 12,
+        "totalMs": 17,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 23,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 25,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 20,
+        "totalMs": 29,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 21,
+        "totalMs": 29,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 6,
+        "calcMs": 21,
+        "totalMs": 29,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 25,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 24,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 23,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 12,
+        "totalMs": 17,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 17,
+        "totalMs": 24,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 17,
+        "totalMs": 25,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 23,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 24,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 24,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 26,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 25,
+        "totalMs": 34,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 24,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 23,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 23,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "4ed20a27",
         "seriesPoints": 39545
       }
     ]
@@ -680,24 +953,24 @@
     "uiSamples": [
       {
         "timeframe": "W",
-        "security": "600030.SH",
+        "security": "601014.SH",
         "barCount": 104,
         "cacheHit": false,
-        "barsMs": 11,
-        "calcMs": 40,
-        "totalMs": 41,
-        "seriesHash": "736e1795",
+        "barsMs": 12,
+        "calcMs": 18,
+        "totalMs": 20,
+        "seriesHash": "86e66051",
         "seriesPoints": 6671
       },
       {
         "timeframe": "D",
-        "security": "600030.SH",
+        "security": "601014.SH",
         "barCount": 520,
         "cacheHit": true,
         "barsMs": 11,
-        "calcMs": 79,
-        "totalMs": 86,
-        "seriesHash": "63506b3f",
+        "calcMs": 21,
+        "totalMs": 29,
+        "seriesHash": "4ed20a27",
         "seriesPoints": 39545
       }
     ],
@@ -754,8 +1027,9 @@
         "downCandleStroke": "rgb(23, 166, 115)",
         "histPosFill": "rgb(228, 72, 63)",
         "histNegFill": "rgb(23, 166, 115)",
-        "chgFirst": "pos|rgb(228, 72, 63)|▲ +2.74%",
-        "chgSecond": "neg|rgb(23, 166, 115)|▼ -9.98%"
+        "chgFirst": "neg|rgb(23, 166, 115)|▼ -1.01%",
+        "chgSecond": "neg|rgb(23, 166, 115)|▼ -1.34%",
+        "chgPos": "pos|rgb(228, 72, 63)|▲ +2.65%"
       },
       "colorOk": true,
       "statisticalReadouts": [
@@ -771,7 +1045,7 @@
         "%",
         "%"
       ],
-      "t21Text": "R² 0.30无量纲",
+      "t21Text": "R² 0.00无量纲",
       "t21TwoDecimals": true,
       "readoutHost": 1,
       "hoverIndex": "76",
@@ -779,51 +1053,51 @@
       "maTooltip": [
         {
           "id": "ma-T01",
-          "value": "25.648500000000034",
+          "value": "235.50899999999993",
           "unit": "元",
-          "text": "T01 25.65 元"
+          "text": "T01 235.51 元"
         },
         {
           "id": "ma-T02",
-          "value": "25.500771448092717",
+          "value": "235.96736478200057",
           "unit": "元",
-          "text": "T02 25.50 元"
+          "text": "T02 235.97 元"
         },
         {
           "id": "ma-T03",
-          "value": "25.608380952380955",
+          "value": "234.78014285714286",
           "unit": "元",
-          "text": "T03 25.61 元"
+          "text": "T03 234.78 元"
         },
         {
           "id": "ma-T04",
-          "value": "25.74569228683702",
+          "value": "233.27309996008768",
           "unit": "元",
-          "text": "T04 25.75 元"
+          "text": "T04 233.27 元"
         },
         {
           "id": "ma-T05",
-          "value": "25.626647628806133",
+          "value": "232.984065213708",
           "unit": "元",
-          "text": "T05 25.63 元"
+          "text": "T05 232.98 元"
         },
         {
           "id": "ma-T19",
-          "value": "25.528142857142853",
+          "value": "233.3224285714286",
           "unit": "元",
-          "text": "T19 25.53 元"
+          "text": "T19 233.32 元"
         },
         {
           "id": "ma-T20",
-          "value": "25.768857142857136",
+          "value": "237.69557142857144",
           "unit": "元",
-          "text": "T20 25.77 元"
+          "text": "T20 237.70 元"
         },
         {
           "id": "ma-T22",
-          "value": "-0.012669172932330774",
+          "value": "-0.23016541353383432",
           "unit": "元/根",
-          "text": "T22 -0.01 元/根"
+          "text": "T22 -0.23 元/根"
         }
       ],
       "decimalsOk": true,
@@ -834,962 +1108,1082 @@
         "samples": [
           {
             "bar": 400,
-            "engineSma": 28.598500000000023,
-            "shownSma": "28.598500000000023",
-            "engineDif": -0.3196567024370367,
-            "shownDif": "-0.3196567024370367",
+            "hoverIndex": -1,
+            "engineSma": 253.59650000000002,
+            "shownSma": "253.59650000000002",
+            "engineDif": -3.5790420613091385,
+            "shownDif": "-3.5790420613091385",
             "ok": true
           },
           {
             "bar": 401,
-            "engineSma": 28.49400000000002,
-            "shownSma": "28.49400000000002",
-            "engineDif": -0.2659251938320253,
-            "shownDif": "-0.2659251938320253",
+            "hoverIndex": -1,
+            "engineSma": 253.4185,
+            "shownSma": "253.4185",
+            "engineDif": -2.714171402032491,
+            "shownDif": "-2.714171402032491",
             "ok": true
           },
           {
             "bar": 402,
-            "engineSma": 28.437000000000022,
-            "shownSma": "28.437000000000022",
-            "engineDif": -0.20723611792972463,
-            "shownDif": "-0.20723611792972463",
+            "hoverIndex": -1,
+            "engineSma": 253.45999999999998,
+            "shownSma": "253.45999999999998",
+            "engineDif": -2.2848377356244782,
+            "shownDif": "-2.2848377356244782",
             "ok": true
           },
           {
             "bar": 403,
-            "engineSma": 28.393500000000024,
-            "shownSma": "28.393500000000024",
-            "engineDif": -0.13655680070792897,
-            "shownDif": "-0.13655680070792897",
+            "hoverIndex": -1,
+            "engineSma": 253.2815,
+            "shownSma": "253.2815",
+            "engineDif": -2.093139418801968,
+            "shownDif": "-2.093139418801968",
             "ok": true
           },
           {
             "bar": 404,
-            "engineSma": 28.185500000000026,
-            "shownSma": "28.185500000000026",
-            "engineDif": -0.31176181655172996,
-            "shownDif": "-0.31176181655172996",
+            "hoverIndex": -1,
+            "engineSma": 253.63150000000002,
+            "shownSma": "253.63150000000002",
+            "engineDif": -1.6949354450088094,
+            "shownDif": "-1.6949354450088094",
             "ok": true
           },
           {
             "bar": 405,
-            "engineSma": 28.031500000000023,
-            "shownSma": "28.031500000000023",
-            "engineDif": -0.41197358889030156,
-            "shownDif": "-0.41197358889030156",
+            "hoverIndex": -1,
+            "engineSma": 254.0945,
+            "shownSma": "254.0945",
+            "engineDif": -1.1562293636038703,
+            "shownDif": "-1.1562293636038703",
             "ok": true
           },
           {
             "bar": 406,
-            "engineSma": 27.87800000000002,
-            "shownSma": "27.87800000000002",
-            "engineDif": -0.5177010619317421,
-            "shownDif": "-0.5177010619317421",
+            "hoverIndex": -1,
+            "engineSma": 254.671,
+            "shownSma": "254.671",
+            "engineDif": -0.9307903612084374,
+            "shownDif": "-0.9307903612084374",
             "ok": true
           },
           {
             "bar": 407,
-            "engineSma": 27.71000000000002,
-            "shownSma": "27.71000000000002",
-            "engineDif": -0.6879695828396315,
-            "shownDif": "-0.6879695828396315",
+            "hoverIndex": -1,
+            "engineSma": 254.6815,
+            "shownSma": "254.6815",
+            "engineDif": -0.946178147238129,
+            "shownDif": "-0.946178147238129",
             "ok": true
           },
           {
             "bar": 408,
-            "engineSma": 27.60850000000002,
-            "shownSma": "27.60850000000002",
-            "engineDif": -0.7728469757692906,
-            "shownDif": "-0.7728469757692906",
+            "hoverIndex": -1,
+            "engineSma": 254.6435,
+            "shownSma": "254.6435",
+            "engineDif": -0.8732634138170852,
+            "shownDif": "-0.8732634138170852",
             "ok": true
           },
           {
             "bar": 409,
-            "engineSma": 27.51450000000002,
-            "shownSma": "27.51450000000002",
-            "engineDif": -0.8105959648079768,
-            "shownDif": "-0.8105959648079768",
+            "hoverIndex": -1,
+            "engineSma": 254.4115,
+            "shownSma": "254.4115",
+            "engineDif": -1.0861847661075217,
+            "shownDif": "-1.0861847661075217",
             "ok": true
           },
           {
             "bar": 410,
-            "engineSma": 27.394500000000022,
-            "shownSma": "27.394500000000022",
-            "engineDif": -0.9266603184444691,
-            "shownDif": "-0.9266603184444691",
+            "hoverIndex": -1,
+            "engineSma": 254.46749999999997,
+            "shownSma": "254.46749999999997",
+            "engineDif": -1.0116794464934173,
+            "shownDif": "-1.0116794464934173",
             "ok": true
           },
           {
             "bar": 411,
-            "engineSma": 27.23200000000002,
-            "shownSma": "27.23200000000002",
-            "engineDif": -1.0309653212258283,
-            "shownDif": "-1.0309653212258283",
+            "hoverIndex": -1,
+            "engineSma": 254.57799999999997,
+            "shownSma": "254.57799999999997",
+            "engineDif": -1.047874088431172,
+            "shownDif": "-1.047874088431172",
             "ok": true
           },
           {
             "bar": 412,
-            "engineSma": 27.068000000000023,
-            "shownSma": "27.068000000000023",
-            "engineDif": -1.12965482116876,
-            "shownDif": "-1.12965482116876",
+            "hoverIndex": -1,
+            "engineSma": 255.04199999999997,
+            "shownSma": "255.04199999999997",
+            "engineDif": -0.5082787328162794,
+            "shownDif": "-0.5082787328162794",
             "ok": true
           },
           {
             "bar": 413,
-            "engineSma": 26.86300000000002,
-            "shownSma": "26.86300000000002",
-            "engineDif": -1.21962916076885,
-            "shownDif": "-1.21962916076885",
+            "hoverIndex": -1,
+            "engineSma": 255.70149999999995,
+            "shownSma": "255.70149999999995",
+            "engineDif": 0.21543020657225043,
+            "shownDif": "0.21543020657225043",
             "ok": true
           },
           {
             "bar": 414,
-            "engineSma": 26.64050000000002,
-            "shownSma": "26.64050000000002",
-            "engineDif": -1.241123254065002,
-            "shownDif": "-1.241123254065002",
+            "hoverIndex": -1,
+            "engineSma": 256.53749999999997,
+            "shownSma": "256.53749999999997",
+            "engineDif": 1.0216929914883508,
+            "shownDif": "1.0216929914883508",
             "ok": true
           },
           {
             "bar": 415,
-            "engineSma": 26.42700000000002,
-            "shownSma": "26.42700000000002",
-            "engineDif": -1.262964800048426,
-            "shownDif": "-1.262964800048426",
+            "hoverIndex": -1,
+            "engineSma": 257.02199999999993,
+            "shownSma": "257.02199999999993",
+            "engineDif": 1.3090875609640875,
+            "shownDif": "1.3090875609640875",
             "ok": true
           },
           {
             "bar": 416,
-            "engineSma": 26.212500000000023,
-            "shownSma": "26.212500000000023",
-            "engineDif": -1.240955016416656,
-            "shownDif": "-1.240955016416656",
+            "hoverIndex": -1,
+            "engineSma": 257.3539999999999,
+            "shownSma": "257.3539999999999",
+            "engineDif": 1.0438942742460426,
+            "shownDif": "1.0438942742460426",
             "ok": true
           },
           {
             "bar": 417,
-            "engineSma": 25.982500000000023,
-            "shownSma": "25.982500000000023",
-            "engineDif": -1.2630162398798923,
-            "shownDif": "-1.2630162398798923",
+            "hoverIndex": -1,
+            "engineSma": 257.73699999999997,
+            "shownSma": "257.73699999999997",
+            "engineDif": 0.9462768071678624,
+            "shownDif": "0.9462768071678624",
             "ok": true
           },
           {
             "bar": 418,
-            "engineSma": 25.748500000000025,
-            "shownSma": "25.748500000000025",
-            "engineDif": -1.23718937803622,
-            "shownDif": "-1.23718937803622",
+            "hoverIndex": -1,
+            "engineSma": 257.823,
+            "shownSma": "257.823",
+            "engineDif": 0.7233995687770403,
+            "shownDif": "0.7233995687770403",
             "ok": true
           },
           {
             "bar": 419,
-            "engineSma": 25.513500000000025,
-            "shownSma": "25.513500000000025",
-            "engineDif": -1.210832840944608,
-            "shownDif": "-1.210832840944608",
+            "hoverIndex": -1,
+            "engineSma": 258.19399999999996,
+            "shownSma": "258.19399999999996",
+            "engineDif": 0.1775738171172634,
+            "shownDif": "0.1775738171172634",
             "ok": true
           },
           {
             "bar": 420,
-            "engineSma": 25.326500000000024,
-            "shownSma": "25.326500000000024",
-            "engineDif": -1.1468687980273096,
-            "shownDif": "-1.1468687980273096",
+            "hoverIndex": -1,
+            "engineSma": 258.072,
+            "shownSma": "258.072",
+            "engineDif": -0.37813096058903284,
+            "shownDif": "-0.37813096058903284",
             "ok": true
           },
           {
             "bar": 421,
-            "engineSma": 25.114500000000024,
-            "shownSma": "25.114500000000024",
-            "engineDif": -1.0581577239692876,
-            "shownDif": "-1.0581577239692876",
+            "hoverIndex": -1,
+            "engineSma": 257.5755,
+            "shownSma": "257.5755",
+            "engineDif": -0.8698297925744214,
+            "shownDif": "-0.8698297925744214",
             "ok": true
           },
           {
             "bar": 422,
-            "engineSma": 24.895500000000023,
-            "shownSma": "24.895500000000023",
-            "engineDif": -0.9742028058444063,
-            "shownDif": "-0.9742028058444063",
+            "hoverIndex": -1,
+            "engineSma": 257.17299999999994,
+            "shownSma": "257.17299999999994",
+            "engineDif": -1.3743820992002895,
+            "shownDif": "-1.3743820992002895",
             "ok": true
           },
           {
             "bar": 423,
-            "engineSma": 24.617000000000026,
-            "shownSma": "24.617000000000026",
-            "engineDif": -0.9699167269050335,
-            "shownDif": "-0.9699167269050335",
+            "hoverIndex": -1,
+            "engineSma": 256.95599999999996,
+            "shownSma": "256.95599999999996",
+            "engineDif": -1.6287819736313907,
+            "shownDif": "-1.6287819736313907",
             "ok": true
           },
           {
             "bar": 424,
-            "engineSma": 24.459500000000027,
-            "shownSma": "24.459500000000027",
-            "engineDif": -0.9945938248652979,
-            "shownDif": "-0.9945938248652979",
+            "hoverIndex": -1,
+            "engineSma": 256.3924999999999,
+            "shownSma": "256.3924999999999",
+            "engineDif": -2.138197465295292,
+            "shownDif": "-2.138197465295292",
             "ok": true
           },
           {
             "bar": 425,
-            "engineSma": 24.280500000000025,
-            "shownSma": "24.280500000000025",
-            "engineDif": -1.0033910517587756,
-            "shownDif": "-1.0033910517587756",
+            "hoverIndex": -1,
+            "engineSma": 255.34699999999992,
+            "shownSma": "255.34699999999992",
+            "engineDif": -3.0745406856553643,
+            "shownDif": "-3.0745406856553643",
             "ok": true
           },
           {
             "bar": 426,
-            "engineSma": 24.140500000000024,
-            "shownSma": "24.140500000000024",
-            "engineDif": -0.9685354198176661,
-            "shownDif": "-0.9685354198176661",
+            "hoverIndex": -1,
+            "engineSma": 253.8044999999999,
+            "shownSma": "253.8044999999999",
+            "engineDif": -4.775840465873017,
+            "shownDif": "-4.775840465873017",
             "ok": true
           },
           {
             "bar": 427,
-            "engineSma": 24.085500000000025,
-            "shownSma": "24.085500000000025",
-            "engineDif": -0.8879102333131783,
-            "shownDif": "-0.8879102333131783",
+            "hoverIndex": -1,
+            "engineSma": 252.78949999999992,
+            "shownSma": "252.78949999999992",
+            "engineDif": -5.415367752757277,
+            "shownDif": "-5.415367752757277",
             "ok": true
           },
           {
             "bar": 428,
-            "engineSma": 23.981000000000027,
-            "shownSma": "23.981000000000027",
-            "engineDif": -0.8529143153018204,
-            "shownDif": "-0.8529143153018204",
+            "hoverIndex": -1,
+            "engineSma": 251.6264999999999,
+            "shownSma": "251.6264999999999",
+            "engineDif": -6.0166456242163235,
+            "shownDif": "-6.0166456242163235",
             "ok": true
           },
           {
             "bar": 429,
-            "engineSma": 23.848000000000024,
-            "shownSma": "23.848000000000024",
-            "engineDif": -0.8413031052894802,
-            "shownDif": "-0.8413031052894802",
+            "hoverIndex": -1,
+            "engineSma": 250.7514999999999,
+            "shownSma": "250.7514999999999",
+            "engineDif": -6.239679334057882,
+            "shownDif": "-6.239679334057882",
             "ok": true
           },
           {
             "bar": 430,
-            "engineSma": 23.768500000000024,
-            "shownSma": "23.768500000000024",
-            "engineDif": -0.8329888740229521,
-            "shownDif": "-0.8329888740229521",
+            "hoverIndex": -1,
+            "engineSma": 249.7289999999999,
+            "shownSma": "249.7289999999999",
+            "engineDif": -6.349695154200873,
+            "shownDif": "-6.349695154200873",
             "ok": true
           },
           {
             "bar": 431,
-            "engineSma": 23.699500000000025,
-            "shownSma": "23.699500000000025",
-            "engineDif": -0.8241616116457813,
-            "shownDif": "-0.8241616116457813",
+            "hoverIndex": -1,
+            "engineSma": 248.3539999999999,
+            "shownSma": "248.3539999999999",
+            "engineDif": -7.032018715233704,
+            "shownDif": "-7.032018715233704",
             "ok": true
           },
           {
             "bar": 432,
-            "engineSma": 23.642500000000027,
-            "shownSma": "23.642500000000027",
-            "engineDif": -0.8174261597930617,
-            "shownDif": "-0.8174261597930617",
+            "hoverIndex": -1,
+            "engineSma": 246.83899999999988,
+            "shownSma": "246.83899999999988",
+            "engineDif": -7.153816163732529,
+            "shownDif": "-7.153816163732529",
             "ok": true
           },
           {
             "bar": 433,
-            "engineSma": 23.561500000000027,
-            "shownSma": "23.561500000000027",
-            "engineDif": -0.8666513623609546,
-            "shownDif": "-0.8666513623609546",
+            "hoverIndex": -1,
+            "engineSma": 244.90449999999993,
+            "shownSma": "244.90449999999993",
+            "engineDif": -7.541847598724644,
+            "shownDif": "-7.541847598724644",
             "ok": true
           },
           {
             "bar": 434,
-            "engineSma": 23.467000000000027,
-            "shownSma": "23.467000000000027",
-            "engineDif": -0.8817804941465006,
-            "shownDif": "-0.8817804941465006",
+            "hoverIndex": -1,
+            "engineSma": 243.02399999999994,
+            "shownSma": "243.02399999999994",
+            "engineDif": -7.4320506022230575,
+            "shownDif": "-7.4320506022230575",
             "ok": true
           },
           {
             "bar": 435,
-            "engineSma": 23.420000000000027,
-            "shownSma": "23.420000000000027",
-            "engineDif": -0.8269468453272353,
-            "shownDif": "-0.8269468453272353",
+            "hoverIndex": -1,
+            "engineSma": 241.16749999999993,
+            "shownSma": "241.16749999999993",
+            "engineDif": -7.555690555366027,
+            "shownDif": "-7.555690555366027",
             "ok": true
           },
           {
             "bar": 436,
-            "engineSma": 23.339500000000026,
-            "shownSma": "23.339500000000026",
-            "engineDif": -0.803280062402429,
-            "shownDif": "-0.803280062402429",
+            "hoverIndex": -1,
+            "engineSma": 239.74899999999994,
+            "shownSma": "239.74899999999994",
+            "engineDif": -7.343092905488106,
+            "shownDif": "-7.343092905488106",
             "ok": true
           },
           {
             "bar": 437,
-            "engineSma": 23.294000000000025,
-            "shownSma": "23.294000000000025",
-            "engineDif": -0.7731903599695755,
-            "shownDif": "-0.7731903599695755",
+            "hoverIndex": -1,
+            "engineSma": 238.56199999999995,
+            "shownSma": "238.56199999999995",
+            "engineDif": -6.60144981335597,
+            "shownDif": "-6.60144981335597",
             "ok": true
           },
           {
             "bar": 438,
-            "engineSma": 23.217000000000024,
-            "shownSma": "23.217000000000024",
-            "engineDif": -0.762342982166409,
-            "shownDif": "-0.762342982166409",
+            "hoverIndex": -1,
+            "engineSma": 237.39149999999995,
+            "shownSma": "237.39149999999995",
+            "engineDif": -6.054447962672896,
+            "shownDif": "-6.054447962672896",
             "ok": true
           },
           {
             "bar": 439,
-            "engineSma": 23.148000000000025,
-            "shownSma": "23.148000000000025",
-            "engineDif": -0.7403703302446516,
-            "shownDif": "-0.7403703302446516",
+            "hoverIndex": -1,
+            "engineSma": 236.50599999999994,
+            "shownSma": "236.50599999999994",
+            "engineDif": -5.46515080942919,
+            "shownDif": "-5.46515080942919",
             "ok": true
           },
           {
             "bar": 440,
-            "engineSma": 23.067000000000025,
-            "shownSma": "23.067000000000025",
-            "engineDif": -0.7043476504741051,
-            "shownDif": "-0.7043476504741051",
+            "hoverIndex": -1,
+            "engineSma": 236.05049999999997,
+            "shownSma": "236.05049999999997",
+            "engineDif": -4.3811698396863505,
+            "shownDif": "-4.3811698396863505",
             "ok": true
           },
           {
             "bar": 441,
-            "engineSma": 22.987000000000023,
-            "shownSma": "22.987000000000023",
-            "engineDif": -0.6409754922439141,
-            "shownDif": "-0.6409754922439141",
+            "hoverIndex": -1,
+            "engineSma": 235.81649999999996,
+            "shownSma": "235.81649999999996",
+            "engineDif": -3.1892056059597564,
+            "shownDif": "-3.1892056059597564",
             "ok": true
           },
           {
             "bar": 442,
-            "engineSma": 22.936500000000024,
-            "shownSma": "22.936500000000024",
-            "engineDif": -0.5345616874510988,
-            "shownDif": "-0.5345616874510988",
+            "hoverIndex": -1,
+            "engineSma": 235.49099999999993,
+            "shownSma": "235.49099999999993",
+            "engineDif": -2.494199945849658,
+            "shownDif": "-2.494199945849658",
             "ok": true
           },
           {
             "bar": 443,
-            "engineSma": 22.983000000000025,
-            "shownSma": "22.983000000000025",
-            "engineDif": -0.3629319351211002,
-            "shownDif": "-0.3629319351211002",
+            "hoverIndex": -1,
+            "engineSma": 235.27949999999996,
+            "shownSma": "235.27949999999996",
+            "engineDif": -1.6141334036454396,
+            "shownDif": "-1.6141334036454396",
             "ok": true
           },
           {
             "bar": 444,
-            "engineSma": 23.06250000000002,
-            "shownSma": "23.06250000000002",
-            "engineDif": -0.21076695041673332,
-            "shownDif": "-0.21076695041673332",
+            "hoverIndex": -1,
+            "engineSma": 235.37549999999996,
+            "shownSma": "235.37549999999996",
+            "engineDif": -0.7442905753812283,
+            "shownDif": "-0.7442905753812283",
             "ok": true
           },
           {
             "bar": 445,
-            "engineSma": 23.143000000000022,
-            "shownSma": "23.143000000000022",
-            "engineDif": -0.08834974644132743,
-            "shownDif": "-0.08834974644132743",
+            "hoverIndex": -1,
+            "engineSma": 235.64199999999997,
+            "shownSma": "235.64199999999997",
+            "engineDif": -0.34388048969978513,
+            "shownDif": "-0.34388048969978513",
             "ok": true
           },
           {
             "bar": 446,
-            "engineSma": 23.195500000000024,
-            "shownSma": "23.195500000000024",
-            "engineDif": -0.005790971287471081,
-            "shownDif": "-0.005790971287471081",
+            "hoverIndex": -1,
+            "engineSma": 236.62149999999997,
+            "shownSma": "236.62149999999997",
+            "engineDif": 0.10856479668535712,
+            "shownDif": "0.10856479668535712",
             "ok": true
           },
           {
             "bar": 447,
-            "engineSma": 23.261000000000024,
-            "shownSma": "23.261000000000024",
-            "engineDif": 0.12197776675372296,
-            "shownDif": "0.12197776675372296",
+            "hoverIndex": -1,
+            "engineSma": 237.63799999999998,
+            "shownSma": "237.63799999999998",
+            "engineDif": 1.1598132142613622,
+            "shownDif": "1.1598132142613622",
             "ok": true
           },
           {
             "bar": 448,
-            "engineSma": 23.354000000000024,
-            "shownSma": "23.354000000000024",
-            "engineDif": 0.22627546445831825,
-            "shownDif": "0.22627546445831825",
+            "hoverIndex": -1,
+            "engineSma": 238.52399999999997,
+            "shownSma": "238.52399999999997",
+            "engineDif": 1.6000811970999962,
+            "shownDif": "1.6000811970999962",
             "ok": true
           },
           {
             "bar": 449,
-            "engineSma": 23.509500000000024,
-            "shownSma": "23.509500000000024",
-            "engineDif": 0.37959958129857796,
-            "shownDif": "0.37959958129857796",
+            "hoverIndex": -1,
+            "engineSma": 239.27849999999998,
+            "shownSma": "239.27849999999998",
+            "engineDif": 1.8964725660237036,
+            "shownDif": "1.8964725660237036",
             "ok": true
           },
           {
             "bar": 450,
-            "engineSma": 23.621500000000026,
-            "shownSma": "23.621500000000026",
-            "engineDif": 0.4156273129392538,
-            "shownDif": "0.4156273129392538",
+            "hoverIndex": -1,
+            "engineSma": 240.3935,
+            "shownSma": "240.3935",
+            "engineDif": 2.6758507318069746,
+            "shownDif": "2.6758507318069746",
             "ok": true
           },
           {
             "bar": 451,
-            "engineSma": 23.741000000000025,
-            "shownSma": "23.741000000000025",
-            "engineDif": 0.44390399940486347,
-            "shownDif": "0.44390399940486347",
+            "hoverIndex": -1,
+            "engineSma": 241.5295,
+            "shownSma": "241.5295",
+            "engineDif": 2.620994870448442,
+            "shownDif": "2.620994870448442",
             "ok": true
           },
           {
             "bar": 452,
-            "engineSma": 23.853000000000026,
-            "shownSma": "23.853000000000026",
-            "engineDif": 0.43946090191318987,
-            "shownDif": "0.43946090191318987",
+            "hoverIndex": -1,
+            "engineSma": 242.04450000000003,
+            "shownSma": "242.04450000000003",
+            "engineDif": 1.8900280859601821,
+            "shownDif": "1.8900280859601821",
             "ok": true
           },
           {
             "bar": 453,
-            "engineSma": 24.009000000000025,
-            "shownSma": "24.009000000000025",
-            "engineDif": 0.43735350756030655,
-            "shownDif": "0.43735350756030655",
+            "hoverIndex": -1,
+            "engineSma": 242.773,
+            "shownSma": "242.773",
+            "engineDif": 1.2622902566778293,
+            "shownDif": "1.2622902566778293",
             "ok": true
           },
           {
             "bar": 454,
-            "engineSma": 24.182500000000026,
-            "shownSma": "24.182500000000026",
-            "engineDif": 0.4721998110438257,
-            "shownDif": "0.4721998110438257",
+            "hoverIndex": -1,
+            "engineSma": 243.173,
+            "shownSma": "243.173",
+            "engineDif": 0.5598484786739277,
+            "shownDif": "0.5598484786739277",
             "ok": true
           },
           {
             "bar": 455,
-            "engineSma": 24.334000000000024,
-            "shownSma": "24.334000000000024",
-            "engineDif": 0.5156583130774202,
-            "shownDif": "0.5156583130774202",
+            "hoverIndex": -1,
+            "engineSma": 243.91199999999998,
+            "shownSma": "243.91199999999998",
+            "engineDif": 0.2496180431589039,
+            "shownDif": "0.2496180431589039",
             "ok": true
           },
           {
             "bar": 456,
-            "engineSma": 24.499000000000027,
-            "shownSma": "24.499000000000027",
-            "engineDif": 0.5366510618151139,
-            "shownDif": "0.5366510618151139",
+            "hoverIndex": -1,
+            "engineSma": 244.2515,
+            "shownSma": "244.2515",
+            "engineDif": -0.41030173444582374,
+            "shownDif": "-0.41030173444582374",
             "ok": true
           },
           {
             "bar": 457,
-            "engineSma": 24.664500000000025,
-            "shownSma": "24.664500000000025",
-            "engineDif": 0.550173573654444,
-            "shownDif": "0.550173573654444",
+            "hoverIndex": -1,
+            "engineSma": 244.36999999999998,
+            "shownSma": "244.36999999999998",
+            "engineDif": -0.7838536771908764,
+            "shownDif": "-0.7838536771908764",
             "ok": true
           },
           {
             "bar": 458,
-            "engineSma": 24.835500000000028,
-            "shownSma": "24.835500000000028",
-            "engineDif": 0.5417348171336407,
-            "shownDif": "0.5417348171336407",
+            "hoverIndex": -1,
+            "engineSma": 244.42399999999998,
+            "shownSma": "244.42399999999998",
+            "engineDif": -1.279783504957635,
+            "shownDif": "-1.279783504957635",
             "ok": true
           },
           {
             "bar": 459,
-            "engineSma": 24.982000000000028,
-            "shownSma": "24.982000000000028",
-            "engineDif": 0.49464764530527816,
-            "shownDif": "0.49464764530527816",
+            "hoverIndex": -1,
+            "engineSma": 244.44249999999997,
+            "shownSma": "244.44249999999997",
+            "engineDif": -1.6186483728095027,
+            "shownDif": "-1.6186483728095027",
             "ok": true
           },
           {
             "bar": 460,
-            "engineSma": 25.147000000000027,
-            "shownSma": "25.147000000000027",
-            "engineDif": 0.492005016148525,
-            "shownDif": "0.492005016148525",
+            "hoverIndex": -1,
+            "engineSma": 244.17649999999998,
+            "shownSma": "244.17649999999998",
+            "engineDif": -1.7595977892426617,
+            "shownDif": "-1.7595977892426617",
             "ok": true
           },
           {
             "bar": 461,
-            "engineSma": 25.27850000000003,
-            "shownSma": "25.27850000000003",
-            "engineDif": 0.4580028991037892,
-            "shownDif": "0.4580028991037892",
+            "hoverIndex": -1,
+            "engineSma": 243.90899999999996,
+            "shownSma": "243.90899999999996",
+            "engineDif": -1.5596054768840872,
+            "shownDif": "-1.5596054768840872",
             "ok": true
           },
           {
             "bar": 462,
-            "engineSma": 25.377000000000027,
-            "shownSma": "25.377000000000027",
-            "engineDif": 0.4229527743638499,
-            "shownDif": "0.4229527743638499",
+            "hoverIndex": -1,
+            "engineSma": 243.66549999999998,
+            "shownSma": "243.66549999999998",
+            "engineDif": -1.6220661384050743,
+            "shownDif": "-1.6220661384050743",
             "ok": true
           },
           {
             "bar": 463,
-            "engineSma": 25.429500000000026,
-            "shownSma": "25.429500000000026",
-            "engineDif": 0.39944680456060766,
-            "shownDif": "0.39944680456060766",
+            "hoverIndex": -1,
+            "engineSma": 243.15249999999997,
+            "shownSma": "243.15249999999997",
+            "engineDif": -1.775366472777307,
+            "shownDif": "-1.775366472777307",
             "ok": true
           },
           {
             "bar": 464,
-            "engineSma": 25.48100000000003,
-            "shownSma": "25.48100000000003",
-            "engineDif": 0.3884441580815974,
-            "shownDif": "0.3884441580815974",
+            "hoverIndex": -1,
+            "engineSma": 242.65399999999994,
+            "shownSma": "242.65399999999994",
+            "engineDif": -1.6901702507295795,
+            "shownDif": "-1.6901702507295795",
             "ok": true
           },
           {
             "bar": 465,
-            "engineSma": 25.55550000000003,
-            "shownSma": "25.55550000000003",
-            "engineDif": 0.4128900144518113,
-            "shownDif": "0.4128900144518113",
+            "hoverIndex": -1,
+            "engineSma": 242.32199999999995,
+            "shownSma": "242.32199999999995",
+            "engineDif": -1.6280914984046717,
+            "shownDif": "-1.6280914984046717",
             "ok": true
           },
           {
             "bar": 466,
-            "engineSma": 25.65450000000003,
-            "shownSma": "25.65450000000003",
-            "engineDif": 0.4520667963435514,
-            "shownDif": "0.4520667963435514",
+            "hoverIndex": -1,
+            "engineSma": 241.58399999999992,
+            "shownSma": "241.58399999999992",
+            "engineDif": -2.0738350229546256,
+            "shownDif": "-2.0738350229546256",
             "ok": true
           },
           {
             "bar": 467,
-            "engineSma": 25.67750000000003,
-            "shownSma": "25.67750000000003",
-            "engineDif": 0.4193754796337359,
-            "shownDif": "0.4193754796337359",
+            "hoverIndex": -1,
+            "engineSma": 240.3774999999999,
+            "shownSma": "240.3774999999999",
+            "engineDif": -2.448889521984313,
+            "shownDif": "-2.448889521984313",
             "ok": true
           },
           {
             "bar": 468,
-            "engineSma": 25.688000000000034,
-            "shownSma": "25.688000000000034",
-            "engineDif": 0.37462444255756466,
-            "shownDif": "0.37462444255756466",
+            "hoverIndex": -1,
+            "engineSma": 239.51299999999992,
+            "shownSma": "239.51299999999992",
+            "engineDif": -2.5393294910590214,
+            "shownDif": "-2.5393294910590214",
             "ok": true
           },
           {
             "bar": 469,
-            "engineSma": 25.643500000000035,
-            "shownSma": "25.643500000000035",
-            "engineDif": 0.3217326107451015,
-            "shownDif": "0.3217326107451015",
+            "hoverIndex": -1,
+            "engineSma": 238.7039999999999,
+            "shownSma": "238.7039999999999",
+            "engineDif": -2.5230151706354036,
+            "shownDif": "-2.5230151706354036",
             "ok": true
           },
           {
             "bar": 470,
-            "engineSma": 25.67700000000003,
-            "shownSma": "25.67700000000003",
-            "engineDif": 0.3212990375502045,
-            "shownDif": "0.3212990375502045",
+            "hoverIndex": -1,
+            "engineSma": 237.62549999999993,
+            "shownSma": "237.62549999999993",
+            "engineDif": -2.3426775672193685,
+            "shownDif": "-2.3426775672193685",
             "ok": true
           },
           {
             "bar": 471,
-            "engineSma": 25.662500000000033,
-            "shownSma": "25.662500000000033",
-            "engineDif": 0.24550294416331653,
-            "shownDif": "0.24550294416331653",
+            "hoverIndex": -1,
+            "engineSma": 237.00599999999991,
+            "shownSma": "237.00599999999991",
+            "engineDif": -2.0773683045176767,
+            "shownDif": "-2.0773683045176767",
             "ok": true
           },
           {
             "bar": 472,
-            "engineSma": 25.67150000000003,
-            "shownSma": "25.67150000000003",
-            "engineDif": 0.19927520211760097,
-            "shownDif": "0.19927520211760097",
+            "hoverIndex": -1,
+            "engineSma": 236.6184999999999,
+            "shownSma": "236.6184999999999",
+            "engineDif": -2.133808417164289,
+            "shownDif": "-2.133808417164289",
             "ok": true
           },
           {
             "bar": 473,
-            "engineSma": 25.701000000000032,
-            "shownSma": "25.701000000000032",
-            "engineDif": 0.19987426231406147,
-            "shownDif": "0.19987426231406147",
+            "hoverIndex": -1,
+            "engineSma": 236.1559999999999,
+            "shownSma": "236.1559999999999",
+            "engineDif": -2.3068733667630568,
+            "shownDif": "-2.3068733667630568",
             "ok": true
           },
           {
             "bar": 474,
-            "engineSma": 25.68950000000003,
-            "shownSma": "25.68950000000003",
-            "engineDif": 0.17413421816810626,
-            "shownDif": "0.17413421816810626",
+            "hoverIndex": -1,
+            "engineSma": 235.9514999999999,
+            "shownSma": "235.9514999999999",
+            "engineDif": -2.2007917931807413,
+            "shownDif": "-2.2007917931807413",
             "ok": true
           },
           {
             "bar": 475,
-            "engineSma": 25.649500000000035,
-            "shownSma": "25.649500000000035",
-            "engineDif": 0.12805145744785307,
-            "shownDif": "0.12805145744785307",
+            "hoverIndex": -1,
+            "engineSma": 235.6599999999999,
+            "shownSma": "235.6599999999999",
+            "engineDif": -1.9849068931583531,
+            "shownDif": "-1.9849068931583531",
             "ok": true
           },
           {
             "bar": 476,
-            "engineSma": 25.648500000000034,
-            "shownSma": "25.648500000000034",
-            "engineDif": 0.14553018956220853,
-            "shownDif": "0.14553018956220853",
+            "hoverIndex": -1,
+            "engineSma": 235.50899999999993,
+            "shownSma": "235.50899999999993",
+            "engineDif": -1.9830038302557966,
+            "shownDif": "-1.9830038302557966",
             "ok": true
           },
           {
             "bar": 477,
-            "engineSma": 25.659000000000038,
-            "shownSma": "25.659000000000038",
-            "engineDif": 0.17910435073941144,
-            "shownDif": "0.17910435073941144",
+            "hoverIndex": -1,
+            "engineSma": 235.2829999999999,
+            "shownSma": "235.2829999999999",
+            "engineDif": -1.939769193164011,
+            "shownDif": "-1.939769193164011",
             "ok": true
           },
           {
             "bar": 478,
-            "engineSma": 25.646000000000036,
-            "shownSma": "25.646000000000036",
-            "engineDif": 0.15311140749374985,
-            "shownDif": "0.15311140749374985",
+            "hoverIndex": -1,
+            "engineSma": 235.23149999999993,
+            "shownSma": "235.23149999999993",
+            "engineDif": -1.8175794439534343,
+            "shownDif": "-1.8175794439534343",
             "ok": true
           },
           {
             "bar": 479,
-            "engineSma": 25.647500000000036,
-            "shownSma": "25.647500000000036",
-            "engineDif": 0.11983361540676896,
-            "shownDif": "0.11983361540676896",
+            "hoverIndex": -1,
+            "engineSma": 235.2039999999999,
+            "shownSma": "235.2039999999999",
+            "engineDif": -1.6277432650112473,
+            "shownDif": "-1.6277432650112473",
             "ok": true
           },
           {
             "bar": 480,
-            "engineSma": 25.622000000000035,
-            "shownSma": "25.622000000000035",
-            "engineDif": 0.08920476274138878,
-            "shownDif": "0.08920476274138878",
+            "hoverIndex": -1,
+            "engineSma": 235.1974999999999,
+            "shownSma": "235.1974999999999",
+            "engineDif": -1.3208602955834579,
+            "shownDif": "-1.3208602955834579",
             "ok": true
           },
           {
             "bar": 481,
-            "engineSma": 25.623000000000037,
-            "shownSma": "25.623000000000037",
-            "engineDif": 0.08014563586405643,
-            "shownDif": "0.08014563586405643",
+            "hoverIndex": -1,
+            "engineSma": 235.2534999999999,
+            "shownSma": "235.2534999999999",
+            "engineDif": -0.6752869116091631,
+            "shownDif": "-0.6752869116091631",
             "ok": true
           },
           {
             "bar": 482,
-            "engineSma": 25.619000000000035,
-            "shownSma": "25.619000000000035",
-            "engineDif": 0.060966597588489435,
-            "shownDif": "0.060966597588489435",
+            "hoverIndex": -1,
+            "engineSma": 235.91149999999988,
+            "shownSma": "235.91149999999988",
+            "engineDif": 0.5617325420642487,
+            "shownDif": "0.5617325420642487",
             "ok": true
           },
           {
             "bar": 483,
-            "engineSma": 25.613500000000034,
-            "shownSma": "25.613500000000034",
-            "engineDif": 0.05162727589009819,
-            "shownDif": "0.05162727589009819",
+            "hoverIndex": -1,
+            "engineSma": 236.8514999999999,
+            "shownSma": "236.8514999999999",
+            "engineDif": 1.8515713443204334,
+            "shownDif": "1.8515713443204334",
             "ok": true
           },
           {
             "bar": 484,
-            "engineSma": 25.599500000000035,
-            "shownSma": "25.599500000000035",
-            "engineDif": 0.042126356885493266,
-            "shownDif": "0.042126356885493266",
+            "hoverIndex": -1,
+            "engineSma": 237.87499999999991,
+            "shownSma": "237.87499999999991",
+            "engineDif": 3.15931888062579,
+            "shownDif": "3.15931888062579",
             "ok": true
           },
           {
             "bar": 485,
-            "engineSma": 25.601500000000033,
-            "shownSma": "25.601500000000033",
-            "engineDif": 0.09722248750142626,
-            "shownDif": "0.09722248750142626",
+            "hoverIndex": -1,
+            "engineSma": 238.92549999999991,
+            "shownSma": "238.92549999999991",
+            "engineDif": 4.167049071399191,
+            "shownDif": "4.167049071399191",
             "ok": true
           },
           {
             "bar": 486,
-            "engineSma": 25.58850000000003,
-            "shownSma": "25.58850000000003",
-            "engineDif": 0.1400787438244322,
-            "shownDif": "0.1400787438244322",
+            "hoverIndex": -1,
+            "engineSma": 240.12949999999992,
+            "shownSma": "240.12949999999992",
+            "engineDif": 4.641059345407996,
+            "shownDif": "4.641059345407996",
             "ok": true
           },
           {
             "bar": 487,
-            "engineSma": 25.573000000000032,
-            "shownSma": "25.573000000000032",
-            "engineDif": 0.10983702164075027,
-            "shownDif": "0.10983702164075027",
+            "hoverIndex": -1,
+            "engineSma": 241.39499999999992,
+            "shownSma": "241.39499999999992",
+            "engineDif": 5.0082063196837225,
+            "shownDif": "5.0082063196837225",
             "ok": true
           },
           {
             "bar": 488,
-            "engineSma": 25.548500000000033,
-            "shownSma": "25.548500000000033",
-            "engineDif": 0.0561737119909651,
-            "shownDif": "0.0561737119909651",
+            "hoverIndex": -1,
+            "engineSma": 242.61749999999992,
+            "shownSma": "242.61749999999992",
+            "engineDif": 5.345678093607091,
+            "shownDif": "5.345678093607091",
             "ok": true
           },
           {
             "bar": 489,
-            "engineSma": 25.54350000000003,
-            "shownSma": "25.54350000000003",
-            "engineDif": 0.031039509707049717,
-            "shownDif": "0.031039509707049717",
+            "hoverIndex": -1,
+            "engineSma": 244.08399999999992,
+            "shownSma": "244.08399999999992",
+            "engineDif": 5.996681015129894,
+            "shownDif": "5.996681015129894",
             "ok": true
           },
           {
             "bar": 490,
-            "engineSma": 25.486000000000033,
-            "shownSma": "25.486000000000033",
-            "engineDif": -0.028094574814051754,
-            "shownDif": "-0.028094574814051754",
+            "hoverIndex": -1,
+            "engineSma": 245.23499999999996,
+            "shownSma": "245.23499999999996",
+            "engineDif": 6.073829389369877,
+            "shownDif": "6.073829389369877",
             "ok": true
           },
           {
             "bar": 491,
-            "engineSma": 25.49000000000003,
-            "shownSma": "25.49000000000003",
-            "engineDif": -0.04777974559480924,
-            "shownDif": "-0.04777974559480924",
+            "hoverIndex": -1,
+            "engineSma": 246.69699999999995,
+            "shownSma": "246.69699999999995",
+            "engineDif": 6.658560116887031,
+            "shownDif": "6.658560116887031",
             "ok": true
           },
           {
             "bar": 492,
-            "engineSma": 25.499500000000033,
-            "shownSma": "25.499500000000033",
-            "engineDif": -0.03792875694047382,
-            "shownDif": "-0.03792875694047382",
+            "hoverIndex": -1,
+            "engineSma": 248.61649999999995,
+            "shownSma": "248.61649999999995",
+            "engineDif": 7.482738776715195,
+            "shownDif": "7.482738776715195",
             "ok": true
           },
           {
             "bar": 493,
-            "engineSma": 25.49800000000003,
-            "shownSma": "25.49800000000003",
-            "engineDif": -0.008240047801713501,
-            "shownDif": "-0.008240047801713501",
+            "hoverIndex": -1,
+            "engineSma": 250.48699999999994,
+            "shownSma": "250.48699999999994",
+            "engineDif": 7.811850390236202,
+            "shownDif": "7.811850390236202",
             "ok": true
           },
           {
             "bar": 494,
-            "engineSma": 25.49000000000003,
-            "shownSma": "25.49000000000003",
-            "engineDif": -0.01918775377218296,
-            "shownDif": "-0.01918775377218296",
+            "hoverIndex": -1,
+            "engineSma": 252.51849999999996,
+            "shownSma": "252.51849999999996",
+            "engineDif": 8.452928145670228,
+            "shownDif": "8.452928145670228",
             "ok": true
           },
           {
             "bar": 495,
-            "engineSma": 25.49200000000003,
-            "shownSma": "25.49200000000003",
-            "engineDif": -0.035523560401216514,
-            "shownDif": "-0.035523560401216514",
+            "hoverIndex": -1,
+            "engineSma": 254.81349999999992,
+            "shownSma": "254.81349999999992",
+            "engineDif": 9.386958544991217,
+            "shownDif": "9.386958544991217",
             "ok": true
           },
           {
             "bar": 496,
-            "engineSma": 25.48200000000003,
-            "shownSma": "25.48200000000003",
-            "engineDif": -0.012020006502012848,
-            "shownDif": "-0.012020006502012848",
+            "hoverIndex": -1,
+            "engineSma": 257.01399999999995,
+            "shownSma": "257.01399999999995",
+            "engineDif": 9.67114807671004,
+            "shownDif": "9.67114807671004",
             "ok": true
           },
           {
             "bar": 497,
-            "engineSma": 25.45500000000003,
-            "shownSma": "25.45500000000003",
-            "engineDif": 0.0009473933506605192,
-            "shownDif": "0.0009473933506605192",
+            "hoverIndex": -1,
+            "engineSma": 259.28399999999993,
+            "shownSma": "259.28399999999993",
+            "engineDif": 9.913619669062825,
+            "shownDif": "9.913619669062825",
             "ok": true
           },
           {
             "bar": 498,
-            "engineSma": 25.492500000000028,
-            "shownSma": "25.492500000000028",
-            "engineDif": 0.06374581325403028,
-            "shownDif": "0.06374581325403028",
+            "hoverIndex": -1,
+            "engineSma": 261.7579999999999,
+            "shownSma": "261.7579999999999",
+            "engineDif": 10.3822954788086,
+            "shownDif": "10.3822954788086",
             "ok": true
           },
           {
             "bar": 499,
-            "engineSma": 25.52700000000003,
-            "shownSma": "25.52700000000003",
-            "engineDif": 0.09626599052015905,
-            "shownDif": "0.09626599052015905",
+            "hoverIndex": -1,
+            "engineSma": 264.6869999999999,
+            "shownSma": "264.6869999999999",
+            "engineDif": 11.430491107768262,
+            "shownDif": "11.430491107768262",
             "ok": true
           },
           {
             "bar": 500,
-            "engineSma": 25.55450000000003,
-            "shownSma": "25.55450000000003",
-            "engineDif": 0.10628873919851856,
-            "shownDif": "0.10628873919851856",
+            "hoverIndex": -1,
+            "engineSma": 267.6429999999999,
+            "shownSma": "267.6429999999999",
+            "engineDif": 12.304143055155293,
+            "shownDif": "12.304143055155293",
             "ok": true
           },
           {
             "bar": 501,
-            "engineSma": 25.56600000000003,
-            "shownSma": "25.56600000000003",
-            "engineDif": 0.1033574028160551,
-            "shownDif": "0.1033574028160551",
+            "hoverIndex": -1,
+            "engineSma": 270.4849999999999,
+            "shownSma": "270.4849999999999",
+            "engineDif": 13.056615172849945,
+            "shownDif": "13.056615172849945",
             "ok": true
           },
           {
             "bar": 502,
-            "engineSma": 25.60500000000003,
-            "shownSma": "25.60500000000003",
-            "engineDif": 0.13258946231337276,
-            "shownDif": "0.13258946231337276",
+            "hoverIndex": -1,
+            "engineSma": 272.54649999999987,
+            "shownSma": "272.54649999999987",
+            "engineDif": 12.975656117791914,
+            "shownDif": "12.975656117791914",
             "ok": true
           },
           {
             "bar": 503,
-            "engineSma": 25.509500000000028,
-            "shownSma": "25.509500000000028",
-            "engineDif": -0.054224046198001474,
-            "shownDif": "-0.054224046198001474",
+            "hoverIndex": -1,
+            "engineSma": 274.58799999999985,
+            "shownSma": "274.58799999999985",
+            "engineDif": 13.059512628868447,
+            "shownDif": "13.059512628868447",
             "ok": true
           },
           {
             "bar": 504,
-            "engineSma": 25.418000000000028,
-            "shownSma": "25.418000000000028",
-            "engineDif": -0.19518364350807005,
-            "shownDif": "-0.19518364350807005",
+            "hoverIndex": -1,
+            "engineSma": 275.85649999999987,
+            "shownSma": "275.85649999999987",
+            "engineDif": 12.06140006485299,
+            "shownDif": "12.06140006485299",
             "ok": true
           },
           {
             "bar": 505,
-            "engineSma": 25.29200000000003,
-            "shownSma": "25.29200000000003",
-            "engineDif": -0.2954205514460675,
-            "shownDif": "-0.2954205514460675",
+            "hoverIndex": -1,
+            "engineSma": 277.04299999999984,
+            "shownSma": "277.04299999999984",
+            "engineDif": 11.03027027749215,
+            "shownDif": "11.03027027749215",
             "ok": true
           },
           {
             "bar": 506,
-            "engineSma": 25.13200000000003,
-            "shownSma": "25.13200000000003",
-            "engineDif": -0.4240344189023766,
-            "shownDif": "-0.4240344189023766",
+            "hoverIndex": -1,
+            "engineSma": 278.38199999999983,
+            "shownSma": "278.38199999999983",
+            "engineDif": 10.071974628961641,
+            "shownDif": "10.071974628961641",
             "ok": true
           },
           {
             "bar": 507,
-            "engineSma": 25.012000000000032,
-            "shownSma": "25.012000000000032",
-            "engineDif": -0.5183725268080046,
-            "shownDif": "-0.5183725268080046",
+            "hoverIndex": -1,
+            "engineSma": 279.6624999999998,
+            "shownSma": "279.6624999999998",
+            "engineDif": 9.161720492603422,
+            "shownDif": "9.161720492603422",
             "ok": true
           },
           {
             "bar": 508,
-            "engineSma": 24.86950000000003,
-            "shownSma": "24.86950000000003",
-            "engineDif": -0.6509921552034932,
-            "shownDif": "-0.6509921552034932",
+            "hoverIndex": -1,
+            "engineSma": 281.2784999999998,
+            "shownSma": "281.2784999999998",
+            "engineDif": 8.986316590982597,
+            "shownDif": "8.986316590982597",
             "ok": true
           },
           {
             "bar": 509,
-            "engineSma": 24.71350000000003,
-            "shownSma": "24.71350000000003",
-            "engineDif": -0.7514663124341077,
-            "shownDif": "-0.7514663124341077",
+            "hoverIndex": -1,
+            "engineSma": 282.5554999999998,
+            "shownSma": "282.5554999999998",
+            "engineDif": 8.653150382123158,
+            "shownDif": "8.653150382123158",
             "ok": true
           },
           {
             "bar": 510,
-            "engineSma": 24.59050000000003,
-            "shownSma": "24.59050000000003",
-            "engineDif": -0.8080604092679629,
-            "shownDif": "-0.8080604092679629",
+            "hoverIndex": -1,
+            "engineSma": 283.72299999999984,
+            "shownSma": "283.72299999999984",
+            "engineDif": 7.754252065983962,
+            "shownDif": "7.754252065983962",
             "ok": true
           },
           {
             "bar": 511,
-            "engineSma": 24.426500000000033,
-            "shownSma": "24.426500000000033",
-            "engineDif": -0.8822801670806086,
-            "shownDif": "-0.8822801670806086",
+            "hoverIndex": -1,
+            "engineSma": 284.8609999999998,
+            "shownSma": "284.8609999999998",
+            "engineDif": 7.508058205009036,
+            "shownDif": "7.508058205009036",
             "ok": true
           },
           {
             "bar": 512,
-            "engineSma": 24.237500000000033,
-            "shownSma": "24.237500000000033",
-            "engineDif": -0.9455317703004233,
-            "shownDif": "-0.9455317703004233",
+            "hoverIndex": -1,
+            "engineSma": 286.1514999999998,
+            "shownSma": "286.1514999999998",
+            "engineDif": 7.914851525270706,
+            "shownDif": "7.914851525270706",
             "ok": true
           },
           {
             "bar": 513,
-            "engineSma": 24.041000000000032,
-            "shownSma": "24.041000000000032",
-            "engineDif": -0.9747399292868835,
-            "shownDif": "-0.9747399292868835",
+            "hoverIndex": -1,
+            "engineSma": 287.3254999999998,
+            "shownSma": "287.3254999999998",
+            "engineDif": 7.726158525187714,
+            "shownDif": "7.726158525187714",
             "ok": true
           },
           {
             "bar": 514,
-            "engineSma": 23.888000000000034,
-            "shownSma": "23.888000000000034",
-            "engineDif": -0.9514159520906667,
-            "shownDif": "-0.9514159520906667",
+            "hoverIndex": -1,
+            "engineSma": 288.10099999999983,
+            "shownSma": "288.10099999999983",
+            "engineDif": 7.32674197497812,
+            "shownDif": "7.32674197497812",
             "ok": true
           },
           {
             "bar": 515,
-            "engineSma": 23.785500000000035,
-            "shownSma": "23.785500000000035",
-            "engineDif": -0.8497072411581286,
-            "shownDif": "-0.8497072411581286",
+            "hoverIndex": -1,
+            "engineSma": 288.1999999999998,
+            "shownSma": "288.1999999999998",
+            "engineDif": 6.379088074101958,
+            "shownDif": "6.379088074101958",
             "ok": true
           },
           {
             "bar": 516,
-            "engineSma": 23.687000000000033,
-            "shownSma": "23.687000000000033",
-            "engineDif": -0.7180584534912313,
-            "shownDif": "-0.7180584534912313",
+            "hoverIndex": -1,
+            "engineSma": 288.8014999999998,
+            "shownSma": "288.8014999999998",
+            "engineDif": 6.025010652343099,
+            "shownDif": "6.025010652343099",
             "ok": true
           },
           {
             "bar": 517,
-            "engineSma": 23.589000000000034,
-            "shownSma": "23.589000000000034",
-            "engineDif": -0.6115181388976083,
-            "shownDif": "-0.6115181388976083",
+            "hoverIndex": -1,
+            "engineSma": 289.4749999999998,
+            "shownSma": "289.4749999999998",
+            "engineDif": 5.923838761764614,
+            "shownDif": "5.923838761764614",
             "ok": true
           },
           {
             "bar": 518,
-            "engineSma": 23.422500000000035,
-            "shownSma": "23.422500000000035",
-            "engineDif": -0.577715691408045,
-            "shownDif": "-0.577715691408045",
+            "hoverIndex": -1,
+            "engineSma": 290.11949999999985,
+            "shownSma": "290.11949999999985",
+            "engineDif": 6.122478006903805,
+            "shownDif": "6.122478006903805",
             "ok": true
           },
           {
             "bar": 519,
-            "engineSma": 23.301500000000036,
-            "shownSma": "23.301500000000036",
-            "engineDif": -0.4880104611366427,
-            "shownDif": "-0.4880104611366427",
+            "hoverIndex": -1,
+            "engineSma": 290.21849999999984,
+            "shownSma": "290.21849999999984",
+            "engineDif": 6.1373380649826,
+            "shownDif": "6.1373380649826",
             "ok": true
           }
         ],
@@ -1801,487 +2195,629 @@
     },
     "b2Render": {
       "cardCount": 8,
+      "clauseCount": 60,
+      "failCount": 0,
+      "dataLimitedCount": 1,
       "cards": [
         {
           "card": "S-03.05-01",
+          "ac": "AC-03.05-05",
           "kind": "overlay",
           "selected": true,
-          "expected": {
-            "T08": 3,
-            "T09": 3,
-            "T11": 2,
-            "T24": 2
-          },
-          "samples": {
-            "T08": {
-              "nodes": 3,
-              "paint": "rgb(228, 72, 63)",
-              "points": 1666
+          "clauses": [
+            {
+              "clause": "T09 三轨可见",
+              "status": "pass",
+              "detail": {
+                "nodes": 3,
+                "blocks": [
+                  1,
+                  1,
+                  1
+                ]
+              }
             },
-            "T09": {
-              "nodes": 3,
-              "paint": "rgb(228, 72, 63)",
-              "points": 1666
+            {
+              "clause": "T09 中轨虚线、上下轨实线（虚实可区分）",
+              "status": "pass",
+              "detail": {
+                "middleDash": "4px, 3px",
+                "upper": "none",
+                "lower": "none"
+              }
             },
-            "T11": {
-              "nodes": 2,
-              "paint": "rgb(228, 72, 63)",
-              "points": 1666
+            {
+              "clause": "T09 upper 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
             },
-            "T24": {
-              "nodes": 2,
-              "paint": "rgb(228, 72, 63)",
-              "points": 1666
+            {
+              "clause": "T09 middle 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T09 lower 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T09 图例三线齐全且颜色=线色",
+              "status": "pass",
+              "detail": {
+                "legendKeys": [
+                  "upper",
+                  "middle",
+                  "lower"
+                ],
+                "legendByKey": [
+                  [
+                    "upper",
+                    "rgb(228, 72, 63)"
+                  ],
+                  [
+                    "middle",
+                    "rgb(79, 163, 199)"
+                  ],
+                  [
+                    "lower",
+                    "rgb(23, 166, 115)"
+                  ]
+                ],
+                "strokeByKey": [
+                  [
+                    "upper",
+                    "rgb(228, 72, 63)"
+                  ],
+                  [
+                    "middle",
+                    "rgb(79, 163, 199)"
+                  ],
+                  [
+                    "lower",
+                    "rgb(23, 166, 115)"
+                  ]
+                ]
+              }
+            },
+            {
+              "clause": "T09 读数条 3 条",
+              "status": "pass",
+              "detail": {
+                "count": 3
+              }
+            },
+            {
+              "clause": "切标的后不残留旧线",
+              "status": "pass",
+              "detail": {
+                "switched": true,
+                "afterPaths": 3
+              }
             }
-          },
-          "readouts": {
-            "T08": [
-              {
-                "readout": "b2-overlay-T08-upper",
-                "value": "23.884037500000034",
-                "unit": "元",
-                "text": "T08·upper 23.88 元"
-              },
-              {
-                "readout": "b2-overlay-T08-middle",
-                "value": "23.301500000000036",
-                "unit": "元",
-                "text": "T08·middle 23.30 元"
-              },
-              {
-                "readout": "b2-overlay-T08-lower",
-                "value": "22.718962500000035",
-                "unit": "元",
-                "text": "T08·lower 22.72 元"
-              }
-            ],
-            "T09": [
-              {
-                "readout": "b2-overlay-T09-upper",
-                "value": "25.932435595042826",
-                "unit": "元",
-                "text": "T09·upper 25.93 元"
-              },
-              {
-                "readout": "b2-overlay-T09-middle",
-                "value": "23.301500000000036",
-                "unit": "元",
-                "text": "T09·middle 23.30 元"
-              },
-              {
-                "readout": "b2-overlay-T09-lower",
-                "value": "20.670564404957247",
-                "unit": "元",
-                "text": "T09·lower 20.67 元"
-              }
-            ],
-            "T11": [
-              {
-                "readout": "b2-overlay-T11-upper",
-                "value": "26.33",
-                "unit": "元",
-                "text": "T11·upper 26.33 元"
-              },
-              {
-                "readout": "b2-overlay-T11-lower",
-                "value": "21.51",
-                "unit": "元",
-                "text": "T11·lower 21.51 元"
-              }
-            ],
-            "T24": [
-              {
-                "readout": "b2-overlay-T24-hhv",
-                "value": "26.33",
-                "unit": "元",
-                "text": "T24·hhv 26.33 元"
-              },
-              {
-                "readout": "b2-overlay-T24-llv",
-                "value": "21.51",
-                "unit": "元",
-                "text": "T24·llv 21.51 元"
-              }
-            ]
-          },
-          "ok": true
-        },
-        {
-          "card": "S-03.05-03",
-          "kind": "overlay",
-          "selected": true,
-          "expected": {
-            "T10": 3,
-            "T12": 3,
-            "T13": 2,
-            "T14": 2
-          },
-          "samples": {
-            "T10": {
-              "nodes": 3,
-              "paint": "rgb(228, 72, 63)",
-              "points": 1666
-            },
-            "T12": {
-              "nodes": 3,
-              "paint": "rgb(228, 72, 63)",
-              "points": 1666
-            },
-            "T13": {
-              "nodes": 2,
-              "paint": "rgb(228, 72, 63)",
-              "points": 853
-            },
-            "T14": {
-              "nodes": 2,
-              "paint": "rgb(228, 72, 63)",
-              "points": 1666
-            }
-          },
-          "readouts": {
-            "T10": [
-              {
-                "readout": "b2-overlay-T10-upper",
-                "value": "24.625224819616715",
-                "unit": "元",
-                "text": "T10·upper 24.63 元"
-              },
-              {
-                "readout": "b2-overlay-T10-middle",
-                "value": "23.391778670741395",
-                "unit": "元",
-                "text": "T10·middle 23.39 元"
-              },
-              {
-                "readout": "b2-overlay-T10-lower",
-                "value": "22.158332521866075",
-                "unit": "元",
-                "text": "T10·lower 22.16 元"
-              }
-            ],
-            "T12": [
-              {
-                "readout": "b2-overlay-T12-upper",
-                "value": "24.534946148875356",
-                "unit": "元",
-                "text": "T12·upper 24.53 元"
-              },
-              {
-                "readout": "b2-overlay-T12-middle",
-                "value": "23.301500000000036",
-                "unit": "元",
-                "text": "T12·middle 23.30 元"
-              },
-              {
-                "readout": "b2-overlay-T12-lower",
-                "value": "22.068053851124716",
-                "unit": "元",
-                "text": "T12·lower 22.07 元"
-              }
-            ],
-            "T13": [
-              {
-                "readout": "b2-overlay-T13-long",
-                "value": "",
-                "unit": "元",
-                "text": "T13·long — 元"
-              },
-              {
-                "readout": "b2-overlay-T13-short",
-                "value": "23.781521702108606",
-                "unit": "元",
-                "text": "T13·short 23.78 元"
-              }
-            ],
-            "T14": [
-              {
-                "readout": "b2-overlay-T14-long",
-                "value": "24.492297696139946",
-                "unit": "元",
-                "text": "T14·long 24.49 元"
-              },
-              {
-                "readout": "b2-overlay-T14-short",
-                "value": "23.347702303860054",
-                "unit": "元",
-                "text": "T14·short 23.35 元"
-              }
-            ]
-          },
-          "ok": true
-        },
-        {
-          "card": "S-03.05-04",
-          "kind": "overlay",
-          "selected": true,
-          "expected": {
-            "T15": 5
-          },
-          "samples": {
-            "T15": {
-              "nodes": 5,
-              "paint": "rgb(96, 165, 250)",
-              "points": 1666
-            }
-          },
-          "readouts": {
-            "T15": [
-              {
-                "readout": "b2-overlay-T15-tenkan",
-                "value": "22.67",
-                "unit": "元",
-                "text": "T15·tenkan 22.67 元"
-              },
-              {
-                "readout": "b2-overlay-T15-kijun",
-                "value": "23.92",
-                "unit": "元",
-                "text": "T15·kijun 23.92 元"
-              },
-              {
-                "readout": "b2-overlay-T15-senkouA",
-                "value": "25.560000000000002",
-                "unit": "元",
-                "text": "T15·senkouA 25.56 元"
-              },
-              {
-                "readout": "b2-overlay-T15-senkouB",
-                "value": "24.63",
-                "unit": "元",
-                "text": "T15·senkouB 24.63 元"
-              },
-              {
-                "readout": "b2-overlay-T15-chikou",
-                "value": "",
-                "unit": "元",
-                "text": "T15·chikou — 元"
-              }
-            ]
-          },
-          "ok": true
-        },
-        {
-          "card": "S-03.05-05",
-          "kind": "overlay",
-          "selected": true,
-          "expected": {
-            "T16": 1
-          },
-          "samples": {
-            "T16": {
-              "nodes": 1,
-              "paint": "rgb(245, 158, 11)",
-              "points": 120
-            }
-          },
-          "readouts": {
-            "T16": [
-              {
-                "readout": "b2-overlay-T16-psar",
-                "value": "21.73391296",
-                "unit": "元",
-                "text": "T16·psar 21.73 元"
-              }
-            ]
-          },
-          "ok": true
-        },
-        {
-          "card": "S-03.05-06",
-          "kind": "overlay",
-          "selected": true,
-          "expected": {
-            "T23": 3
-          },
-          "samples": {
-            "T23": {
-              "nodes": 3,
-              "paint": "rgb(79, 163, 199)",
-              "points": 1666
-            }
-          },
-          "readouts": {
-            "T23": [
-              {
-                "readout": "b2-overlay-T23-pivot",
-                "value": "23.16333333333333",
-                "unit": "元",
-                "text": "T23·pivot 23.16 元"
-              },
-              {
-                "readout": "b2-overlay-T23-r1",
-                "value": "23.47666666666666",
-                "unit": "元",
-                "text": "T23·r1 23.48 元"
-              },
-              {
-                "readout": "b2-overlay-T23-s1",
-                "value": "22.59666666666666",
-                "unit": "元",
-                "text": "T23·s1 22.60 元"
-              }
-            ]
-          },
+          ],
           "ok": true
         },
         {
           "card": "S-03.05-02",
+          "ac": "AC-03.05-10",
           "kind": "sub",
-          "expected": {
-            "V01": 1,
-            "V02": 1,
-            "V09": 1,
-            "V10": 1
-          },
-          "samples": {
-            "V01": {
-              "nodes": 1,
-              "paint": "rgb(245, 158, 11)",
-              "points": 1786
+          "clauses": [
+            {
+              "clause": "V01 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
             },
-            "V02": {
-              "nodes": 1,
-              "paint": "rgb(34, 211, 238)",
-              "points": 1786
+            {
+              "clause": "V01 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
             },
-            "V09": {
-              "nodes": 1,
-              "paint": "rgb(96, 165, 250)",
-              "points": 1786
+            {
+              "clause": "V02 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
             },
-            "V10": {
-              "nodes": 1,
-              "paint": "rgb(148, 163, 184)",
-              "points": 1786
+            {
+              "clause": "V02 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V09 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V09 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V10 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V10 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "ATR 以元显示",
+              "status": "pass",
+              "detail": {
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "ATRP 以比值显示",
+              "status": "pass",
+              "detail": {
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "切标的后读数与当前引擎一致（旧值不残留）",
+              "status": "pass",
+              "detail": {
+                "readout": "2.3672247023425297",
+                "expectLast": 2.3672247023425297
+              }
             }
-          },
-          "readouts": {
-            "V01": [
-              {
-                "readout": "b2-sub-V01-atr",
-                "value": "0.6353399617584122",
-                "unit": "元",
-                "text": "V01·atr 0.64 元"
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-03",
+          "ac": "AC-03.05-16",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T13 两轨可见",
+              "status": "pass",
+              "detail": {
+                "nodes": 2
               }
-            ],
-            "V02": [
-              {
-                "readout": "b2-sub-V02-atrp",
-                "value": "0.026898389574869272",
-                "unit": "无量纲",
-                "text": "V02·atrp 0.03 无量纲"
+            },
+            {
+              "clause": "T13 仅显示激活侧",
+              "status": "pass",
+              "detail": {
+                "long": null,
+                "short": 105.90530849344492
               }
-            ],
-            "V09": [
-              {
-                "readout": "b2-sub-V09-amplitude",
-                "value": "1.0500000000000007",
-                "unit": "元",
-                "text": "V09·amplitude 1.05 元"
+            },
+            {
+              "clause": "T13 翻转根有标记",
+              "status": "pass",
+              "detail": {
+                "markers": 10,
+                "flips": 10
               }
-            ],
-            "V10": [
-              {
-                "readout": "b2-sub-V10-tr",
-                "value": "1.0500000000000007",
-                "unit": "元",
-                "text": "V10·tr 1.05 元"
+            },
+            {
+              "clause": "T13 翻转后新侧不继承旧侧值",
+              "status": "pass",
+              "detail": {
+                "flipBars": 5,
+                "carryOver": 0,
+                "staleSide": 0
               }
-            ]
-          },
-          "ok": true
+            },
+            {
+              "clause": "T13 long NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 3,
+                "runs": 3
+              }
+            },
+            {
+              "clause": "T13 short NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 3,
+                "runs": 3
+              }
+            },
+            {
+              "clause": "T13 读数条 2 条",
+              "status": "pass",
+              "detail": {
+                "count": 2
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-04",
+          "ac": "AC-03.05-20",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T15 云带按多空着色",
+              "status": "pass",
+              "detail": {
+                "count": 2,
+                "signs": [
+                  "pos",
+                  "neg"
+                ],
+                "fills": [
+                  "rgb(228, 72, 63)",
+                  "rgb(23, 166, 115)"
+                ]
+              }
+            },
+            {
+              "clause": "T15 先行带在最后一根截断（不越过未来区）",
+              "status": "pass",
+              "detail": {
+                "lastA": 519,
+                "lastB": 519,
+                "bars": 520
+              }
+            },
+            {
+              "clause": "T15 迟行线 26 根留白（位移在尾端）",
+              "status": "pass",
+              "detail": {
+                "tailNaN": 26,
+                "headFinite": 26
+              }
+            },
+            {
+              "clause": "T15 图例五线齐全",
+              "status": "pass",
+              "detail": {
+                "legendCount": 5
+              }
+            },
+            {
+              "clause": "T15 tenkan NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 kijun NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 senkouA NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 senkouB NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 chikou NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 读数条 5 条",
+              "status": "pass",
+              "detail": {
+                "count": 5
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-05",
+          "ac": "AC-03.05-24",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T16 以点列显示",
+              "status": "pass",
+              "detail": {
+                "dots": 120
+              }
+            },
+            {
+              "clause": "T16 点不连成线",
+              "status": "pass",
+              "detail": {
+                "lines": 0
+              }
+            },
+            {
+              "clause": "T16 反转箭头数量与方向正确",
+              "status": "pass",
+              "detail": {
+                "arrows": 8,
+                "expectedFlips": 8,
+                "up": 4,
+                "expectedUp": 4,
+                "down": 4,
+                "expectedDown": 4
+              }
+            },
+            {
+              "clause": "T16 多空颜色正确（红涨绿跌）",
+              "status": "pass",
+              "detail": {
+                "colors": [
+                  "rgb(23, 166, 115)",
+                  "rgb(228, 72, 63)"
+                ],
+                "rise": "rgb(228, 72, 63)",
+                "fall": "rgb(23, 166, 115)",
+                "hasBull": true,
+                "hasBear": true,
+                "upArrowColors": [
+                  "rgb(228, 72, 63)"
+                ],
+                "downArrowColors": [
+                  "rgb(23, 166, 115)"
+                ]
+              }
+            },
+            {
+              "clause": "T16 读数条 1 条",
+              "status": "pass",
+              "detail": {
+                "count": 1
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-06",
+          "ac": "AC-03.05-27",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T23 三线可见",
+              "status": "pass",
+              "detail": {
+                "nodes": 3
+              }
+            },
+            {
+              "clause": "T23 首根无值",
+              "status": "pass",
+              "detail": {
+                "first": null
+              }
+            },
+            {
+              "clause": "T23 切周期后三线重算",
+              "status": "pass",
+              "detail": {
+                "weeklyBars": 104,
+                "dailyBars": 520,
+                "weeklyLasts": [
+                  101.11666666666667,
+                  104.32333333333335,
+                  94.72333333333334
+                ],
+                "dailyLasts": [
+                  97.5,
+                  98.16,
+                  97.16
+                ],
+                "differ": [
+                  "pivot",
+                  "r1",
+                  "s1"
+                ]
+              }
+            },
+            {
+              "clause": "T23 切周期后旧线不残留",
+              "status": "pass",
+              "detail": {
+                "nodes": 3,
+                "residual": 0
+              }
+            },
+            {
+              "clause": "T23 读数标签不重叠",
+              "status": "pass",
+              "detail": {
+                "count": 3,
+                "overlap": 0
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
         },
         {
           "card": "S-03.05-07",
+          "ac": "AC-03.05-31",
           "kind": "sub",
-          "expected": {
-            "V03": 1,
-            "V04": 1,
-            "V05": 1
-          },
-          "samples": {
-            "V03": {
-              "nodes": 1,
-              "paint": "rgb(167, 139, 250)",
-              "points": 1786
+          "clauses": [
+            {
+              "clause": "V03 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
             },
-            "V04": {
-              "nodes": 1,
-              "paint": "rgb(148, 163, 184)",
-              "points": 1786
+            {
+              "clause": "V03 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
             },
-            "V05": {
-              "nodes": 1,
-              "paint": "rgb(52, 211, 153)",
-              "points": 1786
+            {
+              "clause": "V04 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "V04 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V05 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "V05 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "带宽以比值显示",
+              "status": "pass",
+              "detail": {
+                "unit": "无量纲",
+                "text": "V04·width 0.28 无量纲"
+              }
+            },
+            {
+              "clause": "%B 保留两位小数",
+              "status": "pass",
+              "detail": {
+                "text": "V05·percentB 0.29 无量纲",
+                "decimals": 2,
+                "value": "0.29190427557588167"
+              }
+            },
+            {
+              "clause": "零带宽段显示 —",
+              "status": "n/a",
+              "detail": "窗口内零带宽根 = 0（无样本时由 NaN→— 路径覆盖）"
             }
-          },
-          "readouts": {
-            "V03": [
-              {
-                "readout": "b2-sub-V03-std",
-                "value": "1.3154677975213944",
-                "unit": "元",
-                "text": "V03·std 1.32 元"
-              }
-            ],
-            "V04": [
-              {
-                "readout": "b2-sub-V04-width",
-                "value": "0.22581684398367355",
-                "unit": "无量纲",
-                "text": "V04·width 0.23 无量纲"
-              }
-            ],
-            "V05": [
-              {
-                "readout": "b2-sub-V05-percentB",
-                "value": "0.5605297979547814",
-                "unit": "无量纲",
-                "text": "V05·percentB 0.56 无量纲"
-              }
-            ]
-          },
-          "ok": true
+          ],
+          "ok": true,
+          "dataLimited": 1
         },
         {
           "card": "S-03.05-08",
+          "ac": "AC-03.05-35",
           "kind": "sub",
-          "expected": {
-            "V07": 1,
-            "V08": 1
-          },
-          "samples": {
-            "V07": {
-              "nodes": 1,
-              "paint": "rgb(244, 114, 182)",
-              "points": 1786
+          "clauses": [
+            {
+              "clause": "V08 0 轴可见",
+              "status": "pass",
+              "detail": {
+                "zeroAxis": 1
+              }
             },
-            "V08": {
-              "nodes": 1,
-              "paint": "rgb(245, 158, 11)",
-              "points": 1786
+            {
+              "clause": "V08 正负分色",
+              "status": "pass",
+              "detail": {
+                "posStroke": "rgb(228, 72, 63)",
+                "negStroke": "rgb(23, 166, 115)"
+              }
+            },
+            {
+              "clause": "V08 正负路径按符号断开",
+              "status": "pass",
+              "detail": {
+                "posSegments": 30,
+                "negSegments": 29,
+                "posRuns": 30,
+                "negRuns": 29
+              }
+            },
+            {
+              "clause": "V08 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1
+              }
+            },
+            {
+              "clause": "切标的后不残留",
+              "status": "pass",
+              "detail": {
+                "switched": true,
+                "nodes": 2,
+                "readout": "13.517939369395126",
+                "expectLast": 13.517939369395126
+              }
             }
-          },
-          "readouts": {
-            "V07": [
-              {
-                "readout": "b2-sub-V07-ulcer",
-                "value": "5.125130556960944",
-                "unit": "%",
-                "text": "V07·ulcer 5.13 %"
-              }
-            ],
-            "V08": [
-              {
-                "readout": "b2-sub-V08-gapo",
-                "value": "-15.739604938942339",
-                "unit": "%",
-                "text": "V08·gapo -15.74 %"
-              }
-            ]
-          },
-          "ok": true
+          ],
+          "ok": true,
+          "dataLimited": 0
         }
       ],
       "ok": true
@@ -2290,6 +2826,21 @@
       "cardCount": 13,
       "optionsCount": 24,
       "missing": [],
+      "expect": {
+        "M01": 1,
+        "M02": 3,
+        "M04": 1,
+        "M05": 1,
+        "M08": 2,
+        "M09": 1,
+        "M10": 1,
+        "M19": 2,
+        "M20": 2,
+        "M21": 1,
+        "M24": 1,
+        "M25": 2,
+        "M26": 1
+      },
       "cards": [
         {
           "id": "M01",
@@ -2446,16 +2997,16 @@
           "paintOk": true,
           "paints": [
             "rgb(79, 163, 199)",
-            "rgb(59, 130, 246)"
+            "rgb(23, 166, 115)"
           ],
           "readouts": 2,
           "readoutOk": true,
           "triColor": {
             "fillCount": 120,
             "unique": [
+              "rgb(23, 166, 115)",
               "rgb(59, 130, 246)",
-              "rgb(228, 72, 63)",
-              "rgb(23, 166, 115)"
+              "rgb(228, 72, 63)"
             ],
             "ok": true
           },
@@ -2480,18 +3031,16 @@
     "catalog": {
       "route": "#/catalog",
       "rootPresent": true,
-      "items": [
-        "T01",
-        "T02",
+      "itemCount": 44,
+      "itemCountOk": true,
+      "betaIds": [
         "T03",
-        "T04",
-        "T05",
         "T19",
-        "T20",
         "T21",
-        "T22",
-        "E13",
-        "M06",
+        "T16"
+      ],
+      "betaCount": 4,
+      "targetIds": [
         "T08",
         "T09",
         "T10",
@@ -2511,614 +3060,1029 @@
         "V07",
         "V08",
         "V09",
-        "V10",
-        "M01",
-        "M02",
-        "M04",
-        "M05",
-        "M08",
-        "M09",
-        "M10",
-        "M19",
-        "M20",
-        "M21",
-        "M24",
-        "M25",
-        "M26"
+        "V10"
       ],
-      "itemCount": 44,
-      "sections": [
-        "formula",
-        "params",
-        "warmup",
-        "boundary"
+      "cards": [
+        {
+          "id": "T08",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "中轨 = SMA(C, N)；上轨 = 中轨×(1+pct/100)；下轨 = 中轨×(1−pct/100)。N=20、"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 19（0 基），即至少需要 20 根 K 线。\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)；上/下轨=中轨×(1±pct%)；首根有效值 N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T09",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "中轨 = SMA(C, N)；σ 为样本标准差（ddof=1）；上/下轨 = 中轨 ± kσ。N=20、k=2.0，首值"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 19（0 基），即至少需要 20 根 K 线。\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)；σ 为样本标准差（ddof=1）；上/下轨=中轨±kσ。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T10",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "中轨 = EMA(C, N)；ATR(N) 为 Wilder 平滑；上/下轨 = 中轨 ± k×ATR。N=20、k=2"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 20（0 基），即至少需要 21 根 K 线。\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "中轨=EMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T11",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "上轨 = 近 N 根最高价 HHV(high, N)；下轨 = 近 N 根最低价 LLV(low, N)，不做平滑。N="
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 19（0 基），即至少需要 20 根 K 线。\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "上轨=近 N 根最高价；下轨=近 N 根最低价；首根有效值 N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T12",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "中轨 = SMA(C, N)；上/下轨 = 中轨 ± k×ATR(N)（Wilder）。N=20、k=2.0，首值下标 "
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 20（0 基），即至少需要 21 根 K 线。\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T13",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "ATR(14)、k=3.5。多头止损 = max(前值, C−k×ATR)，收盘跌破前值翻空；空头止损 = min(前值"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 14（0 基），即至少需要 15 根 K 线。\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空；翻空当根冻结旧值，空头"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T14",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "多头 = HHV(high, N) − k×ATR(N)；空头 = LLV(low, N) + k×ATR(N)。N=2"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 22（0 基），即至少需要 23 根 K 线。\" expected=22"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "多头=HHV(high,N)-k×ATR(N)；空头=LLV(low,N)+k×ATR(N)；首个有效值 N。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T15",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "转换线 = (HHV9+LLV9)/2；基准线 = (HHV26+LLV26)/2；先行带 A = (转换+基准)/2、"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=4 expected=4"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 77（0 基），即至少需要 78 根 K 线。\" expected=77"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2；先行带 A/B 右移 D 根，末尾 D 根留白；迟行线取 D"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T16",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "SAR = prev_SAR + AF×(EP−prev_SAR)，按前两根极值夹逼；反转时 SAR = EP、EP 取"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=3 expected=3"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 1（0 基），即至少需要 2 根 K 线。\" expected=1"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T23",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "P = (H+L+C)/3；R1 = 2P−L；S1 = 2P−H，H/L/C 取上一根。无参数，首值下标 1；只输出 "
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=0 expected=0"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 1（0 基），即至少需要 2 根 K 线。\" expected=1"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根；日/周/月由图表周期决定，"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T24",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "HHV = max(high[i−N+1 … i])；LLV = min(low[i−N+1 … i])，窗口含当前根，"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 19（0 基），即至少需要 20 根 K 线。\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出；首根有效值 N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V01",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "TR[0]=NaN；TR[i]=max(H−L, |H−PC|, |L−PC|)；ATR 为 TR 的 Wilder 平"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 14（0 基），即至少需要 15 根 K 线。\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "TR 首根 NaN；ATR 为 TR 的 Wilder 平滑，种子取前 N 个 TR 的均值；首个有效值 N。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V02",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "ATRP = ATR(N)/C，无量纲比值（不是百分数）；C=0 时 NaN。N=14。"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 14（0 基），即至少需要 15 根 K 线。\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "ATRP=ATR/收盘，无量纲比值（非百分数）；收盘为 0 时 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V03",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "σ = sqrt(Σ(C−C̄)²/(N−1))，样本标准差 ddof=1。N=20，首值下标 N−1。"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 19（0 基），即至少需要 20 根 K 线。\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "样本标准差（ddof=1）；分母 N-1；首根有效值 N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V04",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "带宽 = (上轨−下轨)/中轨 = 2kσ/SMA(C, N)，无量纲比值；中轨为 0 时 NaN。N=20、k=2.0"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 19（0 基），即至少需要 20 根 K 线。\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "带宽=(上轨-下轨)/中轨=2kσ/SMA；中轨为 0 时 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V05",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "%B = (C−下轨)/(上轨−下轨)；零带宽（σ=0）输出 NaN。N=20、k=2.0。"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 19（0 基），即至少需要 20 根 K 线。\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "%B=(C-下轨)/(上轨-下轨)；零带宽输出 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V07",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "窗口 N 内 回撤 = (C−窗口峰值)/窗口峰值×100；UI = sqrt(mean(回撤²))。N=14，峰值 ≤"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 13（0 基），即至少需要 14 根 K 线。\" expected=13"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "回撤=(C-窗口峰值)/窗口峰值×100；UI=sqrt(mean(回撤²))；峰值为 0 时 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V08",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "GAPO = (Open − 前收)/ATR(N)×100，ATR 周期 14；保留正负号、不按同向筛选。"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 14（0 基），即至少需要 15 根 K 线。\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向；ATR 未就绪或 ATR=0 "
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V09",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "振幅 = High − Low（元），单根直接输出，首根即有效。"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=0 expected=0"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 0（0 基），即至少需要 1 根 K 线。\" expected=0"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "单根 H-L（元），首根即有效。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V10",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "TR[0]=NaN；TR[i]=max(H−L, |H−PC|, |L−PC|)，单根直接输出。"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=0 expected=0"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"首个有效值下标 1（0 基），即至少需要 2 根 K 线。\" expected=1"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "TR=max(H-L, |H-PC|, |L-PC|)；首根 NaN。"
+            }
+          },
+          "ok": true
+        }
       ],
-      "betaIds": [
-        "T03",
-        "T19",
-        "T21",
-        "T16"
-      ],
-      "betaCount": 4,
       "ok": true
     }
   },
   "telemetry": {
     "path": "/Users/sixmillion/Library/Application Support/aka/logs/telemetry.jsonl",
-    "total": 4995,
+    "total": 6015,
     "counts": {
-      "cache.hit": 567,
+      "cache.hit": 1447,
       "cache.miss": 1373,
-      "compute.count": 44,
-      "compute.skip": 265,
+      "compute.count": 64,
+      "compute.skip": 385,
       "indicator.cold_ms": 1373,
       "indicator.compute": 1373
     },
     "coldSamples": 1373,
-    "coldP95Ms": 0.81,
+    "coldP95Ms": 0.12,
     "recent": [
       {
-        "tsMs": 1793980146097,
+        "tsMs": 1793983788249,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M06",
           "paramsHash": "cc530a4de7afed5c",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146098,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T08|{\"pct\":2.5,\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T08|{\"pct\":2.5,\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T08",
           "paramsHash": "84688a996eb80282",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146117,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T09|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T09|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T09",
           "paramsHash": "2058501d9d30925e",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146117,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T10|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T10|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T10",
           "paramsHash": "2058501d9d30925e",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146118,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T11|{\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T11|{\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T11",
           "paramsHash": "e928aa148d72e042",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146118,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T12|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T12|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T12",
           "paramsHash": "2058501d9d30925e",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146137,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T13|{\"mult\":3.5,\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T13|{\"mult\":3.5,\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T13",
           "paramsHash": "0c36bf4e54fbc39f",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146137,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T14|{\"mult\":3.0,\"period\":22}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T14|{\"mult\":3.0,\"period\":22}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T14",
           "paramsHash": "e91a1244413544bd",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146137,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T15|{\"displacement\":26,\"kijun\":26,\"senkou\":52,\"tenkan\":9}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T15|{\"displacement\":26,\"kijun\":26,\"senkou\":52,\"tenkan\":9}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T15",
           "paramsHash": "0f10292179b46ef7",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146137,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T16|{\"increment\":0.02,\"max\":0.2,\"step\":0.02}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T16|{\"increment\":0.02,\"max\":0.2,\"step\":0.02}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T16",
           "paramsHash": "ded8d99ed383318c",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146138,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T23|{}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T23|{}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T23",
           "paramsHash": "08f44b07b5901a25",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146138,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T24|{\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T24|{\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "T24",
           "paramsHash": "e928aa148d72e042",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146138,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V01|{\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V01|{\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V01",
           "paramsHash": "cfa62b147f2228b3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146138,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V02|{\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V02|{\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V02",
           "paramsHash": "cfa62b147f2228b3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146138,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V03|{\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V03|{\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V03",
           "paramsHash": "e928aa148d72e042",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146139,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V04|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V04|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V04",
           "paramsHash": "2058501d9d30925e",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146139,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V05|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V05|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V05",
           "paramsHash": "2058501d9d30925e",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146139,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V07|{\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V07|{\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V07",
           "paramsHash": "cfa62b147f2228b3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146139,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V08|{\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V08|{\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V08",
           "paramsHash": "cfa62b147f2228b3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146139,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V09|{}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V09|{}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V09",
           "paramsHash": "08f44b07b5901a25",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146140,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|V10|{}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V10|{}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "V10",
           "paramsHash": "08f44b07b5901a25",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146140,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M01|{\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M01|{\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M01",
           "paramsHash": "cfa62b147f2228b3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146140,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M02|{\"d\":3,\"k\":3,\"period\":9}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M02|{\"d\":3,\"k\":3,\"period\":9}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M02",
           "paramsHash": "0c81daa36611fd84",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146140,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M04|{\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M04|{\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M04",
           "paramsHash": "cfa62b147f2228b3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146140,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M05|{\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M05|{\"period\":20}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M05",
           "paramsHash": "e928aa148d72e042",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146141,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M08|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M08|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M08",
           "paramsHash": "cc530a4de7afed5c",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146141,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M09|{\"period\":12}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M09|{\"period\":12}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M09",
           "paramsHash": "cfa02f147f1dc3d1",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146141,
+        "tsMs": 1793983788250,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M10|{\"period\":10}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M10|{\"period\":10}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M10",
           "paramsHash": "cf992b147f179e57",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146141,
+        "tsMs": 1793983788251,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M19|{\"period\":25}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M19|{\"period\":25}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M19",
           "paramsHash": "e932a6148d7b2dfb",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146142,
+        "tsMs": 1793983788251,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M20|{\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M20|{\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M20",
           "paramsHash": "cfa62b147f2228b3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146142,
+        "tsMs": 1793983788251,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M21|{\"period\":14}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M21|{\"period\":14}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M21",
           "paramsHash": "cfa62b147f2228b3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146142,
+        "tsMs": 1793983788251,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M24|{\"ema\":9,\"sum\":25}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M24|{\"ema\":9,\"sum\":25}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M24",
           "paramsHash": "b8792a32c607c003",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146142,
+        "tsMs": 1793983788251,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M25|{\"ema\":13,\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M25|{\"ema\":13,\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M25",
           "paramsHash": "90a59b7e0edb97d3",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146142,
+        "tsMs": 1793983788251,
         "name": "cache.hit",
         "fields": {
           "adj": "qfq",
           "barCount": 520,
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M26|{\"period\":7}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M26|{\"period\":7}|2023-01-02~2024-12-27",
           "datasetGeneration": 1,
           "datasetId": "sim-default",
           "indicatorId": "M26",
           "paramsHash": "a8ce3752702ce95d",
-          "security": "600030.SH",
+          "security": "601014.SH",
           "timeframe": "D"
         }
       },
       {
-        "tsMs": 1793980146142,
+        "tsMs": 1793983788251,
         "name": "compute.skip",
         "fields": {
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
           "indicatorId": "T19",
           "instanceId": "b1x-T19",
           "reason": "duplicateKey"
         }
       },
       {
-        "tsMs": 1793980146143,
+        "tsMs": 1793983788251,
         "name": "compute.skip",
         "fields": {
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
           "indicatorId": "T20",
           "instanceId": "b1x-T20",
           "reason": "duplicateKey"
         }
       },
       {
-        "tsMs": 1793980146143,
+        "tsMs": 1793983788251,
         "name": "compute.skip",
         "fields": {
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
           "indicatorId": "T21",
           "instanceId": "b1x-T21",
           "reason": "duplicateKey"
         }
       },
       {
-        "tsMs": 1793980146143,
+        "tsMs": 1793983788251,
         "name": "compute.skip",
         "fields": {
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
           "indicatorId": "T22",
           "instanceId": "b1x-T22",
           "reason": "duplicateKey"
         }
       },
       {
-        "tsMs": 1793980146143,
+        "tsMs": 1793983788251,
         "name": "compute.skip",
         "fields": {
-          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
           "indicatorId": "E13",
           "instanceId": "b1x-E13",
           "reason": "duplicateKey"
         }
       },
       {
-        "tsMs": 1793980146144,
+        "tsMs": 1793983788251,
         "name": "compute.count",
         "fields": {
           "cacheHit": true,
@@ -3130,7 +4094,6 @@
     ]
   },
   "notes": [
-    "连键 1→12→120 的结果：INSUFFICIENT_DATA: 三重指数移动平均线 需要至少 540 根 K 线（预热 539），当前 520 根",
-    "回切异常：样本 10 / cacheHit true / 逐点一致 true / max 132ms"
+    "连键 1→12→120 的结果：INSUFFICIENT_DATA: 三重指数移动平均线 需要至少 540 根 K 线（预热 539），当前 520 根"
   ]
 }

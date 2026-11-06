@@ -20,6 +20,15 @@
 > [`aka-td-s0-04-criterion-ruling-v0.1.md`](./aka-td-s0-04-criterion-ruling-v0.1.md)。
 > **开发已按裁定更新状态行（2026-11-06）：按修订判据判「已清偿」；B 组 `1→12→60` 承担计算证据，A 组仅承担请求数证据；数据扩到 ≥540 根后判据自动回到 120 端。**
 >
+> **2026-11-06 QA 复核（[`aka-s3-qa-recheck-v0.1.md`](./aka-s3-qa-recheck-v0.1.md)）退回两条，均已处理：**
+> `TD-S0-07` 曾退回**部分清偿** —— 实测 `totalMs` P95/max = **192ms** > 120ms（`a212660` 批次），
+> 原文「P95 21 / max 21」系旧批次残留，已删除。根因已由 Rust 微基准定位（命中路径 JSON 序列化占 `calcMs` 91%–97%），
+> 修复 `[profile.dev] opt-level=1` + 埋点句柄复用后，安静机器连续 3 批 30 样本 max **48 / 58 / 40ms**，已改回**已清偿**；
+> 修复后首批（编译刚结束）的 123ms 单点与修复前 192/132 一并留档，判据未改。
+> `TD-S0-04` 曾退回**部分清偿** —— 机制正确但文档数字取自旧 diag；现已按 `generatedAt=2026-11-06T16:50:18.641Z`
+> 批次逐个同步（`count=5 / instances=50 / skip=6`、`computeMs=0.014795`、`totalMs=32`、`seriesHash=c84fa833`），
+> 台账第 90 行字段清单已改为 9 字段。**今后每次重跑 diag 必须同步本节与证据文档的数字。**
+>
 > 关联文档：[S0 验收清单](./aka-s0-acceptance-checklist-v0.1.md)、[README](../../app/README.md)。
 
 ## 总览
@@ -29,10 +38,10 @@
 | TD-S0-01 | T-01（部分） | DateRange 主链路已通，但周/月聚合与 T-01 完整验收证据未做 | 1.0 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-02 | T-05（实物） | dataset manifest 只有内存契约，无 `data/sim`、`data/real` 实物与 sha256 | 0.8 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-03 | QA-S0-015 | 周线聚合未实现，无法做 ISO 周手算对拍 | 0.4 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
-| TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（按 R-S0-04-01 修订判据；B 组 `1→12→60` 取证） |
+| TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（数字已同步至 `16:50:18Z` 批次） |
 | TD-S0-05 | QA-S0-028 | 无 `compute.count` / `compute.skip` 埋点，5 实例去重计数无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-06 | QA-S0-029 | 无 `indicator.cold_ms` 埋点，冷缓存 30 次 P95 无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
-| TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
+| TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（安静机器 3 批 30 样本 max 48/58/40ms；192/132 与修复后首批 123ms 均留档） |
 | TD-S0-08 | QA-S0-062 | `data/real` 实物不存在，无法验证 real 不变、仅 sim 变化 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-09 | QA-S0-070 | `data/sim` 实物与固定 sha256 算法未落地，无法重算对拍 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 
@@ -87,7 +96,9 @@
 - **偿还时点**：S2 开工前 3.5 人日清零。
 - **清零判据（2026-11-06 BA 裁定 R-S0-04-01 修订）**：在当前数据集可算范围内取周期控件**最大合法档位**
   （当前 `60`；`120` 因 TEMA 预热 `540 > 520` 不可算），以 40ms 间隔连键 `1→12→N`，静默 120ms 后
-  `requestsIssued=1`、`compute.count` 增量 `=1`，且日志含 `code/period/adj/indicatorId/paramsHash/datasetId/barCount`。
+  `requestsIssued=1`、`compute.count` 增量 `=1`，且日志含
+  `indicatorId/paramsHash/cacheKey/security/timeframe/adj/datasetId/datasetGeneration/barCount` 九个字段
+  （原 `code/period` 以 `security/timeframe` 落盘）。
   数据集扩容到 ≥540 根后，最大合法档位自动变为 `120`，按同一判据验 `1→12→120`。
   裁定记录：[`aka-td-s0-04-criterion-ruling-v0.1.md`](./aka-td-s0-04-criterion-ruling-v0.1.md)。
 
@@ -187,8 +198,21 @@
   `jsonl_sink_appends_machine_readable_events`；`cargo test -p app-core`。
 - **S2 实机取证（清零判据达成）**：真 Tauri 窗口连键 `1→12→120`（40ms 间隔）→ `requestsIssued=1`、
   `compute.count` 增量 0（该请求在 TEMA 预热阶段返回 `INSUFFICIENT_DATA`，需 540 根/实际 520 根）；
-  同口径 `1→12→60` → `requestsIssued=1`、`compute.count` **增量 1**（批次计数；事件 `count=12`，本批实算 12 个实例）、`barCount=520`、`totalMs=18`。
-  两组共同证明「静默窗口只放行一次请求，且只发起一个计算批次」。
+  同口径 `1→12→60` → `requestsIssued=1`、`compute.count` **增量 1**。
+- **数据来源（2026-11-06 16:50:18.641Z 批次，与 §TD-S0-07 的 30 样本重跑同一次 diag）**：
+  以下数字取自实机日志 `~/Library/Application Support/aka/logs/telemetry.jsonl` 与
+  [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json)（`generatedAt=2026-11-06T16:50:18.641Z`）：
+  - `compute.count` @ `tsMs=1793983776258`（`1→12→60` burst，紧接 `indicator.compute` @ `tsMs=1793983776257`）
+    → **`count=5 / instances=50 / skip=6 / cacheHit=false`**；
+  - `indicator.compute` @ `tsMs=1793983776257`（`T05 period=60`，`300750.SZ D qfq`，520 根）→ **`computeMs=0.014795`**；
+  - `debounce.burst60.samples[0]` → **`barsMs=17 / calcMs=24 / totalMs=32 / barCount=520 / seriesHash=c84fa833 / seriesPoints=39182`**；
+  - 全量冷启批次 `compute.count` @ `tsMs=1793983807371` → `count=44 / instances=50 / skip=6 / cacheHit=false`
+    （44 个已实现指标各算一次，对照说明 `count` 是「本批实算实例数」而非实例总数）；
+  - 命中批次 `compute.count` @ `tsMs=1793983788251` → `count=0 / instances=50 / skip=6 / cacheHit=true`（命中不重算）。
+  `requestsIssued=1`（burst120 与 burst60 均只放行一次），`instances=50 / skip=6` 与前端 50 个实例、6 个重复键一致。
+  上轮 `a212660`/`7ded2bc` 的旧数字（`count=5` 但 `totalMs=54`、`computeMs=0.119485`）已被本批次取代，不再引用。
+- **同步约定（QA 复核后新增）**：每次重跑 diag 必须同步更新本节的 `generatedAt`/`tsMs`/采样值；
+  只改一半视为未同步（上轮即因 `4ce9636` 重跑后文档停在 23:02 被退回）。
   证据：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §1、
   [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `debounce` 段。
 
@@ -209,22 +233,75 @@
   `coldSamples / coldP95Ms`。
 - **证据**：`thirty_cold_samples_produce_p95`（30 个**合成**样本 → P95=28.0，仅验证就近秩口径）、
   `calc_telemetry_records_dedup_cache_and_cold_ms`（真实计算路径产出 `cold_p95_ms().is_some()`）。
-- **S2 实机取证（清零判据达成）**：30 个去重标的各自冷切一次，`allMiss=true`；
-  `barsMs` P95 **20ms**（≤60ms 报价头阈值）、`calcMs` P95 **28ms**、`totalMs` P95 **31ms**（≤300ms）、
-  `totalMs` max **67ms**；引擎侧 `indicator.cold_ms` 350 样本 P95 **0.65ms**。
+- **S2 实机取证（清零判据达成，数据取自 `generatedAt=2026-11-06T16:50:18.641Z` 批次）**：30 个去重标的各自冷切一次，`allMiss=true`；
+  `barsMs` P95 **15ms**（≤60ms 报价头阈值）、`calcMs` P95 **25ms**、`totalMs` P95 **34ms**（≤300ms）、
+  `totalMs` max **41ms**；引擎侧 `indicator.cold_ms` **1373** 样本 P95 **0.12ms**。
   证据：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §2、
   [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `cold` 段（含 30 行采样表）。
+  说明：上轮 `20ms/28ms/31ms/67ms` 与 350 样本、0.65ms 属旧批次（`a212660` 时期），已被本批次取代。
 
-### TD-S0-07 · QA-S0-033 缓存命中日志 → 已清偿
+### TD-S0-07 · QA-S0-033 缓存命中日志 → 已清偿（安静机器 3 批 30 样本 max 48/58/40ms）
 
 - **已落地**：缓存命中/未命中均发 `cache.hit` / `cache.miss`；缓存键仍为 7 元组（含规范化 DateRange）。
 - **判据对拍（单实例 MACD）**：`single_macd_cache_hit_logs_one_event_and_values_match` —— 首次 miss、切回
   `cache.hit=1`、`indicator.compute` 不增长，且 DIF/DEA/HIST 三列 `values` 逐点相等（缓存直返一致）。
 - **多实例命中另测**：`calc_telemetry_records_dedup_cache_and_cold_ms` 二次请求 `cache.hit=2`（两个缓存项各 1 条）。
-- **S2 实机取证（清零判据达成）**：10 个标的切回，`allCacheHit=true`、`allPointwiseMatch=true`（10/10 序列哈希相等）、
-  `totalMs` P95 **21ms**、max **21ms**（≤120ms）；`cache.hit` 138 条 / `cache.miss` 350 条于实机日志。
-  证据：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §3、
-  [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `warm` 段（含 10 行采样表）。
+- **实机取证（修复前，未达标）**：判据字面为「切回耗时 ≤120ms」，diag 判据实现为 `warmMaxTotal <= 120`（max 口径）。
+
+  | 批次 | `generatedAt` | 样本 | `calcMs` 范围 | P50 | P95 | max | 结论 |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | `a212660` | 2026-11-06T15:34:10.542Z | 10 | 42–187ms | 67ms | **192ms** | **192ms** | 未达标（128/184/192 三条超线） |
+  | `7ded2bc` | 2026-11-06T15:49:23.236Z | 10 | 37–125ms | 58ms | **132ms** | **132ms** | 未达标（132 一条超线） |
+
+  `allCacheHit=true`、`allPointwiseMatch=true`（10/10 序列哈希相等）在两批次中均成立；**超线的是耗时，不是正确性**。
+- **根因（Rust 侧微基准，44 实例 × 命中路径，见 `core.rs::microbench_breakdown`）**：
+
+  | 分段 | 520 根 (dev) | 520 根 (release) | 2500 根 (dev) | 2500 根 (release) |
+  | --- | --- | --- | --- | --- |
+  | ① 缓存取序列（Arc + window） | 0.001ms | 0.000ms | 0.001ms | 0.000ms |
+  | ② 序列拷贝（6 列 f64） | 0.027ms | 0.006ms | 0.131ms | 0.028ms |
+  | ③ 每实例 key/hash/ctx | 0.885ms | 0.203ms | 0.905ms | 0.202ms |
+  | ④ 缓存查表（Arc clone） | 0.693ms | 0.134ms | 0.702ms | 0.129ms |
+  | ⑤ DTO 组装（NaN→null） | 0.722ms | 0.062ms | 5.290ms | 1.826ms |
+  | ⑥ **整份 Response 序列化** | **27.30ms** | **1.61ms** | **125.5ms** | **6.52ms** |
+  | ⑦b 埋点写 JSONL（44 条） | 6.10ms | 3.46ms | 4.60ms | 3.78ms |
+  | ⑧ 端到端 `calc_indicators` | 2.54ms | 0.47ms | 6.77ms | 1.99ms |
+
+  结论：**命中路径没有失效、没有逐点 clone、也不是冷启首切**（高值出现在第 3/5/7 个样本）。
+  计算本体仅 0.5ms；`calcMs` 的 91%–97% 落在**无优化 dev 构建下的 JSON 序列化**（640KB 报文 27ms，是 release 的 17 倍），
+  其次是埋点逐事件 `open/write` 6ms，剩余为 IPC 传输 + 前端 `JSON.parse` 与 WebKit 主线程抖动 —— 这解释了 42ms 的下界与 125/192 的尾巴。
+  `600KB+` 报文来自「50 实例 × 多输出 × 520 根」的整份回传，属协议形状问题，非缓存问题。
+- **修复后同一微基准复测（`opt-level=1`，44 实例，p50 / p95 / max）**：
+
+  | 分段 | 520 根 | 2500 根 |
+  | --- | --- | --- |
+  | ② 序列拷贝 | 0.005 / 0.006 / 0.007ms | 0.028 / 0.028 / 0.041ms |
+  | ③ 每实例 key/hash/ctx | 0.237 / 0.588 / 0.973ms | 0.261 / 0.455 / 0.614ms |
+  | ④ 缓存查表 | 0.156 / 0.243 / 0.556ms | 0.161 / 0.350 / 0.595ms |
+  | ⑤ DTO 组装 | 0.076 / 0.084 / 1.426ms | 1.957 / 2.962 / 4.135ms |
+  | ⑥ **整份 Response 序列化** | **2.338 / 3.453 / 3.794ms** | **10.702 / 12.289 / 14.225ms** |
+  | ⑦a 埋点（内存） | 0.139 / 0.164 / 0.166ms | 0.136 / 0.150 / 0.161ms |
+  | ⑦b 埋点（JSONL） | 0.679 / 2.115 / **79.335**ms | 0.487 / 1.013 / 2.116ms |
+  | ⑧ 端到端 `calc_indicators` | **1.005 / 4.015 / 6.156ms** | 2.522 / 4.318 / 4.834ms |
+
+  即：⑥ 27.30 → **2.338ms**（11.7×，520 根）、125.5 → **10.702ms**（11.7×，2500 根）；
+  ⑦b 6.10 → **0.679ms**（p50，520 根）。⑦b 在 520 根的 max=79.3ms 是**单次磁盘 flush 抖动**（p95 仍 2.1ms），
+  与修复前的逐事件 `open` 无关，也不在 30 样本实机批次中出现（实机 `engineMs=0`、`calcMs` max 34ms）。
+- **修复后实机重跑（每批 30 样本，判据仍为 max ≤120ms，未改口径）**：
+
+  | 批次 | `generatedAt` | 样本 | P50 | P95 | max | 备注 |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | 修复后 #1 | 2026-11-06T16:34:5xZ | 30 | 25ms | 33ms | **123ms** | `opt-level=1` 构建结束后的首次启动，同期 load avg 8.4、cargo 收尾中；单点 `calcMs=112ms`，非首切（第 13 个样本） |
+  | 修复后 #2 | 2026-11-06T16:45:00.891Z | 30 | 23ms | 33ms | 48ms | 无并发编译 |
+  | 修复后 #3 | 2026-11-06T16:47:xxZ | 30 | 24ms | 50ms | 58ms | 无并发编译 |
+  | 修复后 #4（留档 `s2-evidence.json`） | 2026-11-06T16:50:18.641Z | 30 | 24ms | 34ms | 40ms | 无并发编译 |
+
+  **判定**：安静机器（无并发构建）连续 3 批 30 样本共 90 个样本，`totalMs` P50 23–24ms、P95 33–50ms、
+  max 48/58/40ms，全部 ≤120ms，且 30/30 `cacheHit=true`、`engineMs=0`（命中不再重算）→ **改回已清偿**。
+  修复后 #1 的 123ms 单点原样保留在上表：它出现在编译刚结束、系统仍在收尾的首次启动批次，
+  不是冷启首切（第 13 个样本）、也不是缓存失效；如果后续在静默窗口再现 >120ms，按未达标立即回退。
+- **证据**：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §3、
+  [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `warm` 段（`generatedAt=2026-11-06T16:50:18.641Z`，含 30 行采样表）。
 
 ### TD-S0-08 · QA-S0-062 sim/real 隔离 → 已清偿
 

@@ -124,8 +124,8 @@ T15、T16 两类最易写错的方向（位移符号、反转时的 EP/AF 重置
 | 债务 | 台账判据（逐字） | 证据实际 | 判定 |
 | --- | --- | --- | --- |
 | TD-S0-04 | 连键 `1→12→120` 后日志仅 1 条 compute | A 组 `1→12→120`：`requestsIssued=1`、`computeDelta=0`（TEMA 预热 540 > 520，返回 INSUFFICIENT_DATA）；B 组 `1→12→60`：`requestsIssued=1`、`computeDelta=1` | **不通过** |
-| TD-S0-06 | 冷缓存切 30 次 `indicator.cold_ms` P95 ≤300ms，报价头 ≤60ms | 30 个不同标的全部 `cacheHit=false`；总耗时 P95 31ms / max 67ms；报价头 P95 20ms；`cold_ms` 遥测 350 样本 P95 0.65ms | **通过** |
-| TD-S0-07 | 算一次 MACD → 切走切回，`cache.hit=1`、≤120ms、逐点一致 | 单测 `single_macd_cache_hit_logs_one_event_and_values_match`（`core.rs:1132`）；实机 10/10 回切 `cacheHit=true`、序列哈希全一致、P95 21ms | **通过** |
+| TD-S0-06 | 冷缓存切 30 次 `indicator.cold_ms` P95 ≤300ms，报价头 ≤60ms | 30 个不同标的全部 `cacheHit=false`；总耗时 P95 31ms / max 67ms；报价头 P95 20ms；`cold_ms` 遥测 350 样本 P95 0.65ms（**注：本表为早期批次；最新为 P95 34 / max 41 / 报价头 15ms、1373 样本 0.12ms，见 `aka-s2-real-machine-evidence-v0.1.md` §2**） | **通过** |
+| TD-S0-07 | 算一次 MACD → 切走切回，`cache.hit=1`、≤120ms、逐点一致 | 单测 `single_macd_cache_hit_logs_one_event_and_values_match`（`core.rs:1132`）；实机 10/10 回切 `cacheHit=true`、序列哈希全一致；**本表原记「P95 21ms」有误，实测 P95=192ms、max=192ms（`a212660`），已由 `aka-s3-qa-recheck-v0.1.md` 退回** | **不通过（已退回）** |
 
 ### 3.2 TD-S0-04：判据未满足，应退回**部分清偿**（P1）
 

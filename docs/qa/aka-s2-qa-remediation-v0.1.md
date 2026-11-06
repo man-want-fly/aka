@@ -17,6 +17,9 @@
     —— 只证明「连键只发 1 条请求」，不冒充计算证据。
   - B 组 `1→12→60`：`requestsIssued=1`、`computeCountEvents=1`、`barCount=520`、
     `seriesPoints=7575`、`seriesHash=1ccf8fcd` —— 计算证据落在这一组。
+    **（2026-11-06 后续批次更新：以 `generatedAt=2026-11-06T16:50:18.641Z` 为准，现为
+    `seriesPoints=39182`、`seriesHash=c84fa833`、`totalMs=32`、`computeMs=0.014795`；
+    本行数字属早期批次，已被取代。）**
 - 提交：`950c0ae`。
 
 ### P1-2 口径页 T19 公式错误 → 文案与实现对齐
@@ -92,20 +95,20 @@ AKA_DIAG=1 npm run tauri dev                   # 实机证据，renderLayer.ok=t
 ## 第二轮定点复核整改（2026-11-06，P1×2 + P2×5）
 
 - 来源：`docs/qa/aka-s2-qa-recheck-v0.1.md`（QA 在独立 worktree、基线 `2247e0d` 上定点复核）。
-- 结论口径修正：**全量测试 = 88 passed**（`app_core 17 / indicator_core 32 / data_provider 26 / data_store 8 / indicator_golden 5`，命令 `cargo test --workspace --exclude aka-desktop`）；黄金 **137/137**（`cargo test -p indicator-golden -- --nocapture` 输出 `golden: 137/137 passed`）；B2 夹具 **83 case**（bases 21×3 + insufficient 16 + below-min 4）。此前「45 项」只是 `indicator_core + data_store + indicator_golden` 三项之和，属口径错误，已弃用。
+- 结论口径修正：**全量测试 = 88 passed**（`app_core 17 / indicator_core 32 / data_provider 26 / data_store 8 / indicator_golden 5`，命令 `cargo test --workspace --exclude aka-desktop`）；黄金 **137/137**（`cargo test -p indicator-golden -- --nocapture` 输出 `golden: 137/137 passed`）；B2 夹具 **83 case**（bases 21×3 + insufficient 16 + below-min 4）。此前「45 项」只是 `indicator_core + data_store + indicator_golden` 三项之和，属口径错误，已弃用。**（2026-11-06 B3 增量后：全量 **97 passed**、黄金 **193/193**，本段为当时批次口径。）**
 
 ### P1-1 TD-S0-04 证据挂接（第三次同类问题）
 
 - 做法：选「补真实事件原文」，不再用「代码里有」代替「证据文件里有」。
 - `diag.ts` 的 `runBurst` 从遥测 `after.recent` 取最后一条 `indicator.compute` 原文，落盘为 `debounce.burst60.computeEvent`。
-- 实机字段：`indicatorId=T05`、`paramsHash=0d154e14a228d636`、`cacheKey=v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{"period":60}|2023-01-02~2024-12-27`、`security=300750.SZ`、`timeframe=D`、`adj=qfq`、`datasetId=sim-default`、`datasetGeneration=1`、`barCount=520`、`computeMs=0.0959`。
+- 实机字段（**以 `generatedAt=2026-11-06T16:50:18.641Z` 批次、`tsMs=1793983776257` 为准**）：`indicatorId=T05`、`paramsHash=0d154e14a228d636`、`cacheKey=v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{"period":60}|2023-01-02~2024-12-27`、`security=300750.SZ`、`timeframe=D`、`adj=qfq`、`datasetId=sim-default`、`datasetGeneration=1`、`barCount=520`、`computeMs=0.014795`。早期批次曾记 `computeMs=0.0959`，已作废。
 - 文档对齐：`aka-td-s0-04-criterion-ruling-v0.1.md`、`aka-tech-debt-s0-v0.1.md`、`aka-s2-real-machine-evidence-v0.1.md` 的字段清单改为上述**事件实际字段**（原写的 `code/period` 实际以 `security/timeframe` 落盘）。
-- 语义更正：`compute.count` 是**请求批次计数**；一条 `calc` 请求含 12 个实例，事件 `count=12` 表示本批实算 12 个实例。断言目标是「只发 1 次请求、只发起 1 个计算批次」，不是「只算 1 个实例」。
+- 语义更正：`compute.count` 是**请求批次计数**；当前一次 `calc` 请求含 **50** 个实例，`tsMs=1793983776258` 事件为 `count=5 / instances=50 / skip=6`（5 实算、6 skip、其余命中）。早期文档写的 `count=12` 属旧批次，已作废。断言目标是「只发 1 次请求、只发起 1 个计算批次」，不是「只算 1 个实例」。
 
 ### P1-2 tooltip 逐根等值（`AC-03.04-05`）
 
-- `diag.ts` 新增 `tooltipParity`：从可见窗口取 6 根，派发真实 `mousemove` 后读 tooltip 的 `data-value`，与引擎序列同索引逐点比对，**容差 0**（同时比 T01 SMA 与 M06 DIF）。
-- 实机结果：`sampled=6`、`enginePoints=520`、`mismatches=[]`、`ok=true`（12/12 点全等；例如 `bar=400` 引擎 SMA 与 tooltip `data-value` 同为 `28.598500000000023`）。
+- `diag.ts` 新增 `tooltipParity`：从可见窗口取 120 根，派发真实 `mousemove` 后读 tooltip 的 `data-value`，与引擎序列同索引逐点比对，**容差 0**（每根同时比 T01 SMA 与 M06 DIF）。
+- 实机结果（最新批次）：`sampled=120`、`enginePoints=520`、`mismatches=[]`、`ok=true`（240/240 点全等）。早前 `sampled=6` 已扩到 120，并针对屏幕→viewBox 取整造成的 5 处错位用 `data-hover-index` 校正至 0。
 - `verification.renderLayer.ok` 已把 `tooltipParity.ok` 纳入必要条件。
 
 ### P2 五项
