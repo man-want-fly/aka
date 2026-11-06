@@ -1,0 +1,7 @@
+{
+  "$schema": "https://schema.tauri.app/capability/2",
+  "identifier": "default",
+  "description": "AKA 主窗口默认能力：仅允许 core 基础命令与自定义 IPC",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

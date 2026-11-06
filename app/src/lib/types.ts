@@ -1,0 +1,178 @@
+// 与 Rust DTO 字段一一对应（camelCase）；改字段必须两边同时改。
+
+export type Category =
+  | "trend"
+  | "momentum"
+  | "volatility"
+  | "volume"
+  | "stat"
+  | "breadth";
+
+export type SpecStatus = "manualComplete" | "partial" | "productDefined";
+export type OutputKind = "line" | "histogram" | "dot";
+
+export type ParamSpec =
+  | {
+      kind: "int";
+      key: string;
+      label: string;
+      min: number;
+      max: number;
+      default: number;
+      step: number;
+    }
+  | {
+      kind: "float";
+      key: string;
+      label: string;
+      min: number;
+      max: number;
+      default: number;
+      step: number;
+      unit: string | null;
+    }
+  | {
+      kind: "enum";
+      key: string;
+      label: string;
+      variants: string[];
+      default: string;
+    }
+  | { kind: "bool"; key: string; label: string; default: boolean };
+
+export interface ParamValueMap {
+  [key: string]: string | number | boolean;
+}
+
+export interface OutputSpecDto {
+  key: string;
+  labelZh: string;
+  kind: OutputKind;
+  color: string;
+}
+
+export interface InputsDto {
+  open: boolean;
+  high: boolean;
+  low: boolean;
+  close: boolean;
+  volume: boolean;
+  amount: boolean;
+}
+
+export interface IndicatorMetaDto {
+  id: string;
+  nameZh: string;
+  nameEn: string;
+  category: Category;
+  params: ParamSpec[];
+  outputs: OutputSpecDto[];
+  inputs: InputsDto;
+  specStatus: SpecStatus;
+  engineVersion: number;
+  warmup: number;
+  implemented: boolean;
+}
+
+export interface RegistryResponse {
+  plannedCount: number;
+  implementedCount: number;
+  indicators: IndicatorMetaDto[];
+}
+
+export interface SecurityDto {
+  code: string;
+  name: string;
+  market: "SH" | "SZ";
+  board: string;
+  isIndex: boolean;
+  basePrice: number;
+}
+
+export interface BarDto {
+  ts: number;
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  amount: number;
+  source: string;
+  quality: string[];
+}
+
+export interface ProvenanceDto {
+  provider: string;
+  datasetId: string;
+  dataVersion: string;
+  simulated: boolean;
+  generatedAt: number;
+}
+
+export interface BarsResponse {
+  security: string;
+  timeframe: string;
+  adj: string;
+  datasetId: string;
+  totalBars: number;
+  bars: BarDto[];
+  provenance: ProvenanceDto;
+}
+
+export interface GetBarsRequest {
+  security: string;
+  timeframe: "D" | "W" | "M";
+  adj: "none" | "qfq" | "hfq";
+  from?: number;
+  to?: number;
+}
+
+export interface InstanceRequest {
+  instanceId: string;
+  indicatorId: string;
+  params: ParamValueMap;
+}
+
+export interface CalcRequest {
+  security: string;
+  timeframe: "D" | "W" | "M";
+  adj: "none" | "qfq" | "hfq";
+  from?: number;
+  to?: number;
+  generation: number;
+  instances: InstanceRequest[];
+}
+
+export interface OutputSeriesDto {
+  key: string;
+  labelZh: string;
+  kind: OutputKind;
+  color: string;
+  values: (number | null)[];
+}
+
+export interface SeriesDto {
+  instanceId: string;
+  indicatorId: string;
+  outputs: OutputSeriesDto[];
+  warmup: number;
+  engineVersion: number;
+}
+
+export interface CalcResponse {
+  generation: number;
+  datasetId: string;
+  engineVersion: string;
+  computedMs: number;
+  cacheHit: boolean;
+  barCount: number;
+  series: SeriesDto[];
+}
+
+export interface AppError {
+  code: string;
+  message: string;
+  retryable: boolean;
+  details?: Record<string, unknown>;
+}

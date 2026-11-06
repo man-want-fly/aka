@@ -1,0 +1,12 @@
+[package]
+name = "app-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+indicator-core = { path = "../indicator-core" }
+data-provider = { path = "../data-provider" }
+data-store = { path = "../data-store" }
+serde.workspace = true
+serde_json.workspace = true

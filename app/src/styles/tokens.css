@@ -1,0 +1,65 @@
+/* 设计 token 取自 docs/../design-spec.html；三主题 + 红涨绿跌可切换。 */
+:root {
+  --bg: #0b0f14;
+  --surface: #11161d;
+  --surface2: #151b23;
+  --surface3: #1a2129;
+  --line: #222b35;
+  --line2: #2e3946;
+  --text: #d7dfe7;
+  --text2: #a7b3bf;
+  --muted: #8b97a4;
+  --faint: #5e6b78;
+  --up: #e4483f;
+  --up-soft: rgba(228, 72, 63, 0.13);
+  --up-line: #7a2c28;
+  --down: #17a673;
+  --down-soft: rgba(23, 166, 115, 0.13);
+  --down-line: #1b5947;
+  --accent: #4fa3c7;
+  --accent-soft: rgba(79, 163, 199, 0.13);
+  --warn: #d9a340;
+  --warn-soft: rgba(217, 163, 64, 0.12);
+  --r: 4px;
+  --r2: 3px;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html[data-theme="light"] {
+  --bg: #f2f4f7;
+  --surface: #ffffff;
+  --surface2: #f7f8fa;
+  --surface3: #edf1f5;
+  --line: #dde3ea;
+  --line2: #c4cdd6;
+  --text: #16202b;
+  --text2: #3c4a57;
+  --muted: #5f6b78;
+  --faint: #8a96a3;
+  --up: #c8342b;
+  --up-soft: rgba(200, 52, 43, 0.08);
+  --up-line: #e9c7c3;
+  --down: #0f7b54;
+  --down-soft: rgba(15, 123, 84, 0.08);
+  --down-line: #bfdace;
+  --accent: #1f6e93;
+  --accent-soft: rgba(31, 110, 147, 0.09);
+  --warn: #8a6410;
+  --warn-soft: rgba(138, 100, 16, 0.09);
+}
+
+/* 红涨绿跌 / 绿涨红跌：只换语义色，不动主题色板 */
+:root,
+html[data-colormode="redUp"] {
+  --rise: var(--up);
+  --fall: var(--down);
+  --rise-soft: var(--up-soft);
+  --fall-soft: var(--down-soft);
+}
+
+html[data-colormode="greenUp"] {
+  --rise: var(--down);
+  --fall: var(--up);
+  --rise-soft: var(--down-soft);
+  --fall-soft: var(--up-soft);
+}
