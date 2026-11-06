@@ -98,7 +98,7 @@ npm run tauri build
 - **缓存键（S0 裁定）**：7 元组 `数据集版本 + 标的 + 周期 + 复权 + 指标 id + 参数 + DateRange`，DateRange 用规范化后的 `returnedFrom~returnedTo` 参与键；前缀 `v2|`，**不保留旧 6 元组键**。
 - **6 类运行埋点（S0 债务清偿）**：`app-core::telemetry` 以 JSONL 落盘（`~/Library/Application Support/aka/logs/telemetry.jsonl`）+ 4096 条内存环；事件 `indicator.compute`（含 `code/period/adj/indicatorId/paramsHash/cacheKey/datasetId/barCount`）、`compute.count` / `compute.skip`（请求级去重，重复实例计 skip）、`cache.hit` / `cache.miss`、`indicator.cold_ms`（就近秩 P95，上限 5000ms）、`param.debounce`（`TYPICAL_INPUT_GAP_MS=40`、`DEFAULT_DEBOUNCE_QUIET_MS=120`）。前端工作台已按 120ms 静默防抖发请求；`telemetry_dump` 返回 `{path, total, counts, coldSamples, coldP95Ms, recent}`。
 - **机读 golden-report（S0 债务清偿）**：`aka-golden-report` 输出 `bench/reports/golden-report.json`（`formatVersion/generatedAtUnix/total/passed/failed/result/indicators/suites/failures`）与同名 `.md`，失败时进程退出码 1，可直接进 CI。
-- **sim 数据集生成器最小闭环（S0 债务清偿）**：`data-provider::sim_dataset` 固定规范 CSV（`date,open,high,low,close,volume,amount`，升序、2/0/2 位小数）→ `sha256`（仓库内自实现，已知向量测试）→ `manifest.json` 9 字段；`verify_sim_dataset` 只读复算行数与摘要，不改写；`data_version = v<N>` 经 `DatasetManifest::generation()` 解析为 `dataset_generation`，已贯通 `BarBatch → CandleSeries → ProvenanceDto / CalcResponse`（前端类型同步）；目录隔离：只写 `data/sim/seed-<n>/`，路径含 `real` 直接 `PermissionDenied`。实物见 `data/sim/` 与 `generation-report.json`（含 real 目录重建前后 sha256 比对）。
+- **sim 数据集生成器最小闭环（S0 债务清偿）**：`data-provider::sim_dataset` 固定规范 CSV（`date,open,high,low,close,volume,amount`，升序、2/0/2 位小数）→ `sha256`（仓库内自实现，已知向量测试）→ `manifest.json` 9 字段；`verify_sim_dataset` 只读复算行数与摘要，不改写；`data_version = v<N>` 经 `DatasetManifest::generation()` 解析为 `dataset_generation`，已贯通 `BarBatch → CandleSeries → ProvenanceDto / CalcResponse`（前端类型同步）；目录隔离：只写 `data/sim/seed-<n>/`，路径含 `real` 直接 `PermissionDenied`。实物见 `data/sim/` 与 `generation-report.json`（含 real 目录重建前后 sha256 比对）。**sha256 算法定义**：对 canonical CSV 的**字节**计算（按 `date` 升序；价格 2 位、volume 0 位、amount 2 位；末尾单个 `\n`），同一 CSV 两次重算逐字符相等，外部复算者可直接对 `records.csv` 取摘要。
 - **IPC 6 条命令**：`list_securities`、`get_bars`、`indicator_registry`、`indicator_manifest`、`calc_indicators`、`telemetry_dump`；错误统一为 `{ code, message, retryable, details }`。
 - **指标 manifest（S0-5 / S1）**：`app/manifest/indicators.json` 为目录唯一事实来源（id / 显示名 / 分类 / 参数 spec / 默认值与上下界 / 公式引用 / 版本 / normal|beta / 单位 / 口径说明），`include_str!` 编译期嵌入；注册表 `meta()` 由 manifest 派生，并有逐字段一致性测试（含 alias 冲突、单位与口径必填）；前端通过 `indicator_manifest` 生成指标目录。
 - **state.db（S0-4）**：`~/Library/Application Support/aka/state.db`，rusqlite（bundled SQLite）；`PRAGMA user_version` + `schema_versions` 表版本化，前滚脚本 `migrations/001_init.sql` 与回滚脚本 `001_init_rollback.sql`；WAL；8 张业务表（`settings`、`view_state`、`watchlist_groups`、`watchlist_items`、`favorites`、`chart_layout`、`indicator_params`、`dataset_meta`）。打开时 `PRAGMA quick_check` 检坏库，坏库隔离为 `state.db.corrupt-<ts>` 并回退内存库（`degraded=true`，写失败 `retryable=true`）。
@@ -139,11 +139,11 @@ npm run tauri build
 | TD-S0-02 | 已清偿 | `data/sim/seed-42` 与 `seed-7` 两份 manifest；`dataset_manifest` 单测 `two_seeds_differ_in_at_least_three_fields`、`missing_unknown_and_type_errors_are_explicit`；`sim_dataset` 单测 `sha_is_recomputable_and_changes_on_any_tamper` |
 | TD-S0-03 | 已清偿 | `calendar` / `aggregate` 单测（ISO 周年界、周一为起点、整周停牌无周线）；`weekly_and_monthly_aggregate_from_daily_batch` |
 | TD-S0-04 | 部分清偿 | 机制：`Telemetry` JSONL + `ParamDebouncer`（40ms 输入 / 120ms 静默）+ 前端 120ms 防抖；单测 `debounce_fires_once_after_120ms_quiet_with_40ms_inputs`。缺口：实机连键只发 1 条的日志取证需运行 Tauri UI，属 S2 |
-| TD-S0-05 | 已清偿 | `calc_telemetry_records_dedup_cache_and_cold_ms`：`compute.count=2 / skip=1`、重复实例只算一次 |
-| TD-S0-06 | 部分清偿 | 机制：`indicator.cold_ms` + 就近秩 P95（`thirty_cold_samples_produce_p95` → 28.0）。缺口：实机 30 次冷切 P95/报价头耗时需 UI 取证，属 S2 |
-| TD-S0-07 | 部分清偿 | 机制：`cache.hit` / `cache.miss` 事件 + 7 元组键；单测同请求二次命中 `cache.hit=2`。缺口：实机切回 ≤120ms 与逐点一致的 UI 取证属 S2 |
+| TD-S0-05 | 已清偿 | `calc_telemetry_counts_five_instances_without_skips`：5 实例（T01/T02 + M06×3 不同参数）→ `compute.count=5 / skip=0 / cache.miss=5`；`calc_telemetry_records_dedup_cache_and_cold_ms` 另测重复键 → `count=2 / skip=1` |
+| TD-S0-06 | 部分清偿 | 机制：`indicator.cold_ms` + 就近秩 P95（`thirty_cold_samples_produce_p95` 为**合成样本** → 28.0，仅验口径）。缺口：实机 30 次冷切 P95/报价头耗时需 UI 取证，属 S2 |
+| TD-S0-07 | 部分清偿 | 机制：`cache.hit` / `cache.miss` + 7 元组键；`single_macd_cache_hit_logs_one_event_and_values_match`：单实例 MACD 切回 `cache.hit=1` 且 DIF/DEA/HIST 逐点相等。缺口：实机切回 ≤120ms 需 UI 取证，属 S2 |
 | TD-S0-08 | 已清偿 | `data/sim/generation-report.json.realDir`：重建前后 sha256 `9e44c1e2…303e` 相同、`changed=false`；生成器写 real 目录被拒（`generator_refuses_real_directories`） |
-| TD-S0-09 | 已清偿 | `data/sim/seed-42/records.csv` sha256 由 `verify_sim_dataset` 复算一致；`sha256_known_vectors` 已知向量；规范 CSV 格式单测 |
+| TD-S0-09 | 已清偿 | `data/sim/seed-42/records.csv` sha256 由 `verify_sim_dataset` 复算一致；`sha256_known_vectors` 已知向量；规范 CSV 格式单测；算法定义见上条「sim 数据集生成器」 |
 
 > 说明：`data/real` 目前只有隔离说明文件、无真实行情数据，因此「real 数据重建不变」只能以哨兵目录
 > sha256 不变为证；真实数据源接入与 real 侧重建验证仍属后续 Sprint（见「未实现」）。

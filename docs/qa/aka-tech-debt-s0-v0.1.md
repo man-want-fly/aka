@@ -68,7 +68,8 @@
 - **为什么 S1 可以带病开工**：B1 全部为日线趋势/回归指标，与周期聚合无关。
 - **偿还工作量**：0.4 人日。
 - **偿还时点**：S2 开工前 3.5 人日清零。
-- **清零判据**：2023-01-03~2024-04-30 周线 CSV + ISO 周手算对照表逐周一致。
+- **清零判据**：全量 mock 区间（2023-01-02~2024-12-27，覆盖原判据 2023-01-03~2024-04-30）周/月 CSV，
+  与 Python `date.isocalendar()` 独立复算逐周/逐月一致，并附首周 OHLC 手算单测。
 
 ### TD-S0-04 · QA-S0-022 参数防抖日志
 
@@ -88,7 +89,7 @@
 - **为什么 S1 可以带病开工**：B1 只验证单指标数值，不依赖批量计数。
 - **偿还工作量**：0.2 人日。
 - **偿还时点**：S2 开工前 3.5 人日清零。
-- **清零判据**：5 实例请求日志 `compute.count=5`、未挂载 `compute.skip=0`。
+- **清零判据**：5 实例请求（主图 2 叠加 + 副图 3，含重复 id）日志 `compute.count=5`、未挂载 `compute.skip=0`。
 
 ### TD-S0-06 · QA-S0-029 冷算耗时
 
@@ -180,25 +181,29 @@
 
 - **改动**：`calc_indicators` 增加请求级 `request_cache` 去重；每个重复实例发 `compute.skip`，
   每次真实计算发 `indicator.compute` + `indicator.cold_ms`，请求结束发 `compute.count`（`count/skip/instances/cacheHit`）。
-- **证据**：`calc_telemetry_records_dedup_cache_and_cold_ms` → `compute.count=2`、`compute.skip=1`、
-  `indicator.compute=2`；重复实例未重复计算。
+- **判据对拍（5 实例）**：`calc_telemetry_counts_five_instances_without_skips` —— 主图 2（T01 p20 / T02 p20）
+  + 副图 3（M06 12/26/9、5/10/3、12/26/5，同 id 不同参数），5 个实例键各不相同：
+  `compute.count=5`、`compute.skip` 无事件（0）、`indicator.compute=5`、`cache.miss=5`、`cacheHit=false`。
+- **去重语义另测**：`calc_telemetry_records_dedup_cache_and_cold_ms` —— 3 实例含重复键（a/b 同 T01 p20、c 为 p30）：
+  `compute.count=2`、`compute.skip=1`、`indicator.compute=2`，重复实例只算一次。
+- **命令 / 输出**：`cargo test -p app-core calc_telemetry` → 3 passed（5 实例 / 3 实例去重 / 单 MACD 缓存命中）。
 
 ### TD-S0-06 · QA-S0-029 冷算耗时 → 部分清偿
 
 - **已落地**：`indicator.cold_ms` 事件 + 内存环就近秩 P95（`cold_p95_ms`），`telemetry_dump` 返回
   `coldSamples / coldP95Ms`。
-- **证据**：`thirty_cold_samples_produce_p95`（30 样本 → P95=28.0）、`calc_telemetry_records_dedup_cache_and_cold_ms`
-  （`cold_p95_ms().is_some()`）。
+- **证据**：`thirty_cold_samples_produce_p95`（30 个**合成**样本 → P95=28.0，仅验证就近秩口径）、
+  `calc_telemetry_records_dedup_cache_and_cold_ms`（真实计算路径产出 `cold_p95_ms().is_some()`）。
 - **未清部分（原因）**：「冷缓存切 30 次 P95 ≤300ms、报价头 ≤60ms」需真实 UI 交互与墙钟采样；
-  实现层只保证埋点与统计口径正确，实机数值待 S2 取证。
+  上述合成样本**不代表**实机耗时，实机数值待 S2 取证。
 
 ### TD-S0-07 · QA-S0-033 缓存命中日志 → 部分清偿
 
 - **已落地**：缓存命中/未命中均发 `cache.hit` / `cache.miss`；缓存键仍为 7 元组（含规范化 DateRange）。
-- **证据**：同一请求二次调用 → `second.cache_hit=true`，`cache.hit=2` 且 `indicator.compute` 仍为 2
-  （未重复计算，见 `calc_telemetry_records_dedup_cache_and_cold_ms`）。
-- **未清部分（原因）**：「切回总耗时 ≤120ms + 逐点一致」的实机取证属 S2 UI 批次；数值逐点一致由缓存直返保证，
-  但需 QA 在 UI 上复测。
+- **判据对拍（单实例 MACD）**：`single_macd_cache_hit_logs_one_event_and_values_match` —— 首次 miss、切回
+  `cache.hit=1`、`indicator.compute` 不增长，且 DIF/DEA/HIST 三列 `values` 逐点相等（缓存直返一致）。
+- **多实例命中另测**：`calc_telemetry_records_dedup_cache_and_cold_ms` 二次请求 `cache.hit=2`（两个缓存项各 1 条）。
+- **未清部分（原因）**：仅剩「切回总耗时 ≤120ms」需实机 UI 墙钟取证，属 S2 UI 批次；逐点一致已由上述用例对拍。
 
 ### TD-S0-08 · QA-S0-062 sim/real 隔离 → 已清偿
 
@@ -213,6 +218,8 @@
 ### TD-S0-09 · QA-S0-070 sim sha256 重算 → 已清偿
 
 - **改动**：规范 CSV（表头/排序/小数位/末尾换行冻结）+ 仓库内 SHA-256 + `verify_sim_dataset` 只读复算。
+- **算法契约**：sha256 = 对 canonical CSV **字节**（按 `date` 升序、价格 2 位/volume 0 位/amount 2 位、
+  末尾单个 `\n`）计算；同一 CSV 两次重算逐字符相等。写入 `app/README.md`「sim 数据集生成器」条目。
 - **证据**：`canonical_csv_is_sorted_and_format_is_frozen`（逐字节比对）、`sha256_known_vectors`（空串/"abc"/长向量）、
   `manifest_covers_rows_and_verifies_after_write`（写后复算通过）。
 - **产物**：`app/data/sim/seed-42/manifest.json.sha256` 与 `records.csv` 字节重算一致（`generation-report.json`

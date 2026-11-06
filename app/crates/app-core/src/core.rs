@@ -1050,4 +1050,98 @@ mod tests {
         assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_HIT), Some(&2));
         assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&2));
     }
+
+    /// QA-S0-028：主图 2 叠加 + 副图 3（M06 三次不同参数，含重复 id），5 个实例键全不重复
+    /// → `compute.count=5`、`compute.skip=0`；与上面 3 实例用例的「含重复键 → skip=1」是不同场景。
+    #[tokio::test]
+    async fn calc_telemetry_counts_five_instances_without_skips() {
+        let core = AppCore::new_mock().await.unwrap();
+        let instance = |id: &str, indicator: &str, params: &[(&str, i64)]| crate::dto::InstanceRequest {
+            instance_id: id.into(),
+            indicator_id: indicator.into(),
+            params: params
+                .iter()
+                .map(|(key, value)| (key.to_string(), indicator_core::ParamValue::Int(*value)))
+                .collect(),
+        };
+        let request = CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+            from: None,
+            to: None,
+            generation: 1,
+            instances: vec![
+                instance("main-sma", "T01", &[("period", 20)]),
+                instance("main-ema", "T02", &[("period", 20)]),
+                instance("sub-macd-1", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+                instance("sub-macd-2", "M06", &[("fast", 5), ("slow", 10), ("signal", 3)]),
+                instance("sub-macd-3", "M06", &[("fast", 12), ("slow", 26), ("signal", 5)]),
+            ],
+        };
+
+        let response = core.calc_indicators(&request).await.unwrap();
+        assert!(!response.cache_hit);
+        assert_eq!(response.series.len(), 5);
+
+        let counts = core.telemetry().summary(0).counts;
+        assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&5));
+        assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_MISS), Some(&5));
+        assert_eq!(
+            counts
+                .get(crate::telemetry::EVENT_COMPUTE_SKIP)
+                .copied()
+                .unwrap_or(0),
+            0,
+            "5 个实例键各不相同，不应产生 compute.skip"
+        );
+        let count_event = core
+            .telemetry()
+            .events()
+            .into_iter()
+            .find(|event| event.name == crate::telemetry::EVENT_COMPUTE_COUNT)
+            .expect("必须有 compute.count");
+        assert_eq!(count_event.fields["count"], 5);
+        assert_eq!(count_event.fields["skip"], 0);
+        assert_eq!(count_event.fields["instances"], 5);
+        assert_eq!(count_event.fields["cacheHit"], false);
+    }
+
+    /// QA-S0-033：单实例 MACD 切走切回 → 日志 `cache.hit=1` 且逐点一致。
+    /// 判据中的「耗时 ≤120ms」属实机 UI 取证，本用例不代证（TD-S0-07 仍为部分清偿）。
+    #[tokio::test]
+    async fn single_macd_cache_hit_logs_one_event_and_values_match() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = |generation: u64| CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+            from: None,
+            to: None,
+            generation,
+            instances: vec![crate::dto::InstanceRequest {
+                instance_id: "macd".into(),
+                indicator_id: "M06".into(),
+                params: std::collections::BTreeMap::from([
+                    ("fast".to_string(), indicator_core::ParamValue::Int(12)),
+                    ("slow".to_string(), indicator_core::ParamValue::Int(26)),
+                    ("signal".to_string(), indicator_core::ParamValue::Int(9)),
+                ]),
+            }],
+        };
+
+        let first = core.calc_indicators(&request(1)).await.unwrap();
+        assert!(!first.cache_hit);
+        let second = core.calc_indicators(&request(2)).await.unwrap();
+        assert!(second.cache_hit);
+        assert_eq!(second.series[0].outputs.len(), 3);
+        for (before, after) in first.series[0].outputs.iter().zip(&second.series[0].outputs) {
+            assert_eq!(before.key, after.key);
+            assert_eq!(before.values, after.values, "缓存命中必须逐点一致");
+        }
+
+        let counts = core.telemetry().summary(0).counts;
+        assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_HIT), Some(&1));
+        assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&1));
+    }
 }
