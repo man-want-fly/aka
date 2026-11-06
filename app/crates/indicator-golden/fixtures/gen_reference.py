@@ -803,7 +803,10 @@ def main():
     write("edge_b2_insufficient.json",
           suite_ohlc("edge_b2_insufficient", 7, short_b2, insufficient_b2))
 
-    # 输入长度 < 最小窗口：固化 T16/T23/V09/V10 在只有 1 根时的行为
+    # 输入长度 < 最小窗口：固化 T16/T23/V09/V10 在只有 1 根时的行为。
+    # 重要：下面 4 条期望值是**规格固化**（按边界契约手写的字面量 NAN / 1.0），
+    # 不是参考实现产出，也不是由本脚本的公式函数推导出来——不要把它们当成
+    # 「参考实现算出来的结果」引用，也不要据此回推公式。
     below_min_b2 = [
         case("T16", {"step": 0.02, "increment": 0.02, "max": 0.2},
              ["psar"], {"psar": [NAN]}),
@@ -814,8 +817,12 @@ def main():
     ]
     one_bar = {"open": [10.2], "high": [10.5], "low": [9.5], "close": [10.0],
                "volume": [0.0], "amount": [0.0]}
-    write("edge_b2_below_min_window.json",
-          suite_ohlc("edge_b2_below_min_window", 0, one_bar, below_min_b2))
+    below_suite = suite_ohlc("edge_b2_below_min_window", 0, one_bar, below_min_b2)
+    below_suite["note"] = (
+        "期望值为规格固化（手写字面量 NAN/1.0），非参考实现推导；"
+        "不得作为公式推导依据引用"
+    )
+    write("edge_b2_below_min_window.json", below_suite)
 
 
 if __name__ == "__main__":
