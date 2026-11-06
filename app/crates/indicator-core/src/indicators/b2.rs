@@ -583,7 +583,10 @@ impl Indicator for PercentB {
         for i in 0..view.len() {
             if middle[i].is_finite() && std[i].is_finite() {
                 let width = 2.0 * mult * std[i];
-                if width != 0.0 {
+                // 零带宽判定必须带相对容差：常数序列的浮点标准差会残留 ~1e-14，
+                // 严格 `!= 0.0` 会把它当成有效带宽而输出 0.5，违反口径（零带宽 → NaN）。
+                let scale = middle[i].abs().max(1.0);
+                if width > 1e-12 * scale {
                     out[0][i] = (view.close[i] - (middle[i] - mult * std[i])) / width;
                 }
             }
@@ -736,6 +739,30 @@ mod tests {
         let out = run(V10_ID, 40);
         assert!(out[0][0].is_nan());
         assert!(out[0][1].is_finite());
+    }
+
+    #[test]
+    fn v05_zero_bandwidth_outputs_nan() {
+        // 常数收盘 → σ=0 → 上轨=下轨，%B 必须为 NaN（PRD/口径页零带宽退化条款）
+        let len = 40;
+        let close = vec![10.0; len];
+        let high = vec![10.0; len];
+        let low = vec![10.0; len];
+        let open = vec![10.0; len];
+        let volume = vec![1.0; len];
+        let amount = vec![1.0; len];
+        let view = OhlcvView::new(&open, &high, &low, &close, &volume, &amount);
+        let indicator = lookup(V05_ID).unwrap();
+        let params = merge_defaults(indicator.meta().params, &Params::new());
+        let mut out = vec![vec![0.0; len]; indicator.meta().outputs.len()];
+        indicator.calc(&view, &params, &mut out).unwrap();
+        for i in 0..len {
+            assert!(
+                out[0][i].is_nan(),
+                "第 {i} 根零带宽 %B 应为 NaN，实得 {}",
+                out[0][i]
+            );
+        }
     }
 
     #[test]

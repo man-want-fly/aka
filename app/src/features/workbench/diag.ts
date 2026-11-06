@@ -451,26 +451,28 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     Array.from(document.querySelectorAll<SVGPathElement>(`[data-sub='${id}']`));
 
   // 切走再切回：用于「切标的后旧线/旧值不残留」
-  const switchAwayAndBack = async () => {
+  /** 切到另一标的再切回；probe 在「切走后」被调用，用于抓取 B 标的的渲染结果。 */
+  const switchAwayAndBack = async (probe?: () => unknown) => {
     const original = hooks.activeCode;
     const target = hooks.codes.find((code) => code !== original);
-    if (!target) return false;
+    if (!target) return { ok: false, away: undefined };
     hooks.setPhase("warm");
     const away = hooks.nextSample(4000);
     hooks.setCode(target);
     if (!(await away)) {
       hooks.setPhase("done");
-      return false;
+      return { ok: false, away: undefined };
     }
+    const awayProbe = probe?.();
     const back = hooks.nextSample(4000);
     hooks.setCode(original);
     if (!(await back)) {
       hooks.setPhase("done");
-      return false;
+      return { ok: false, away: awayProbe };
     }
     await sleep(320);
     hooks.setPhase("done");
-    return true;
+    return { ok: true, away: awayProbe };
   };
   const switchTimeframeAndBack = async () => {
     const before = snapshotOf();
@@ -572,15 +574,16 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     ];
     const dashOf = (path: SVGPathElement | null | undefined) =>
       path ? getComputedStyle(path).strokeDasharray : "";
-    const middleDash = dashOf(paths[1]);
+    const middleDash = dashOf(paths[1]).replace(/\s+/g, " ");
     const othersSolid = [dashOf(paths[0]), dashOf(paths[2])].every(
       (value) => value === "" || value === "none",
     );
     clauses.push(
       pass(
         "T09 中轨虚线、上下轨实线（虚实可区分）",
-        middleDash !== "" && middleDash !== "none" && othersSolid,
-        { middleDash, upper: dashOf(paths[0]), lower: dashOf(paths[2]) },
+        // 精确值比对：源代码写死 `4 3`，浏览器计算值为 `4px, 3px`；改成任意其它值必须失败
+        middleDash === "4px, 3px" && othersSolid,
+        { middleDash, expected: "4px, 3px", upper: dashOf(paths[0]), lower: dashOf(paths[2]) },
       ),
     );
     const start = windowStart();
@@ -620,9 +623,23 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
         count: readouts.length,
       }),
     );
-    const switched = await switchAwayAndBack();
+    // 残留检测必须能证伪：记录 A 的三条路径，切到 B 抓取 B 的路径，切回 A 后要求逐条与 A 完全一致，
+    // 且 B 的路径确实与 A 不同（否则场景本身无效）。
+    const dOfKeys = () => keys.map((key) => overlayPath("T09", key)?.getAttribute("d") ?? "");
+    const beforeA = dOfKeys();
+    const switched = await switchAwayAndBack(() => dOfKeys());
     const afterPaths = overlayPaths("T09").length;
-    clauses.push(pass("切标的后不残留旧线", switched && afterPaths === 3, { switched, afterPaths }));
+    const afterA = dOfKeys();
+    const awayB = (switched.away as string[] | undefined) ?? [];
+    const awayDiffers = awayB.length === 3 && awayB.every((d, index) => d !== "" && d !== beforeA[index]);
+    const backMatches = afterA.length === 3 && afterA.every((d, index) => d === beforeA[index]);
+    clauses.push(
+      pass(
+        "切标的后不残留旧线",
+        switched.ok && afterPaths === 3 && awayDiffers && backMatches,
+        { switched: switched.ok, afterPaths, awayDiffers, backMatches, beforeA: beforeA.map((d) => d.length), awayB: awayB.map((d) => d.length) },
+      ),
+    );
     cards.push({
       card: "S-03.05-01",
       ac: "AC-03.05-05",
@@ -671,7 +688,7 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     clauses.push(
       pass(
         "切标的后读数与当前引擎一致（旧值不残留）",
-        switched && readout !== undefined && numericMatches(readout.value, expectLast),
+        switched.ok && readout !== undefined && numericMatches(readout.value, expectLast),
         { readout: readout?.value ?? "", expectLast },
       ),
     );
@@ -1058,8 +1075,8 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     clauses.push(
       pass(
         "切标的后不残留",
-        switched && document.querySelectorAll("[data-sub='V08'] path[data-sub-sign]").length === 2 && readout !== undefined && numericMatches(readout.value, expectLast),
-        { switched, nodes: document.querySelectorAll("[data-sub='V08'] path[data-sub-sign]").length, readout: readout?.value ?? "", expectLast },
+        switched.ok && document.querySelectorAll("[data-sub='V08'] path[data-sub-sign]").length === 2 && readout !== undefined && numericMatches(readout.value, expectLast),
+        { switched: switched.ok, nodes: document.querySelectorAll("[data-sub='V08'] path[data-sub-sign]").length, readout: readout?.value ?? "", expectLast },
       ),
     );
     cards.push({ card: "S-03.05-08", ac: "AC-03.05-35", kind: "sub", clauses, ok: verdict(clauses), dataLimited: dataLimited(clauses) });
@@ -1194,11 +1211,14 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
   window.location.hash = "#/catalog";
   await sleep(600);
   const registry = await ipc.indicatorRegistry();
+  const manifest = await ipc.indicatorManifest();
   const registryById = new Map(registry.indicators.map((item) => [item.id, item] as const));
-  const b2Ids = [
-    "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T23", "T24",
-    "V01", "V02", "V03", "V04", "V05", "V07", "V08", "V09", "V10",
-  ];
+  // 逐项覆盖全部已实现指标（44），不再只抽样 B2 的 20 个
+  const targetIds = registry.indicators.map((item) => item.id);
+  const expectedBetaIds = manifest.indicators
+    .filter((item) => item.status === "beta")
+    .map((item) => item.id)
+    .sort();
   const listed = Array.from(document.querySelectorAll("[data-catalog-item]")).map(
     (element) => element.getAttribute("data-catalog-item") ?? "",
   );
@@ -1213,7 +1233,7 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
     return section;
   };
   const cards: Array<Record<string, unknown>> = [];
-  for (const id of b2Ids) {
+  for (const id of targetIds) {
     const button = document.querySelector<HTMLElement>(`[data-catalog-item='${id}']`);
     if (!button) {
       cards.push({ id, ok: false, reason: "条目缺失" });
@@ -1257,20 +1277,24 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
 
   window.location.hash = previous || "#/workbench";
   await sleep(320);
+  const betaIdsSorted = [...betaIds].sort();
   return {
     route: "#/catalog",
     rootPresent,
     itemCount: listed.length,
-    itemCountOk: listed.length === 44,
+    itemCountOk: listed.length === registry.indicators.length,
     betaIds,
     betaCount: betaIds.length,
-    targetIds: b2Ids,
+    expectedBetaCount: expectedBetaIds.length,
+    targetIds,
     cards,
     ok:
       rootPresent &&
-      listed.length === 44 &&
-      betaIds.includes("T16") &&
-      cards.length === 20 &&
+      listed.length === registry.indicators.length &&
+      targetIds.every((id) => listed.includes(id)) &&
+      betaIdsSorted.length === expectedBetaIds.length &&
+      betaIdsSorted.every((id, index) => id === expectedBetaIds[index]) &&
+      cards.length === targetIds.length &&
       cards.every((item) => Boolean(item.ok)),
   };
 }
