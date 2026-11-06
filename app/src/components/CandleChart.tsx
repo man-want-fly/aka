@@ -230,6 +230,7 @@ export function CandleChart({ bars, series, windowSize }: Props) {
               />
               <rect
                 data-candle={rising ? "up" : "down"}
+                data-index={index}
                 x={x - bodyWidth / 2}
                 y={bodyTop}
                 width={bodyWidth}

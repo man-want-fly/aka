@@ -136,6 +136,8 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
   let hoverIndex = "";
   let hoverError: string | null = null;
   let colorSamples: Record<string, string> = {};
+  let chgFirst = { sign: "", text: "", color: "" };
+  let chgSecond = { sign: "", text: "", color: "" };
   const svg = document.querySelector<SVGSVGElement>("[data-chart='candle']");
   if (svg) {
     try {
@@ -162,11 +164,37 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
         }),
       );
       // 配色三重编码：颜色（--pos/--neg）+ 箭头（▲/▼）+ 正负号
+      const chgOf = () => {
+        const element = document.querySelector<HTMLElement>("[data-readout='chg']");
+        return {
+          sign: element?.getAttribute("data-sign") ?? "",
+          text: element?.textContent?.trim() ?? "",
+          color: element ? getComputedStyle(element).color : "",
+        };
+      };
+      chgFirst = chgOf();
+      // 再悬停下跌 K 线，取到相反方向的读数，证明 ▲▼ 双向都编码
+      // 收平/开高收低的 K 线可能出现「▼ —」，多试几根直到拿到带负号的读数
+      const downBars = Array.from(
+        document.querySelectorAll<SVGElement>("[data-candle='down'][data-index]"),
+      ).slice(0, 16);
+      for (const bar of downBars) {
+        const barRect = bar.getBoundingClientRect();
+        svg.dispatchEvent(
+          new MouseEvent("mousemove", {
+            bubbles: true,
+            clientX: barRect.left + barRect.width / 2,
+            clientY: barRect.top + barRect.height / 2,
+          }),
+        );
+        await sleep(90);
+        chgSecond = chgOf();
+        if (/^▼\s*-/.test(chgSecond.text)) break;
+      }
       const upCandle = document.querySelector<SVGElement>("[data-candle='up']");
       const downCandle = document.querySelector<SVGElement>("[data-candle='down']");
       const histPos = document.querySelector<SVGElement>("[data-hist='pos']");
       const histNeg = document.querySelector<SVGElement>("[data-hist='neg']");
-      const chg = document.querySelector<HTMLElement>("[data-readout='chg']");
       colorSamples = {
         posToken: resolveColor("--pos"),
         negToken: resolveColor("--neg"),
@@ -174,9 +202,8 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
         downCandleStroke: downCandle ? getComputedStyle(downCandle).stroke : "",
         histPosFill: histPos ? getComputedStyle(histPos).fill : "",
         histNegFill: histNeg ? getComputedStyle(histNeg).fill : "",
-        chgColor: chg ? getComputedStyle(chg).color : "",
-        chgSign: chg?.getAttribute("data-sign") ?? "",
-        chgText: chg?.textContent?.trim() ?? "",
+        chgFirst: `${chgFirst.sign}|${chgFirst.color}|${chgFirst.text}`,
+        chgSecond: `${chgSecond.sign}|${chgSecond.color}|${chgSecond.text}`,
       };
       svg.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
       await sleep(80);
@@ -196,6 +223,10 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
   const histCount = document.querySelectorAll("[data-hist]").length;
   const posColor = colorSamples.posToken;
   const negColor = colorSamples.negToken;
+  const chgEncoded = (sample: { sign: string; text: string; color: string }, direction: "pos" | "neg") =>
+    sample.sign === direction &&
+    sample.color === (direction === "pos" ? posColor : negColor) &&
+    (direction === "pos" ? /^▲\s*\+/.test(sample.text) : /^▼\s*-/.test(sample.text));
   const colorOk =
     posColor !== "" &&
     negColor !== "" &&
@@ -203,10 +234,8 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
     colorSamples.downCandleStroke === negColor &&
     colorSamples.histPosFill === posColor &&
     colorSamples.histNegFill === negColor &&
-    colorSamples.chgSign !== "" &&
-    colorSamples.chgColor === (colorSamples.chgSign === "pos" ? posColor : negColor) &&
-    /^[▲▼]/.test(colorSamples.chgText) &&
-    /^[▲]\s*\+/.test(colorSamples.chgText) === (colorSamples.chgSign === "pos");
+    (chgEncoded(chgFirst, "pos") || chgEncoded(chgSecond, "pos")) &&
+    (chgEncoded(chgFirst, "neg") || chgEncoded(chgSecond, "neg"));
   const statisticalCount = statistical.length;
   return {
     chartPresent: Boolean(svg),
