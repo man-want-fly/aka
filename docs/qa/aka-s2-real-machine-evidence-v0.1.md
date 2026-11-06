@@ -241,6 +241,33 @@ Rust 侧微基准 `app-core::core::microbench_breakdown`（`#[ignore]`，命中�
 
 `engineMs` 全 0 的原因：命中路径不进入 `indicator.calc`，引擎耗时事件 `indicator.compute` 不产生，前端取不到分项。P50 24 / P95 34 / max 40 均由 `verification.warm` 的 `nearestRankPercentile` 算出，与上表逐行可复算。
 
+### 3.3 2026-11-07 release 复跑（P 线口径 + 切标的残留断言修正）
+
+本轮按 `R-S0-07-01` 重跑 P 线（release 打包产物、30 连续热切回 × 3 批、批间不插冷算、判定取 max），同时修正 B2 `S-03.05-01` 的残留断言。
+
+| 项 | 值 |
+|---|---|
+| 证据文件 | [`evidence/s2-evidence-p-line-20261107k.json`](./evidence/s2-evidence-p-line-20261107k.json) |
+| 构建 | `release` / `opt-level=3` / `lto=false` / `codegen-units=16` / `debug=0` / `x86_64-apple-darwin` |
+| 数据集 | `sim-default`，520 根 / 50 实例 / payload 678221 bytes |
+| 样本 | **90**（3 批 × 30，批间不插冷算） |
+| 分批 max | **89 / 39 / 27 ms** |
+| 汇总 | P50 **22.5** / P95 **26** / max **89** ms |
+| 命中与一致性 | `cacheHit=true` 90/90、`matchesCold=true` 90/90（逐样本带 `cacheHit/matchesCold/engineMs`） |
+| 判定 | max 89 ≤ 120ms → **达标**（回退条款不变：再出现 >120ms 即回退「部分清偿」） |
+
+机器负载（12 核，IDE 与 cargo 同机运行，非安静机器）：运行前 load average **11.60 / 9.34 / 10.08**，运行后 **7.35 / 8.55 / 9.73**。同机另一轮（`p-line-20261107j`，运行前 15.40）max 为 60ms，说明本轮 89ms 是负载尖峰下的上界，不是稳定值；判据仍按协议取 max，不取均值。
+
+**`切标的后不残留旧线` 红项根因（已修）**：上一轮（`p-line-20261107i/j`）该 clause 判红，逐层诊断（`candlesSame=false`、轴刻度价格区间从 `-20.58~323.84` 变为 `-12.03~179.49`、日期刻度不变）确认不是叠加线残留，而是**取证脚本自身的 bug**：`switchAwayAndBack` 用了启动时的 `activeCode` 静态快照「切回原标的」，实际切回了启动标的而非当前标的。改为实时读取 `getActiveCode()` 后，回切三条路径与切换前**逐字节一致**（`backMatches=true`、`toA=0`、`toB=0.9987`、`candlesSame=true`）。诊断字段 `toA/toB/candlesSame/axisSame` 保留在 payload 里，后续可复核。
+
+**T09 反向负控（每轮随取证执行，`scripts/diag-run.sh` 归档后自动校验 3/3）**：
+
+| 负控 | 做法 | 结果 |
+|---|---|---|
+| 错误虚实值必须被判红 | 把中轨 `strokeDasharray` 改成 `6 4`，断言值仍为 `4px, 3px` | 判红 |
+| 旧线值必须被判残留 | 把 A 的一条路径替换成 B 的路径，喂给 `residualFree` | 判红 |
+| 回切未重绘（仍显示 B 线）必须被判红 | 把 `awayB` 当作回切结果喂给形状判据 | 判红（`staleToB=0`、`staleToA=0.5882`） |
+
 ## 4. 前端 W/M 周期切换与缓存键
 
 | 项 | 证据 | 判定 |

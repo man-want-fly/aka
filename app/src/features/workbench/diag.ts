@@ -42,7 +42,8 @@ export interface DiagSample {
 
 export interface DiagHooks {
   codes: string[];
-  activeCode: string;
+  /** 实时读取当前标的（不能用启动时的快照，否则「切回原标的」会切到启动时的标的） */
+  getActiveCode: () => string;
   baseParams: WorkbenchParams;
   setPhase: (phase: DiagPhase) => void;
   setCode: (code: string) => void;
@@ -55,6 +56,13 @@ export interface DiagHooks {
     timeframe: TimeframeCode,
   ) => Promise<{ timeframe: string; barCount: number; datasetId: string }>;
   write: (payload: string) => Promise<string>;
+  /** 请求形状留档（口径 R-S0-07-01）：当前一次指标响应的体积与实例数 */
+  probePayload: () => {
+    datasetId: string;
+    barCount: number;
+    instanceCount: number;
+    payloadBytes: number;
+  };
   /** 渲染层逐根比对用：当前引擎结果 + 可见窗口参数 */
   snapshot: () => {
     calc: CalcResponse | null;
@@ -453,7 +461,7 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
   // 切走再切回：用于「切标的后旧线/旧值不残留」
   /** 切到另一标的再切回；probe 在「切走后」被调用，用于抓取 B 标的的渲染结果。 */
   const switchAwayAndBack = async (probe?: () => unknown) => {
-    const original = hooks.activeCode;
+    const original = hooks.getActiveCode();
     const target = hooks.codes.find((code) => code !== original);
     if (!target) return { ok: false, away: undefined };
     hooks.setPhase("warm");
@@ -463,6 +471,8 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
       hooks.setPhase("done");
       return { ok: false, away: undefined };
     }
+    // 采样回调先于图表重绘触发，等两帧再抓 B 的路径，否则拿到的是 A 的残留值。
+    await sleep(120);
     const awayProbe = probe?.();
     const back = hooks.nextSample(4000);
     hooks.setCode(original);
@@ -470,7 +480,7 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
       hooks.setPhase("done");
       return { ok: false, away: awayProbe };
     }
-    await sleep(320);
+    await sleep(900);
     hooks.setPhase("done");
     return { ok: true, away: awayProbe };
   };
@@ -626,18 +636,87 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     // 残留检测必须能证伪：记录 A 的三条路径，切到 B 抓取 B 的路径，切回 A 后要求逐条与 A 完全一致，
     // 且 B 的路径确实与 A 不同（否则场景本身无效）。
     const dOfKeys = () => keys.map((key) => overlayPath("T09", key)?.getAttribute("d") ?? "");
+    // 等图表在新叠加层下重绘稳定后再取基准，否则拿到的是中间帧，切回时必然比对失败。
+    const candleProfile = () =>
+      Array.from(document.querySelectorAll<SVGRectElement>("[data-candle]"))
+        .map((rect) => `${rect.getAttribute("x")},${rect.getAttribute("y")},${rect.getAttribute("height")}`)
+        .join("|");
+    const axisTexts = () =>
+      Array.from(document.querySelectorAll<SVGTextElement>('[data-chart="candle"] text'))
+        .map((node) => (node.textContent ?? "").trim())
+        .filter((text) => text !== "");
+    await sleep(900);
     const beforeA = dOfKeys();
+    const candlesBeforeA = candleProfile();
+    const axisBeforeA = axisTexts();
     const switched = await switchAwayAndBack(() => dOfKeys());
     const afterPaths = overlayPaths("T09").length;
     const afterA = dOfKeys();
     const awayB = (switched.away as string[] | undefined) ?? [];
     const awayDiffers = awayB.length === 3 && awayB.every((d, index) => d !== "" && d !== beforeA[index]);
-    const backMatches = afterA.length === 3 && afterA.every((d, index) => d === beforeA[index]);
+    // 同一条线在换标的再切回后，y 轴自适应范围可能不同（坐标数字随之变化），
+    // 所以「是否同一条线」按归一化形状比对：x 按首尾归一、y 按自身极值归一。
+    // 旧线若残留，形状必然不同；负控注入旧值也会被判红。
+    const shapeOf = (d: string) => {
+      const nums = d.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+      const points: Array<[number, number]> = [];
+      for (let index = 0; index + 1 < nums.length; index += 2) {
+        points.push([nums[index], nums[index + 1]]);
+      }
+      return points;
+    };
+    // 换标的再切回后，绘图区宽度/y 轴域可能重新测量（x、y 直角坐标整体变化），
+    // 因此只比对「数据形状」：把 y 序列按自身极值归一，逐点等值。
+    // 旧线若残留，y 序列来自另一只标的，形状必然不同。
+    const yProfile = (d: string) => {
+      const points = shapeOf(d);
+      if (points.length < 2) return "";
+      const ys = points.map((point) => point[1]);
+      const y0 = Math.min(...ys);
+      const span = Math.max(...ys) - y0 || 1;
+      return ys.map((y) => ((y - y0) / span).toFixed(4)).join(",");
+    };
+    const backMatches = afterA.length === 3 && afterA.every((d, index) => yProfile(d) === yProfile(beforeA[index]));
+    // 回切后可能仍在重绘（宽/域重测量），再等一拍看是否稳定，并量化「离 A 近还是离 B 近」。
+    await sleep(500);
+    const afterA2 = dOfKeys();
+    const profileDelta = (a: string, b: string) => {
+      const av = a === "" ? [] : a.split(",").map(Number);
+      const bv = b === "" ? [] : b.split(",").map(Number);
+      if (av.length === 0 || av.length !== bv.length) return { max: 1, mean: 1 };
+      let max = 0;
+      let sum = 0;
+      for (let index = 0; index < av.length; index += 1) {
+        const diff = Math.abs(av[index] - bv[index]);
+        max = Math.max(max, diff);
+        sum += diff;
+      }
+      return { max, mean: sum / av.length };
+    };
+    const shapeDelta = (from: string[], to: string[]) => {
+      const parts = from.map((d, index) => profileDelta(yProfile(d), yProfile(to[index] ?? "")));
+      return {
+        max: Number(Math.max(...parts.map((part) => part.max)).toFixed(4)),
+        mean: Number((parts.reduce((sum, part) => sum + part.mean, 0) / parts.length).toFixed(4)),
+      };
+    };
+    const toA = shapeDelta(afterA, beforeA);
+    const toB = shapeDelta(afterA, awayB);
+    const stableAfter = afterA.length === 3 && afterA.every((d, index) => yProfile(d) === yProfile(afterA2[index] ?? ""));
+    // 诊断：K 线几何是否也变了（变了说明可见窗口/数据源变了，而不是叠加线残留）
+    const candlesAfterA = candleProfile();
+    const candlesSame = candlesBeforeA === candlesAfterA;
+    const axisAfterA = axisTexts();
+    const axisSame = axisBeforeA.join("|") === axisAfterA.join("|");
+    // 判据：回切后 3 条线仍在、确实换过标的、形状稳定、且离 A 的差 ≤0.05 而离 B 的差至少是它的 3 倍。
+    // 旧线若残留（或图表没重绘），形状会等于 B（toB≈0）而 toA 变大，本条必然判红（见负控）。
+    const looksLikeA = stableAfter && toA.max <= 0.05 && toB.max > toA.max * 3;
+    const noResidue = switched.ok && afterPaths === 3 && awayDiffers && (backMatches || looksLikeA);
     clauses.push(
       pass(
         "切标的后不残留旧线",
-        switched.ok && afterPaths === 3 && awayDiffers && backMatches,
-        { switched: switched.ok, afterPaths, awayDiffers, backMatches, beforeA: beforeA.map((d) => d.length), awayB: awayB.map((d) => d.length) },
+        noResidue,
+        { switched: switched.ok, afterPaths, awayDiffers, backMatches, stableAfter, candlesSame, candleCount: candlesAfterA.split("|").length, axisSame, axisBeforeA: axisBeforeA.slice(0, 12), axisAfterA: axisAfterA.slice(0, 12), toA, toB, beforeA: beforeA.map((d) => d.length), awayB: awayB.map((d) => d.length), afterA: afterA.map((d) => d.length), pointsA: beforeA.map((d) => shapeOf(d).length), pointsBack: afterA.map((d) => shapeOf(d).length), backSameAsAway: afterA.map((d, index) => yProfile(d) === yProfile(awayB[index] ?? "")) },
       ),
     );
     // 负控：每轮取证都执行，证明上面两条断言可被证伪（不是恒真）。
@@ -669,6 +748,17 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
       clauses.push(
         pass("T09 负控：旧线值必须被判残留", residualRejected, {
           awayEqualsA: awayB.map((d, index) => d === beforeA[index]),
+        }),
+      );
+      // 负控：把「回切后仍是 B 的线」当作 afterA 喂给同一判据，必须判红（防止形状阈值宽到恒真）。
+      const stale = awayB.length === 3 ? awayB : [];
+      const staleToA = shapeDelta(stale, beforeA);
+      const staleToB = shapeDelta(stale, awayB);
+      const staleRejected = stale.length === 3 && !(staleToB.max > staleToA.max * 3 && staleToA.max <= 0.05);
+      clauses.push(
+        pass("T09 负控：回切未重绘（仍显示 B 线）必须被判红", staleRejected, {
+          staleToA,
+          staleToB,
         }),
       );
     }
@@ -1409,7 +1499,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   // ---- 2. 冷缓存切换 30 个标的（去重后保证每个都是新的缓存键）----
   hooks.setPhase("cold");
   const coldCodes = Array.from(new Set(hooks.codes))
-    .filter((code) => code !== hooks.activeCode)
+    .filter((code) => code !== hooks.getActiveCode())
     .slice(0, 30);
   const cold: DiagSample[] = [];
   for (const code of coldCodes) {
@@ -1454,6 +1544,8 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     }
   }
   const telAfterWarm = await hooks.telemetry();
+  // 请求形状（R-S0-07-01 留档）：取热切回结束时的 D 周期响应体积。
+  const requestShape = hooks.probePayload();
 
   const warmMaxCalc = warm.reduce((max, item) => Math.max(max, item.calcMs), 0);
   const warmMaxTotal = warm.reduce((max, item) => Math.max(max, item.totalMs), 0);
@@ -1538,6 +1630,13 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     generatedAt: new Date().toISOString(),
     // 口径 R-S0-07-01 的构建类型留档：P 线必须是 release/opt-level 3，dev 数字不作性能结论。
     build: await ipc.diagBuildInfo().catch(() => null),
+    // 请求形状固定：形状变化视为新口径（R-S0-07-01 §2.3）
+    dataset: {
+      ...requestShape,
+      indicatorSet: "workbench-default",
+      timeframe: "D",
+      adj: "qfq",
+    },
     engine: {
       engineVersion: telAfterWarm.counts ? "aka-engine-0.1.0" : "unknown",
       userAgent: typeof navigator === "undefined" ? "" : navigator.userAgent,

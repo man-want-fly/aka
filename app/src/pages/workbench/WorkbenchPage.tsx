@@ -302,7 +302,7 @@ export function WorkbenchPage({
       try {
         const report = await runS2Diagnostics({
           codes: securities.map((item) => item.code),
-          activeCode: activeCodeRef.current,
+          getActiveCode: () => activeCodeRef.current,
           baseParams: DEFAULT_PARAMS,
           setPhase: (phase) => {
             diagPhase.current = phase;
@@ -328,6 +328,16 @@ export function WorkbenchPage({
             };
           },
           write: (payload) => ipc.diagWrite(payload),
+          probePayload: () => {
+            const calc = calcRef.current;
+            if (!calc) return { datasetId: "", barCount: 0, instanceCount: 0, payloadBytes: 0 };
+            return {
+              datasetId: calc.datasetId,
+              barCount: calc.barCount,
+              instanceCount: calc.series.length,
+              payloadBytes: JSON.stringify(calc).length,
+            };
+          },
           snapshot: () => ({
             calc: calcRef.current,
             barsLength: barsRef.current?.bars.length ?? 0,
