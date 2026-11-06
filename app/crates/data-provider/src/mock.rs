@@ -323,6 +323,10 @@ fn build_securities() -> Vec<Security> {
     list.push(make_security("399001.SZ", "深证成指", Board::Index, true, 10800.0));
     list.push(make_security("399006.SZ", "创业板指", Board::Index, true, 2150.0));
 
+    // 生成组不得与已列出的已知标的/指数撞码（曾出现 601012 重复，导致 120 条仅 119 唯一）。
+    let mut used: std::collections::HashSet<String> =
+        list.iter().map(|security| security.code.clone()).collect();
+
     let groups: [(&str, usize, Board); 4] = [
         ("601", 40, Board::ShMain),
         ("002", 40, Board::SzMain),
@@ -332,24 +336,25 @@ fn build_securities() -> Vec<Security> {
 
     let mut serial = 1;
     for (prefix, count, board) in groups {
-        for offset in 0..count {
-            let code = if prefix == "601" {
-                format!("{:06}.SH", 601_000 + offset)
-            } else {
-                format!("{}{:03}.SZ", prefix, 100 + offset)
+        let mut offset = 0;
+        let mut added = 0;
+        while added < count {
+            let code = match prefix {
+                // 科创板上交所后缀，其余生成组按深交所处理
+                "601" => format!("{:06}.SH", 601_000 + offset),
+                "688" => format!("688{:03}.SH", 100 + offset),
+                _ => format!("{}{:03}.SZ", prefix, 100 + offset),
             };
-            // 科创板与沪深主板后缀不同
-            let code = if prefix == "688" {
-                format!("{}{:03}.SH", prefix, 100 + offset)
-            } else if prefix == "300" {
-                format!("{}{:03}.SZ", prefix, 100 + offset)
-            } else {
-                code
-            };
+            offset += 1;
+            if used.contains(&code) {
+                continue;
+            }
+            used.insert(code.clone());
             let name = format!("示例标的 {serial:03}");
             let price = 5.0 + (fnv1a(&code) % 2000) as f64 / 10.0;
             list.push(make_security(&code, &name, board, false, price));
             serial += 1;
+            added += 1;
         }
     }
 
@@ -484,6 +489,18 @@ mod tests {
         assert_eq!(provider.security_count(), MOCK_SECURITY_COUNT);
         assert_eq!(provider.bars_per_security(), MOCK_BARS_PER_SECURITY);
         assert_eq!(provider.first_date(), Date::new(2023, 1, 2));
+
+        // 代码必须唯一：生成组曾与已知标的撞码，导致 120 条只有 119 个唯一代码。
+        let mut codes: Vec<&str> = provider
+            .securities
+            .iter()
+            .map(|security| security.code.as_str())
+            .collect();
+        codes.sort_unstable();
+        let before = codes.len();
+        codes.dedup();
+        assert_eq!(before, MOCK_SECURITY_COUNT);
+        assert_eq!(codes.len(), MOCK_SECURITY_COUNT);
     }
 
     #[test]
