@@ -6,7 +6,7 @@ interface Props {
   /** B2 主图叠加所选指标 */
   overlayIds: string[];
   /** 副图指标 id（M06 或 V01–V10） */
-  subId: string;
+  subIds: string[];
   /** manifest 单位表 */
   units: Record<string, string>;
 }
@@ -51,14 +51,16 @@ function Sparkline({
 }
 
 /** TD-B1-02 渲染层证据：R² 与 BIAS 三线以最新值 + 迷你走势呈现；B2 追加叠加/副图读数同步。 */
-export function IndicatorReadouts({ series, barCount, overlayIds, subId, units }: Props) {
+export function IndicatorReadouts({ series, barCount, overlayIds, subIds, units }: Props) {
   const r2 = series.find((item) => item.indicatorId === "T21");
   const bias = series.find((item) => item.indicatorId === "E13");
   const b2Overlays = [...new Set(overlayIds)]
     .map((id) => series.find((item) => item.indicatorId === id))
     .filter((item): item is SeriesDto => Boolean(item));
-  const b2Sub = series.find((item) => item.indicatorId === subId);
-  if (!r2 && !bias && b2Overlays.length === 0 && !b2Sub) return null;
+  const b2Subs = subIds
+    .map((id) => series.find((item) => item.indicatorId === id))
+    .filter((item): item is SeriesDto => Boolean(item));
+  if (!r2 && !bias && b2Overlays.length === 0 && b2Subs.length === 0) return null;
 
   const latest = (values: (number | null)[] | undefined) => {
     if (!values) return null;
@@ -130,13 +132,13 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subId, units }
         </div>
       )}
 
-      {(b2Overlays.length > 0 || b2Sub) && (
+      {(b2Overlays.length > 0 || b2Subs.length > 0) && (
         <div
           data-verification="b2-render-layer"
           style={{ marginTop: 8, borderTop: "1px dashed var(--line)", paddingTop: 6 }}
         >
           <div className="caption" style={{ marginBottom: 4 }}>
-            B2 读数同步 · 叠加 {overlayIds.join(" / ") || "无"} · 副图 {subId}
+            B2 读数同步 · 叠加 {overlayIds.join(" / ") || "无"} · 副图 {subIds.join(" / ") || "无"}
           </div>
           <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
             {b2Overlays.flatMap((item) =>
@@ -158,23 +160,25 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subId, units }
                 );
               }),
             )}
-            {b2Sub?.outputs.map((output) => {
-              const value = current(output.values);
-              const unit = units[b2Sub.indicatorId] ?? "";
-              return (
-                <span
-                  key={`b2-sub-${b2Sub.indicatorId}-${output.key}`}
-                  className="mono"
-                  data-readout={`b2-sub-${b2Sub.indicatorId}-${output.key}`}
-                  data-value={value ?? ""}
-                  data-unit={unit}
-                  style={{ color: output.color, fontSize: 11 }}
-                >
-                  {b2Sub.indicatorId}·{output.key} {value === null ? "—" : value.toFixed(2)}
-                  {unit ? ` ${unit}` : ""}
-                </span>
-              );
-            })}
+            {b2Subs.flatMap((sub) =>
+              sub.outputs.map((output) => {
+                const value = current(output.values);
+                const unit = units[sub.indicatorId] ?? "";
+                return (
+                  <span
+                    key={`b2-sub-${sub.indicatorId}-${output.key}`}
+                    className="mono"
+                    data-readout={`b2-sub-${sub.indicatorId}-${output.key}`}
+                    data-value={value ?? ""}
+                    data-unit={unit}
+                    style={{ color: output.color, fontSize: 11 }}
+                  >
+                    {sub.indicatorId}·{output.key} {value === null ? "—" : value.toFixed(2)}
+                    {unit ? ` ${unit}` : ""}
+                  </span>
+                );
+              }),
+            )}
           </div>
         </div>
       )}

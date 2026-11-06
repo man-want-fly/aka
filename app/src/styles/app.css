@@ -1116,6 +1116,8 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
 .ind-drawer__title {
@@ -1295,6 +1297,29 @@ select {
   opacity: 0.45;
   cursor: default;
   border-color: var(--line);
+}
+
+.add-btn:disabled,
+.add-btn[data-drawer-full="1"][disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--line);
+}
+
+/* 新增副图 180ms 进场（AC-02.04-03） */
+.sub-panel {
+  animation: sub-panel-in 180ms ease-out;
+}
+
+@keyframes sub-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .ind-drawer__foot {

@@ -21,7 +21,8 @@ const RAW: &str = include_str!("../../../manifest/indicators.json");
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
     pub schema_version: u32,
-    pub planned_count: usize,
+    /// 目录规划总量（含已实现），不是 status=planned 的条数
+    pub catalog_total: usize,
     /// 缓存键维度（只作文档用途，实际实现在 app-core::calc_key）
     #[serde(default)]
     pub cache_key: Vec<String>,
@@ -289,7 +290,7 @@ mod tests {
     fn manifest_parses_and_ids_are_unique() {
         let manifest = manifest();
         assert_eq!(manifest.schema_version, 1);
-        assert!(manifest.planned_count >= manifest.indicators.len());
+        assert!(manifest.catalog_total >= manifest.indicators.len());
         let mut ids = std::collections::BTreeSet::new();
         let mut visible = std::collections::BTreeSet::new();
         for item in &manifest.indicators {
@@ -317,7 +318,7 @@ mod tests {
 
         let manifest = manifest();
         assert_eq!(manifest.indicators.len(), 105, "目录应为 PRD 的 105 条");
-        assert_eq!(manifest.planned_count, 105);
+        assert_eq!(manifest.catalog_total, 105);
 
         let mut counts = BTreeMap::new();
         for item in &manifest.indicators {

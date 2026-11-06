@@ -4,7 +4,7 @@ import type { Category, ManifestResponse } from "../../lib/types";
 interface Check {
   id: string;
   ac: string;
-  layer: "data" | "render";
+  layer: "data" | "render" | "runtime";
   passed: boolean;
   detail: string;
 }
@@ -28,6 +28,12 @@ const qa = <T extends Element>(selector: string) => Array.from(document.querySel
 
 const rowIds = (selector: string) =>
   qa<HTMLElement>(selector).map((element) => element.dataset.drawerRow ?? "").filter(Boolean);
+
+/** 副图多选当前选中项（= 副图实例列表，容量判定与参数归属的唯一 DOM 事实来源）。 */
+const selectedSubs = () => {
+  const select = q<HTMLSelectElement>("[data-b2-sub-select]");
+  return select ? Array.from(select.selectedOptions).map((option) => option.value) : [];
+};
 
 const input = () => q<HTMLInputElement>("[data-drawer-search]");
 
@@ -93,12 +99,12 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const betaCount = items.filter((item) => item.status === "beta").length;
   push(
     "D-02",
-    "AC-02.04-03(补1)",
+    "AC-02.04-03(补3)",
     "data",
     planned.length === 61 && normalCount === 40 && betaCount === 4 && missingMeta.length === 0,
     `规划中 ${planned.length} / normal ${normalCount} / beta ${betaCount} / 缺四字段 ${
       missingMeta.map((item) => item.id).join(",") || "无"
-    }（manifest.plannedCount=${manifest.plannedCount} 为目录规划总量，非 status=planned 的条数）`,
+    }（manifest.catalogTotal=${manifest.catalogTotal} 为目录规划总量，非 status=planned 的条数）`,
   );
 
   // ---- 渲染层 ----
@@ -136,7 +142,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   }
   push(
     "R-02",
-    "AC-02.04-03",
+    "AC-02.04-03(补3)",
     "render",
     plannedInDom.length === 61 &&
       plannedInDom.every((row) => row.hasAbbr && (row.panel === "主" || row.panel === "副")),
@@ -149,22 +155,24 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   // 名称含 MACD 的其他条目只能是规划中变体（M07 归一化 MACD），必须置灰；
   // 无关长英文名不得因 m→a→c→d 子序列误命中。
   const macdExtras = macdRows.filter((row) => row.dataset.drawerRow !== "M06");
+  const normalHits = macdRows.filter((row) => row.dataset.drawerStatus !== "planned").length;
   push(
     "R-03",
     "AC-02.04-02",
     "render",
     (firstMacd?.dataset.drawerRow ?? "") === "M06" &&
+      normalHits === 1 &&
       (firstMacd?.dataset.drawerPanel ?? "") === "副" &&
       (firstMacd?.dataset.drawerParams ?? "") === "12,26,9" &&
       Boolean(firstMacd?.querySelector("mark")) &&
       macdExtras.every((row) => row.dataset.drawerStatus === "planned"),
     `搜索 MACD → ${macdRows
       .map((row) => `${row.dataset.drawerRow}:${row.dataset.drawerStatus}`)
-      .join(",")} / 首行 ${firstMacd?.dataset.drawerRow ?? "—"} 面板 ${
-      firstMacd?.dataset.drawerPanel ?? "—"
-    } 参数 ${firstMacd?.dataset.drawerParams ?? "—"} / 命中高亮=${
-      firstMacd?.querySelector("mark") ? "有" : "无"
-    }（AC 原文「只返回一行」与「规划中条目可搜到并置灰」冲突，见汇报）`,
+      .join(",")} / normal 命中 ${normalHits} / 首行 ${
+      firstMacd?.dataset.drawerRow ?? "—"
+    } 面板 ${firstMacd?.dataset.drawerPanel ?? "—"} 参数 ${
+      firstMacd?.dataset.drawerParams ?? "—"
+    } / 命中高亮=${firstMacd?.querySelector("mark") ? "有" : "无"}`,
   );
 
   await typeQuery("kdj");
@@ -229,6 +237,176 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     "render",
     closed && focused,
     `关闭=${closed ? "是" : "否"} / 焦点回归触发按钮=${focused ? "是" : "否"}`,
+  );
+
+  // ---- S-02.04-02 添加逻辑（已添加 / 容量 / 面板归属） ----
+  clickElement(trigger);
+  await waitFor(() => q("[data-indicator-drawer]"));
+  await sleep(120);
+
+  // R-09 已添加态：M06 默认就在副图，行内必须显示「已添加」且重复点击不再新增
+  await typeQuery("MACD");
+  const m06Button = q<HTMLElement>('[data-drawer-add="M06:sub"]');
+  const panelsBefore = qa("[data-sub-panel]").length;
+  clickElement(m06Button);
+  await sleep(120);
+  const m06Hint = q("[data-drawer-hint]")?.textContent ?? "";
+  push(
+    "R-09",
+    "AC-02.04-02(补1)",
+    "render",
+    m06Button?.dataset.drawerAdded === "1" &&
+      Boolean(m06Button?.textContent?.includes("已添加")) &&
+      qa("[data-sub-panel]").length === panelsBefore &&
+      m06Hint.includes("已添加"),
+    `M06 按钮已添加态=${m06Button?.dataset.drawerAdded} / 文案「${
+      m06Button?.textContent?.trim() ?? ""
+    }」/ 重击后副图 ${qa("[data-sub-panel]").length} 面板 / 提示「${m06Hint}」`,
+  );
+
+  // R-10 加入副图：M06 → +V01 → +M02，三个面板标题与数量都要对
+  await typeQuery("ATR");
+  clickElement(q('[data-drawer-add="V01:sub"]'));
+  await sleep(200);
+  await typeQuery("KDJ");
+  const addStartedAt = performance.now();
+  clickElement(q('[data-drawer-add="M02:sub"]'));
+  const m02Path = await waitFor(() => q('[data-sub-panel="M02"] [data-sub-key]'), 3_000, 20).catch(() => null);
+  const addWallMs = performance.now() - addStartedAt;
+  await sleep(200);
+  const subTitles = qa<HTMLElement>("[data-sub-panel]").map(
+    (panel) => panel.querySelector("[data-sub-title]")?.getAttribute("data-sub-title") ?? "",
+  );
+  push(
+    "R-10",
+    "AC-02.04-03",
+    "render",
+    qa("[data-sub-panel]").length === 3 &&
+      subTitles.some((title) => title.startsWith("MACD(")) &&
+      subTitles.some((title) => title.startsWith("ATR")) &&
+      subTitles.some((title) => title.startsWith("KDJ")),
+    `副图 ${qa("[data-sub-panel]").length} 个 / 标题 ${subTitles.join(" | ") || "无"}`,
+  );
+
+  // R-11 副图满 3：第 4 个按钮为禁用态、显示 3/3、带「请先移除一个指标」tooltip，
+  // 点击不改变副图数量，也不改动已有 3 个实例（无静默替换）
+  await typeQuery("ATRP");
+  const v02Button = q<HTMLButtonElement>('[data-drawer-add="V02:sub"]');
+  const v02Disabled = Boolean(v02Button?.disabled);
+  const subsBefore = selectedSubs();
+  clickElement(v02Button);
+  await sleep(200);
+  const subsAfter = selectedSubs();
+  const capacityText = q("[data-drawer-capacity]")?.textContent ?? "";
+  push(
+    "R-11",
+    "AC-02.04-03(补1)",
+    "render",
+    v02Disabled &&
+      qa("[data-sub-panel]").length === 3 &&
+      Boolean(v02Button?.dataset.drawerFull === "1") &&
+      capacityText.includes("副图 3/3") &&
+      (v02Button?.title ?? "") === "请先移除一个指标" &&
+      subsBefore.length === 3 &&
+      subsBefore.join(",") === subsAfter.join(","),
+    `第 4 个副图按钮 disabled=${v02Disabled} / full=${v02Button?.dataset.drawerFull} / 容量「${capacityText.trim()}」/ tooltip「${
+      v02Button?.title ?? ""
+    }」/ 副图 ${qa("[data-sub-panel]").length} 个 / 实例 ${subsBefore.join(
+      "+",
+    )} → ${subsAfter.join("+")}`,
+  );
+
+  // R-12 移除后恢复可添加：从副图多选里去掉 V01，V02 应重新可点且能加进第 3 个
+  const subSelect = q<HTMLSelectElement>("[data-b2-sub-select]");
+  if (subSelect) {
+    Array.from(subSelect.options).forEach((option) => {
+      if (option.value === "V01") option.selected = false;
+    });
+    subSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  await sleep(200);
+  await typeQuery("ATRP");
+  const v02After = q<HTMLButtonElement>('[data-drawer-add="V02:sub"]');
+  const reEnabled = !v02After?.disabled;
+  clickElement(v02After);
+  await sleep(200);
+  push(
+    "R-12",
+    "AC-02.04-03(补2)",
+    "render",
+    reEnabled &&
+      qa("[data-sub-panel]").length === 3 &&
+      Boolean(q<HTMLElement>('[data-sub-panel="V02"]')),
+    `移除 V01 后 V02 可添加=${reEnabled} / 副图 ${qa("[data-sub-panel]").length} 个 / V02 面板=${
+      Boolean(q<HTMLElement>('[data-sub-panel="V02"]')) ? "在" : "无"
+    }`,
+  );
+
+  // R-13 面板归属：主图条目只给「+ 主图」，副图条目只给「+ 副图」
+  await typeQuery("Envelopes");
+  const mainRow = q<HTMLElement>('[data-drawer-row="T08"]');
+  const mainHasSubButton = Boolean(mainRow?.querySelector('[data-drawer-add$=":sub"]'));
+  await typeQuery("KDJ");
+  const subRow = q<HTMLElement>('[data-drawer-row="M02"]');
+  const subHasMainButton = Boolean(subRow?.querySelector('[data-drawer-add$=":main"]'));
+  push(
+    "R-13",
+    "AC-02.04-04(补1)",
+    "render",
+    Boolean(mainRow) && !mainHasSubButton && Boolean(subRow) && !subHasMainButton,
+    `T08(主) 带副图按钮=${mainHasSubButton} / M02(副) 带主图按钮=${subHasMainButton}`,
+  );
+
+  // R-14 主图满 2：点第 3 个给明确提示，不静默替换掉已有叠加
+  await typeQuery("Envelopes");
+  const mainButton = q<HTMLElement>('[data-drawer-add="T08:main"]');
+  const mainFull = mainButton?.dataset.drawerFull === "1";
+  clickElement(mainButton);
+  await sleep(120);
+  const fullHint = q("[data-drawer-hint]")?.textContent ?? "";
+  push(
+    "R-14",
+    "AC-02.04-04",
+    "render",
+    mainFull && fullHint.includes("主图最多 2 个") && Boolean(mainButton?.dataset.drawerAdded === "0"),
+    `T08 full=${mainButton?.dataset.drawerFull} / 点击提示「${fullHint}」/ 未被静默加入=${mainButton?.dataset.drawerAdded}`,
+  );
+
+  // R-15 首次冷算 ≤300ms：M06 的冷算日志（页面挂载时首次计算）+ M02 抽屉点击到曲线出现
+  const dump = await ipc.telemetryDump(200);
+  const colds = dump.recent.filter((event) => event.name === "indicator.cold_ms");
+  const lastCold = (id: string) =>
+    [...colds].reverse().find((event) => String(event.fields.indicatorId ?? "") === id);
+  const m06ColdMs = Number(lastCold("M06")?.fields.coldMs ?? Number.NaN);
+  const m02ColdMs = Number(lastCold("M02")?.fields.coldMs ?? Number.NaN);
+  push(
+    "R-15",
+    "AC-02.04-04(补2)",
+    "runtime",
+    Boolean(m02Path) &&
+      m06ColdMs <= 300 &&
+      m02ColdMs <= 300 &&
+      addWallMs <= 300,
+    `M06 冷算 ${m06ColdMs.toFixed(2)}ms / M02 冷算 ${m02ColdMs.toFixed(2)}ms / M02 点击→曲线 ${addWallMs.toFixed(
+      0,
+    )}ms / 冷样本 ${dump.coldSamples} P95 ${dump.coldP95Ms ?? "—"}ms`,
+  );
+
+  // R-16 面板 180ms 展开只做位移/透明度，不叠绝对定位层遮挡坐标轴
+  const panelEl = q<HTMLElement>('[data-sub-panel="M02"]');
+  const animMs = panelEl ? Number.parseFloat(getComputedStyle(panelEl).animationDuration) * 1000 : Number.NaN;
+  const covering = panelEl
+    ? Array.from(panelEl.querySelectorAll<HTMLElement>("*")).filter((element) => {
+        const style = getComputedStyle(element);
+        return style.position === "absolute" && Number.parseFloat(style.zIndex || "0") > 0;
+      }).length
+    : -1;
+  push(
+    "R-16",
+    "AC-02.04-04(补2)",
+    "render",
+    Number.isFinite(animMs) && animMs >= 180 && animMs <= 200 && covering === 0,
+    `面板动画 ${animMs.toFixed(0)}ms / 覆盖坐标轴的绝对定位层 ${covering} 个`,
   );
 
   const report = {

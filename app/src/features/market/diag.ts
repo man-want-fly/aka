@@ -350,12 +350,35 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
         .join(",")}；前5=${ratioValues.join("/")}`,
     );
 
+    // ---- 渲染层：换手率降序 + 空值恒末尾（AC 已改为「任意数值列」，第二个实例）----
+    click(document.querySelector<HTMLElement>('[data-market-sort="turnoverPct"]'), "换手率列头");
+    await sleep(120);
+    const turnoverRows = rowEls();
+    const turnoverNulls = turnoverRows
+      .map((row, index) => (cellText(row, "turnoverPct") === "—" ? index : -1))
+      .filter((index) => index >= 0);
+    const turnoverTailCodes = turnoverRows
+      .slice(turnoverRows.length - turnoverNulls.length)
+      .map((row) => row.dataset.code ?? "");
+    push(
+      "R-07B",
+      "AC-01.01-03(补2)",
+      "render",
+      sortDirOf("turnoverPct") === "desc" &&
+        turnoverNulls.length > 0 &&
+        turnoverNulls[turnoverNulls.length - 1] === turnoverRows.length - 1 &&
+        JSON.stringify(turnoverTailCodes) === JSON.stringify([...turnoverTailCodes].sort()),
+      `换手率降序 空值 ${turnoverNulls.length} 行；尾部代码=${turnoverTailCodes.join(",")}`,
+    );
+
     // ---- 渲染层：分区 / 排序 / 列显隐落库 ----
     click(document.querySelector<HTMLElement>('[data-market-board="chinext"]'), "创业板分区");
     await sleep(80);
-    // R-07 把排序切到了量比；卡上 R-08 要的是「换手率降序」，重新点成降序。
-    click(document.querySelector<HTMLElement>('[data-market-sort="turnoverPct"]'), "换手率列头");
-    await sleep(80);
+    // 卡上 R-08 要的是「换手率降序」：R-07B 已切到换手率，只在非降序时再点一次
+    if (sortDirOf("turnoverPct") !== "desc") {
+      click(document.querySelector<HTMLElement>('[data-market-sort="turnoverPct"]'), "换手率列头");
+      await sleep(80);
+    }
     const chinextRows = rowEls().length;
     if (!document.querySelector<HTMLElement>("[data-market-columns]")) {
       click(document.querySelector<HTMLElement>("[data-market-columns-toggle]"), "列设置");

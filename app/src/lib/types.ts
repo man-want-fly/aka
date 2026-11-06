@@ -126,7 +126,8 @@ export interface ManifestIndicatorDto {
 /** 指标目录的单一事实来源；前端指标列表一律由它生成。 */
 export interface ManifestResponse {
   schemaVersion: number;
-  plannedCount: number;
+  /** 目录规划总量（含已实现）；status=planned 的条数需要按 indicators 自行统计 */
+  catalogTotal: number;
   /** 缓存键维度（七元组：后三项固定为 indicatorId、params、dateRange） */
   cacheKey: string[];
   indicators: ManifestIndicatorDto[];

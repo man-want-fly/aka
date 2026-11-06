@@ -74,6 +74,10 @@ export const B1_OVERLAY_CHOICES: Array<{ id: string; label: string }> = [
 
 export const DEFAULT_B2_OVERLAYS = ["T09", "T24"];
 export const DEFAULT_SUB_ID = "M06";
+/** 主图叠加容量（S-02.04-02）：满 2 后需先移除才能加 */
+export const MAX_MAIN_OVERLAYS = 2;
+/** 副图容量（S-02.04-02）：满 3 后需先移除才能加 */
+export const MAX_SUBPLOTS = 3;
 
 const B2_IDS = [
   "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T23", "T24",

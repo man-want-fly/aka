@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { StateCard } from "../../components/StateCard";
+import { MAX_MAIN_OVERLAYS, MAX_SUBPLOTS } from "./model";
 import type { AppError, Category, ManifestIndicatorDto, ManifestResponse } from "../../lib/types";
 
 const CATEGORY_LABELS: Array<{ key: Category; label: string }> = [
@@ -77,7 +78,7 @@ export interface IndicatorDrawerProps {
   error: AppError | null;
   onRetry: () => void;
   overlayIds: string[];
-  subId: string;
+  subIds: string[];
   onAddMain: (id: string) => void;
   onAddSub: (id: string) => void;
   onClose: () => void;
@@ -94,7 +95,7 @@ export function IndicatorDrawer({
   error,
   onRetry,
   overlayIds,
-  subId,
+  subIds,
   onAddMain,
   onAddSub,
   onClose,
@@ -148,16 +149,26 @@ export function IndicatorDrawer({
   }, [items, category, debounced]);
 
   const pick = (item: ManifestIndicatorDto) => {
+    const panel = panelKey(item);
+    const added = panel === "main" ? overlayIds.includes(item.id) : subIds.includes(item.id);
+    // 已添加 / 规划中 / 容量满 都属于「点得动但加不进」，一律给明确说法
+    if (added) {
+      setHint("该指标已添加");
+      return;
+    }
     if (item.status === "planned") {
-      // 规划中与 P1「本期未开放」是同一件事的两种说法，两条提示一起给，避免用户只看到一半
-      setHint(`「${item.nameZh}」该指标规划中（本期未开放）`);
+      setHint("该指标规划中，本期未开放");
       return;
     }
-    if (item.priority === "P1") {
-      setHint(`「${item.nameZh}」该指标本期未开放`);
+    if (panel === "main" && overlayIds.length >= MAX_MAIN_OVERLAYS) {
+      setHint(`主图最多 ${MAX_MAIN_OVERLAYS} 个叠加，请先移除一个`);
       return;
     }
-    if (item.panel === "主") onAddMain(item.id);
+    if (panel === "sub" && subIds.length >= MAX_SUBPLOTS) {
+      // 副图满 3 由禁用态拦截，不给 toast
+      return;
+    }
+    if (panel === "main") onAddMain(item.id);
     else onAddSub(item.id);
     setHint(`已加入「${item.nameZh}」`);
   };
@@ -170,6 +181,9 @@ export function IndicatorDrawer({
         <span className="ind-drawer__title">指标</span>
         <span className="caption mono" data-drawer-summary="1">
           {implementedCount} 可选 / {plannedCount} 规划中
+        </span>
+        <span className="caption mono" data-drawer-capacity="1">
+          主图 {overlayIds.length}/{MAX_MAIN_OVERLAYS} · 副图 {subIds.length}/{MAX_SUBPLOTS}
         </span>
         <button
           type="button"
@@ -258,7 +272,12 @@ export function IndicatorDrawer({
           <ul className="ind-drawer__list" data-drawer-list="1">
             {list.map((item) => {
               const planned = item.status === "planned";
-              const added = item.panel === "主" ? overlayIds.includes(item.id) : subId === item.id;
+              const panel = panelKey(item);
+              const added = panel === "main" ? overlayIds.includes(item.id) : subIds.includes(item.id);
+              const full =
+                panel === "main"
+                  ? overlayIds.length >= MAX_MAIN_OVERLAYS
+                  : subIds.length >= MAX_SUBPLOTS;
               const params = item.params.map((param) => String(param.default)).join(",");
               return (
                 <li key={item.id}>
@@ -296,22 +315,23 @@ export function IndicatorDrawer({
                         )}
                       </span>
                     </div>
-                    {(planned || item.priority === "P1") && item.priority === "P1" ? null : (
-                      <button
-                        type="button"
-                        className="add-btn"
-                        data-drawer-add={`${item.id}:${panelKey(item)}`}
-                        data-drawer-added={added ? "1" : "0"}
-                        aria-disabled={added || planned}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (added) return;
-                          pick(item);
-                        }}
-                      >
-                        {added ? "已添加" : item.panel === "主" ? "+ 主图" : "+ 副图"}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="add-btn"
+                      data-drawer-add={`${item.id}:${panel}`}
+                      data-drawer-added={added ? "1" : "0"}
+                      data-drawer-planned={planned ? "1" : "0"}
+                      data-drawer-full={full ? "1" : "0"}
+                      disabled={!added && !planned && full && panel === "sub"}
+                      aria-disabled={added || planned || full}
+                      title={!added && !planned && full ? "请先移除一个指标" : undefined}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        pick(item);
+                      }}
+                    >
+                      {added ? "✓ 已添加" : panel === "main" ? "+ 主图" : "+ 副图"}
+                    </button>
                   </div>
                 </li>
               );

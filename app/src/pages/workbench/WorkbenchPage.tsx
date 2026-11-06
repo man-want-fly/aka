@@ -14,6 +14,8 @@ import {
   DEFAULT_B2_OVERLAYS,
   DEFAULT_PARAMS,
   DEFAULT_SUB_ID,
+  MAX_MAIN_OVERLAYS,
+  MAX_SUBPLOTS,
   buildInstances,
   localCheck,
   type WorkbenchParams,
@@ -93,7 +95,7 @@ export function WorkbenchPage({
   const [appliedParams, setAppliedParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
   // B2 主图叠加与副图选择：纯客户端切换，指标实例已全量下发
   const [overlayIds, setOverlayIds] = useState<string[]>(DEFAULT_B2_OVERLAYS);
-  const [subId, setSubId] = useState<string>(DEFAULT_SUB_ID);
+  const [subIds, setSubIds] = useState<string[]>([DEFAULT_SUB_ID]);
   // S-02.04-01 指标抽屉：Esc 先关抽屉，不能再触发行情返回
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerOpenRef = useRef(false);
@@ -401,6 +403,18 @@ export function WorkbenchPage({
     };
   }, [manifest]);
 
+  // 副图面板标题按当前参数口径生成（AC-02.04-03：标题必须是 MACD(12,26,9) 这种形态）
+  const subLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    for (const item of manifest?.indicators ?? []) {
+      labels[item.id] =
+        item.id === "M06"
+          ? `MACD(${appliedParams.fast},${appliedParams.slow},${appliedParams.signal})`
+          : item.abbr;
+    }
+    return labels;
+  }, [manifest, appliedParams.fast, appliedParams.slow, appliedParams.signal]);
+
   const security = securities.find((item) => item.code === activeCode);
   const lastIndex = bars && bars.bars.length > 0 ? bars.bars.length - 1 : -1;
   const lastBar = lastIndex >= 0 ? bars!.bars[lastIndex] : undefined;
@@ -644,8 +658,15 @@ export function WorkbenchPage({
                 className="b2-select"
                 aria-label="副图指标"
                 data-b2-sub-select="1"
-                value={subId}
-                onChange={(event) => setSubId(event.target.value)}
+                multiple
+                size={3}
+                value={subIds}
+                onChange={(event) => {
+                  const picked = Array.from(event.target.selectedOptions).map(
+                    (option) => option.value,
+                  );
+                  setSubIds(picked.slice(0, MAX_SUBPLOTS));
+                }}
               >
                 {SUB_CHOICES.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -671,14 +692,15 @@ export function WorkbenchPage({
                     series={calc?.series ?? []}
                     windowSize={range}
                     overlayIds={overlayIds}
-                    subId={subId}
+                    subIds={subIds}
+                    subLabels={subLabels}
                     units={units}
                   />
                   <IndicatorReadouts
                     series={calc?.series ?? []}
                     barCount={bars.bars.length}
                     overlayIds={overlayIds}
-                    subId={subId}
+                    subIds={subIds}
                     units={units}
                   />
                 </>
@@ -710,11 +732,19 @@ export function WorkbenchPage({
                 error={manifest ? null : error}
                 onRetry={() => window.location.reload()}
                 overlayIds={overlayIds}
-                subId={subId}
+                subIds={subIds}
                 onAddMain={(id) =>
-                  setOverlayIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+                  setOverlayIds((prev) =>
+                    prev.includes(id) || prev.length >= MAX_MAIN_OVERLAYS
+                      ? prev
+                      : [...prev, id],
+                  )
                 }
-                onAddSub={(id) => setSubId(id)}
+                onAddSub={(id) =>
+                  setSubIds((prev) =>
+                    prev.includes(id) || prev.length >= MAX_SUBPLOTS ? prev : [...prev, id],
+                  )
+                }
                 onClose={closeDrawer}
               />
             )}
