@@ -60,6 +60,9 @@ pub struct TelemetrySummary {
 pub struct Telemetry {
     inner: Mutex<Inner>,
     log_path: Option<PathBuf>,
+    /// 复用同一个追加句柄：`emit` 是热路径（一次请求 40+ 条事件），逐条 `open/close` 在
+    /// dev 构建下实测占 6ms（TD-S0-07 微基准 ⑦b）。句柄延迟打开，写失败时保持为空、下条重试。
+    log_file: Mutex<Option<std::fs::File>>,
 }
 
 impl Default for Telemetry {
@@ -73,6 +76,7 @@ impl Telemetry {
         Self {
             inner: Mutex::new(Inner::default()),
             log_path: None,
+            log_file: Mutex::new(None),
         }
     }
 
@@ -84,6 +88,7 @@ impl Telemetry {
         Self {
             inner: Mutex::new(Inner::default()),
             log_path: Some(path),
+            log_file: Mutex::new(None),
         }
     }
 
@@ -105,8 +110,13 @@ impl Telemetry {
             let line = serde_json::to_string(&event)
                 .map(|json| format!("{json}\n"))
                 .unwrap_or_default();
-            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
-                let _ = file.write_all(line.as_bytes());
+            if let Ok(mut sink) = self.log_file.lock() {
+                if sink.is_none() {
+                    *sink = OpenOptions::new().create(true).append(true).open(path).ok();
+                }
+                if let Some(file) = sink.as_mut() {
+                    let _ = file.write_all(line.as_bytes());
+                }
             }
         }
 

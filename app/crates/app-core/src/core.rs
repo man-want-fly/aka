@@ -1126,6 +1126,310 @@ mod tests {
         assert_eq!(count_event.fields["cacheHit"], false);
     }
 
+    /// TD-S0-07 微基准：把缓存命中路径拆成 5 段计时（非交付断言，手动运行）。
+    ///
+    /// ```text
+    /// cargo test -p app-core --release microbench_breakdown -- --ignored --nocapture
+    /// cargo test -p app-core           microbench_breakdown -- --ignored --nocapture   # dev 构建
+    /// ```
+    #[ignore = "微基准，手动运行"]
+    #[tokio::test]
+    async fn microbench_breakdown() {
+        fn synth(security: &str, bars: usize) -> CandleSeries {
+            let mut day = Date::new(2020, 1, 2);
+            let mut candles = Vec::with_capacity(bars);
+            let mut price = 10.0_f64;
+            for i in 0..bars {
+                // 带噪声的随机游走，避免全等值导致缓存/序列化偏快
+                price += ((i as f64 * 0.37).sin() * 0.4) + 0.02;
+                candles.push(Candle {
+                    ts: day.epoch_secs(),
+                    date: day.iso(),
+                    open: price,
+                    high: price + 0.3,
+                    low: price - 0.3,
+                    close: price + 0.1,
+                    volume: 1_000.0 + i as f64,
+                    amount: (1_000.0 + i as f64) * price,
+                    adj_factor: 1.0,
+                    quality: vec![],
+                    source: "bench".to_string(),
+                });
+                day = day.next_weekday();
+            }
+            CandleSeries {
+                security: security.into(),
+                timeframe: "D".into(),
+                adj: "qfq".into(),
+                provider: "bench".into(),
+                dataset_id: "bench".into(),
+                data_version: "v0".into(),
+                dataset_generation: 1,
+                simulated: true,
+                generated_at: 0,
+                candles,
+            }
+        }
+
+        fn percentile(mut samples: Vec<f64>, ratio: f64) -> f64 {
+            samples.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            let index = ((samples.len() as f64 * ratio).ceil() as usize)
+                .saturating_sub(1)
+                .min(samples.len() - 1);
+            samples[index]
+        }
+
+        fn run<F: FnMut()>(label: &str, iters: usize, mut body: F) -> f64 {
+            let mut samples = Vec::with_capacity(iters);
+            for _ in 0..iters {
+                let started = Instant::now();
+                body();
+                samples.push(started.elapsed().as_secs_f64() * 1000.0);
+            }
+            let p50 = percentile(samples.clone(), 0.50);
+            let p95 = percentile(samples.clone(), 0.95);
+            let max = *samples
+                .iter()
+                .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .unwrap();
+            println!("    {label:<34} p50={p50:8.3}ms p95={p95:8.3}ms max={max:8.3}ms");
+            p50
+        }
+
+        for bars in [520_usize, 2_500] {
+            let core = AppCore::new_mock().await.unwrap();
+            let series = std::sync::Arc::new(synth("600519.SH", bars));
+            let key = SeriesKey {
+                security: "600519.SH".into(),
+                timeframe: "D".into(),
+                adj: "qfq".into(),
+            };
+            core.store_lock().unwrap().put(key.clone(), series.clone());
+
+            // 实例集合 = 前端一次请求的真实规模（44 个已实现指标 + 空参数走默认值）
+            let mut instance_ids: Vec<&'static str> =
+                all().iter().map(|ind| ind.meta().id).collect();
+            instance_ids.sort_unstable();
+            instance_ids.dedup();
+            let instances: Vec<crate::dto::InstanceRequest> = instance_ids
+                .iter()
+                .map(|id| crate::dto::InstanceRequest {
+                    instance_id: format!("bench-{id}"),
+                    indicator_id: id.to_string(),
+                    params: Default::default(),
+                })
+                .collect();
+            let request = |generation: u64| CalcRequest {
+                security: "600519.SH".into(),
+                timeframe: "D".into(),
+                adj: "qfq".into(),
+                from: None,
+                to: None,
+                generation,
+                instances: instances.clone(),
+            };
+
+            let cold = core.calc_indicators(&request(1)).await.unwrap();
+            assert!(cold.series.len() == instances.len());
+            let warm = core.calc_indicators(&request(2)).await.unwrap();
+            assert!(warm.cache_hit, "第 2 次请求必须全部命中缓存");
+            let window = resolve_window(&series, None, None).unwrap();
+
+            println!("\n=== TD-S0-07 微基准：{bars} 根 × {} 实例 ===", instances.len());
+
+            // ① 从缓存取序列（Arc clone）+ 窗口解析
+            run("① 从缓存取序列(Arc+window)", 200, || {
+                assert!(core.store_lock().unwrap().get(&key).is_some());
+            });
+
+            // ② 序列拷贝/转换：CandleSeries → 6 列连续 f64
+            run("② 序列拷贝(6 列 f64)", 100, || {
+                let columns = SeriesColumns::new(&series);
+                std::hint::black_box(&columns);
+            });
+
+            // ③ 每实例预处理：lookup + merge_defaults + validate + calc_key + params_hash + context
+            run("③ 每实例预处理(key/hash/ctx)", 40, || {
+                for instance in &instances {
+                    let indicator = lookup(&instance.indicator_id).unwrap();
+                    let meta = indicator.meta();
+                    let params = merge_defaults(meta.params, &instance.params);
+                    validate(meta.params, &params).unwrap();
+                    let key = calc_key(&series, meta, &params, &window.range);
+                    let hash = params_hash(&params);
+                    let context = telemetry_context(
+                        meta.id,
+                        &hash,
+                        &key,
+                        &series,
+                        window.end - window.start,
+                    );
+                    std::hint::black_box((key, hash, context));
+                }
+            });
+
+            // ④ 每实例缓存取（Mutex + HashMap + Arc clone）
+            run("④ 每实例缓存查表(Arc clone)", 200, || {
+                for instance in &instances {
+                    let indicator = lookup(&instance.indicator_id).unwrap();
+                    let meta = indicator.meta();
+                    let params = merge_defaults(meta.params, &instance.params);
+                    let key = calc_key(&series, meta, &params, &window.range);
+                    let hit = core.calc_cache.lock().unwrap().get(&key).cloned();
+                    std::hint::black_box(hit);
+                }
+            });
+
+            let mut missing: Vec<&'static str> = Vec::new();
+            let raws: Vec<(&'static str, std::sync::Arc<Vec<Vec<f64>>>)> = instances
+                .iter()
+                .filter_map(|instance| {
+                    let indicator = lookup(&instance.indicator_id).unwrap();
+                    let meta = indicator.meta();
+                    let params = merge_defaults(meta.params, &instance.params);
+                    let key = calc_key(&series, meta, &params, &window.range);
+                    match core.calc_cache.lock().unwrap().get(&key).cloned() {
+                        Some(values) => Some((meta.id, values)),
+                        None => {
+                            missing.push(meta.id);
+                            None
+                        }
+                    }
+                })
+                .collect();
+            if !missing.is_empty() {
+                let stored: Vec<String> = core.calc_cache.lock().unwrap().keys().cloned().take(3).collect();
+                let probe = {
+                    let instance = instances
+                        .iter()
+                        .find(|item| item.indicator_id == missing[0])
+                        .unwrap();
+                    let indicator = lookup(&missing[0]).unwrap();
+                    let meta = indicator.meta();
+                    let params = merge_defaults(meta.params, &instance.params);
+                    calc_key(&series, meta, &params, &window.range)
+                };
+                panic!("stored={stored:?}\nprobe={probe}\nrange={:?}", window.range);
+            }
+
+            // ⑤ DTO 组装：每输出 slice → Vec<Option<f64>>（NaN→null）
+            run("⑤ DTO 组装(NaN→null)", 100, || {
+                let built: Vec<SeriesDto> = instances
+                    .iter()
+                    .zip(raws.iter())
+                    .map(|(instance, (id, raw))| SeriesDto {
+                        instance_id: instance.instance_id.clone(),
+                        indicator_id: id.to_string(),
+                        outputs: raw
+                            .iter()
+                            .map(|values| OutputSeriesDto {
+                                key: "bench",
+                                label_zh: "基准",
+                                kind: indicator_core::OutputKind::Line,
+                                color: "--pos",
+                                values: values[window.start..window.end]
+                                    .iter()
+                                    .map(|v| if v.is_finite() { Some(*v) } else { None })
+                                    .collect(),
+                            })
+                            .collect(),
+                        warmup: 0,
+                        engine_version: 1,
+                    })
+                    .collect();
+                std::hint::black_box(&built);
+            });
+
+            // ⑥ IPC 报文序列化（整份 CalcResponse 与前端收到的同形）
+            let payload = CalcResponse {
+                generation: 2,
+                dataset_id: series.dataset_id.clone(),
+                dataset_generation: series.dataset_generation,
+                engine_version: ENGINE_VERSION,
+                computed_ms: 0.0,
+                cache_hit: true,
+                bar_count: window.end - window.start,
+                range: window.range.clone(),
+                series: instances
+                    .iter()
+                    .zip(raws.iter())
+                    .map(|(instance, (id, raw))| SeriesDto {
+                        instance_id: instance.instance_id.clone(),
+                        indicator_id: id.to_string(),
+                        outputs: raw
+                            .iter()
+                            .map(|values| OutputSeriesDto {
+                                key: "bench",
+                                label_zh: "基准",
+                                kind: indicator_core::OutputKind::Line,
+                                color: "--pos",
+                                values: values[window.start..window.end]
+                                    .iter()
+                                    .map(|v| if v.is_finite() { Some(*v) } else { None })
+                                    .collect(),
+                            })
+                            .collect(),
+                        warmup: 0,
+                        engine_version: 1,
+                    })
+                    .collect(),
+            };
+            let json_bytes = serde_json::to_string(&payload).unwrap().len();
+            run("⑥ 整份 Response 序列化", 40, || {
+                let text = serde_json::to_string(&payload).unwrap();
+                std::hint::black_box(text.len());
+            });
+            println!("    ⑥ 报文大小 = {:.1} KB", json_bytes as f64 / 1024.0);
+
+            // ⑦ 埋点：每实例一条 cache.hit，分别测「仅内存」与「内存 + JSONL 追加写」
+            let per_context = telemetry_context("T01", "deadbeef", "k", &series, 520);
+            let fields = |id: &'static str| {
+                let mut fields = per_context.clone();
+                fields[0] = ("indicatorId", serde_json::json!(id));
+                fields
+            };
+            let mem = Telemetry::in_memory();
+            run("⑦a 埋点(内存环形队列)", 40, || {
+                for id in &instance_ids {
+                    mem.emit(EVENT_CACHE_HIT, fields(*id));
+                }
+            });
+            let dir = std::env::temp_dir().join("aka-microbench-telemetry");
+            let _ = std::fs::create_dir_all(&dir);
+            let path = dir.join("telemetry.jsonl");
+            let _ = std::fs::remove_file(&path);
+            let sink = Telemetry::with_log_path(path.clone());
+            run("⑦b 埋点(内存+JSONL 落盘)", 40, || {
+                for id in &instance_ids {
+                    sink.emit(EVENT_CACHE_HIT, fields(*id));
+                }
+            });
+            let log_size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+            println!(
+                "    ⑦ JSONL 体积 = {:.1} KB（{} 条事件 × 40 轮）",
+                log_size as f64 / 1024.0,
+                instance_ids.len() * 40
+            );
+            std::fs::remove_dir_all(&dir).ok();
+
+            // ⑧ 端到端对照（含锁、事件、DTO 与序列化的完整 calc_indicators 墙钟）
+            let mut e2e: Vec<f64> = Vec::with_capacity(40);
+            for _ in 0..40 {
+                let started = Instant::now();
+                let response = core.calc_indicators(&request(2)).await.unwrap();
+                std::hint::black_box(&response);
+                e2e.push(started.elapsed().as_secs_f64() * 1000.0);
+            }
+            let p50 = percentile(e2e.clone(), 0.50);
+            let p95 = percentile(e2e.clone(), 0.95);
+            let max = *e2e
+                .iter()
+                .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .unwrap();
+            println!("    ⑧ 端到端 calc_indicators(命中) p50={p50:8.3}ms p95={p95:8.3}ms max={max:8.3}ms");
+        }
+    }
+
     /// QA-S0-033：单实例 MACD 切走切回 → 日志 `cache.hit=1` 且逐点一致。
     /// 判据中的「耗时 ≤120ms」属实机 UI 取证，本用例不代证（TD-S0-07 仍为部分清偿）。
     #[tokio::test]
