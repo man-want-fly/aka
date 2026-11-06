@@ -172,6 +172,27 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
     }`,
   );
 
+  // 手册覆盖度：61 条规划项不得残留占位公式；覆盖分层由 specStatus 承载
+  const plannedItems = items.filter((item) => item.status === "planned");
+  const placeholder = plannedItems.filter(
+    (item) => item.formulaSummary.includes("待《技术指标全能手册》核定") || item.formulaSummary.includes("待手册核定"),
+  );
+  const bySpec = (key: string) => plannedItems.filter((item) => item.specStatus === key).length;
+  push(
+    "D-06",
+    "S-03.01-01(手册)",
+    "data",
+    plannedItems.length === 61 &&
+      placeholder.length === 0 &&
+      bySpec("manualComplete") === 48 &&
+      bySpec("partial") === 9 &&
+      bySpec("productDefined") === 4 &&
+      plannedItems.every((item) => item.notes.includes("手册")),
+    `规划项 ${plannedItems.length} / 占位残留 ${placeholder.length} / 手册完整 ${bySpec(
+      "manualComplete",
+    )} 部分 ${bySpec("partial")} 未覆盖 ${bySpec("productDefined")}`,
+  );
+
   // ---- 渲染层 ----
   await waitFor(() => q("[data-catalog-root='p3']"));
   const header = q<HTMLElement>("[data-catalog-total]");
@@ -333,6 +354,22 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
     "render",
     t03Text.includes("默认参数") && t03Text.includes("本产品补全口径"),
     `T03 摘要「${t03Text.replace(/\s+/g, " ").trim()}」`,
+  );
+
+  const pendingBadge = q<HTMLElement>('[data-catalog-spec-pending="F16"]');
+  const manualPendingBadge = q<HTMLElement>('[data-catalog-spec-pending="T06"]');
+  push(
+    "R-12",
+    "S-03.01-01(手册)",
+    "render",
+    pendingBadge !== null &&
+      manualPendingBadge === null &&
+      rowText("F16").includes("口径待定"),
+    `F16 口径待定徽标=${pendingBadge !== null} / T06 口径待定徽标=${manualPendingBadge !== null} / F16 文案「${rowText(
+      "F16",
+    )
+      .replace(/\s+/g, " ")
+      .trim()}」`,
   );
 
   const report = {

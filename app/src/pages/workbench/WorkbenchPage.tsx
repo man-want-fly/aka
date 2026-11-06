@@ -33,6 +33,7 @@ import {
 } from "../../features/workbench/diag";
 import { runS205Diagnostics } from "../../features/workbench/s205Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
+import { runRestartDiagnostics } from "../../features/workbench/restartDiag";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type {
   AppError,
@@ -441,6 +442,36 @@ export function WorkbenchPage({
         (window as unknown as Record<string, unknown>).__AKA_S205_EVIDENCE__ = report;
       } catch (err) {
         setDiagStatus(`S-02.05-02 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, registry, securities, defaultParams]);
+
+  // S-02.05-02 物理重启验证：AKA_DIAG_TARGET=restart 时按 localStorage 标记跑第一次或第二次启动
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (window.sessionStorage.getItem("aka.restart.diag.done") === "1") return;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "restart" || !alive) return;
+      window.sessionStorage.setItem("aka.restart.diag.done", "1");
+      try {
+        const report = await runRestartDiagnostics(defaultParams);
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `重启验证（${report.phase}）：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+      } catch (err) {
+        const message = describeError(err).message;
+        setDiagStatus(`重启验证失败：${message}`);
+        void ipc.diagWriteNamed(
+          "s20502-restart-evidence.json",
+          JSON.stringify({ ok: false, phase: "error", error: message }, null, 2),
+        );
       }
     })();
     return () => {

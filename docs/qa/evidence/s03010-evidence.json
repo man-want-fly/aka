@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-06T21:30:00.301Z",
+  "finishedAt": "2026-11-06T21:47:04.190Z",
   "context": {
     "manifestCount": 105,
     "declaredTotal": 105,
@@ -50,6 +50,13 @@
       "layer": "data",
       "passed": true,
       "detail": "注册表 44 条 / 默认值不一致：无"
+    },
+    {
+      "id": "D-06",
+      "ac": "S-03.01-01(手册)",
+      "layer": "data",
+      "passed": true,
+      "detail": "规划项 61 / 占位残留 0 / 手册完整 48 部分 9 未覆盖 4"
     },
     {
       "id": "R-01",
@@ -127,6 +134,13 @@
       "layer": "render",
       "passed": true,
       "detail": "T03 摘要「默认参数20数据要求至少 20 根 K 线（首个有效值下标 19，0 基）适用周期日线 · 周线 · 月线口径来源本产品补全口径 · PRD 附录 A」"
+    },
+    {
+      "id": "R-12",
+      "ac": "S-03.01-01(手册)",
+      "layer": "render",
+      "passed": true,
+      "detail": "F16 口径待定徽标=true / T06 口径待定徽标=false / F16 文案「F16广度突破Breadth Thrust副图补全口径规划中口径待定摘要」"
     }
   ]
 }

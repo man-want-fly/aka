@@ -22,7 +22,11 @@ const categoryLabel = (key: Category) =>
   CATEGORIES.find((entry) => entry.key === key)?.label ?? key;
 
 const sourceLabel = (item: ManifestIndicatorDto) => {
-  if (item.status === "planned") return "PRD 附录 A · 待《技术指标全能手册》核定";
+  if (item.status === "planned") {
+    if (item.specStatus === "manualComplete") return "《技术指标全能手册》· 完整覆盖";
+    if (item.specStatus === "partial") return "《技术指标全能手册》· 部分覆盖，口径由 BA 定";
+    return "手册未覆盖 · 本产品定义，待 BA 拍板";
+  }
   if (item.isCompletion) return "本产品补全口径 · PRD 附录 A";
   if (item.completeness === "beta") return "PRD beta 口径 · 待裁定";
   return `PRD 附录 A · 引擎 v${item.version}`;
@@ -173,6 +177,11 @@ export function CatalogPage({ onNavigate }: Props) {
             {item.isCompletion && <span className="tag tag--beta">补全口径</span>}
             {item.completeness === "beta" && <span className="tag tag--accent">beta</span>}
             {planned && <span className="tag tag--muted">规划中</span>}
+            {planned && item.specStatus !== "manualComplete" && (
+              <span className="tag tag--accent" data-catalog-spec-pending={item.id}>
+                口径待定
+              </span>
+            )}
           </div>
           <button
             type="button"

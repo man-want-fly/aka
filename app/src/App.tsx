@@ -83,7 +83,7 @@ export default function App() {
           return;
         }
         // S-02.05-02 恢复默认取证：进工作台，占住其它套件的 once 位。
-        if (target === "s205") {
+        if (target === "s205" || target === "restart") {
           sessionStorage.setItem("aka.s2.diag.once", "1");
           sessionStorage.setItem("aka.drawer.diag.done", "1");
           sessionStorage.setItem("aka.catalog.diag.done", "1");

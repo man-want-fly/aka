@@ -1,0 +1,48 @@
+{
+  "ok": true,
+  "phase": "after-restart",
+  "finishedAt": "2026-11-06T21:52:57.490Z",
+  "phaseA": {
+    "finishedAt": "2026-11-06T21:52:06.656Z",
+    "applied": "10/22/8",
+    "stored": "10/22/8",
+    "exitMethod": "kill -TERM aka-desktop 进程（等同关闭应用窗口）"
+  },
+  "phaseB": {
+    "finishedAt": "2026-11-06T21:52:57.490Z",
+    "firstScreen": "12/26/9",
+    "stored": null,
+    "restoreDisabled": true,
+    "subtitleDefault": false
+  },
+  "checks": [
+    {
+      "id": "PA-04",
+      "ac": "AC-02.05-04",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "重启后 sessionStorage = 空"
+    },
+    {
+      "id": "PA-05",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "重启后首屏参数 12/26/9（manifest 默认 12/26/9）"
+    },
+    {
+      "id": "PA-06",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "重启后恢复按钮 disabled=true"
+    },
+    {
+      "id": "PA-07",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "重启后无残留 MACD(10,22,8)=true · 副图标题含 MACD(12,26,9)=false（首屏未选标的时副图不渲染，仅以无残留为准）"
+    }
+  ]
+}

@@ -46,6 +46,7 @@
 | TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿（完整签认）**：G 线 dev(`opt-level=1`) 3 批 × 30 样本 max 48/58/40ms 通过；P 线 release 90 样本 × 3 批 批 max 89/39/27ms 通过（P50 22 / P95 26，命中 90/90、逐点一致）；回退条款保留。`#1` 123ms 属 load avg 8.4 受扰批次，样本保留但不作通过批次；`229/192/132ms` 为 dev（未加 opt-level）历史坏样本 |
 | TD-S0-08 | QA-S0-062 | `data/real` 实物不存在，无法验证 real 不变、仅 sim 变化 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-09 | QA-S0-070 | `data/sim` 实物与固定 sha256 算法未落地，无法重算对拍 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
+| TD-S3-01 | S-03.01 自查 | 组件/渲染层仍保留 `T15/T16/T13/M25/M06` 等指标 id 字面量，作为视觉分支与槽位键；manifest 无 `workbenchRole` | 0.5 人日 | **待 BA 排期**（不阻塞当前节奏） | **已登记，未清偿** |
 
 **合计：3.5 人日**（与用户裁定的 S2 前清零窗口一致）。
 
@@ -346,6 +347,22 @@
   `manifest_covers_rows_and_verifies_after_write`（写后复算通过）。
 - **产物**：`app/data/sim/seed-42/manifest.json.sha256` 与 `records.csv` 字节重算一致（`generation-report.json`
   每个 generation `verified: true`）。
+
+## 新增登记（S-03.01 批次）
+
+### TD-S3-01 · 组件层指标 id 字面量（用户裁定：不清，记技术债）
+
+- **当前缺口**：manifest 已成唯一内容源（`abbr/pinyin_initials/panel/formula_summary` 只定义一次，`content.ts` 副本已删除），
+  但渲染层仍按 id 字面量做视觉分支：`CandleChart` 的 `T15` 云带、`T16` 翻转箭头、`T13` 翻轨点、`T09` 中轨虚线、`M06` 副图、`M25` 状态点；
+  `ParamPanel` 按 `T01/M06` 取 ParamSpec 边界；`WorkbenchPage` 过滤 `M06`。manifest 无 `workbenchRole` 字段，
+  槽位归属（MA 基座 / 主图叠加 / 副图）仍是前端硬编码。
+- **性质**：用户已书面裁定这些是「以 manifest 字段为 key 的引擎键绑定」，不是内容副本；**暂不清偿**。
+- **归属**：开发侧登记（本文件）；偿还时点与优先级由 **BA 排期**，开发不自行排期。
+- **为什么可以带病运行**：id 只作槽位/视觉分支键，文案与公式仍全部来自 manifest；id 拼写错误会在
+  `model.ts` 的 `choices()` 与 Rust `registry_matches_manifest` 两侧暴露（缺 id 直接抛错）。
+- **若将来偿还**（建议方案，不承诺）：manifest 增 `workbenchRole: "ma-base" | "b2-overlay" | "b2-sub" | "b3-sub"`，
+  前端改为读该字段挑选槽位，组件内不再出现 id 字面量；预计 0.5 人日，需同步 Rust DTO 与目录徽标。
+- **影响面**：只影响可维护性，不影响当前任何 AC；不阻塞 `S-01.02` 三张卡。
 
 ## 防污染声明（S1 期间适用，已归档）
 
