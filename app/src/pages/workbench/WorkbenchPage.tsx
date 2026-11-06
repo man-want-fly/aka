@@ -733,6 +733,7 @@ export function WorkbenchPage({
                 onRetry={() => window.location.reload()}
                 overlayIds={overlayIds}
                 subIds={subIds}
+                hasTarget={Boolean(security)}
                 onAddMain={(id) =>
                   setOverlayIds((prev) =>
                     prev.includes(id) || prev.length >= MAX_MAIN_OVERLAYS

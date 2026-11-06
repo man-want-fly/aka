@@ -79,6 +79,8 @@ export interface IndicatorDrawerProps {
   onRetry: () => void;
   overlayIds: string[];
   subIds: string[];
+  /** 当前工作台是否已有有效标的；无标的不允许把指标加进图表 */
+  hasTarget: boolean;
   onAddMain: (id: string) => void;
   onAddSub: (id: string) => void;
   onClose: () => void;
@@ -96,6 +98,7 @@ export function IndicatorDrawer({
   onRetry,
   overlayIds,
   subIds,
+  hasTarget,
   onAddMain,
   onAddSub,
   onClose,
@@ -150,6 +153,11 @@ export function IndicatorDrawer({
 
   const pick = (item: ManifestIndicatorDto) => {
     const panel = panelKey(item);
+    // 无标的：指标无处可加，先给引导，不能静默失败
+    if (!hasTarget) {
+      setHint("请先在行情页选择一只标的");
+      return;
+    }
     const added = panel === "main" ? overlayIds.includes(item.id) : subIds.includes(item.id);
     // 已添加 / 规划中 / 容量满 都属于「点得动但加不进」，一律给明确说法
     if (added) {
@@ -185,6 +193,14 @@ export function IndicatorDrawer({
         <span className="caption mono" data-drawer-capacity="1">
           主图 {overlayIds.length}/{MAX_MAIN_OVERLAYS} · 副图 {subIds.length}/{MAX_SUBPLOTS}
         </span>
+        {!hasTarget && (
+          <span className="caption" data-drawer-no-target="1">
+            请先在行情页选择一只标的{" "}
+            <a className="link" href="#/market" data-drawer-go-market="1">
+              去行情页
+            </a>
+          </span>
+        )}
         <button
           type="button"
           className="icon-btn"
@@ -322,9 +338,10 @@ export function IndicatorDrawer({
                       data-drawer-added={added ? "1" : "0"}
                       data-drawer-planned={planned ? "1" : "0"}
                       data-drawer-full={full ? "1" : "0"}
-                      disabled={!added && !planned && full && panel === "sub"}
-                      aria-disabled={added || planned || full}
-                      title={!added && !planned && full ? "请先移除一个指标" : undefined}
+                      disabled={!hasTarget || (!added && !planned && full && panel === "sub")}
+                      aria-disabled={!hasTarget || added || planned || full}
+                      title={!hasTarget ? "请先在行情页选择一只标的" : !added && !planned && full ? "请先移除一个指标" : undefined}
+                      data-drawer-blocked={!hasTarget ? "1" : "0"}
                       onClick={(event) => {
                         event.stopPropagation();
                         pick(item);

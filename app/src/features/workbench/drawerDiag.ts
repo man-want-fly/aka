@@ -409,6 +409,52 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     `面板动画 ${animMs.toFixed(0)}ms / 覆盖坐标轴的绝对定位层 ${covering} 个`,
   );
 
+  // R-17 无标的：加入按钮禁用 + 「请先在行情页选择一只标的」引导 + 去行情页链接；
+  // 行内点击只能出提示，不能静默把指标加进一个不存在的标的。
+  // 经目录页中转，让工作台以「不存在的代码」重新挂载（同一路由内改 hash 不会重建组件）。
+  window.location.hash = "#/catalog";
+  await sleep(250);
+  window.location.hash = "#/workbench/999999.XX";
+  const noTargetName = await waitFor(
+    () => {
+      const name = q("[data-wb-name]")?.textContent ?? "";
+      return name.includes("未选择标的") ? name : null;
+    },
+    5_000,
+    100,
+  ).catch(() => "");
+  clickElement(await waitFor(() => q<HTMLElement>("[data-drawer-trigger]"), 5_000, 50).catch(() => null));
+  await waitFor(() => q("[data-indicator-drawer]"), 5_000, 50).catch(() => null);
+  await sleep(120);
+  const guide = q<HTMLElement>("[data-drawer-no-target]");
+  const guideText = (guide?.textContent ?? "").replace(/\s+/g, " ").trim();
+  const goMarket = guide?.querySelector<HTMLAnchorElement>("[data-drawer-go-market]");
+  await typeQuery("kdj");
+  const m02Button = q<HTMLButtonElement>('[data-drawer-add="M02:sub"]');
+  const blocked = m02Button?.dataset.drawerBlocked === "1" && Boolean(m02Button.disabled);
+  const subsBeforeNoTarget = selectedSubs();
+  clickElement(q<HTMLElement>('[data-drawer-row="M02"]'));
+  await sleep(120);
+  const subsAfterNoTarget = selectedSubs();
+  const noTargetHint = q("[data-drawer-hint]")?.textContent ?? "";
+  push(
+    "R-17",
+    "AC-03.01-05(补1)",
+    "render",
+    noTargetName.includes("未选择标的") &&
+      Boolean(guide) &&
+      guideText.includes("请先在行情页选择一只标的") &&
+      (goMarket?.getAttribute("href") ?? "") === "#/market" &&
+      blocked &&
+      subsBeforeNoTarget.join(",") === subsAfterNoTarget.join(",") &&
+      noTargetHint.includes("请先在行情页选择一只标的"),
+    `标的=${noTargetName || "—"} / 引导「${guideText}」/ 去行情页 href=${goMarket?.getAttribute(
+      "href",
+    )} / M02 禁用=${blocked} / 副图实例=${subsBeforeNoTarget.join(
+      "+",
+    )} → ${subsAfterNoTarget.join("+")} / 行点击提示「${noTargetHint}」`,
+  );
+
   const report = {
     ok: checks.every((check) => check.passed),
     finishedAt: new Date().toISOString(),
