@@ -8,7 +8,7 @@
 | 裁定对象 | `docs/qa/aka-b2-ac-evidence-v0.1.md` §4：T13 / T15 / T16 / T23 / T24 / V08 |
 | 口径基线 | `docs/indicators/b2-channel-volatility.md`；Story 卡 `S-03.05-01 ~ 08`；`app/manifest/indicators.json` |
 | 结论 | **5 条转 normal（R-01 / R-02 / R-04 / R-05 / R-06）；R-03（T16）保留 beta** |
-| 边界 | 只冻结口径，不判定进 UI、不判定 Story 卡结项；B2 八卡仍为「数值层未挂 / 渲染层未做 / 整卡未结项」 |
+| 边界 | 只冻结口径，不判定进 UI、不判定 Story 卡结项；卡状态以 `docs/qa/aka-story-completion-ledger-v0.1.md` 为准（B2 八卡 2026-11-06 已进 UI，但渲染差异条款未测，台账仍判 `数值层已具备`） |
 
 > 使用方式：开发按 §3 改 manifest；QA 按 §2 的可测断言复核。口径页各条的「beta 原因」已回写为「口径裁定」。
 
