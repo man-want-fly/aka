@@ -1,6 +1,6 @@
 # AKA · Sprint 0 技术债登记（v0.1）
 
-> 状态：**6 条已清偿 / 3 条部分清偿（2026-11-06 清债批次）**
+> 状态：**9 条全部已清偿**（2026-11-06 清债批次 + 2026-11-06 S2 实机取证批次）
 >
 > 本文件登记 BA S0 验收清单中 9 条阻塞项（`blocking=是`）的实际缺口。用户已拍板「带条件进 S1」，
 > 即 S1 期间允许在这些缺口未清零的情况下开工，但必须留账：
@@ -11,8 +11,9 @@
 > 4. 数据集 `sha256` 落地前，黄金夹具的数据源固定为可复现生成脚本
 >    `app/crates/indicator-golden/fixtures/gen_reference.py`，**禁止手工改数据文件**。
 >
-> 2026-11-06 清偿批次：机制与实现层全部落地；TD-S0-04 / 06 / 07 因「实机 UI 端到端取证」
-> 按 BA 裁定归入 S2 前端批次，如实标为**部分清偿**（证据见文末「清偿证据」）。
+> 2026-11-06 清偿批次：机制与实现层全部落地。
+> 2026-11-06 S2 实机取证批次：`TD-S0-04 / 06 / 07` 的真实 Tauri 窗口取证完成，三条改「已清偿」，
+> 证据见 [`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md)。
 >
 > 关联文档：[S0 验收清单](./aka-s0-acceptance-checklist-v0.1.md)、[README](../../app/README.md)。
 
@@ -23,10 +24,10 @@
 | TD-S0-01 | T-01（部分） | DateRange 主链路已通，但周/月聚合与 T-01 完整验收证据未做 | 1.0 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-02 | T-05（实物） | dataset manifest 只有内存契约，无 `data/sim`、`data/real` 实物与 sha256 | 0.8 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-03 | QA-S0-015 | 周线聚合未实现，无法做 ISO 周手算对拍 | 0.4 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
-| TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **部分清偿**（UI 取证待 S2） |
+| TD-S0-04 | QA-S0-022 | 无 `indicator.compute` 日志，参数防抖「仅 1 条请求」无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
 | TD-S0-05 | QA-S0-028 | 无 `compute.count` / `compute.skip` 埋点，5 实例去重计数无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
-| TD-S0-06 | QA-S0-029 | 无 `indicator.cold_ms` 埋点，冷缓存 30 次 P95 无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **部分清偿**（UI 取证待 S2） |
-| TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **部分清偿**（UI 取证待 S2） |
+| TD-S0-06 | QA-S0-029 | 无 `indicator.cold_ms` 埋点，冷缓存 30 次 P95 无法取证 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
+| TD-S0-07 | QA-S0-033 | 无 `cache.hit` 日志与切回耗时取证；命中仅进程内计数 | 0.2 人日 | S2 开工前 3.5 人日清零 | **已清偿**（S2 实机取证） |
 | TD-S0-08 | QA-S0-062 | `data/real` 实物不存在，无法验证 real 不变、仅 sim 变化 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 | TD-S0-09 | QA-S0-070 | `data/sim` 实物与固定 sha256 算法未落地，无法重算对拍 | 0.25 人日 | S2 开工前 3.5 人日清零 | **已清偿** |
 
@@ -166,16 +167,19 @@
   首末与日线一致；`dataset_generation=1`）；`calendar` 的 `iso_week_year_boundary_is_hand_checked`
   （2021-01-01 → 2020-W53，2024-12-30 → 2025-W01）；Python 独立对拍 mismatch 0（见 TD-S0-01）。
 
-### TD-S0-04 · QA-S0-022 参数防抖日志 → 部分清偿
+### TD-S0-04 · QA-S0-022 参数防抖日志 → 已清偿
 
 - **已落地**：`app-core::telemetry` 的 `indicator.compute` JSONL（字段 `code/period/adj/indicatorId/paramsHash/cacheKey/datasetId/barCount`）；
   `ParamDebouncer`（`TYPICAL_INPUT_GAP_MS=40`、`DEFAULT_DEBOUNCE_QUIET_MS=120`）；
   前端 `WorkbenchPage` 120ms 静默防抖。
 - **证据**：`debounce_fires_once_after_120ms_quiet_with_40ms_inputs`、`separate_bursts_fire_separately`、
   `jsonl_sink_appends_machine_readable_events`；`cargo test -p app-core`。
-- **未清部分（原因）**：清零判据要求「实机连键 1→12→120 后日志仅 1 条」。这需要运行 Tauri UI 并读取
-  `~/Library/Application Support/aka/logs/telemetry.jsonl`；BA 已把渲染层/UI 取证归入 S2（`TD-B1-02`），
-  本批次不代跑，故标部分清偿。
+- **S2 实机取证（清零判据达成）**：真 Tauri 窗口连键 `1→12→120`（40ms 间隔）→ `requestsIssued=1`、
+  `compute.count` 增量 0（该请求在 TEMA 预热阶段返回 `INSUFFICIENT_DATA`，需 540 根/实际 520 根）；
+  同口径 `1→12→60` → `requestsIssued=1`、`compute.count` **增量 1**、`barCount=520`、`totalMs=18`。
+  两组共同证明「静默窗口只放行一次请求，且该请求只计算一次」。
+  证据：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §1、
+  [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `debounce` 段。
 
 ### TD-S0-05 · QA-S0-028 批量计算计数 → 已清偿
 
@@ -188,22 +192,28 @@
   `compute.count=2`、`compute.skip=1`、`indicator.compute=2`，重复实例只算一次。
 - **命令 / 输出**：`cargo test -p app-core calc_telemetry` → 3 passed（5 实例 / 3 实例去重 / 单 MACD 缓存命中）。
 
-### TD-S0-06 · QA-S0-029 冷算耗时 → 部分清偿
+### TD-S0-06 · QA-S0-029 冷算耗时 → 已清偿
 
 - **已落地**：`indicator.cold_ms` 事件 + 内存环就近秩 P95（`cold_p95_ms`），`telemetry_dump` 返回
   `coldSamples / coldP95Ms`。
 - **证据**：`thirty_cold_samples_produce_p95`（30 个**合成**样本 → P95=28.0，仅验证就近秩口径）、
   `calc_telemetry_records_dedup_cache_and_cold_ms`（真实计算路径产出 `cold_p95_ms().is_some()`）。
-- **未清部分（原因）**：「冷缓存切 30 次 P95 ≤300ms、报价头 ≤60ms」需真实 UI 交互与墙钟采样；
-  上述合成样本**不代表**实机耗时，实机数值待 S2 取证。
+- **S2 实机取证（清零判据达成）**：30 个去重标的各自冷切一次，`allMiss=true`；
+  `barsMs` P95 **20ms**（≤60ms 报价头阈值）、`calcMs` P95 **28ms**、`totalMs` P95 **31ms**（≤300ms）、
+  `totalMs` max **67ms**；引擎侧 `indicator.cold_ms` 350 样本 P95 **0.65ms**。
+  证据：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §2、
+  [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `cold` 段（含 30 行采样表）。
 
-### TD-S0-07 · QA-S0-033 缓存命中日志 → 部分清偿
+### TD-S0-07 · QA-S0-033 缓存命中日志 → 已清偿
 
 - **已落地**：缓存命中/未命中均发 `cache.hit` / `cache.miss`；缓存键仍为 7 元组（含规范化 DateRange）。
 - **判据对拍（单实例 MACD）**：`single_macd_cache_hit_logs_one_event_and_values_match` —— 首次 miss、切回
   `cache.hit=1`、`indicator.compute` 不增长，且 DIF/DEA/HIST 三列 `values` 逐点相等（缓存直返一致）。
 - **多实例命中另测**：`calc_telemetry_records_dedup_cache_and_cold_ms` 二次请求 `cache.hit=2`（两个缓存项各 1 条）。
-- **未清部分（原因）**：仅剩「切回总耗时 ≤120ms」需实机 UI 墙钟取证，属 S2 UI 批次；逐点一致已由上述用例对拍。
+- **S2 实机取证（清零判据达成）**：10 个标的切回，`allCacheHit=true`、`allPointwiseMatch=true`（10/10 序列哈希相等）、
+  `totalMs` P95 **21ms**、max **21ms**（≤120ms）；`cache.hit` 138 条 / `cache.miss` 350 条于实机日志。
+  证据：[`aka-s2-real-machine-evidence-v0.1.md`](./aka-s2-real-machine-evidence-v0.1.md) §3、
+  [`s2-evidence.json`](./evidence/s2-20261106/s2-evidence.json) `warm` 段（含 10 行采样表）。
 
 ### TD-S0-08 · QA-S0-062 sim/real 隔离 → 已清偿
 

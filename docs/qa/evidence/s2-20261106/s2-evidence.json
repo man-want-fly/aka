@@ -1,0 +1,1391 @@
+{
+  "schemaVersion": 1,
+  "kind": "aka-s2-evidence",
+  "generatedAt": "2026-11-06T13:41:13.887Z",
+  "engine": {
+    "engineVersion": "aka-engine-0.1.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)"
+  },
+  "debounce": {
+    "target": "1→12→120（台账判据）+ 1→12→60（成功单次 compute 佐证）",
+    "burst120": {
+      "label": "1→12→120",
+      "inputs": [
+        1,
+        12,
+        120
+      ],
+      "inputGapMs": 40,
+      "quietMs": 120,
+      "requestsIssued": 1,
+      "computeCountEvents": 0,
+      "samples": [
+        {
+          "phase": "debounce",
+          "security": "300750.SZ",
+          "timeframe": "D",
+          "adj": "qfq",
+          "barsMs": null,
+          "calcMs": null,
+          "totalMs": 14,
+          "cacheHit": false,
+          "computedMs": null,
+          "barCount": 0,
+          "seriesHash": "error",
+          "seriesPoints": 0,
+          "error": "INSUFFICIENT_DATA: 三重指数移动平均线 需要至少 540 根 K 线（预热 539），当前 520 根"
+        }
+      ],
+      "passed": true
+    },
+    "burst60": {
+      "label": "1→12→60",
+      "inputs": [
+        1,
+        12,
+        60
+      ],
+      "inputGapMs": 40,
+      "quietMs": 120,
+      "requestsIssued": 1,
+      "computeCountEvents": 1,
+      "samples": [
+        {
+          "phase": "debounce",
+          "security": "300750.SZ",
+          "timeframe": "D",
+          "adj": "qfq",
+          "barsMs": 11.00000000000091,
+          "calcMs": 15,
+          "totalMs": 18,
+          "cacheHit": false,
+          "computedMs": 0.57,
+          "barCount": 520,
+          "seriesHash": "1ccf8fcd",
+          "seriesPoints": 7575
+        }
+      ],
+      "passed": true
+    },
+    "telemetry": {
+      "computeCount": 44,
+      "indicatorCompute": 350
+    }
+  },
+  "cold": {
+    "targetCount": 30,
+    "sampleCount": 30,
+    "codes": [
+      "600519.SH",
+      "002594.SZ",
+      "601318.SH",
+      "600036.SH",
+      "000858.SZ",
+      "688981.SH",
+      "300059.SZ",
+      "601899.SH",
+      "002415.SZ",
+      "600030.SH",
+      "601012.SH",
+      "000651.SZ",
+      "600900.SH",
+      "000001.SH",
+      "399001.SZ",
+      "399006.SZ",
+      "601000.SH",
+      "601001.SH",
+      "601002.SH",
+      "601003.SH",
+      "601004.SH",
+      "601005.SH",
+      "601006.SH",
+      "601007.SH",
+      "601008.SH",
+      "601009.SH",
+      "601010.SH",
+      "601011.SH",
+      "601013.SH",
+      "601014.SH"
+    ],
+    "allMiss": true,
+    "p95CalcMs": 28,
+    "p95TotalMs": 31,
+    "p95BarsMs": 20,
+    "maxTotalMs": 67,
+    "telemetryColdSamples": 350,
+    "telemetryColdP95Ms": 0.65,
+    "samples": [
+      {
+        "security": "600519.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 26,
+        "totalMs": 28,
+        "cacheHit": false,
+        "computedMs": 2.79,
+        "barCount": 520,
+        "seriesHash": "89c928db",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "002594.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 24,
+        "totalMs": 26,
+        "cacheHit": false,
+        "computedMs": 2.86,
+        "barCount": 520,
+        "seriesHash": "22ca8714",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601318.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 22,
+        "totalMs": 25,
+        "cacheHit": false,
+        "computedMs": 2.59,
+        "barCount": 520,
+        "seriesHash": "309323f0",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "600036.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 23,
+        "totalMs": 25,
+        "cacheHit": false,
+        "computedMs": 2.58,
+        "barCount": 520,
+        "seriesHash": "c5bd26e1",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "000858.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 21,
+        "totalMs": 23,
+        "cacheHit": false,
+        "computedMs": 2.61,
+        "barCount": 520,
+        "seriesHash": "d77fa28c",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "688981.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 20,
+        "calcMs": 22,
+        "totalMs": 24,
+        "cacheHit": false,
+        "computedMs": 2.8,
+        "barCount": 520,
+        "seriesHash": "e278d58c",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "300059.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 21,
+        "totalMs": 23,
+        "cacheHit": false,
+        "computedMs": 2.78,
+        "barCount": 520,
+        "seriesHash": "da0c344e",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601899.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 16,
+        "totalMs": 18,
+        "cacheHit": false,
+        "computedMs": 3.28,
+        "barCount": 520,
+        "seriesHash": "b615032a",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "002415.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 24,
+        "totalMs": 26,
+        "cacheHit": false,
+        "computedMs": 3.01,
+        "barCount": 520,
+        "seriesHash": "e7c32582",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "600030.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 23,
+        "totalMs": 25,
+        "cacheHit": false,
+        "computedMs": 2.65,
+        "barCount": 520,
+        "seriesHash": "0b15d02f",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601012.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 21,
+        "totalMs": 24,
+        "cacheHit": false,
+        "computedMs": 3.68,
+        "barCount": 520,
+        "seriesHash": "73034597",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "000651.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 24,
+        "totalMs": 27,
+        "cacheHit": false,
+        "computedMs": 3.53,
+        "barCount": 520,
+        "seriesHash": "219866ee",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "600900.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 21,
+        "totalMs": 24,
+        "cacheHit": false,
+        "computedMs": 2.55,
+        "barCount": 520,
+        "seriesHash": "46194d9f",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "000001.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 19,
+        "totalMs": 21,
+        "cacheHit": false,
+        "computedMs": 1.84,
+        "barCount": 520,
+        "seriesHash": "04bb79a4",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "399001.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 20,
+        "calcMs": 27,
+        "totalMs": 29,
+        "cacheHit": false,
+        "computedMs": 3.63,
+        "barCount": 520,
+        "seriesHash": "a019a5a2",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "399006.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 18,
+        "calcMs": 23,
+        "totalMs": 25,
+        "cacheHit": false,
+        "computedMs": 2.95,
+        "barCount": 520,
+        "seriesHash": "76390f54",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601000.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 25,
+        "totalMs": 28,
+        "cacheHit": false,
+        "computedMs": 3.08,
+        "barCount": 520,
+        "seriesHash": "5a0cbf59",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601001.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 28,
+        "totalMs": 31,
+        "cacheHit": false,
+        "computedMs": 5.31,
+        "barCount": 520,
+        "seriesHash": "943c2963",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601002.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 24,
+        "totalMs": 27,
+        "cacheHit": false,
+        "computedMs": 4.79,
+        "barCount": 520,
+        "seriesHash": "1d7c47c8",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601003.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 66,
+        "totalMs": 67,
+        "cacheHit": false,
+        "computedMs": 5.52,
+        "barCount": 520,
+        "seriesHash": "912d37ce",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601004.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 23,
+        "totalMs": 25,
+        "cacheHit": false,
+        "computedMs": 3,
+        "barCount": 520,
+        "seriesHash": "21ed7716",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601005.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 22,
+        "totalMs": 24,
+        "cacheHit": false,
+        "computedMs": 2.85,
+        "barCount": 520,
+        "seriesHash": "d6d0fa6a",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601006.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 25,
+        "totalMs": 27,
+        "cacheHit": false,
+        "computedMs": 2.83,
+        "barCount": 520,
+        "seriesHash": "7680b120",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601007.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 23,
+        "totalMs": 25,
+        "cacheHit": false,
+        "computedMs": 2.66,
+        "barCount": 520,
+        "seriesHash": "1ba93fda",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601008.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 24,
+        "totalMs": 26,
+        "cacheHit": false,
+        "computedMs": 2.61,
+        "barCount": 520,
+        "seriesHash": "bec28f71",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601009.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 22,
+        "totalMs": 24,
+        "cacheHit": false,
+        "computedMs": 2.15,
+        "barCount": 520,
+        "seriesHash": "f2ea0200",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601010.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 20,
+        "calcMs": 25,
+        "totalMs": 27,
+        "cacheHit": false,
+        "computedMs": 2.79,
+        "barCount": 520,
+        "seriesHash": "daaa5bd2",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601011.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 25,
+        "totalMs": 28,
+        "cacheHit": false,
+        "computedMs": 4.64,
+        "barCount": 520,
+        "seriesHash": "8f231b1b",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601013.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 26,
+        "totalMs": 27,
+        "cacheHit": false,
+        "computedMs": 2.89,
+        "barCount": 520,
+        "seriesHash": "d369a945",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601014.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 19,
+        "calcMs": 25,
+        "totalMs": 26,
+        "cacheHit": false,
+        "computedMs": 3.23,
+        "barCount": 520,
+        "seriesHash": "940d60af",
+        "seriesPoints": 7935
+      }
+    ]
+  },
+  "warm": {
+    "targetCount": 10,
+    "sampleCount": 10,
+    "allCacheHit": true,
+    "allPointwiseMatch": true,
+    "p95TotalMs": 21,
+    "maxTotalMs": 21,
+    "maxCalcMs": 20,
+    "samples": [
+      {
+        "security": "600519.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 18,
+        "calcMs": 19,
+        "totalMs": 21,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "89c928db",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "002594.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 20,
+        "totalMs": 21,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "22ca8714",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601318.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 18,
+        "totalMs": 21,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "309323f0",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "600036.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 19,
+        "totalMs": 21,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "c5bd26e1",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "000858.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 18,
+        "totalMs": 19,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "d77fa28c",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "688981.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 18,
+        "totalMs": 20,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "e278d58c",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "300059.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 14,
+        "totalMs": 16,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "da0c344e",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "601899.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 18,
+        "totalMs": 20,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b615032a",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "002415.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 17,
+        "totalMs": 19,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "e7c32582",
+        "seriesPoints": 7935
+      },
+      {
+        "security": "600030.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 17,
+        "totalMs": 19,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "0b15d02f",
+        "seriesPoints": 7935
+      }
+    ]
+  },
+  "timeframes": {
+    "uiOrder": [
+      "W",
+      "D"
+    ],
+    "wCold": true,
+    "uiSamples": [
+      {
+        "timeframe": "W",
+        "security": "600030.SH",
+        "barCount": 104,
+        "cacheHit": false,
+        "barsMs": 10,
+        "calcMs": 15,
+        "totalMs": 15,
+        "seriesHash": "1766e23e",
+        "seriesPoints": 1279
+      },
+      {
+        "timeframe": "D",
+        "security": "600030.SH",
+        "barCount": 520,
+        "cacheHit": true,
+        "barsMs": 18,
+        "calcMs": 19,
+        "totalMs": 21,
+        "seriesHash": "0b15d02f",
+        "seriesPoints": 7935
+      }
+    ],
+    "aggregationOrdered": true,
+    "barProbes": [
+      {
+        "timeframe": "D",
+        "barCount": 520,
+        "datasetId": "sim-default"
+      },
+      {
+        "timeframe": "W",
+        "barCount": 104,
+        "datasetId": "sim-default"
+      },
+      {
+        "timeframe": "M",
+        "barCount": 24,
+        "datasetId": "sim-default"
+      }
+    ],
+    "monthlyNote": "当前模拟数据集仅 520 根日线（≈24 个月），M 周期下 11 个 B1 指标均未达预热阈值，只取证到行情层聚合"
+  },
+  "verification": {
+    "renderLayer": {
+      "chartPresent": true,
+      "overlays": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T19",
+        "T20",
+        "T22"
+      ],
+      "overlayCount": 8,
+      "macd": [
+        "dif",
+        "dea"
+      ],
+      "macdCount": 2,
+      "statisticalReadouts": [
+        "T21-r2",
+        "E13-bias6",
+        "E13-bias12",
+        "E13-bias24"
+      ],
+      "statisticalReadoutCount": 4,
+      "statisticalUnits": [
+        "无量纲",
+        "%",
+        "%",
+        "%"
+      ],
+      "readoutHost": 1,
+      "hoverIndex": "76",
+      "maTooltipCount": 8,
+      "maTooltip": [
+        {
+          "id": "ma-T01",
+          "value": "25.648500000000034",
+          "unit": "元",
+          "text": "T01 25.65 元"
+        },
+        {
+          "id": "ma-T02",
+          "value": "25.500771448092717",
+          "unit": "元",
+          "text": "T02 25.50 元"
+        },
+        {
+          "id": "ma-T03",
+          "value": "25.608380952380955",
+          "unit": "元",
+          "text": "T03 25.61 元"
+        },
+        {
+          "id": "ma-T04",
+          "value": "25.74569228683702",
+          "unit": "元",
+          "text": "T04 25.75 元"
+        },
+        {
+          "id": "ma-T05",
+          "value": "25.626647628806133",
+          "unit": "元",
+          "text": "T05 25.63 元"
+        },
+        {
+          "id": "ma-T19",
+          "value": "25.528142857142853",
+          "unit": "元",
+          "text": "T19 25.53 元"
+        },
+        {
+          "id": "ma-T20",
+          "value": "25.768857142857136",
+          "unit": "元",
+          "text": "T20 25.77 元"
+        },
+        {
+          "id": "ma-T22",
+          "value": "-0.012669172932330774",
+          "unit": "元/根",
+          "text": "T22 -0.01 元/根"
+        }
+      ],
+      "decimalsOk": true,
+      "hoverError": null,
+      "ok": true
+    },
+    "catalog": {
+      "route": "#/catalog",
+      "rootPresent": true,
+      "items": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "E13",
+        "M06"
+      ],
+      "itemCount": 11,
+      "sections": [
+        "formula",
+        "params",
+        "warmup",
+        "boundary"
+      ],
+      "betaCount": 4,
+      "ok": true
+    }
+  },
+  "telemetry": {
+    "path": "/Users/sixmillion/Library/Application Support/aka/logs/telemetry.jsonl",
+    "total": 1277,
+    "counts": {
+      "cache.hit": 138,
+      "cache.miss": 350,
+      "compute.count": 44,
+      "compute.skip": 45,
+      "indicator.cold_ms": 350,
+      "indicator.compute": 350
+    },
+    "coldSamples": 350,
+    "coldP95Ms": 0.65,
+    "recent": [
+      {
+        "tsMs": 1793972471229,
+        "name": "compute.count",
+        "fields": {
+          "cacheHit": true,
+          "count": 0,
+          "instances": 12,
+          "skip": 1
+        }
+      },
+      {
+        "tsMs": 1793972471394,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T01",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471394,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T01",
+          "instanceId": "overlay-T01",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1793972471394,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T02|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T02",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471395,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T03|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T03",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471395,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T04|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T04",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471395,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T05|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T05",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471395,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T19",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471395,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T20",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471395,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T21",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471396,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T22",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471396,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "E13",
+          "paramsHash": "049603ad72311beb",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471396,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601899.SH|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M06",
+          "paramsHash": "cc530a4de7afed5c",
+          "security": "601899.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471396,
+        "name": "compute.count",
+        "fields": {
+          "cacheHit": true,
+          "count": 0,
+          "instances": 12,
+          "skip": 1
+        }
+      },
+      {
+        "tsMs": 1793972471563,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T01",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471564,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T01",
+          "instanceId": "overlay-T01",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1793972471564,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T02|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T02",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471564,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T03|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T03",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471564,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T04|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T04",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471564,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T05|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T05",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471564,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T19",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471564,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T20",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471565,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T21",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471565,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T22",
+          "paramsHash": "e928aa148d72e042",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471565,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "E13",
+          "paramsHash": "049603ad72311beb",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471565,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|002415.SZ|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M06",
+          "paramsHash": "cc530a4de7afed5c",
+          "security": "002415.SZ",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471566,
+        "name": "compute.count",
+        "fields": {
+          "cacheHit": true,
+          "count": 0,
+          "instances": 12,
+          "skip": 1
+        }
+      },
+      {
+        "tsMs": 1793972471729,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T01",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471729,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T01|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T01",
+          "instanceId": "overlay-T01",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1793972471729,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T02|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T02",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471729,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T03|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T03",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471729,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T04|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T04",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471730,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T05|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T05",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471730,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T19",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471730,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T20",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471730,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T21",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471730,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T22",
+          "paramsHash": "e928aa148d72e042",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471731,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "E13",
+          "paramsHash": "049603ad72311beb",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471731,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|600030.SH|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M06",
+          "paramsHash": "cc530a4de7afed5c",
+          "security": "600030.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1793972471731,
+        "name": "compute.count",
+        "fields": {
+          "cacheHit": true,
+          "count": 0,
+          "instances": 12,
+          "skip": 1
+        }
+      }
+    ]
+  },
+  "notes": [
+    "连键 1→12→120 的结果：INSUFFICIENT_DATA: 三重指数移动平均线 需要至少 540 根 K 线（预热 539），当前 520 根"
+  ]
+}
