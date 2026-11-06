@@ -266,6 +266,16 @@ export interface TelemetrySummary {
 
 // ---------- E-01 行情 / 自选 / 持仓 ----------
 
+/** 取证留档构建元数据（口径 R-S0-07-01） */
+export interface DiagBuildInfo {
+  buildProfile: "dev" | "release";
+  optLevel: string;
+  lto: string;
+  codegenUnits: string;
+  debug: string;
+  targetTriple: string;
+}
+
 export interface MarketRowDto {
   security: string;
   code: string;
@@ -290,6 +300,10 @@ export interface MarketRowDto {
 export interface MarketSnapshotDto {
   sampleCount: number;
   dataDate: string;
+  /** 数据集 manifest `coverage_start`（与 dataDate 独立来源） */
+  coverageStart: string;
+  /** 数据集 manifest `coverage_end`（数据集最后交易日） */
+  coverageEnd: string;
   provider: string;
   datasetId: string;
   dataVersion: string;

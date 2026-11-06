@@ -263,6 +263,10 @@ pub struct MarketSnapshotDto {
     pub sample_count: usize,
     /// 最新一根日线的交易日（列表「数据时间」列）
     pub data_date: String,
+    /// 数据集 manifest `coverage_start`：与 `data_date` 独立来源，供页头核对
+    pub coverage_start: String,
+    /// 数据集 manifest `coverage_end`：数据集的最后交易日
+    pub coverage_end: String,
     pub provider: String,
     pub dataset_id: String,
     pub data_version: String,

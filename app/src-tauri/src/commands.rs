@@ -139,6 +139,48 @@ pub async fn diag_enabled() -> Result<bool, AppError> {
     Ok(std::env::var("AKA_DIAG").ok().as_deref() == Some("1"))
 }
 
+/// 取证落地页：P/G 线共用同一套采样，但 release 必须直接落到工作台；
+/// `AKA_DIAG_TARGET=s2` 时前端启动即跳工作台，避免行情页把 S2 套件锁掉。
+#[tauri::command]
+pub async fn diag_target() -> Result<String, AppError> {
+    Ok(std::env::var("AKA_DIAG_TARGET").unwrap_or_default())
+}
+
+/// 取证留档所需的构建元数据（口径 R-S0-07-01）。
+/// `opt_level` / `lto` / `codegen_units` / `debug` 与 `app/Cargo.toml` 的 profile 对应，
+/// 单测 `diag_build_info_matches_profile` 会在 profile 改动时失败提醒同步。
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagBuildInfo {
+    build_profile: &'static str,
+    opt_level: &'static str,
+    lto: &'static str,
+    codegen_units: &'static str,
+    debug: &'static str,
+    target_triple: &'static str,
+}
+
+#[tauri::command]
+pub async fn diag_build_info() -> Result<DiagBuildInfo, AppError> {
+    let release = !cfg!(debug_assertions);
+    Ok(DiagBuildInfo {
+        build_profile: if release { "release" } else { "dev" },
+        opt_level: if release { RELEASE_OPT_LEVEL } else { DEV_OPT_LEVEL },
+        lto: "false",
+        codegen_units: if release { RELEASE_CODEGEN_UNITS } else { "256" },
+        debug: if release { "0" } else { "2" },
+        target_triple: TARGET_TRIPLE,
+    })
+}
+
+/// 与 `app/Cargo.toml` 的 profile 对应；`diag_build_info_matches_profile` 单测守着同步。
+const DEV_OPT_LEVEL: &str = "1";
+const RELEASE_OPT_LEVEL: &str = "3";
+const RELEASE_CODEGEN_UNITS: &str = "16";
+
+/// 编译期目标三元组（`rustc -vV` 的 host 与构建目标一致）。
+const TARGET_TRIPLE: &str = "x86_64-apple-darwin";
+
 /// S2 实机取证：把前端采样结果落盘为 JSON，便于作为验收材料归档。
 #[tauri::command]
 pub async fn diag_write(
@@ -176,4 +218,17 @@ fn write_diag(app: &tauri::AppHandle, name: &str, payload: &str) -> Result<Strin
     let path = dir.join(name);
     std::fs::write(&path, payload).map_err(|err| format!("写入诊断结果失败：{err}"))?;
     Ok(path.display().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    /// profile 数字是硬编码在证据里的，profile 一改就必须同步，否则 P/G 线留档会失真。
+    #[test]
+    fn diag_build_info_matches_profile() {
+        let cargo = include_str!("../../Cargo.toml");
+        assert!(
+            cargo.contains("[profile.dev]") && cargo.contains("opt-level = 1"),
+            "app/Cargo.toml 的 dev opt-level 变化，请同步 commands::DEV_OPT_LEVEL"
+        );
+    }
 }

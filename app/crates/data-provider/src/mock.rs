@@ -141,6 +141,11 @@ impl DataProvider for MockProvider {
         ProviderId::Mock
     }
 
+    /// mock 数据集的 manifest 覆盖区间即日历首末日。
+    fn dataset_coverage(&self) -> Option<(Date, Date)> {
+        Some((self.first_date(), self.last_date()))
+    }
+
     fn capabilities(&self) -> Capabilities {
         Capabilities {
             securities: true,
@@ -501,6 +506,52 @@ mod tests {
         codes.dedup();
         assert_eq!(before, MOCK_SECURITY_COUNT);
         assert_eq!(codes.len(), MOCK_SECURITY_COUNT);
+    }
+
+    /// 生成数据的系统性校验：代码唯一、名称唯一、分区标注与代码前缀一致。
+    #[test]
+    fn mock_security_metadata_is_unique_and_consistent() {
+        let provider = MockProvider::new();
+        let total = provider.security_count();
+
+        let mut codes: Vec<&str> = provider
+            .securities
+            .iter()
+            .map(|security| security.code.as_str())
+            .collect();
+        codes.sort_unstable();
+        codes.dedup();
+        assert_eq!(codes.len(), total, "存在重复代码");
+
+        let mut names: Vec<&str> = provider
+            .securities
+            .iter()
+            .map(|security| security.name.as_str())
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), total, "存在重复名称");
+
+        for security in &provider.securities {
+            let (digits, suffix) = security.code.split_at(6);
+            let consistent = match security.board {
+                Board::Index => suffix == ".SH" || suffix == ".SZ",
+                Board::ShMain => {
+                    matches!(&digits[..3], "600" | "601" | "603" | "605") && suffix == ".SH"
+                }
+                Board::SzMain => {
+                    matches!(&digits[..3], "000" | "001" | "002" | "003") && suffix == ".SZ"
+                }
+                Board::ChiNext => matches!(&digits[..3], "300" | "301") && suffix == ".SZ",
+                Board::Star => matches!(&digits[..3], "688" | "689") && suffix == ".SH",
+            };
+            assert!(
+                consistent,
+                "{} 分区标注为 {}，与代码前缀/后缀不一致",
+                security.code,
+                security.board.label_zh()
+            );
+        }
     }
 
     #[test]

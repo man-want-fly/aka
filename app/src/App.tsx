@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MarketPage } from "./pages/market/MarketPage";
 import { CatalogPage } from "./pages/catalog/CatalogPage";
 import { WorkbenchPage } from "./pages/workbench/WorkbenchPage";
+import { ipc, isTauriRuntime } from "./lib/ipc";
 import {
   applyTheme,
   loadColorMode,
@@ -55,15 +56,39 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  // 取证落地页：release 性能线（P 线）必须直接进工作台，
+  // 否则行情页会把 S2 套件锁掉（sessionStorage `aka.s2.diag.once`）。
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    (async () => {
+      try {
+        if ((await ipc.diagTarget()) !== "s2") return;
+        if (window.location.hash.startsWith("#/workbench")) return;
+        window.location.hash = "#/workbench";
+        setLocation({ route: "workbench", code: null });
+      } catch {
+        // 非取证运行：命令异常不影响正常路由
+      }
+    })();
+  }, []);
+
   const navigate = (key: Route) => {
     window.location.hash = `#/${key}`;
     setLocation({ route: key, code: null });
   };
 
-  /** S-01.01-03：行情行点击 → 工作台，单窗口，代码进路由。 */
+  const openTimer = useRef<number | null>(null);
+
+  /** S-01.01-03：行情行点击 → 工作台，单窗口，代码进路由。
+   * 50ms 合并窗口：连续快速点击多行时只打开最后一只（AC-01.01-04（补1）），
+   * 避免工作台报价头闪烁或出现双份。 */
   const openSecurity = (code: string) => {
-    window.location.hash = `#/workbench/${encodeURIComponent(code)}`;
-    setLocation({ route: "workbench", code });
+    if (openTimer.current !== null) window.clearTimeout(openTimer.current);
+    openTimer.current = window.setTimeout(() => {
+      openTimer.current = null;
+      window.location.hash = `#/workbench/${encodeURIComponent(code)}`;
+      setLocation({ route: "workbench", code });
+    }, 50);
   };
 
   if (location.route === "catalog") {

@@ -640,6 +640,38 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
         { switched: switched.ok, afterPaths, awayDiffers, backMatches, beforeA: beforeA.map((d) => d.length), awayB: awayB.map((d) => d.length) },
       ),
     );
+    // 负控：每轮取证都执行，证明上面两条断言可被证伪（不是恒真）。
+    {
+      const middle = paths[1];
+      let dashInjected = "";
+      let dashRejected = false;
+      if (middle) {
+        const original = middle.style.strokeDasharray;
+        middle.style.strokeDasharray = "6 4";
+        dashInjected = dashOf(middle).replace(/\s+/g, " ");
+        dashRejected = dashInjected !== "4px, 3px";
+        middle.style.strokeDasharray = original;
+      }
+      const residualFree = (newer: string[], older: string[]) =>
+        newer.length === 3 && newer.every((d, index) => d !== older[index]);
+      const injectedOld = [
+        beforeA[0] ?? "",
+        awayB[1] ?? beforeA[1] ?? "",
+        awayB[2] ?? beforeA[2] ?? "",
+      ];
+      const residualRejected = !residualFree(injectedOld, beforeA) && residualFree(awayB, beforeA);
+      clauses.push(
+        pass("T09 负控：错误虚实值必须被判红", dashRejected, {
+          injected: dashInjected,
+          expected: "4px, 3px",
+        }),
+      );
+      clauses.push(
+        pass("T09 负控：旧线值必须被判残留", residualRejected, {
+          awayEqualsA: awayB.map((d, index) => d === beforeA[index]),
+        }),
+      );
+    }
     cards.push({
       card: "S-03.05-01",
       ac: "AC-03.05-05",
@@ -1397,24 +1429,29 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   const coldBarsP95 = nearestRankP95(cold.map((item) => item.barsMs));
   const coldAllMiss = cold.every((item) => !item.cacheHit);
 
-  // ---- 3. 切回前 30 个标的（缓存命中）：QA 要求 ≥30 样本并给 P50/P95/max ----
+  // ---- 3. 切回前 30 个标的 × 3 批（缓存命中，批间不插冷算/改参/换数据集/重启）----
+  // 口径 R-S0-07-01：每批 30 连续热切回，合计 ≥90 样本；判定取 max。
   hooks.setPhase("warm");
   const warmTargets = coldCodes.slice(0, 30);
-  const warm: Array<DiagSample & { matchesCold: boolean }> = [];
-  for (const code of warmTargets) {
-    const pending = hooks.nextSample(4_000);
-    hooks.setCode(code);
-    const sample = await pending;
-    if (!sample) {
-      notes.push(`回切请求超时：${code}`);
-      continue;
+  const warmBatches = 3;
+  const warm: Array<DiagSample & { matchesCold: boolean; batch: number }> = [];
+  for (let batch = 1; batch <= warmBatches; batch += 1) {
+    for (const code of warmTargets) {
+      const pending = hooks.nextSample(4_000);
+      hooks.setCode(code);
+      const sample = await pending;
+      if (!sample) {
+        notes.push(`回切请求超时：${code}`);
+        continue;
+      }
+      const coldRef = cold.find((item) => item.security === code) ?? null;
+      warm.push({
+        ...sample,
+        phase: "warm",
+        batch,
+        matchesCold: coldRef ? coldRef.seriesHash === sample.seriesHash : false,
+      });
     }
-    const coldRef = cold.find((item) => item.security === code) ?? null;
-    warm.push({
-      ...sample,
-      phase: "warm",
-      matchesCold: coldRef ? coldRef.seriesHash === sample.seriesHash : false,
-    });
   }
   const telAfterWarm = await hooks.telemetry();
 
@@ -1425,7 +1462,10 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   const warmP50Calc = nearestRankPercentile(warm.map((item) => item.calcMs), 0.5);
   const warmAllHit = warm.every((item) => item.cacheHit);
   const warmAllMatch = warm.every((item) => item.matchesCold);
-  const warmPassed = warm.length >= 30 && warmAllHit && warmAllMatch && warmMaxTotal <= 120;
+  const warmBatchMax = Array.from({ length: warmBatches }, (_, index) =>
+    round2(warm.filter((item) => item.batch === index + 1).reduce((max, item) => Math.max(max, item.totalMs), 0)),
+  );
+  const warmPassed = warm.length >= 90 && warmAllHit && warmAllMatch && warmMaxTotal <= 120;
   if (!warmPassed) {
     notes.push(
       `回切异常：样本 ${warm.length} / cacheHit ${warmAllHit} / 逐点一致 ${warmAllMatch} / max ${round2(warmMaxTotal)}ms`,
@@ -1496,9 +1536,13 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     schemaVersion: 1,
     kind: "aka-s2-evidence",
     generatedAt: new Date().toISOString(),
+    // 口径 R-S0-07-01 的构建类型留档：P 线必须是 release/opt-level 3，dev 数字不作性能结论。
+    build: await ipc.diagBuildInfo().catch(() => null),
     engine: {
       engineVersion: telAfterWarm.counts ? "aka-engine-0.1.0" : "unknown",
       userAgent: typeof navigator === "undefined" ? "" : navigator.userAgent,
+      hardwareConcurrency:
+        typeof navigator === "undefined" ? null : navigator.hardwareConcurrency ?? null,
     },
     debounce: {
       target: "1→12→120（台账判据）+ 1→12→60（成功单次 compute 佐证）",
@@ -1539,7 +1583,9 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     },
     warm: {
       targetCount: 30,
-      criterion: "全部 cacheHit 且逐点一致，且 totalMs max ≤ 120ms（max 口径，不改判据）",
+      batchCount: warmBatches,
+      criterion:
+        "口径 R-S0-07-01：每批 30 连续热切回 × 3 批（≥90），批间不插冷算；全部 cacheHit 且逐点一致，判定取 max ≤ 120ms",
       sampleCount: warm.length,
       allCacheHit: warmAllHit,
       allPointwiseMatch: warmAllMatch,
@@ -1548,8 +1594,10 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
       p95TotalMs: warmP95 === null ? null : round2(warmP95),
       maxTotalMs: round2(warmMaxTotal),
       maxCalcMs: round2(warmMaxCalc),
+      batchMaxTotalMs: warmBatchMax,
       samples: warm.map((item) => ({
         security: item.security,
+        batch: item.batch,
         timeframe: item.timeframe,
         adj: item.adj,
         barsMs: round2(item.barsMs),

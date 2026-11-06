@@ -4,6 +4,7 @@ import type {
   BarsResponse,
   CalcRequest,
   CalcResponse,
+  DiagBuildInfo,
   GetBarsRequest,
   ManifestResponse,
   MarketSnapshotDto,
@@ -66,6 +67,11 @@ export const ipc = {
     invoke<TelemetrySummary>("telemetry_dump", { recent }),
 
   diagEnabled: (): Promise<boolean> => invoke<boolean>("diag_enabled"),
+
+  /** 取证落地页：`s2` = 启动直接进工作台，跑 release 性能线。 */
+  diagTarget: (): Promise<string> => invoke<string>("diag_target"),
+
+  diagBuildInfo: (): Promise<DiagBuildInfo> => invoke<DiagBuildInfo>("diag_build_info"),
 
   diagWrite: (payload: string): Promise<string> =>
     invoke<string>("diag_write", { payload }),

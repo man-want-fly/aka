@@ -72,6 +72,8 @@ pub fn run() {
             commands::position_save,
             commands::position_delete,
             commands::diag_enabled,
+            commands::diag_target,
+            commands::diag_build_info,
             commands::diag_write,
             commands::diag_write_named,
         ])

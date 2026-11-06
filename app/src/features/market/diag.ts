@@ -125,6 +125,16 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       `前 4 行成交额：${byAmount.slice(0, 4).map((row) => `${row.code}=${row.amount}`).join(" / ")}`,
     );
 
+    push(
+      "D-04",
+      "AC-01.01-01",
+      "data",
+      snapshot.coverageStart !== "" &&
+        snapshot.coverageEnd !== "" &&
+        snapshot.coverageEnd === snapshot.dataDate,
+      `coverage ${snapshot.coverageStart}~${snapshot.coverageEnd} dataDate=${snapshot.dataDate}`,
+    );
+
     // ---- 渲染层：页头 / 行数 / 徽标 ----
     await waitFor(() => rowEls().length > 0);
     const summary = document.querySelector<HTMLElement>("[data-market-summary]")?.textContent ?? "";
@@ -133,7 +143,10 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       "R-01",
       "AC-01.01-01",
       "render",
-      summary.includes("样本 120 只") && summary.includes(snapshot.dataDate) && sim.includes("模拟"),
+      summary.includes("样本 120 只") &&
+        summary.includes(snapshot.dataDate) &&
+        summary.includes(snapshot.coverageEnd) &&
+        sim.includes("模拟"),
       `页头="${summary.trim()}" 徽标="${sim.trim()}"`,
     );
 
@@ -243,46 +256,97 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       `DOM=${JSON.stringify(chipCounts)} data=${JSON.stringify(boardCounts)}`,
     );
 
-    // ---- 渲染层：列头三态排序 ----
-    const firstBefore = rowEls()[0]?.dataset.code ?? "";
-    click(
-      document.querySelector<HTMLElement>('[data-market-sort="amount"]'),
-      "成交额列头",
-    );
+    // ---- 渲染层：列头排序完整三态（S-01.01-01 / S-01.01-02 同一组件，一次证完）----
+    const sortDirOf = (key: string) =>
+      document.querySelector<HTMLElement>(`[data-market-sort="${key}"]`)?.dataset.sortDir ?? "";
+    const sortHeadText = (key: string) =>
+      document.querySelector<HTMLElement>(`[data-market-sort="${key}"]`)?.textContent?.trim() ?? "";
+    const cellValues = (key: string) =>
+      rowEls()
+        .map((row) =>
+          Number(row.querySelector<HTMLElement>(`[data-cell="${key}"]`)?.dataset.value ?? "NaN"),
+        )
+        .filter((value) => Number.isFinite(value));
+    const firstCode = () => rowEls()[0]?.dataset.code ?? "";
+
     await sleep(80);
-    const amountHeader = document.querySelector<HTMLElement>('[data-market-sort="amount"]');
-    const afterAsc = rowEls()[0]?.dataset.code ?? "";
+    const amountFirst = firstCode();
+
+    // 第一次点击「换手率」（新列）→ 降序
+    click(document.querySelector<HTMLElement>('[data-market-sort="turnoverPct"]'), "换手率列头");
+    await sleep(120);
+    const descValues = cellValues("turnoverPct").slice(0, 5);
+    const descFirst = firstCode();
     push(
       "R-06",
       "AC-01.01-03",
       "render",
-      amountHeader?.dataset.sortDir === "asc" &&
-        amountHeader.textContent?.includes("↑") === true &&
-        afterAsc !== firstBefore,
-      `方向=${amountHeader?.dataset.sortDir} 首行 ${firstBefore}→${afterAsc}`,
+      sortDirOf("turnoverPct") === "desc" &&
+        sortHeadText("turnoverPct").includes("↓") &&
+        descValues.every((value, index) => index === 0 || value <= descValues[index - 1]),
+      `首次点击：方向=${sortDirOf("turnoverPct")} 标记=${sortHeadText("turnoverPct")} 前5=${descValues.join(
+        "/",
+      )} 首行 ${amountFirst}→${descFirst}`,
     );
 
-    // ---- 渲染层：空值恒末尾 ----
+    // 第二次点击 → 升序
     click(document.querySelector<HTMLElement>('[data-market-sort="turnoverPct"]'), "换手率列头");
     await sleep(120);
-    const turnoverRows = rowEls();
-    const nullIndexes = turnoverRows
-      .map((row, index) => (cellText(row, "turnoverPct") === "—" ? index : -1))
+    const ascValues = cellValues("turnoverPct").slice(0, 5);
+    const ascFirst = firstCode();
+    const ascDir = sortDirOf("turnoverPct");
+    const ascMark = sortHeadText("turnoverPct");
+
+    // 第三次点击 → 回到默认（成交额降序）
+    click(document.querySelector<HTMLElement>('[data-market-sort="turnoverPct"]'), "换手率列头");
+    await sleep(120);
+    const backFirst = firstCode();
+    push(
+      "R-06B",
+      "AC-01.01-02",
+      "render",
+      ascDir === "asc" &&
+        ascMark.includes("↑") &&
+        ascValues.every((value, index) => index === 0 || value >= ascValues[index - 1]) &&
+        ascFirst !== descFirst &&
+        sortDirOf("amount") === "desc" &&
+        sortHeadText("amount").includes("↓") &&
+        sortDirOf("turnoverPct") === "" &&
+        backFirst === amountFirst,
+      `二次点击：方向=${ascDir} 标记=${ascMark} 首行=${ascFirst}；三次点击：默认列=${sortDirOf(
+        "amount",
+      )} 首行=${backFirst}（原=${amountFirst}）`,
+    );
+
+    // ---- 渲染层：量比降序 + 空值恒末尾（AC-01.01-03（补2））----
+    click(document.querySelector<HTMLElement>('[data-market-sort="volumeRatio"]'), "量比列头");
+    await sleep(120);
+    const ratioRows = rowEls();
+    const ratioNulls = ratioRows
+      .map((row, index) => (cellText(row, "volumeRatio") === "—" ? index : -1))
       .filter((index) => index >= 0);
-    const tailStart = turnoverRows.length - nullIndexes.length;
-    const tailCodes = turnoverRows.slice(tailStart).map((row) => row.dataset.code ?? "");
+    const tailStart = ratioRows.length - ratioNulls.length;
+    const tailCodes = ratioRows.slice(tailStart).map((row) => row.dataset.code ?? "");
+    const ratioValues = cellValues("volumeRatio").slice(0, 5);
     push(
       "R-07",
       "AC-01.01-03(补2)",
       "render",
-      nullIndexes.length > 0 &&
-        nullIndexes[nullIndexes.length - 1] === turnoverRows.length - 1 &&
-        JSON.stringify(tailCodes) === JSON.stringify([...tailCodes].sort()),
-      `空值 ${nullIndexes.length} 行；尾部代码=${tailCodes.slice(0, 5).join(",")}`,
+      sortDirOf("volumeRatio") === "desc" &&
+        ratioNulls.length > 0 &&
+        ratioNulls[ratioNulls.length - 1] === ratioRows.length - 1 &&
+        JSON.stringify(tailCodes) === JSON.stringify([...tailCodes].sort()) &&
+        ratioValues.every((value, index) => index === 0 || value <= ratioValues[index - 1]),
+      `方向=${sortDirOf("volumeRatio")} 空值 ${ratioNulls.length} 行；尾部代码=${tailCodes
+        .slice(0, 5)
+        .join(",")}；前5=${ratioValues.join("/")}`,
     );
 
     // ---- 渲染层：分区 / 排序 / 列显隐落库 ----
     click(document.querySelector<HTMLElement>('[data-market-board="chinext"]'), "创业板分区");
+    await sleep(80);
+    // R-07 把排序切到了量比；卡上 R-08 要的是「换手率降序」，重新点成降序。
+    click(document.querySelector<HTMLElement>('[data-market-sort="turnoverPct"]'), "换手率列头");
     await sleep(80);
     const chinextRows = rowEls().length;
     if (!document.querySelector<HTMLElement>("[data-market-columns]")) {
@@ -321,10 +385,11 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
     const target = await waitFor(
       () => document.querySelector<HTMLElement>('[data-market-row][data-code="300750.SZ"]'),
     );
-    const targetIndex = rowEls().findIndex((row) => row.dataset.code === "300750.SZ");
+    // 真实滚动到目标行（不是按行索引手算 scrollTop）；记录滚动后真实位置。
+    target.scrollIntoView({ block: "start" });
+    await sleep(100);
     const rowHeight = table.querySelector<HTMLElement>("[data-market-row]")?.offsetHeight ?? 34;
-    const expectedScroll = Math.max(0, (targetIndex - 6) * rowHeight);
-    table.scrollTop = expectedScroll;
+    const scrollBeforeOpen = table.scrollTop;
     target.dataset.selected = "1";
     click(target, "300750.SZ 行");
 
@@ -350,7 +415,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
     const restoredSelected = document.querySelector<HTMLElement>(
       '[data-market-row][data-selected="1"]',
     );
-    const scrollDelta = Math.abs(backTable.scrollTop - expectedScroll);
+    const scrollDelta = Math.abs(backTable.scrollTop - scrollBeforeOpen);
     push(
       "R-10",
       "AC-01.01-04",
@@ -363,7 +428,61 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
         scrollDelta <= rowHeight,
       `分区=${activeBoard?.dataset.marketBoard} 排序=${turnover?.dataset.sortDir} 隐藏列=${
         document.querySelector('[data-market-sort="volumeRatio"]') ? "未隐藏" : "已隐藏"
-      } 选中=${restoredSelected?.dataset.code} 滚动差=${scrollDelta}px`,
+      } 选中=${restoredSelected?.dataset.code} 滚动差=${scrollDelta}px（记录=${scrollBeforeOpen}px）`,
+    );
+
+    // ---- 渲染层：字面「第 40 行」——真实滚动后点击，返回仍停在该行 ----
+    // 创业板只有 17 行，滚不动；按字面 40 行只能在「全部」分区执行（120 行）。
+    click(document.querySelector<HTMLElement>('[data-market-board="all"]'), "全部分区");
+    await sleep(100);
+    if (sortDirOf("amount") !== "desc") {
+      click(document.querySelector<HTMLElement>('[data-market-sort="amount"]'), "成交额列头");
+      await sleep(100);
+    }
+    const allTable = await waitFor(() => document.querySelector<HTMLElement>("[data-market-table]"));
+    allTable.scrollTop = 0;
+    const allRows = rowEls();
+    const row40 = allRows[allRows.length > 39 ? 39 : allRows.length - 1];
+    if (!row40?.dataset.code) throw new Error("列表不足 40 行，无法按字面执行第 40 行场景");
+    const row40Code = row40.dataset.code;
+    row40.scrollIntoView({ block: "start" });
+    await sleep(100);
+    const row40Scroll = allTable.scrollTop;
+    const storedBefore = sessionStorage.getItem("aka.market.scroll");
+    const tableView = allTable.getBoundingClientRect();
+    const rowView = row40.getBoundingClientRect();
+    const row40Visible = rowView.top >= tableView.top - 1 && rowView.bottom <= tableView.bottom + 1;
+    click(row40, `第 40 行 ${row40Code}`);
+
+    let wbCode3 = "";
+    const row40Deadline = Date.now() + 3_000;
+    while (Date.now() < row40Deadline) {
+      const code = document.querySelector<HTMLElement>(".sec-code")?.textContent?.trim() ?? "";
+      if (code === row40Code) {
+        wbCode3 = code;
+        break;
+      }
+      await sleep(60);
+    }
+    press(window, "Escape");
+    await waitFor(() => document.querySelector<HTMLElement>("[data-market-root]"));
+    await waitFor(() => rowEls().length > 0);
+    const backAll = await waitFor(() => document.querySelector<HTMLElement>("[data-market-table]"));
+    await sleep(120);
+    const storedAfter = sessionStorage.getItem("aka.market.scroll");
+    const backRow40 = document.querySelector<HTMLElement>('[data-market-row][data-selected="1"]');
+    push(
+      "R-12",
+      "AC-01.01-04",
+      "render",
+      row40Scroll > 0 &&
+        row40Visible &&
+        wbCode3 === row40Code &&
+        backRow40?.dataset.code === row40Code &&
+        Math.abs(backAll.scrollTop - row40Scroll) <= rowHeight * 1.5,
+      `第40行=${row40Code} 真实 scrollTop=${row40Scroll}px 可见=${row40Visible} 返回选中=${
+        backRow40?.dataset.code
+      } 返回 scrollTop=${backAll.scrollTop}px 存档 ${storedBefore}→${storedAfter}`,
     );
 
     // ---- 渲染层：键盘 ↑↓ 选中 + Enter 进入 ----
@@ -404,6 +523,58 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       "render",
       beforeKey !== afterKey && afterKey === wbCode2 && wb2.textContent?.trim() !== "",
       `↑↓ ${beforeKey}→${afterKey} Enter 进入=${wbCode2}`,
+    );
+    press(window, "Escape");
+    await waitFor(() => document.querySelector<HTMLElement>("[data-market-root]"));
+
+    // ---- 渲染层：50ms 内连点 3 行，只打开最后一只、报价头不闪不重（AC-01.01-04（补1）----
+    await waitFor(() => rowEls().length > 0);
+    const picks = rowEls()
+      .slice(0, 3)
+      .map((row) => ({ el: row, code: row.dataset.code ?? "" }));
+    if (picks.length < 3 || picks.some((pick) => !pick.code)) {
+      throw new Error("列表不足 3 行，无法执行 50ms 连点场景");
+    }
+    const clickTimes: number[] = [];
+    for (const pick of picks) {
+      clickTimes.push(performance.now());
+      click(pick.el, `连点 ${pick.code}`);
+    }
+    const gaps = clickTimes.slice(1).map((time, index) => time - clickTimes[index]);
+    if (!gaps.every((gap) => gap <= 50)) {
+      throw new Error(`连点间隔超过 50ms：${gaps.join(",")}`);
+    }
+    const expectedCode = picks[2].code;
+    // 观察窗口：落地前/落地后逐帧采样报价头，确认没出现中间标的、没有空闪、没有双份。
+    const observedCodes: string[] = [];
+    let maxHeaderCount = 0;
+    let emptyFrames = 0;
+    const deadline = Date.now() + 1_200;
+    while (Date.now() < deadline) {
+      const headers = document.querySelectorAll<HTMLElement>(".sec-code");
+      maxHeaderCount = Math.max(maxHeaderCount, headers.length);
+      const code = headers[0]?.textContent?.trim() ?? "";
+      if (code) {
+        if (observedCodes[observedCodes.length - 1] !== code) observedCodes.push(code);
+        if (code === expectedCode) break;
+      } else if (document.querySelector("[data-wb-name]")) {
+        emptyFrames += 1;
+      }
+      await sleep(8);
+    }
+    const distinctObserved = [...new Set(observedCodes)];
+    push(
+      "R-13",
+      "AC-01.01-04(补1)",
+      "render",
+      gaps.every((gap) => gap <= 50) &&
+        distinctObserved.length === 1 &&
+        distinctObserved[0] === expectedCode &&
+        maxHeaderCount === 1 &&
+        emptyFrames === 0,
+      `连点间隔=${gaps.map((gap) => gap.toFixed(1)).join("/")}ms 目标=${picks
+        .map((pick) => pick.code)
+        .join("→")} 展示=${distinctObserved.join(",")} 报价头元素=${maxHeaderCount} 空闪帧=${emptyFrames}`,
     );
     press(window, "Escape");
     await waitFor(() => document.querySelector<HTMLElement>("[data-market-root]"));

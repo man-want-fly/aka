@@ -62,4 +62,10 @@ pub trait DataProvider: Send + Sync {
 
     fn rate_policy(&self) -> RatePolicy;
     async fn health(&self) -> Health;
+
+    /// 数据集覆盖区间（manifest `coverage_start` / `coverage_end`）。
+    /// 与行内最新交易日独立：行情页用它核对「页头日期 = 数据集终点」。
+    fn dataset_coverage(&self) -> Option<(Date, Date)> {
+        None
+    }
 }

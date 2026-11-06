@@ -220,12 +220,26 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
   }, [view, viewLoaded]);
 
   useEffect(() => {
-    if (!snapshot) return;
-    const row = tableRef.current?.querySelector<HTMLElement>(`[data-code="${selected}"]`);
-    const scroll = Number(sessionStorage.getItem(SCROLL_KEY) ?? "0");
-    if (tableRef.current && Number.isFinite(scroll)) tableRef.current.scrollTop = scroll;
-    if (row) row.dataset.selected = "1";
-  }, [snapshot, view.board, view.sortKey, view.sortDir]);
+    if (!snapshot || loading) return;
+    let frames = 0;
+    // 首帧可能还没量出完整滚动高度，scrollTop 会被 clamp 到 0；补两帧重试。
+    const apply = () => {
+      const el = tableRef.current;
+      if (!el) return;
+      const scroll = Number(sessionStorage.getItem(SCROLL_KEY) ?? "0");
+      if (Number.isFinite(scroll) && el.scrollTop !== scroll) {
+        el.scrollTop = scroll;
+        if (el.scrollTop !== scroll && frames < 3) {
+          frames += 1;
+          requestAnimationFrame(apply);
+          return;
+        }
+      }
+      const row = el.querySelector<HTMLElement>(`[data-code="${selected}"]`);
+      if (row) row.dataset.selected = "1";
+    };
+    apply();
+  }, [snapshot, loading, view.board, view.sortKey, view.sortDir]);
 
   useEffect(() => {
     if (!toast) return;
@@ -540,17 +554,29 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
                     </span>
                   )}
                   {visible.has("turnoverPct") && (
-                    <span className="market-cell num mono" data-cell="turnoverPct">
+                    <span
+                      className="market-cell num mono"
+                      data-cell="turnoverPct"
+                      data-value={row.turnoverPct ?? ""}
+                    >
                       {row.turnoverPct == null ? "—" : formatPct(row.turnoverPct)}
                     </span>
                   )}
                   {visible.has("volumeRatio") && (
-                    <span className="market-cell num mono" data-cell="volumeRatio">
+                    <span
+                      className="market-cell num mono"
+                      data-cell="volumeRatio"
+                      data-value={row.volumeRatio ?? ""}
+                    >
                       {row.volumeRatio == null ? "—" : row.volumeRatio.toFixed(2)}
                     </span>
                   )}
                   {visible.has("amplitudePct") && (
-                    <span className="market-cell num mono" data-cell="amplitudePct">
+                    <span
+                      className="market-cell num mono"
+                      data-cell="amplitudePct"
+                      data-value={row.amplitudePct ?? ""}
+                    >
                       {row.amplitudePct == null ? "—" : formatPct(row.amplitudePct)}
                     </span>
                   )}

@@ -90,16 +90,23 @@ fn summary_row(sec: &Security, rows: &[data_provider::BarRow]) -> MarketRowDto {
         _ => None,
     };
 
-    let volume_ratio = (rows.len() >= 6).then(|| {
-        let start = rows.len() - 6;
-        let prior = &rows[start..rows.len() - 1];
-        let avg = prior.iter().map(|row| row.volume).sum::<f64>() / prior.len() as f64;
-        if avg > 0.0 {
-            Some(last.map(|row| row.volume).unwrap_or(0.0) / avg)
-        } else {
-            None
-        }
-    }).flatten();
+    // 卡口径「指数与停牌的量类指标显示 —」：量比不拿指数成交量硬算。
+    let volume_ratio = if sec.is_index || suspended {
+        None
+    } else {
+        (rows.len() >= 6)
+            .then(|| {
+                let start = rows.len() - 6;
+                let prior = &rows[start..rows.len() - 1];
+                let avg = prior.iter().map(|row| row.volume).sum::<f64>() / prior.len() as f64;
+                if avg > 0.0 {
+                    Some(last.map(|row| row.volume).unwrap_or(0.0) / avg)
+                } else {
+                    None
+                }
+            })
+            .flatten()
+    };
 
     let amplitude_pct = match (last, prev_close) {
         (Some(row), Some(prev)) if row.high.is_finite() && row.low.is_finite() => {
@@ -153,6 +160,8 @@ pub struct AppCore {
     store: Mutex<CandleStore>,
     /// 日线原始批次（按「标的|复权」缓存）：日/周/月都从同一份日线派生，避免重复取数。
     daily_batches: Mutex<HashMap<String, Arc<BarBatch>>>,
+    /// 数据集 manifest 覆盖区间（provider 自报，独立于行内最新交易日）
+    dataset_coverage: Option<(String, String)>,
     calc_cache: Mutex<HashMap<String, Arc<Vec<Vec<f64>>>>>,
     calc_stats: Mutex<CacheStats>,
     telemetry: Telemetry,
@@ -163,6 +172,9 @@ pub struct AppCore {
 
 impl AppCore {
     pub async fn new(provider: Box<dyn DataProvider>) -> Result<Self, AppError> {
+        let dataset_coverage = provider
+            .dataset_coverage()
+            .map(|(start, end)| (start.iso(), end.iso()));
         let master = provider
             .securities(data_provider::Date::new(2026, 1, 1))
             .await
@@ -172,6 +184,7 @@ impl AppCore {
             securities: master.securities,
             store: Mutex::new(CandleStore::new()),
             daily_batches: Mutex::new(HashMap::new()),
+            dataset_coverage,
             calc_cache: Mutex::new(HashMap::new()),
             calc_stats: Mutex::new(CacheStats::default()),
             telemetry: Telemetry::in_memory(),
@@ -295,6 +308,16 @@ impl AppCore {
         Ok(MarketSnapshotDto {
             sample_count: self.securities.len(),
             data_date,
+            coverage_start: self
+                .dataset_coverage
+                .as_ref()
+                .map(|(start, _)| start.clone())
+                .unwrap_or_default(),
+            coverage_end: self
+                .dataset_coverage
+                .as_ref()
+                .map(|(_, end)| end.clone())
+                .unwrap_or_default(),
             provider,
             dataset_id,
             data_version,
@@ -1211,6 +1234,9 @@ mod tests {
         assert_eq!(snapshot.sample_count, 120, "模拟域样本口径应为 120 只");
         assert_eq!(snapshot.rows.len(), 120);
         assert!(snapshot.data_date.len() == 10, "数据时间应为最后一个交易日");
+        // 卡 AC-01.01-01：页头日期同时要与 manifest coverage_end 对得上（独立来源）。
+        assert_eq!(snapshot.coverage_end, snapshot.data_date);
+        assert!(snapshot.coverage_start.len() == 10);
 
         for row in &snapshot.rows {
             assert!(row.last_price.is_some(), "{} 缺最新价", row.security);
@@ -1218,6 +1244,7 @@ mod tests {
             assert!(row.amount.is_some(), "{} 缺成交额", row.security);
             if row.is_index {
                 assert!(row.turnover_pct.is_none(), "指数不应有换手率");
+                assert!(row.volume_ratio.is_none(), "指数量比应为 —");
             } else {
                 assert!(row.turnover_pct.unwrap() >= 0.0);
             }
