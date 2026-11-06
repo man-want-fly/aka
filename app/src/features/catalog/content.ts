@@ -51,6 +51,72 @@ export const B1_FORMULAS: Record<string, CatalogFormula> = {
   },
 };
 
+/** B3 动量/摆动 13 条新口径（M06 已计入 B1；正文与 docs/indicators/b3-momentum-oscillators.md 同源）。 */
+export const B3_FORMULAS: Record<string, CatalogFormula> = {
+  M01: {
+    formula:
+      "涨幅/跌幅取 Wilder 平滑（种子=前 N 个有效差值的算术均值）；RSI = 100 − 100/(1+RS)，RS = 平均涨幅/平均跌幅。N=14，首值下标 14；平均跌幅为 0 输出 100，平均涨幅为 0 输出 0。",
+    tolerance: "百分比振荡 · absolute 1e-4",
+  },
+  M02: {
+    formula:
+      "RSV = (C − LLV(L,N))/(HHV(H,N) − LLV(L,N))×100；K = ((k−1)·K₋₁ + RSV)/k、D = ((d−1)·D₋₁ + K)/d，种子 K₀=D₀=50；J = 3K − 2D。N=9、k=d=3，首值下标 8。高低差为 0 时 RSV 取 50（beta 待裁定）。",
+    tolerance: "百分比振荡 · absolute 1e-4（beta）",
+  },
+  M04: {
+    formula:
+      "%R = (HHV(H,N) − C)/(HHV(H,N) − LLV(L,N))×−100，值域 [−100, 0]。N=14，首值下标 13；高低差为 0 输出 NaN。",
+    tolerance: "百分比振荡 · absolute 1e-4",
+  },
+  M05: {
+    formula:
+      "TP = (H+L+C)/3；CCI = (TP − SMA(TP,N))/(0.015×平均绝对偏差)，平均绝对偏差 = mean(|TPᵢ − SMA|)。N=20，首值下标 19；偏差为 0 输出 NaN。",
+    tolerance: "无量纲振荡 · absolute 1e-4",
+  },
+  M08: {
+    formula:
+      "PPO = (EMA(fast) − EMA(slow))/EMA(slow)×100；信号线 = PPO 的 EMA(signal)。默认 12/26/9，首值下标 slow+signal−2=33；fast<slow，慢线为 0 时 NaN。本口径只出双线，不出柱。",
+    tolerance: "百分比振荡 · absolute 1e-4",
+  },
+  M09: {
+    formula: "ROC = (C − C₋N)/C₋N×100。N=12，首值下标 12；前值为 0 输出 NaN。",
+    tolerance: "百分比振荡 · absolute 1e-4",
+  },
+  M10: {
+    formula: "MOM = C − C₋N，差额单位元。N=10，首值下标 10。",
+    tolerance: "价格口径 · relative 1e-6",
+  },
+  M19: {
+    formula:
+      "Aroon Up = 100×(N − 距最高价根数)/N；Aroon Down 同理取最低价。窗口 N 根含当前根，默认 25，首值下标 24；并列极值取窗口内最近一次。",
+    tolerance: "百分比振荡 · absolute 1e-4",
+  },
+  M20: {
+    formula:
+      "VI+ = Σ|Hᵢ − Lᵢ₋₁|/ΣTR；VI− = Σ|Lᵢ − Hᵢ₋₁|/ΣTR，窗口 N，TR 为真实波幅。N=14，首值下标 14；ΣTR 为 0 输出 NaN。",
+    tolerance: "无量纲振荡 · absolute 1e-4",
+  },
+  M21: {
+    formula:
+      "CMO = 100×(Σ涨幅 − Σ跌幅)/(Σ涨幅 + Σ跌幅)，窗口 N 内逐根收盘差。N=14，首值下标 14；分母为 0 输出 NaN。",
+    tolerance: "百分比振荡 · absolute 1e-4",
+  },
+  M24: {
+    formula:
+      "Mass = Σ[EMA9(H−L)/EMA9(EMA9(H−L))]，求和 25 根。首值下标 40 = 2×(9−1)+25−1。CSV 声明 warmup=30 与递推实算不一致（beta 待裁定）。",
+    tolerance: "无量纲比值 · relative 1e-6（beta）",
+  },
+  M25: {
+    formula:
+      "脉冲线 = EMA13(2×(DIF−DEA))；状态 state ∈ {−1,0,1}：柱>0 且脉冲上行 → 1，柱<0 且脉冲下行 → −1，其余 0。默认 12/26/9/13，首值下标 46（state 需前一根脉冲）。三色规则与 EMA 对象存在多种实现（beta 待裁定）。",
+    tolerance: "副图 · absolute 1e-4（beta）",
+  },
+  M26: {
+    formula: "range = H − L；当根振幅为近 7 根最小 → 1，否则 0。首值下标 6。",
+    tolerance: "0/1 计数 · 严格相等",
+  },
+};
+
 /** B2 通道/波动 20 条口径（正文与 docs/indicators/b2-channel-volatility.md 同源）。 */
 export const B2_FORMULAS: Record<string, CatalogFormula> = {
   T08: {

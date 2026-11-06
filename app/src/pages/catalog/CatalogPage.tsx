@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../../app/AppShell";
-import { B1_FORMULAS, B2_FORMULAS } from "../../features/catalog/content";
+import { B1_FORMULAS, B2_FORMULAS, B3_FORMULAS } from "../../features/catalog/content";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { AppError, ManifestResponse, RegistryResponse } from "../../lib/types";
 
@@ -8,9 +8,9 @@ interface Props {
   onNavigate: (key: "workbench" | "catalog") => void;
 }
 
-const FORMULAS = { ...B1_FORMULAS, ...B2_FORMULAS };
+const FORMULAS = { ...B1_FORMULAS, ...B2_FORMULAS, ...B3_FORMULAS };
 
-/** P4 指标口径页：B1 11 个 + B2 20 个，四段结构可查可用。 */
+/** P4 指标口径页：B1 11 个 + B2 20 个 + B3 13 个（M06 计入 B1），四段结构可查可用。 */
 export function CatalogPage({ onNavigate }: Props) {
   const [registry, setRegistry] = useState<RegistryResponse | null>(null);
   const [manifest, setManifest] = useState<ManifestResponse | null>(null);
@@ -60,7 +60,7 @@ export function CatalogPage({ onNavigate }: Props) {
         >
           <h1 style={{ fontSize: 18, margin: "0 0 4px" }}>指标口径</h1>
           <div className="caption" style={{ marginBottom: 12 }}>
-            B1 11 个 + B2 20 个 · 当前匹配 {implemented.length} / 共 31 条
+            B1 11 个 + B2 20 个 + B3 13 个 · 当前匹配 {implemented.length} / 共 {Object.keys(FORMULAS).length} 条
           </div>
           <input
             type="search"

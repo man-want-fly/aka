@@ -254,6 +254,20 @@ fn main() {
         cases.push(measure("V08", "gapo20", bars, runs, &period20, threshold));
         cases.push(measure("V09", "amplitude", bars, runs, &[], threshold));
         cases.push(measure("V10", "trueRange", bars, runs, &[], threshold));
+        // B3 动量 / 摆动
+        cases.push(measure("M01", "rsi14", bars, runs, &period14, threshold));
+        cases.push(measure("M02", "kdj9/3/3", bars, runs, &[], threshold));
+        cases.push(measure("M04", "wr14", bars, runs, &period14, threshold));
+        cases.push(measure("M05", "cci20", bars, runs, &period20, threshold));
+        cases.push(measure("M08", "ppo12/26/9", bars, runs, &[], threshold));
+        cases.push(measure("M09", "roc12", bars, runs, &[], threshold));
+        cases.push(measure("M10", "mom10", bars, runs, &[], threshold));
+        cases.push(measure("M19", "aroon25", bars, runs, &[], threshold));
+        cases.push(measure("M20", "vortex14", bars, runs, &period14, threshold));
+        cases.push(measure("M21", "cmo14", bars, runs, &period14, threshold));
+        cases.push(measure("M24", "mass9/25", bars, runs, &[], threshold));
+        cases.push(measure("M25", "elder12/26/9/13", bars, runs, &[], threshold));
+        cases.push(measure("M26", "nr7", bars, runs, &[], threshold));
     }
 
     let mut bin_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

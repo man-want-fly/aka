@@ -694,6 +694,293 @@
       "status": "normal",
       "unit": "元",
       "notes": "TR=max(H-L, |H-PC|, |L-PC|)；首根 NaN。"
+    },
+    {
+      "id": "M01",
+      "prdId": "M01",
+      "aliases": [],
+      "nameZh": "相对强弱指数",
+      "nameEn": "Relative Strength Index",
+      "category": "momentum",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "rsi", "labelZh": "RSI", "kind": "line", "color": "var(--accent)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m01-rsi",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "Wilder 平滑涨幅/跌幅，RSI=100-100/(1+RS)；avg_loss=0→100，avg_gain=0→0；首根有效值 14（0-based）。"
+    },
+    {
+      "id": "M02",
+      "prdId": "M02",
+      "aliases": [],
+      "nameZh": "随机指标 KDJ",
+      "nameEn": "Stochastic KDJ",
+      "category": "momentum",
+      "inputs": { "close": true, "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "RSV 周期", "min": 2, "max": 200, "default": 9, "step": 1 },
+        { "kind": "int", "key": "k", "label": "K 平滑", "min": 2, "max": 20, "default": 3, "step": 1 },
+        { "kind": "int", "key": "d", "label": "D 平滑", "min": 2, "max": 20, "default": 3, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "k", "labelZh": "K", "kind": "line", "color": "var(--accent)" },
+        { "key": "d", "labelZh": "D", "kind": "line", "color": "var(--warn)" },
+        { "key": "j", "labelZh": "J", "kind": "line", "color": "#8b5cf6" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m02-kdj",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "%",
+      "notes": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100；K/D 以 50/50 为种子按 (N-1)/N 权重递推，J=3K-2D；首根有效值 8（0-based）。高低差为 0 时 RSV 取 50——beta 待裁定。"
+    },
+    {
+      "id": "M04",
+      "prdId": "M04",
+      "aliases": [],
+      "nameZh": "威廉指标",
+      "nameEn": "Williams %R",
+      "category": "momentum",
+      "inputs": { "close": true, "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "wr", "labelZh": "%R", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m04-williams-r",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "%R=(HHV(H,N)-C)/(HHV(H,N)-LLV(L,N))×-100，值域 [-100,0]；高低差为 0 时 NaN；首根有效值 13。"
+    },
+    {
+      "id": "M05",
+      "prdId": "M05",
+      "aliases": [],
+      "nameZh": "顺势指标",
+      "nameEn": "Commodity Channel Index",
+      "category": "momentum",
+      "inputs": { "close": true, "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 20, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "cci", "labelZh": "CCI", "kind": "line", "color": "var(--accent)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m05-cci",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "指数",
+      "notes": "TP=(H+L+C)/3；CCI=(TP-SMA(TP,N))/(0.015×平均绝对偏差)；偏差为 0 时 NaN；首根有效值 19。"
+    },
+    {
+      "id": "M08",
+      "prdId": "M08",
+      "aliases": [],
+      "nameZh": "百分比价格振荡器",
+      "nameEn": "Percentage Price Oscillator",
+      "category": "momentum",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "fast", "label": "快线", "min": 2, "max": 200, "default": 12, "step": 1 },
+        { "kind": "int", "key": "slow", "label": "慢线", "min": 2, "max": 200, "default": 26, "step": 1 },
+        { "kind": "int", "key": "signal", "label": "信号", "min": 2, "max": 200, "default": 9, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "ppo", "labelZh": "PPO", "kind": "line", "color": "var(--accent)" },
+        { "key": "signal", "labelZh": "信号线", "kind": "line", "color": "var(--warn)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m08-ppo",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "PPO=(EMA(fast)-EMA(slow))/EMA(slow)×100；signal=PPO 的 EMA(signal)；fast<slow；首根有效值 slow+signal-2=33。本口径只出双线，不出柱。"
+    },
+    {
+      "id": "M09",
+      "prdId": "M09",
+      "aliases": [],
+      "nameZh": "变动率",
+      "nameEn": "Rate of Change",
+      "category": "momentum",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 12, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "roc", "labelZh": "ROC", "kind": "line", "color": "var(--accent)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m09-roc",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "ROC=(C-C[-N])/C[-N]×100；前值为 0 时 NaN；首根有效值 12。"
+    },
+    {
+      "id": "M10",
+      "prdId": "M10",
+      "aliases": [],
+      "nameZh": "动量",
+      "nameEn": "Momentum",
+      "category": "momentum",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 10, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "mom", "labelZh": "MOM", "kind": "line", "color": "var(--accent)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m10-momentum",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "元",
+      "notes": "MOM=C-C[-N]，差额单位元；首根有效值 10。"
+    },
+    {
+      "id": "M19",
+      "prdId": "M19",
+      "aliases": [],
+      "nameZh": "阿隆指标",
+      "nameEn": "Aroon",
+      "category": "momentum",
+      "inputs": { "close": true, "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 25, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "aroonUp", "labelZh": "Aroon Up", "kind": "line", "color": "var(--rise)" },
+        { "key": "aroonDown", "labelZh": "Aroon Down", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m19-aroon",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "Up=100×(N-距最高价根数)/N，Down 同理取最低价；窗口 N 根，并列极值取最近一次；首根有效值 24。"
+    },
+    {
+      "id": "M20",
+      "prdId": "M20",
+      "aliases": [],
+      "nameZh": "涡旋指标",
+      "nameEn": "Vortex Indicator",
+      "category": "momentum",
+      "inputs": { "close": true, "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "viPlus", "labelZh": "VI+", "kind": "line", "color": "var(--rise)" },
+        { "key": "viMinus", "labelZh": "VI-", "kind": "line", "color": "var(--fall)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m20-vortex",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "比值",
+      "notes": "VI+=Σ|H_i-L_{i-1}|/ΣTR，VI-=Σ|L_i-H_{i-1}|/ΣTR，窗口 N；ΣTR=0 时 NaN；首根有效值 14。"
+    },
+    {
+      "id": "M21",
+      "prdId": "M21",
+      "aliases": [],
+      "nameZh": "钱德动量摆动指标",
+      "nameEn": "Chande Momentum Oscillator",
+      "category": "momentum",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "周期", "min": 2, "max": 200, "default": 14, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "cmo", "labelZh": "CMO", "kind": "line", "color": "var(--accent)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m21-cmo",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "%",
+      "notes": "CMO=100×(Σ涨幅-Σ跌幅)/(Σ涨幅+Σ跌幅)，窗口 N；分母为 0 时 NaN；首根有效值 14。"
+    },
+    {
+      "id": "M24",
+      "prdId": "M24",
+      "aliases": [],
+      "nameZh": "质量指数",
+      "nameEn": "Mass Index",
+      "category": "momentum",
+      "inputs": { "close": true, "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "ema", "label": "EMA 周期", "min": 2, "max": 200, "default": 9, "step": 1 },
+        { "kind": "int", "key": "sum", "label": "求和窗口", "min": 2, "max": 200, "default": 25, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "massIndex", "labelZh": "Mass", "kind": "line", "color": "var(--accent)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m24-mass-index",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "比值",
+      "notes": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根；首根有效值 40=(9-1)×2+25-1。CSV 声明 warmup=30 与递推实算不一致——beta 待裁定。"
+    },
+    {
+      "id": "M25",
+      "prdId": "M25",
+      "aliases": [],
+      "nameZh": "埃尔德脉冲",
+      "nameEn": "Elder Impulse System",
+      "category": "momentum",
+      "inputs": { "close": true },
+      "params": [
+        { "kind": "int", "key": "fast", "label": "快线", "min": 2, "max": 200, "default": 12, "step": 1 },
+        { "kind": "int", "key": "slow", "label": "慢线", "min": 2, "max": 200, "default": 26, "step": 1 },
+        { "kind": "int", "key": "signal", "label": "信号", "min": 2, "max": 200, "default": 9, "step": 1 },
+        { "kind": "int", "key": "ema", "label": "脉冲 EMA", "min": 2, "max": 200, "default": 13, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "impulse", "labelZh": "脉冲线", "kind": "line", "color": "var(--accent)" },
+        { "key": "state", "labelZh": "三色状态", "kind": "dot", "color": "#94a3b8" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m25-elder-impulse",
+      "version": 1,
+      "specStatus": "partial",
+      "status": "beta",
+      "unit": "无量纲",
+      "notes": "impulse=EMA13(2×(DIF-DEA))；state∈{-1,0,1}：柱>0 且脉冲上行→1，柱<0 且下行→-1，其余 0；首根有效值 46（impulse 起 45，state 需前一根 impulse）。三色规则与 EMA 对象存在多种实现——beta 待裁定。"
+    },
+    {
+      "id": "M26",
+      "prdId": "M26",
+      "aliases": [],
+      "nameZh": "NR7 窄幅",
+      "nameEn": "NR7",
+      "category": "momentum",
+      "inputs": { "close": true, "high": true, "low": true },
+      "params": [
+        { "kind": "int", "key": "period", "label": "窗口", "min": 2, "max": 200, "default": 7, "step": 1 }
+      ],
+      "outputs": [
+        { "key": "nr7", "labelZh": "NR7", "kind": "dot", "color": "var(--warn)" }
+      ],
+      "formulaRef": "docs/indicators/b3-momentum-oscillators.md#m26-nr7",
+      "version": 1,
+      "specStatus": "manualComplete",
+      "status": "normal",
+      "unit": "0/1",
+      "notes": "range=H-L；当根为近 7 根最小振幅→1，否则 0；首根有效值 6。"
     }
   ]
 }

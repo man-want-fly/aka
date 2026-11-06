@@ -45,12 +45,35 @@ export const B2_SUB_CHOICES: Array<{ id: string; label: string }> = [
   { id: "V10", label: "V10 TR" },
 ];
 
+/** B3 副图候选（13 个动量/摆动指标；M06 已在 B2 副图清单）。 */
+export const B3_SUB_CHOICES: Array<{ id: string; label: string }> = [
+  { id: "M01", label: "M01 RSI" },
+  { id: "M02", label: "M02 KDJ（beta）" },
+  { id: "M04", label: "M04 %R" },
+  { id: "M05", label: "M05 CCI" },
+  { id: "M08", label: "M08 PPO" },
+  { id: "M09", label: "M09 ROC" },
+  { id: "M10", label: "M10 Momentum" },
+  { id: "M19", label: "M19 Aroon" },
+  { id: "M20", label: "M20 Vortex" },
+  { id: "M21", label: "M21 CMO" },
+  { id: "M24", label: "M24 Mass Index（beta）" },
+  { id: "M25", label: "M25 Elder Impulse（beta）" },
+  { id: "M26", label: "M26 NR7" },
+];
+
+export const SUB_CHOICES = [...B2_SUB_CHOICES, ...B3_SUB_CHOICES];
+
 export const DEFAULT_B2_OVERLAYS = ["T09", "T24"];
 export const DEFAULT_SUB_ID = "M06";
 
 const B2_IDS = [
   "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T23", "T24",
   "V01", "V02", "V03", "V04", "V05", "V07", "V08", "V09", "V10",
+] as const;
+
+const B3_IDS = [
+  "M01", "M02", "M04", "M05", "M08", "M09", "M10", "M19", "M20", "M21", "M24", "M25", "M26",
 ] as const;
 
 /** 前端只做「表单 → 实例」的装配；范围校验以后端 ParamSpec 为准。 */
@@ -91,6 +114,12 @@ export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
     // 参数留空即用 manifest 默认值（与后端 fallback 同源）。
     ...B2_IDS.map((indicatorId) => ({
       instanceId: `b2-${indicatorId}`,
+      indicatorId,
+      params: {},
+    })),
+    // B3 全量 13 个：全部为副图候选，参数留空走 manifest 默认值。
+    ...B3_IDS.map((indicatorId) => ({
+      instanceId: `b3-${indicatorId}`,
       indicatorId,
       params: {},
     })),

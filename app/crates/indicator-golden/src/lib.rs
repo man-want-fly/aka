@@ -315,6 +315,9 @@ mod tests {
                     "E13" | "M06" => "absolute:1e-4",
                     "T24" => "absolute:1e-9",
                     "V02" | "V04" | "V05" | "V07" | "V08" => "absolute:1e-4",
+                    "M01" | "M02" | "M04" | "M05" | "M08" | "M09" | "M19" | "M20" | "M21"
+                    | "M25" => "absolute:1e-4",
+                    "M26" => "count",
                     _ => "relative:1e-6",
                 };
                 if case.tolerance == "absolute:1e-9" {

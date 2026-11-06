@@ -449,6 +449,210 @@ def amplitude(high, low):
             for i in range(len(high))]
 
 
+# ----------------------------- B3 动量 / 摆动 -----------------------------
+def window_sum_finite(values, period):
+    out = [NAN] * len(values)
+    for i in range(period - 1, len(values)):
+        window = values[i + 1 - period:i + 1]
+        if any(v is None for v in window):
+            continue
+        out[i] = sum(window)
+    return out
+
+
+def arg_extreme(values, period, latest):
+    out = [NAN] * len(values)
+    for i in range(period - 1, len(values)):
+        start = i + 1 - period
+        window = values[start:i + 1]
+        if any(v is None for v in window):
+            continue
+        best = 0
+        for offset, value in enumerate(window):
+            if (value >= window[best]) if latest else (value <= window[best]):
+                best = offset
+        out[i] = start + best
+    return out
+
+
+def rsi(closes, period):
+    gain = [NAN] * len(closes)
+    loss = [NAN] * len(closes)
+    for i in range(1, len(closes)):
+        delta = closes[i] - closes[i - 1]
+        gain[i] = max(delta, 0.0)
+        loss[i] = max(-delta, 0.0)
+    avg_gain = wilder_of_valid(gain, period)
+    avg_loss = wilder_of_valid(loss, period)
+    out = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if avg_gain[i] is None or avg_loss[i] is None:
+            continue
+        if avg_loss[i] == 0.0:
+            out[i] = 100.0
+        elif avg_gain[i] == 0.0:
+            out[i] = 0.0
+        else:
+            out[i] = 100.0 - 100.0 / (1.0 + avg_gain[i] / avg_loss[i])
+    return {"rsi": out}
+
+
+def kdj(closes, high, low, period, k_period, d_period):
+    hhv = rolling_max(high, period)
+    llv = rolling_min(low, period)
+    k_out, d_out, j_out = [NAN] * len(closes), [NAN] * len(closes), [NAN] * len(closes)
+    prev_k, prev_d = 50.0, 50.0
+    for i in range(len(closes)):
+        if hhv[i] is None or llv[i] is None:
+            continue
+        span = hhv[i] - llv[i]
+        rsv = 50.0 if span == 0.0 else (closes[i] - llv[i]) / span * 100.0
+        k = ((k_period - 1) * prev_k + rsv) / k_period
+        d = ((d_period - 1) * prev_d + k) / d_period
+        k_out[i], d_out[i], j_out[i] = k, d, 3.0 * k - 2.0 * d
+        prev_k, prev_d = k, d
+    return {"k": k_out, "d": d_out, "j": j_out}
+
+
+def williams_r(closes, high, low, period):
+    hhv = rolling_max(high, period)
+    llv = rolling_min(low, period)
+    out = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if hhv[i] is None or llv[i] is None:
+            continue
+        span = hhv[i] - llv[i]
+        if span != 0.0:
+            out[i] = (hhv[i] - closes[i]) / span * -100.0
+    return {"wr": out}
+
+
+def cci(closes, high, low, period):
+    typical = [(high[i] + low[i] + closes[i]) / 3.0 for i in range(len(closes))]
+    mean = sma(typical, period)
+    out = [NAN] * len(closes)
+    for i in range(period - 1, len(closes)):
+        if mean[i] is None:
+            continue
+        window = typical[i + 1 - period:i + 1]
+        deviation = sum(abs(v - mean[i]) for v in window) / period
+        if deviation != 0.0:
+            out[i] = (typical[i] - mean[i]) / (0.015 * deviation)
+    return {"cci": out}
+
+
+def ppo(closes, fast, slow, signal):
+    ef, es = ema(closes, fast), ema(closes, slow)
+    ppo_out = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if ef[i] is not None and es[i] is not None and es[i] != 0.0:
+            ppo_out[i] = (ef[i] - es[i]) / es[i] * 100.0
+    return {"ppo": ppo_out, "signal": ema_of_valid(ppo_out, signal)}
+
+
+def roc(closes, period):
+    out = [NAN] * len(closes)
+    for i in range(period, len(closes)):
+        previous = closes[i - period]
+        if previous != 0.0:
+            out[i] = (closes[i] - previous) / previous * 100.0
+    return {"roc": out}
+
+
+def momentum(closes, period):
+    out = [NAN] * len(closes)
+    for i in range(period, len(closes)):
+        out[i] = closes[i] - closes[i - period]
+    return {"mom": out}
+
+
+def aroon(high, low, period):
+    up_at = arg_extreme(high, period, True)
+    down_at = arg_extreme(low, period, False)
+    up, down = [NAN] * len(high), [NAN] * len(high)
+    for i in range(len(high)):
+        if up_at[i] is not None:
+            up[i] = (period - (i - up_at[i])) / period * 100.0
+        if down_at[i] is not None:
+            down[i] = (period - (i - down_at[i])) / period * 100.0
+    return {"aroonUp": up, "aroonDown": down}
+
+
+def vortex(high, low, close, period):
+    tr = true_range(high, low, close)
+    plus, minus = [NAN] * len(close), [NAN] * len(close)
+    for i in range(period, len(close)):
+        start = i + 1 - period
+        sum_tr = sum_plus = sum_minus = 0.0
+        for j in range(start, i + 1):
+            if tr[j] is None:
+                sum_tr = None
+                break
+            sum_tr += tr[j]
+            sum_plus += abs(high[j] - low[j - 1])
+            sum_minus += abs(low[j] - high[j - 1])
+        if sum_tr is not None and sum_tr != 0.0:
+            plus[i] = sum_plus / sum_tr
+            minus[i] = sum_minus / sum_tr
+    return {"viPlus": plus, "viMinus": minus}
+
+
+def cmo(closes, period):
+    delta = [NAN] * len(closes)
+    for i in range(1, len(closes)):
+        delta[i] = closes[i] - closes[i - 1]
+    out = [NAN] * len(closes)
+    for i in range(period, len(closes)):
+        window = delta[i + 1 - period:i + 1]
+        if any(v is None for v in window):
+            continue
+        up = sum(v for v in window if v > 0.0)
+        down = sum(-v for v in window if v < 0.0)
+        total = up + down
+        if total != 0.0:
+            out[i] = (up - down) / total * 100.0
+    return {"cmo": out}
+
+
+def mass_index(high, low, ema_period, sum_period):
+    span = [high[i] - low[i] for i in range(len(high))]
+    first = ema(span, ema_period)
+    second = ema_of_valid(first, ema_period)
+    ratio = [NAN] * len(high)
+    for i in range(len(high)):
+        if first[i] is not None and second[i] is not None and second[i] != 0.0:
+            ratio[i] = first[i] / second[i]
+    return {"massIndex": window_sum_finite(ratio, sum_period)}
+
+
+def elder_impulse(closes, fast, slow, signal, ema_period):
+    hist = macd(closes, fast, slow, signal)["hist"]
+    impulse = ema_of_valid(hist, ema_period)
+    state = [NAN] * len(closes)
+    for i in range(1, len(closes)):
+        if impulse[i] is None or impulse[i - 1] is None or hist[i] is None:
+            continue
+        rising = impulse[i] > impulse[i - 1]
+        if hist[i] > 0.0 and rising:
+            state[i] = 1.0
+        elif hist[i] < 0.0 and not rising:
+            state[i] = -1.0
+        else:
+            state[i] = 0.0
+    return {"impulse": impulse, "state": state}
+
+
+def nr7(high, low, period):
+    span = [high[i] - low[i] for i in range(len(high))]
+    out = [NAN] * len(high)
+    for i in range(period - 1, len(high)):
+        window = span[i + 1 - period:i + 1]
+        if any(v is None for v in window):
+            continue
+        out[i] = 1.0 if span[i] == min(window) else 0.0
+    return {"nr7": out}
+
+
 
 def roundv(value):
     return None if value is None else round(value, 9)
@@ -494,12 +698,13 @@ def case(indicator_id, params, outputs, expected, tolerance=None):
 # - 无量纲比率（T21 R²）：absolute 1e-6
 # - 百分比振荡（E13 BIAS，%）与 MACD 副图：absolute 1e-4
 # - B2 无量纲振荡（V02/V04/V05/V07/V08）：absolute 1e-4
+# - B3 摆动（M01/M02/M04/M05/M08/M09/M19/M20/M21/M25）：absolute 1e-4；M26 计数严格相等
 # - T24 为原始窗口最值直取，用 absolute 1e-9 等价精确（容差 0）
 # - 手算类夹具（edge_manual_nonlinear / edge_arithmetic_regression）允许单 case 收紧到 absolute 1e-9
 TOLERANCE_RULES = (
     "relative:1e-6=价格/斜率类（元、元/根），分母 max(|expected|,1.0)；"
     "absolute:1e-6=R²（无量纲）；"
-    "absolute:1e-4=BIAS(%)、MACD 副图、B2 无量纲振荡（ATRP/带宽/%B/ULCER/GAPO）；"
+    "absolute:1e-4=BIAS(%)、MACD 副图、B2 无量纲振荡（ATRP/带宽/%B/ULCER/GAPO）、B3 摆动（RSI/KDJ/%R/CCI/PPO/ROC/Aroon/Vortex/CMO/脉冲）；"
     "absolute:1e-9=仅手算夹具单 case 收紧，或 T24 原始值直取（容差 0）；"
     "count=计数严格相等"
 )
@@ -513,6 +718,17 @@ TOLERANCE_BY_INDICATOR = {
     "V05": "absolute:1e-4",
     "V07": "absolute:1e-4",
     "V08": "absolute:1e-4",
+    "M01": "absolute:1e-4",
+    "M02": "absolute:1e-4",
+    "M04": "absolute:1e-4",
+    "M05": "absolute:1e-4",
+    "M08": "absolute:1e-4",
+    "M09": "absolute:1e-4",
+    "M19": "absolute:1e-4",
+    "M20": "absolute:1e-4",
+    "M21": "absolute:1e-4",
+    "M25": "absolute:1e-4",
+    "M26": "count",
 }
 DEFAULT_TOLERANCE = "relative:1e-6"
 
@@ -589,6 +805,30 @@ def b2_cases(data):
         case("V08", {"period": 14}, ["gapo"], {"gapo": gapo(o, c, h, l, 14)}),
         case("V09", {}, ["amplitude"], {"amplitude": amplitude(h, l)}),
         case("V10", {}, ["tr"], {"tr": true_range(h, l, c)}),
+    ]
+
+
+def b3_cases(data):
+    """B3 默认参数下的 14 个指标基线（M06 沿用 B1 实现，一并覆盖）。"""
+    h, l, c = data["high"], data["low"], data["close"]
+    return [
+        case("M01", {"period": 14}, ["rsi"], rsi(c, 14)),
+        case("M02", {"period": 9, "k": 3, "d": 3}, ["k", "d", "j"], kdj(c, h, l, 9, 3, 3)),
+        case("M04", {"period": 14}, ["wr"], williams_r(c, h, l, 14)),
+        case("M05", {"period": 20}, ["cci"], cci(c, h, l, 20)),
+        case("M06", {"fast": 12, "slow": 26, "signal": 9},
+             ["dif", "dea", "hist"], macd(c, 12, 26, 9), "absolute:1e-4"),
+        case("M08", {"fast": 12, "slow": 26, "signal": 9}, ["ppo", "signal"],
+             ppo(c, 12, 26, 9)),
+        case("M09", {"period": 12}, ["roc"], roc(c, 12)),
+        case("M10", {"period": 10}, ["mom"], momentum(c, 10)),
+        case("M19", {"period": 25}, ["aroonUp", "aroonDown"], aroon(h, l, 25)),
+        case("M20", {"period": 14}, ["viPlus", "viMinus"], vortex(h, l, c, 14)),
+        case("M21", {"period": 14}, ["cmo"], cmo(c, 14)),
+        case("M24", {"ema": 9, "sum": 25}, ["massIndex"], mass_index(h, l, 9, 25)),
+        case("M25", {"fast": 12, "slow": 26, "signal": 9, "ema": 13},
+             ["impulse", "state"], elder_impulse(c, 12, 26, 9, 13)),
+        case("M26", {"period": 7}, ["nr7"], nr7(h, l, 7)),
     ]
 
 
@@ -823,6 +1063,50 @@ def main():
         "不得作为公式推导依据引用"
     )
     write("edge_b2_below_min_window.json", below_suite)
+
+    # ----------------------------- B3 夹具 -----------------------------
+    write("base_b3_momentum_seed42_520.json",
+          suite_ohlc("base_b3_momentum_seed42_520", 42, data, b3_cases(data)))
+
+    # 常数 OHLC：H=L=O=C=10；零区间、零振幅、零柱的退化口径。
+    write("edge_b3_constant_ohlc.json",
+          suite_ohlc("edge_b3_constant_ohlc", 0, flat_data, b3_cases(flat_data)))
+
+    # 预热不足：20 根数据 + 大周期，全部输出 NaN。
+    short_b3 = build_input(20, 11)
+    insufficient_b3 = [
+        case("M01", {"period": 60}, ["rsi"], rsi(short_b3["close"], 60)),
+        case("M02", {"period": 60, "k": 3, "d": 3}, ["k", "d", "j"],
+             kdj(short_b3["close"], short_b3["high"], short_b3["low"], 60, 3, 3)),
+        case("M04", {"period": 60}, ["wr"],
+             williams_r(short_b3["close"], short_b3["high"], short_b3["low"], 60)),
+        case("M05", {"period": 60}, ["cci"],
+             cci(short_b3["close"], short_b3["high"], short_b3["low"], 60)),
+        case("M06", {"fast": 20, "slow": 60, "signal": 9}, ["dif", "dea", "hist"],
+             macd(short_b3["close"], 20, 60, 9)),
+        case("M08", {"fast": 20, "slow": 60, "signal": 9}, ["ppo", "signal"],
+             ppo(short_b3["close"], 20, 60, 9)),
+        case("M09", {"period": 60}, ["roc"], roc(short_b3["close"], 60)),
+        case("M10", {"period": 60}, ["mom"], momentum(short_b3["close"], 60)),
+        case("M19", {"period": 60}, ["aroonUp", "aroonDown"],
+             aroon(short_b3["high"], short_b3["low"], 60)),
+        case("M20", {"period": 60}, ["viPlus", "viMinus"],
+             vortex(short_b3["high"], short_b3["low"], short_b3["close"], 60)),
+        case("M21", {"period": 60}, ["cmo"], cmo(short_b3["close"], 60)),
+        case("M24", {"ema": 60, "sum": 25}, ["massIndex"],
+             mass_index(short_b3["high"], short_b3["low"], 60, 25)),
+        case("M25", {"fast": 20, "slow": 60, "signal": 9, "ema": 13},
+             ["impulse", "state"],
+             elder_impulse(short_b3["close"], 20, 60, 9, 13)),
+        case("M26", {"period": 60}, ["nr7"],
+             nr7(short_b3["high"], short_b3["low"], 60)),
+    ]
+    write("edge_b3_insufficient.json",
+          suite_ohlc("edge_b3_insufficient", 11, short_b3, insufficient_b3))
+
+    # 首根：1 根 K 线，全部输出 NaN（warmup 均 ≥ 6）。
+    write("edge_b3_first_bar.json",
+          suite_ohlc("edge_b3_first_bar", 0, first_data, b3_cases(first_data)))
 
 
 if __name__ == "__main__":

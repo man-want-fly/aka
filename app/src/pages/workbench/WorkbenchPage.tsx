@@ -7,7 +7,7 @@ import { SimBadge } from "../../components/SimBadge";
 import { Watchlist } from "../../components/Watchlist";
 import {
   B2_OVERLAY_CHOICES,
-  B2_SUB_CHOICES,
+  SUB_CHOICES,
   DEFAULT_B2_OVERLAYS,
   DEFAULT_PARAMS,
   DEFAULT_SUB_ID,
@@ -549,7 +549,7 @@ export function WorkbenchPage({
                 value={subId}
                 onChange={(event) => setSubId(event.target.value)}
               >
-                {B2_SUB_CHOICES.map((item) => (
+                {SUB_CHOICES.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.label}
                   </option>
