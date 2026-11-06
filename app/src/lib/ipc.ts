@@ -70,6 +70,9 @@ export const ipc = {
   diagWrite: (payload: string): Promise<string> =>
     invoke<string>("diag_write", { payload }),
 
+  diagWriteNamed: (name: string, payload: string): Promise<string> =>
+    invoke<string>("diag_write_named", { name, payload }),
+
   marketSnapshot: (): Promise<MarketSnapshotDto> => invoke<MarketSnapshotDto>("market_snapshot"),
 
   watchlist: (): Promise<WatchlistDto> => invoke<WatchlistDto>("watchlist_read"),

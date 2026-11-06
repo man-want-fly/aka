@@ -145,6 +145,27 @@ pub async fn diag_write(
     app: tauri::AppHandle,
     payload: String,
 ) -> Result<String, String> {
+    write_diag(&app, "s2-evidence.json", &payload)
+}
+
+/// 命名诊断落盘：不同批次（S2 / E-01 / E-02）证据分开存档，避免互相覆盖。
+#[tauri::command]
+pub async fn diag_write_named(
+    app: tauri::AppHandle,
+    name: String,
+    payload: String,
+) -> Result<String, String> {
+    let safe: String = name
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
+        .collect();
+    if safe.is_empty() || safe.contains("..") {
+        return Err("非法诊断文件名".to_string());
+    }
+    write_diag(&app, &safe, &payload)
+}
+
+fn write_diag(app: &tauri::AppHandle, name: &str, payload: &str) -> Result<String, String> {
     use tauri::Manager;
     let dir = app
         .path()
@@ -152,7 +173,7 @@ pub async fn diag_write(
         .map_err(|err| format!("无法解析 home 目录：{err}"))?
         .join("Library/Application Support/aka/diag");
     std::fs::create_dir_all(&dir).map_err(|err| format!("创建诊断目录失败：{err}"))?;
-    let path = dir.join("s2-evidence.json");
+    let path = dir.join(name);
     std::fs::write(&path, payload).map_err(|err| format!("写入诊断结果失败：{err}"))?;
     Ok(path.display().to_string())
 }

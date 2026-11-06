@@ -73,6 +73,7 @@ pub fn run() {
             commands::position_delete,
             commands::diag_enabled,
             commands::diag_write,
+            commands::diag_write_named,
         ])
         .run(tauri::generate_context!())
         .expect("AKA 启动失败");
