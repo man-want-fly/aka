@@ -273,6 +273,139 @@ async function collectRenderChecks(): Promise<Record<string, unknown>> {
   };
 }
 
+/** B2 渲染层 8 条 AC：按 Story 卡 S-03.05-01~08 逐卡切换叠加/副图并采样真实 DOM。 */
+async function collectB2RenderChecks(): Promise<Record<string, unknown>> {
+  const setOverlays = async (ids: string[]) => {
+    const select = document.querySelector<HTMLSelectElement>("[data-b2-overlay-select]");
+    if (!select) return false;
+    for (const option of Array.from(select.options)) {
+      option.selected = ids.includes(option.value);
+    }
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(260);
+    return true;
+  };
+  const setSub = async (id: string) => {
+    const select = document.querySelector<HTMLSelectElement>("[data-b2-sub-select]");
+    if (!select) return false;
+    select.value = id;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(260);
+    return true;
+  };
+
+  const overlaySample = (id: string) => {
+    const nodes = Array.from(document.querySelectorAll<SVGElement>(`[data-overlay='${id}']`));
+    const line = nodes.find((node) => node.tagName.toLowerCase() === "path");
+    const dot = nodes.find((node) => node.tagName.toLowerCase() === "g");
+    return {
+      nodes: nodes.length,
+      paint: line
+        ? getComputedStyle(line).stroke
+        : dot
+          ? getComputedStyle(dot.querySelector("circle") ?? dot).fill
+          : "",
+      points: line?.getAttribute("d")?.length ?? dot?.querySelectorAll("circle").length ?? 0,
+    };
+  };
+  const subSample = (id: string) => {
+    const nodes = Array.from(document.querySelectorAll<SVGElement>(`[data-sub='${id}']`));
+    const line = nodes.find((node) => node.tagName.toLowerCase() === "path");
+    return {
+      nodes: nodes.length,
+      paint: line ? getComputedStyle(line).stroke : "",
+      points: line?.getAttribute("d")?.length ?? 0,
+    };
+  };
+  const readoutsOf = (prefix: string) =>
+    Array.from(document.querySelectorAll<HTMLElement>(`[data-readout^='${prefix}']`)).map(
+      (element) => ({
+        readout: element.getAttribute("data-readout") ?? "",
+        value: element.getAttribute("data-value") ?? "",
+        unit: element.getAttribute("data-unit") ?? "",
+        text: element.textContent?.trim() ?? "",
+      }),
+    );
+  // 当前根读数：有效值必须是有限数；故意 NaN 的尾部（位移/未激活）必须显示 —
+  const readoutShapeOk = (entries: Array<{ value: string; text: string }>) =>
+    entries.length > 0 &&
+    entries.some((entry) => entry.value !== "") &&
+    entries.every((entry) =>
+      entry.value !== ""
+        ? Number.isFinite(Number(entry.value))
+        : entry.text.includes("—"),
+    );
+
+  const cards: Array<Record<string, unknown>> = [];
+
+  const overlayCases: Array<{ card: string; ids: string[]; expect: Record<string, number> }> = [
+    { card: "S-03.05-01", ids: ["T08", "T09", "T11", "T24"], expect: { T08: 3, T09: 3, T11: 2, T24: 2 } },
+    { card: "S-03.05-03", ids: ["T10", "T12", "T13", "T14"], expect: { T10: 3, T12: 3, T13: 2, T14: 2 } },
+    { card: "S-03.05-04", ids: ["T15"], expect: { T15: 5 } },
+    { card: "S-03.05-05", ids: ["T16"], expect: { T16: 1 } },
+    { card: "S-03.05-06", ids: ["T23"], expect: { T23: 3 } },
+  ];
+  for (const item of overlayCases) {
+    const selected = await setOverlays(item.ids);
+    const samples = Object.fromEntries(item.ids.map((id) => [id, overlaySample(id)]));
+    const readouts = Object.fromEntries(item.ids.map((id) => [id, readoutsOf(`b2-overlay-${id}-`)]));
+    const countsOk = item.ids.every(
+      (id) => (samples[id] as { nodes: number }).nodes === item.expect[id],
+    );
+    const paintOk = item.ids.every((id) => (samples[id] as { paint: string }).paint !== "");
+    const readoutOk = item.ids.every((id) =>
+      readoutShapeOk(readouts[id] as Array<{ value: string; text: string }>),
+    );
+    cards.push({
+      card: item.card,
+      kind: "overlay",
+      selected,
+      expected: item.expect,
+      samples,
+      readouts,
+      ok: selected && countsOk && paintOk && readoutOk,
+    });
+  }
+
+  const subCases: Array<{ card: string; ids: string[]; expect: Record<string, number> }> = [
+    { card: "S-03.05-02", ids: ["V01", "V02", "V09", "V10"], expect: { V01: 1, V02: 1, V09: 1, V10: 1 } },
+    { card: "S-03.05-07", ids: ["V03", "V04", "V05"], expect: { V03: 1, V04: 1, V05: 1 } },
+    { card: "S-03.05-08", ids: ["V07", "V08"], expect: { V07: 1, V08: 1 } },
+  ];
+  for (const item of subCases) {
+    const samples: Record<string, unknown> = {};
+    const readouts: Record<string, unknown> = {};
+    for (const id of item.ids) {
+      await setSub(id);
+      samples[id] = subSample(id);
+      readouts[id] = readoutsOf(`b2-sub-${id}-`);
+    }
+    const countsOk = item.ids.every((id) => (samples[id] as { nodes: number }).nodes === item.expect[id]);
+    const paintOk = item.ids.every((id) => (samples[id] as { paint: string }).paint !== "");
+    const readoutOk = item.ids.every((id) =>
+      readoutShapeOk(readouts[id] as Array<{ value: string; text: string }>),
+    );
+    cards.push({
+      card: item.card,
+      kind: "sub",
+      expected: item.expect,
+      samples,
+      readouts,
+      ok: countsOk && paintOk && readoutOk,
+    });
+  }
+
+  // 复位默认视图，避免取证改变用户看到的叠加/副图
+  await setOverlays(["T09", "T24"]);
+  await setSub("M06");
+
+  return {
+    cardCount: cards.length,
+    cards,
+    ok: cards.length === 8 && cards.every((item) => Boolean(item.ok)),
+  };
+}
+
 /** 口径页证据：真实跳转 P4 路由，读 DOM 里的指标条目与四段结构。 */
 async function collectCatalogCheck(): Promise<Record<string, unknown>> {
   const previous = window.location.hash;
@@ -284,7 +417,9 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
   const sections = Array.from(document.querySelectorAll("[data-catalog-section]")).map(
     (element) => element.getAttribute("data-catalog-section") ?? "",
   );
-  const betaCount = document.querySelectorAll("[data-catalog-beta='1']").length;
+  const betaIds = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-catalog-item][data-catalog-beta='1']"),
+  ).map((element) => element.getAttribute("data-catalog-item") ?? "");
   const rootPresent = document.querySelectorAll("[data-catalog-root='p4']").length > 0;
   window.location.hash = previous || "#/workbench";
   await sleep(320);
@@ -294,8 +429,9 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
     items,
     itemCount: items.length,
     sections,
-    betaCount,
-    ok: rootPresent && items.length === 31 && sections.length === 4,
+    betaIds,
+    betaCount: betaIds.length,
+    ok: rootPresent && items.length === 31 && sections.length === 4 && betaIds.includes("T16"),
   };
 }
 
@@ -473,8 +609,10 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   await sleep(600);
 
   const renderLayer = await collectRenderChecks();
+  const b2Render = await collectB2RenderChecks();
   const catalog = await collectCatalogCheck();
   if (!renderLayer.ok) notes.push("渲染层 DOM 断言未通过，见 verification.renderLayer");
+  if (!b2Render.ok) notes.push("B2 渲染层 8 卡断言未通过，见 verification.b2Render");
   if (!catalog.ok) notes.push("口径页 DOM 断言未通过，见 verification.catalog");
 
   const payload = {
@@ -568,6 +706,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     },
     verification: {
       renderLayer,
+      b2Render,
       catalog,
     },
     telemetry: {

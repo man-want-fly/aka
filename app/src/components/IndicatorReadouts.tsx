@@ -68,6 +68,12 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subId, units }
     }
     return null;
   };
+  // B2 读数取「当前根」而不是最近有效值：位移/未激活输出尾部为 NaN，显示 — 才如实
+  const current = (values: (number | null)[] | undefined) => {
+    if (!values || values.length === 0) return null;
+    const value = values[values.length - 1];
+    return value !== null && Number.isFinite(value) ? value : null;
+  };
 
   return (
     <div
@@ -135,7 +141,7 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subId, units }
           <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
             {b2Overlays.flatMap((item) =>
               item.outputs.map((output) => {
-                const value = latest(output.values);
+                const value = current(output.values);
                 const unit = units[item.indicatorId] ?? "";
                 return (
                   <span
@@ -153,7 +159,7 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subId, units }
               }),
             )}
             {b2Sub?.outputs.map((output) => {
-              const value = latest(output.values);
+              const value = current(output.values);
               const unit = units[b2Sub.indicatorId] ?? "";
               return (
                 <span
