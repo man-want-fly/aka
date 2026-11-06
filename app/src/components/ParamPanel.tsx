@@ -43,9 +43,9 @@ export function ParamPanel({
   const signalSpec = findSpec(registry, "M06", "signal");
 
   const periodBounds = intBounds(maPeriodSpec, 2, 200);
-  const fastBounds = intBounds(fastSpec, 2, 100);
+  const fastBounds = intBounds(fastSpec, 2, 200);
   const slowBounds = intBounds(slowSpec, 2, 200);
-  const signalBounds = intBounds(signalSpec, 2, 100);
+  const signalBounds = intBounds(signalSpec, 2, 200);
 
   const variants =
     maTypeSpec && maTypeSpec.kind === "enum"

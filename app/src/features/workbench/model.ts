@@ -101,7 +101,7 @@ export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
 export function localCheck(params: WorkbenchParams): string | null {
   const pairs: Array<[string, number, number, number]> = [
     ["MA 周期", params.maPeriod, 2, 200],
-    ["MACD 快线", params.fast, 2, 100],
+    ["MACD 快线", params.fast, 2, 200],
     ["MACD 慢线", params.slow, 2, 200],
     ["MACD 信号", params.signal, 2, 200],
   ];
