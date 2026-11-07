@@ -1,3 +1,4 @@
+import { changePctMismatch } from "../../lib/changePct";
 import { describeError, ipc } from "../../lib/ipc";
 import type { MarketSnapshotDto } from "../../lib/types";
 
@@ -229,18 +230,26 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       }`,
     );
 
-    // ---- 渲染层：涨跌幅符号 / 停牌 / 空值 ----
+    // ---- 渲染层：涨跌幅三态逐行比对 / 停牌 / 空值 ----
+    const rowsByCode = new Map(rows.map((row) => [row.code, row]));
     const pctProblems: string[] = [];
     const suspendedProblems: string[] = [];
     for (const row of domRows) {
-      const suspended = row.dataset.suspended === "1";
+      const code = row.dataset.code ?? "";
+      const dataRow = rowsByCode.get(code);
       const pct = cellText(row, "changePct");
+      if (!dataRow) {
+        pctProblems.push(`${code} 数据层无对应行`);
+        continue;
+      }
+      const suspended = row.dataset.suspended === "1";
       if (suspended) {
-        if (pct !== "—") suspendedProblems.push(`${row.dataset.code} 停牌却显示 ${pct}`);
+        if (pct !== "—") suspendedProblems.push(`${code} 停牌却显示 ${pct}`);
         const name = row.querySelector<HTMLElement>('[data-cell="name"]');
-        if (!name?.textContent?.includes("停牌")) suspendedProblems.push(`${row.dataset.code} 缺停牌徽标`);
-      } else if (!/^(?:[+]|−)\d+\.\d{2}%$/.test(pct)) {
-        pctProblems.push(`${row.dataset.code}=${pct}`);
+        if (!name?.textContent?.includes("停牌")) suspendedProblems.push(`${code} 缺停牌徽标`);
+      } else {
+        const mismatch = changePctMismatch(dataRow.changePct, pct);
+        if (mismatch) pctProblems.push(`${code} ${mismatch}`);
       }
     }
     push(
@@ -248,7 +257,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       "AC-01.01-01（补1）",
       "render",
       pctProblems.length === 0 && suspendedProblems.length === 0,
-      `符号异常=${pctProblems.length} 停牌异常=${suspendedProblems.length} ${
+      `三态异常=${pctProblems.length} 停牌异常=${suspendedProblems.length} ${
         pctProblems.slice(0, 3).join(",") || ""
       }`,
     );
