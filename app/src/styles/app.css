@@ -387,6 +387,190 @@ select {
   text-align: center;
 }
 
+/* S-01.02-02/03：分组 CRUD、写失败错误条、六层空态与行状态 */
+.wl-error {
+  margin: 0 10px 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--warn);
+  border-radius: var(--r2);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wl-error--write {
+  border-color: var(--danger, var(--warn));
+}
+
+.wl-error button {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--line2);
+  border-radius: var(--r2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  flex: none;
+}
+
+.wl-group-ops,
+.wl-new-group,
+.wl-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.wl-group-ops button,
+.wl-new-group button,
+.wl-confirm button {
+  padding: 2px 8px;
+  border: 1px solid var(--line2);
+  border-radius: var(--r2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.wl-new-group input,
+.wl-group-ops input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.wl-hint {
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.wl-hint--error {
+  color: var(--warn);
+}
+
+.wl-group-ops button:disabled,
+.wl-new-group button:disabled,
+.wl-new-group input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wl-confirm {
+  flex-wrap: wrap;
+  color: var(--warn);
+}
+
+.wl-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+}
+
+.wl-row.active {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.wl-row-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  padding: 7px 4px 7px 12px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.wl-row-main:hover {
+  background: var(--surface2);
+}
+
+.wl-row--muted .wl-row-main {
+  opacity: 0.55;
+}
+
+.wl-row .tag {
+  grid-column: 1 / -1;
+  justify-self: start;
+  font-size: 9.5px;
+}
+
+.wl-quote {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.wl-remove {
+  flex: none;
+  width: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wl-remove:hover {
+  color: var(--warn);
+  background: var(--surface2);
+}
+
+.wl-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.wl-empty b {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wl-empty span {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.wl-empty button {
+  margin-top: 2px;
+  padding: 3px 10px;
+  border: 1px solid var(--line2);
+  border-radius: var(--r2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.wl-empty-inline {
+  color: var(--faint);
+  font-size: 11px;
+}
+
 /* ---------------- 图表区 ---------------- */
 .main {
   display: flex;
@@ -1274,6 +1458,7 @@ select {
 }
 
 .tag--warn { border-color: var(--warn); color: var(--warn); }
+.tag--info { border-color: var(--accent); color: var(--accent); }
 .tag--muted { border-color: var(--line); color: var(--faint); }
 .tag--beta { border-color: var(--accent); color: var(--accent); }
 

@@ -1,48 +1,79 @@
 {
   "ok": true,
   "phase": "after-restart",
-  "finishedAt": "2026-11-06T21:52:57.490Z",
+  "finishedAt": "2026-11-06T23:01:42.958Z",
   "phaseA": {
-    "finishedAt": "2026-11-06T21:52:06.656Z",
-    "applied": "10/22/8",
-    "stored": "10/22/8",
+    "finishedAt": "2026-11-06T22:56:35.118Z",
+    "code": "300750.SZ",
+    "appliedBeforeExit": "10/22/8",
+    "storedBeforeExit": "10/22/8",
     "exitMethod": "kill -TERM aka-desktop 进程（等同关闭应用窗口）"
   },
   "phaseB": {
-    "finishedAt": "2026-11-06T21:52:57.490Z",
+    "finishedAt": "2026-11-06T23:01:42.958Z",
     "firstScreen": "12/26/9",
     "stored": null,
     "restoreDisabled": true,
-    "subtitleDefault": false
+    "reopened": "300750.SZ",
+    "subtitleDefault": true,
+    "insufficientNotice": "MACD 需要 34 根，当前 20 根"
   },
   "checks": [
     {
-      "id": "PA-04",
+      "id": "PA-10",
       "ac": "AC-02.05-04",
-      "layer": "runtime",
+      "layer": "data",
       "passed": true,
       "detail": "重启后 sessionStorage = 空"
     },
     {
-      "id": "PA-05",
+      "id": "PA-11",
       "ac": "AC-02.05-04",
       "layer": "render",
       "passed": true,
       "detail": "重启后首屏参数 12/26/9（manifest 默认 12/26/9）"
     },
     {
-      "id": "PA-06",
+      "id": "PA-12",
       "ac": "AC-02.05-04",
       "layer": "render",
       "passed": true,
       "detail": "重启后恢复按钮 disabled=true"
     },
     {
-      "id": "PA-07",
+      "id": "PA-13",
       "ac": "AC-02.05-04",
       "layer": "render",
       "passed": true,
-      "detail": "重启后无残留 MACD(10,22,8)=true · 副图标题含 MACD(12,26,9)=false（首屏未选标的时副图不渲染，仅以无残留为准）"
+      "detail": "重启首屏无残留 MACD(10,22,8)"
+    },
+    {
+      "id": "PA-14",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "打开 300750.SZ 后副图标题 MACD(12,26,9)"
+    },
+    {
+      "id": "PA-15",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "副图提示「MACD 需要 34 根，当前 20 根」"
+    },
+    {
+      "id": "PA-16",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "20 根时无全局错误条"
+    },
+    {
+      "id": "PA-17",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "20 根时恢复默认后 ParamPanel 显示 12/26/9"
     }
   ]
 }

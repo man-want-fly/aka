@@ -2321,7 +2321,7 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 —；手册 §3.1｜手册未给出公式，口径由 BA 定｜A股主口径：无｜变体：无",
+      "notes": "规划中（未上线）：默认参数 —；本期不实现（P1 与 M22 冲突时砍 M22，不改口径）；手册 §3.1｜手册未给出公式，口径由 BA 定｜A股主口径：无｜变体：无",
       "formulaSummary": "手册仅定义「修正 RSI 在强趋势中过早转弱问题的无界动量震荡」，未给可计算公式",
       "warmupBars": 20,
       "completeness": "beta",
@@ -3633,7 +3633,17 @@
       "inputs": {
         "close": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "分位窗口",
+          "min": 20,
+          "max": 250,
+          "default": 60,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
@@ -3647,9 +3657,9 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 60 · 横截面；手册 §3.4/§4.2｜手册未给出公式，口径由 BA 定｜A股主口径：横截面 60 日分位｜变体：时序分位 vs 横截面分位",
+      "notes": "规划中（未上线）：默认参数 60 · 横截面；分位窗口 60（范围 20–250），预热 61 根；手册 §3.4/§4.2｜手册未给出公式，口径由 BA 定｜A股主口径：横截面 60 日分位｜变体：时序分位 vs 横截面分位",
       "formulaSummary": "手册仅在 PCR 条目提到「结合历史分位」，未给出 RS 分位算法与窗口",
-      "warmupBars": 60,
+      "warmupBars": 61,
       "completeness": "部分",
       "isCompletion": false,
       "defaultParamsText": "60 · 横截面",
@@ -4703,7 +4713,7 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 样本池 N · A 股特有；手册 §4.1/§9.3｜手册未给出公式，口径由 BA 定｜A股主口径：涨停家数/跌停家数｜变体：是否含一字板待定",
+      "notes": "规划中（未上线）：默认参数 样本池 N · A 股特有；手册 §4.1/§9.3｜手册未给出公式，口径由 BA 定｜A股主口径：涨停家数/跌停家数｜一字板结案：一字涨停计入涨停家数（子计数，不单独成桶、不剔除），依据 S-04.02-01 / B-11",
       "formulaSummary": "手册仅提及 A 股「涨停/跌停家数」可替代新高新低，未给家数比公式",
       "warmupBars": 2,
       "completeness": "完整",
@@ -4727,7 +4737,17 @@
       "inputs": {
         "close": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 5,
+          "max": 30,
+          "default": 10,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
@@ -4741,9 +4761,9 @@
       "specStatus": "productDefined",
       "status": "planned",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 10；手册无来源｜手册未给出公式，口径由 BA 定｜A股主口径：站上均线占比的 10 日急升｜变体：本产品补全口径，阈值与窗口由 BA 定",
+      "notes": "规划中（未上线）：默认参数 10；范围 5–30，预热 29 根；手册无来源｜手册未给出公式，口径由 BA 定｜A股主口径：站上均线占比的 10 日急升｜变体：本产品补全口径，阈值与窗口由 BA 定",
       "formulaSummary": "手册未收录 Breadth Thrust（全文无该指标），无公式可依",
-      "warmupBars": 10,
+      "warmupBars": 29,
       "completeness": "完整",
       "isCompletion": true,
       "defaultParamsText": "10",

@@ -7,7 +7,7 @@ use data_provider::{
     aggregate_bars, Adjust, AggregatePeriod, BarBatch, BarRequest, DataProvider, Date,
     Security, Timeframe,
 };
-use data_store::state_db::StateDb;
+use data_store::state_db::{AddWatchOutcome, StateDb};
 use data_store::{CacheStats, Candle, CandleSeries, CandleStore, SeriesKey};
 use indicator_core::{
     all, implemented_count, lookup, merge_defaults, validate, CalcError, Category, Indicator,
@@ -30,8 +30,10 @@ use crate::telemetry::{
 pub const WATCHLIST_LIMIT: i64 = 500;
 /// 自定义分组上限
 pub const MAX_CUSTOM_GROUPS: usize = 20;
-/// 内置分组名
+/// 内置分组名（只读派生，不承载 items）
 pub const DEFAULT_WATCH_GROUP: &str = "全部";
+/// 未分组视图名（只读派生，group_name = NULL 的标的）
+pub const UNGROUPED_GROUP: &str = "未分组";
 
 fn validate_group_name(name: &str) -> Result<&str, AppError> {
     let trimmed = name.trim();
@@ -41,8 +43,10 @@ fn validate_group_name(name: &str) -> Result<&str, AppError> {
     if trimmed.chars().count() > 20 {
         return Err(AppError::invalid_argument("分组名最长 20 个字符"));
     }
-    if trimmed == DEFAULT_WATCH_GROUP {
-        return Err(AppError::invalid_argument("内置分组「全部」不可作为自定义分组名"));
+    if trimmed == DEFAULT_WATCH_GROUP || trimmed == UNGROUPED_GROUP {
+        return Err(AppError::invalid_argument(format!(
+            "「{trimmed}」为只读视图名，不可作为自定义分组名"
+        )));
     }
     Ok(trimmed)
 }
@@ -230,7 +234,14 @@ impl AppCore {
 
     /// MVP 装配：mock 是唯一启用的数据源。
     pub async fn new_mock() -> Result<Self, AppError> {
-        Self::new(Box::new(MockProvider::new())).await
+        let provider = MockProvider::new();
+        // 取证运行注入 20 根短序列样本；正常启动不注入，产品行为不变
+        let provider = if std::env::var("AKA_DIAG").ok().as_deref() == Some("1") {
+            provider.with_diag_short_series(20).with_diag_tiny_series(12)
+        } else {
+            provider
+        };
+        Self::new(Box::new(provider)).await
     }
 
     pub fn provider_id(&self) -> &'static str {
@@ -341,26 +352,41 @@ impl AppCore {
         let items = db.watchlist().map_err(AppError::from)?;
         let groups = db.watch_groups().map_err(AppError::from)?;
         let mut counts: HashMap<String, i64> = HashMap::new();
+        let mut ungrouped = 0_i64;
         for item in &items {
-            *counts.entry(item.group_name.clone()).or_insert(0) += 1;
+            match &item.group_name {
+                Some(name) => *counts.entry(name.clone()).or_insert(0) += 1,
+                None => ungrouped += 1,
+            }
         }
-        let total = db.watch_distinct_count().map_err(AppError::from)?;
+        let total = items.len() as i64;
+
+        // 「全部」「未分组」都是只读派生，不落库、不承载 items
+        let mut dto_groups = vec![WatchGroupDto {
+            name: DEFAULT_WATCH_GROUP.to_string(),
+            count: total,
+            sort_order: 0,
+            is_builtin: true,
+        }];
+        dto_groups.extend(groups.into_iter().map(|g| WatchGroupDto {
+            count: counts.get(&g.name).copied().unwrap_or(0),
+            name: g.name,
+            sort_order: g.sort_order,
+            is_builtin: g.is_builtin,
+        }));
+        if ungrouped > 0 {
+            dto_groups.push(WatchGroupDto {
+                name: UNGROUPED_GROUP.to_string(),
+                count: ungrouped,
+                sort_order: i64::MAX - 1,
+                is_builtin: true,
+            });
+        }
+
         Ok(WatchlistDto {
             limit: WATCHLIST_LIMIT,
             total,
-            groups: groups
-                .into_iter()
-                .map(|g| WatchGroupDto {
-                    count: if g.is_builtin {
-                        total
-                    } else {
-                        counts.get(&g.name).copied().unwrap_or(0)
-                    },
-                    name: g.name,
-                    sort_order: g.sort_order,
-                    is_builtin: g.is_builtin,
-                })
-                .collect(),
+            groups: dto_groups,
             items: items
                 .into_iter()
                 .map(|i| WatchItemDto {
@@ -372,40 +398,54 @@ impl AppCore {
         })
     }
 
-    /// 星标切换：未收藏 → 加入分组；已收藏（任意分组）→ 从全部分组移除。
+    /// 星标切换：未收藏 → 加入指定分组（缺省为未分组）；已收藏 → 从自选移除。
     pub fn toggle_watch(&self, security: &str, group: Option<&str>) -> Result<WatchToggleResult, AppError> {
-        if !self.securities.iter().any(|s| s.code == security) {
-            return Err(AppError::unknown_security(security));
-        }
         let db = self
             .state_db()
             .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
-        let existing = db.watchlist().map_err(AppError::from)?;
-        let watched_now = existing.iter().any(|i| i.security == security);
-        if watched_now {
-            for item in existing.iter().filter(|i| i.security == security) {
-                db.remove_watch(security, &item.group_name).map_err(AppError::from)?;
-            }
-            return Ok(WatchToggleResult { watched: false, total: db.watch_distinct_count().map_err(AppError::from)? });
+        // 已收藏 → 先移除：标的可能已不在数据集（退市/更名），移出不能被数据集校验拦住
+        if db
+            .watchlist()
+            .map_err(AppError::from)?
+            .iter()
+            .any(|i| i.security == security)
+        {
+            db.remove_watch(security).map_err(AppError::from)?;
+            return Ok(WatchToggleResult {
+                watched: false,
+                total: db.watch_distinct_count().map_err(AppError::from)?,
+            });
+        }
+        // 新增才要求标的在数据集内
+        if !self.securities.iter().any(|s| s.code == security) {
+            return Err(AppError::unknown_security(security));
         }
 
-        let target = group.unwrap_or(DEFAULT_WATCH_GROUP);
-        if db.watch_group_exists(target).map_err(AppError::from)? == false {
-            return Err(AppError::invalid_argument(format!("自选分组不存在：{target}")));
+        let target = group.filter(|name| *name != DEFAULT_WATCH_GROUP && *name != UNGROUPED_GROUP);
+        if let Some(name) = target {
+            if !db.watch_group_exists(name).map_err(AppError::from)? {
+                return Err(AppError::invalid_argument(format!("自选分组不存在：{name}")));
+            }
         }
         let distinct = db.watch_distinct_count().map_err(AppError::from)?;
-        if distinct >= WATCHLIST_LIMIT {
-            return Err(AppError::new(
-                ErrorCode::InvalidArgument,
-                format!("自选数量已达上限 {WATCHLIST_LIMIT} 只"),
-            )
-            .with_details(serde_json::json!({
-                "reason": "WATCHLIST_LIMIT",
-                "limit": WATCHLIST_LIMIT,
-                "security": security,
-            })));
+        // 判定与写入同一事务：499 放行、落库 500，count >= 500 时拒第 501 只
+        match db
+            .add_watch_with_limit(security, target, distinct + 1, WATCHLIST_LIMIT)
+            .map_err(AppError::from)?
+        {
+            AddWatchOutcome::Added => {}
+            AddWatchOutcome::LimitReached => {
+                return Err(AppError::new(
+                    ErrorCode::InvalidArgument,
+                    format!("自选上限 {WATCHLIST_LIMIT} 只，请先移出后再添加"),
+                )
+                .with_details(serde_json::json!({
+                    "reason": "WATCHLIST_LIMIT",
+                    "limit": WATCHLIST_LIMIT,
+                    "security": security,
+                })))
+            }
         }
-        db.add_watch(security, target, distinct + 1).map_err(AppError::from)?;
         Ok(WatchToggleResult {
             watched: true,
             total: db.watch_distinct_count().map_err(AppError::from)?,
@@ -428,8 +468,12 @@ impl AppCore {
             .count();
         if custom >= MAX_CUSTOM_GROUPS {
             return Err(AppError::invalid_argument(format!(
-                "自定义分组最多 {MAX_CUSTOM_GROUPS} 个"
-            )));
+                "分组上限 {MAX_CUSTOM_GROUPS} 个，请先删除不用的分组"
+            ))
+            .with_details(serde_json::json!({
+                "reason": "GROUP_LIMIT",
+                "limit": MAX_CUSTOM_GROUPS,
+            })));
         }
         db.create_watch_group(name).map_err(AppError::from)
     }
@@ -1296,7 +1340,11 @@ mod tests {
         assert!(core.delete_watch_group("全部").is_err(), "内置组不可删除");
         core.delete_watch_group("波段").unwrap();
         let after = core.watchlist().unwrap();
-        assert_eq!(after.items[0].group_name, "全部", "删组后标的应回落内置组");
+        assert_eq!(after.items[0].group_name, None, "删组后标的应回到未分组");
+        assert!(
+            after.groups.iter().any(|group| group.name == "未分组" && group.count == 1),
+            "未分组应为只读派生视图"
+        );
 
         core.save_position("600519.SH", 1500.0, 100).unwrap();
         assert!(core.save_position("600519.SH", -1.0, 100).is_err());
@@ -1315,12 +1363,60 @@ mod tests {
         {
             let db = core.state_db().unwrap();
             for i in 0..500 {
-                db.add_watch(&format!("TEST{i}.SZ"), "全部", i).unwrap();
+                db.add_watch_with_limit(&format!("TEST{i}.SZ"), None, i, 500)
+                    .unwrap();
             }
         }
         let err = core.toggle_watch("600519.SH", None).unwrap_err();
         assert_eq!(err.code, ErrorCode::InvalidArgument);
         assert_eq!(err.details.as_ref().unwrap()["reason"], "WATCHLIST_LIMIT");
+    }
+
+    #[tokio::test]
+    async fn watchlist_removes_security_that_left_the_dataset() {
+        let core = AppCore::new(Box::new(data_provider::mock::MockProvider::new()))
+            .await
+            .unwrap()
+            .with_state_db(data_store::state_db::StateDb::open_in_memory().unwrap());
+        core.state_db()
+            .unwrap()
+            .add_watch_with_limit("DELISTED.SZ", None, 0, 500)
+            .unwrap();
+        // 不在数据集的已收藏标的：移出必须成功，新增仍被拒
+        let out = core.toggle_watch("DELISTED.SZ", None).unwrap();
+        assert!(!out.watched);
+        assert!(core.watchlist().unwrap().items.is_empty());
+        assert!(core.toggle_watch("DELISTED.SZ", None).is_err());
+    }
+
+    #[tokio::test]
+    async fn watchlist_re_adds_security_after_it_returns_to_dataset() {
+        let path = std::env::temp_dir().join(format!("aka-watchlist-readd-{}.db", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        // 第一段：标的已离开数据集 → 移出成功，库里不留任何残行（没有软删除/墓碑）
+        {
+            let core = AppCore::new(Box::new(data_provider::mock::MockProvider::new()))
+                .await
+                .unwrap()
+                .with_state_db(StateDb::open_with_fallback(&path));
+            core.state_db()
+                .unwrap()
+                .add_watch_with_limit("DIAG020.SZ", None, 0, 500)
+                .unwrap();
+            assert!(!core.toggle_watch("DIAG020.SZ", None).unwrap().watched);
+            assert!(core.state_db().unwrap().watchlist().unwrap().is_empty());
+        }
+        // 第二段：标的回到数据集（provider 里又有 DIAG020.SZ）→ 可重新收藏
+        let core = AppCore::new(Box::new(
+            data_provider::mock::MockProvider::new().with_diag_short_series(20),
+        ))
+        .await
+        .unwrap()
+        .with_state_db(StateDb::open_with_fallback(&path));
+        let back = core.toggle_watch("DIAG020.SZ", None).unwrap();
+        assert!(back.watched, "回到数据集后应能重新收藏");
+        assert_eq!(back.total, 1);
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]

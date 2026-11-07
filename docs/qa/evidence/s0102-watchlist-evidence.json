@@ -1,0 +1,165 @@
+{
+  "ok": true,
+  "suite": "S-01.02 watchlist",
+  "finishedAt": "2026-11-06T23:42:03.397Z",
+  "layers": {
+    "data": 6,
+    "render": 13
+  },
+  "blocked": [],
+  "note": "500 上限/不在数据集行的样本由前置脚本直插 state.db 构造，取证后用备份还原；写失败为真实路径（重命名到已有分组被后端拒绝）。",
+  "checks": [
+    {
+      "id": "WL-01",
+      "ac": "S-01.02-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "基线 total=497，全部=497（builtin=true），分组 全部:497 未分组:497",
+      "blocked": false
+    },
+    {
+      "id": "WL-02",
+      "ac": "S-01.02-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "某组空态「本组还没有标的从行情页加星，或切回「全部」查看已有自选去行情页加星换组」",
+      "blocked": false
+    },
+    {
+      "id": "WL-03",
+      "ac": "S-01.02-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "分组 诊断组A 落库且渲染 tab（自定义 2 个）",
+      "blocked": false
+    },
+    {
+      "id": "WL-04",
+      "ac": "S-01.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "空白名提示「分组名不能为空」，新建按钮 disabled=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-05",
+      "ac": "S-01.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "同名提示「已有同名分组」，新建按钮 disabled=true，自定义组仍 2 个",
+      "blocked": false
+    },
+    {
+      "id": "WL-06",
+      "ac": "S-01.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "内置组两项 disabled=true/true",
+      "blocked": false
+    },
+    {
+      "id": "WL-07",
+      "ac": "S-01.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "二次确认文案「删除分组「诊断组A」？组内标的将回到「（未分组）」确认删除取消」",
+      "blocked": false
+    },
+    {
+      "id": "WL-08",
+      "ac": "S-01.02-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "归属=诊断组A→null，组已删除=true，total 498→498，DIAG012.SZ groupName=null=true，未分组 tab=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-09",
+      "ac": "S-01.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "删除后选中「全部 498」",
+      "blocked": false
+    },
+    {
+      "id": "WL-10",
+      "ac": "S-01.02-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "499→499，500→500，501 拒「自选上限 500 只，请先移出后再添加」reason=WATCHLIST_LIMIT",
+      "blocked": false
+    },
+    {
+      "id": "WL-11",
+      "ac": "S-01.02-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "state=insufficient，提示「可用 K 线 12 根，不足 20 根」，灰显=false，移出按钮=false",
+      "blocked": false
+    },
+    {
+      "id": "WL-12",
+      "ac": "S-01.02-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "数据不足行可进工作台=true（.wl-row-main 未 disabled）",
+      "blocked": false
+    },
+    {
+      "id": "WL-13",
+      "ac": "S-01.02-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "state=missing，灰显=true，warn 徽标=true，移出=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-14",
+      "ac": "S-01.02-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "不在数据集行点「×」后已从自选删除=true（toggle_watch 先判已收藏再校验数据集）",
+      "blocked": false
+    },
+    {
+      "id": "WL-15",
+      "ac": "S-01.02-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "错误条「未保存：分组已存在：诊断空组重试」，重试按钮=true，原组仍在=true，目标组未被覆盖=true，重试后仍报错=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-16",
+      "ac": "S-01.02-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "搜索空态「没有匹配「zqzzzz」的自选清除搜索」",
+      "blocked": false
+    },
+    {
+      "id": "WL-17",
+      "ac": "S-01.02-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "建至 20 个后，第 21 个 拒「分组上限 20 个，请先删除不用的分组」reason=GROUP_LIMIT",
+      "blocked": false
+    },
+    {
+      "id": "WL-19",
+      "ac": "S-01.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "20 组时提示「分组上限 20 个，请先删除不用的分组」，输入框 disabled=true，新建按钮 disabled=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-18",
+      "ac": "S-01.02-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "全部空态「自选还是空的在行情页点星标，把标的加进来去行情页」",
+      "blocked": false
+    }
+  ]
+}

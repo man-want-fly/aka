@@ -33,7 +33,8 @@ import {
 } from "../../features/workbench/diag";
 import { runS205Diagnostics } from "../../features/workbench/s205Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
-import { runRestartDiagnostics } from "../../features/workbench/restartDiag";
+import { runRestartDiagnostics, restartDiagStage } from "../../features/workbench/restartDiag";
+import { runWatchlistDiagnostics, watchlistDiagStage } from "../../features/watchlist/watchlistDiag";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type {
   AppError,
@@ -73,6 +74,35 @@ const RANGES = [
 
 /** 输入静默 120ms 后才发请求：连续输入（典型间隔 40ms）只保留最后一次，避免抖动请求 */
 const REQUEST_DEBOUNCE_MS = 120;
+
+/** AC-02.05-04 补3：把后端 INSUFFICIENT_DATA 的 details 转成副图内联文案 */
+function noticesFrom(error: AppError, manifest: ManifestResponse | null) {
+  const details = error.details as
+    | { indicatorId?: string; required?: number; got?: number }
+    | undefined;
+  const id = details?.indicatorId;
+  if (!id || !Number.isFinite(details?.required)) {
+    return { M06: error.message };
+  }
+  const abbr = manifest?.indicators.find((item) => item.id === id)?.abbr ?? id;
+  return { [id]: `${abbr} 需要 ${details?.required} 根，当前 ${details?.got} 根` };
+}
+
+/**
+ * AC-02.05-04 补3：后端算指标时不会因预热不足报错（只输出 NaN），
+ * 因此由前端按 manifest 的 warmupBars 判定「数据不足」，在副图内联提示且不阻塞主图。
+ */
+function noticesForBars(len: number, subIds: string[], manifest: ManifestResponse | null) {
+  const notices: Record<string, string> = {};
+  for (const id of subIds) {
+    const item = manifest?.indicators.find((entry) => entry.id === id);
+    if (!item || item.warmupBars <= 0) continue;
+    if (len < item.warmupBars) {
+      notices[id] = `${item.abbr} 需要 ${item.warmupBars} 根，当前 ${len} 根`;
+    }
+  }
+  return Object.keys(notices).length > 0 ? notices : null;
+}
 
 export function WorkbenchPage({
   initialCode,
@@ -133,6 +163,10 @@ export function WorkbenchPage({
   const rangeRef = useRef(120);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
+  // 数据不足的内联提示按指标 id 归位，不上升为全局错误条
+  const [calcNotices, setCalcNotices] = useState<Record<string, string> | null>(null);
+  const restartStarted = useRef(false);
+  const watchlistStarted = useRef(false);
   const generation = useRef(0);
 
   // S2 实机取证（TD-S0-04/06/07）：只在 AKA_DIAG=1 时激活，采样只来自真实 IPC 路径
@@ -183,7 +217,8 @@ export function WorkbenchPage({
     }
     let alive = true;
     Promise.all([
-      ipc.listSecurities(120),
+      // 自选行要按「完整数据集」解析名称/板块/是否在数据集：不传 limit = provider 全量代码表
+      ipc.listSecurities(),
       ipc.indicatorRegistry(),
       ipc.indicatorManifest(),
     ])
@@ -246,52 +281,72 @@ export function WorkbenchPage({
       let barsMs = Number.NaN;
       let calcMs = Number.NaN;
 
-      Promise.all([
-        ipc.getBars(request).then((value) => {
-          barsMs = performance.now() - startedAt;
-          return value;
-        }),
-        ipc.calcIndicators(request).then((value) => {
+      const barsPromise = ipc.getBars(request).then((value) => {
+        barsMs = performance.now() - startedAt;
+        return value;
+      });
+      // 指标重算失败不连坐行情：K 线照常渲染，数据不足在副图内联提示（AC-02.05-04 补3）
+      const calcPromise = ipc
+        .calcIndicators(request)
+        .then((value) => {
           calcMs = performance.now() - startedAt;
-          return value;
-        }),
-      ])
-        .then(([nextBars, nextCalc]) => {
+          return { ok: true as const, value };
+        })
+        .catch((err) => {
+          calcMs = performance.now() - startedAt;
+          return { ok: false as const, failure: describeError(err) };
+        });
+
+      Promise.all([barsPromise, calcPromise])
+        .then(([nextBars, calcResult]) => {
           if (current !== generation.current) return;
           setBars(nextBars);
           barsRef.current = nextBars;
-          setCalc(nextCalc);
-          calcRef.current = nextCalc;
           setLoading(false);
+
+          if (calcResult.ok) {
+            setCalc(calcResult.value);
+            calcRef.current = calcResult.value;
+            setCalcNotices(noticesForBars(nextBars.bars.length, subIds, manifest));
+            setError(null);
+          } else {
+            setCalc(null);
+            calcRef.current = null;
+            const failure = calcResult.failure;
+            if (failure.code === "INSUFFICIENT_DATA") {
+              setCalcNotices(
+                noticesForBars(nextBars.bars.length, subIds, manifest) ??
+                  noticesFrom(failure, manifest),
+              );
+              setError(null);
+            } else {
+              setCalcNotices(null);
+              setError(failure);
+            }
+          }
 
           if (phaseAtIssue !== "debounce" && phaseAtIssue !== "cold" && phaseAtIssue !== "warm") {
             return;
           }
-          const signature = seriesSignature(nextCalc);
-          const sample: DiagSample = {
-            phase: phaseAtIssue,
-            security: activeCode,
-            timeframe,
-            adj,
-            barsMs,
-            calcMs,
-            totalMs: performance.now() - startedAt,
-            cacheHit: nextCalc.cacheHit,
-            computedMs: nextCalc.computedMs,
-            barCount: nextCalc.barCount,
-            seriesHash: signature.hash,
-            seriesPoints: signature.points,
-          };
-          diagSamples.current.push(sample);
-          const waiter = diagWaiters.current.shift();
-          if (waiter) waiter(sample);
-        })
-        .catch((err) => {
-          if (current !== generation.current) return;
-          const failure = describeError(err);
-          setError(failure);
-          setLoading(false);
-          if (phaseAtIssue !== "debounce" && phaseAtIssue !== "cold" && phaseAtIssue !== "warm") {
+          if (calcResult.ok) {
+            const signature = seriesSignature(calcResult.value);
+            const sample: DiagSample = {
+              phase: phaseAtIssue,
+              security: activeCode,
+              timeframe,
+              adj,
+              barsMs,
+              calcMs,
+              totalMs: performance.now() - startedAt,
+              cacheHit: calcResult.value.cacheHit,
+              computedMs: calcResult.value.computedMs,
+              barCount: calcResult.value.barCount,
+              seriesHash: signature.hash,
+              seriesPoints: signature.points,
+            };
+            diagSamples.current.push(sample);
+            const waiter = diagWaiters.current.shift();
+            if (waiter) waiter(sample);
             return;
           }
           // 失败也算一次真实请求：既进样本池，也唤醒等待中的诊断步骤
@@ -308,7 +363,7 @@ export function WorkbenchPage({
             barCount: 0,
             seriesHash: "error",
             seriesPoints: 0,
-            error: `${failure.code}: ${failure.message}`,
+            error: `${calcResult.failure.code}: ${calcResult.failure.message}`,
           };
           diagSamples.current.push(sample);
           const waiter = diagWaiters.current.shift();
@@ -452,7 +507,9 @@ export function WorkbenchPage({
   // S-02.05-02 物理重启验证：AKA_DIAG_TARGET=restart 时按 localStorage 标记跑第一次或第二次启动
   useEffect(() => {
     if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (restartStarted.current) return;
     if (window.sessionStorage.getItem("aka.restart.diag.done") === "1") return;
+    restartStarted.current = true;
     let alive = true;
     (async () => {
       const target = await ipc.diagTarget();
@@ -467,16 +524,48 @@ export function WorkbenchPage({
         );
       } catch (err) {
         const message = describeError(err).message;
-        setDiagStatus(`重启验证失败：${message}`);
+        const stage = restartDiagStage();
+        setDiagStatus(`重启验证失败（${stage}）：${message}`);
         void ipc.diagWriteNamed(
           "s20502-restart-evidence.json",
-          JSON.stringify({ ok: false, phase: "error", error: message }, null, 2),
+          JSON.stringify({ ok: false, phase: "error", stage, error: message }, null, 2),
         );
       }
     })();
     return () => {
       alive = false;
     };
+  }, [manifest, registry, securities, defaultParams]);
+
+  // S-01.02-01/02/03 自选取证：AKA_DIAG_TARGET=watchlist@<token> 时在页面就绪后自跑一次
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (watchlistStarted.current) return;
+    watchlistStarted.current = true;
+    // 不用 alive 门闩：StrictMode/HMR 重跑不应把已启动的取证静默掐断
+    void (async () => {
+      const target = await ipc.diagTarget();
+      if (!target.startsWith("watchlist")) return;
+      // sessionStorage 只在本进程内有效（实测：pkill 后新进程为空）；
+      // token 用于同一进程内页面重挂载时区分取证批次，避免重挂载被旧标记静默挡住
+      if (window.sessionStorage.getItem("aka.watchlist.diag.run") === target) return;
+      window.sessionStorage.setItem("aka.watchlist.diag.run", target);
+      try {
+        const report = await runWatchlistDiagnostics();
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `自选取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+      } catch (err) {
+        const message = describeError(err).message;
+        const stage = watchlistDiagStage();
+        setDiagStatus(`自选取证失败（${stage}）：${message}`);
+        void ipc.diagWriteNamed(
+          "s0102-watchlist-evidence.json",
+          JSON.stringify({ ok: false, stage, error: message }, null, 2),
+        );
+      }
+    })();
   }, [manifest, registry, securities, defaultParams]);
 
   // AC-02.04-01 跨页核对：抽屉分类计数 vs 指标目录分类计数（比较两页各自渲染结果）
@@ -631,6 +720,7 @@ export function WorkbenchPage({
             securities={securities}
             activeCode={activeCode}
             onSelect={setActiveCode}
+            onGoMarket={() => onNavigate("market")}
           />
 
           <main className="main">
@@ -793,6 +883,7 @@ export function WorkbenchPage({
                     windowSize={range}
                     overlayIds={overlayIds}
                     subIds={subIds}
+                    subNotices={calcNotices ?? undefined}
                     subLabels={subLabels}
                     units={units}
                   />
@@ -885,7 +976,7 @@ export function WorkbenchPage({
           <span>
             目录 <b>{manifest ? `${manifest.indicators.length} 条 / schema v${manifest.schemaVersion}` : "—"}</b>
           </span>
-          <span>
+          <span data-wb-returned={bars?.bars.length ?? 0}>
             区间 <b>{bars ? `${bars.range.returnedFrom ?? "—"} ~ ${bars.range.returnedTo ?? "—"}` : "—"}</b>
             {bars?.range.clamped ? "（已吸附）" : ""}
           </span>

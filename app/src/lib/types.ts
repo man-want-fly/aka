@@ -332,7 +332,8 @@ export interface WatchGroupDto {
 
 export interface WatchItemDto {
   security: string;
-  groupName: string;
+  /** null = 未分组 */
+  groupName: string | null;
   sortOrder: number;
 }
 

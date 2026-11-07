@@ -1,0 +1,27 @@
+{
+  "story": "S-02.05-02（重启回默认）/ S-01.02 取证基础设施",
+  "claim": "Tauri 2 + WKWebView（wry 0.57.1）下 sessionStorage 不跨进程存活，localStorage 跨进程持久",
+  "method": "App.tsx 内置 ssprobe 探针（AKA_DIAG=1 AKA_DIAG_TARGET=ssprobe@<tag>）：先读 aka.ss.probe.v1 的 session/local 副本与 aka.ss.probe.boot，落盘 ss-probe.json，再写 session='A'、local='L'、boot+1；每轮读完后杀掉整个进程，再起新进程。",
+  "dev": {
+    "origin": "http://localhost:1420",
+    "launcher": "AKA_DIAG=1 AKA_DIAG_TARGET=ssprobe@rN npm run tauri dev",
+    "runs": [
+      { "tag": "r1", "session": null, "local": null, "boot": 0, "url": "http://localhost:1420/", "at": "2026-11-06T23:49:08.090Z" },
+      { "tag": "r2", "session": null, "local": "L", "boot": 1, "url": "http://localhost:1420/", "at": "2026-11-06T23:49:20.664Z" },
+      { "tag": "r3", "session": null, "local": "L", "boot": 2, "url": "http://localhost:1420/", "at": "2026-11-06T23:49:34.391Z" }
+    ]
+  },
+  "release": {
+    "origin": "tauri://localhost",
+    "launcher": "AKA_DIAG=1 AKA_DIAG_TARGET=ssprobe@relN target/release/aka-desktop",
+    "runs": [
+      { "tag": "rel1", "session": null, "local": null, "boot": 0, "url": "tauri://localhost", "at": "2026-11-06T23:58:00.154Z" },
+      { "tag": "rel2", "session": null, "local": "L", "boot": 1, "url": "tauri://localhost", "at": "2026-11-06T23:58:08.087Z" }
+    ]
+  },
+  "disk": {
+    "localStorage": "~/Library/WebKit/aka-desktop/WebsiteData/Default/<origin-hash>/<hash>/LocalStorage/localstorage.sqlite3 内含 aka.ss.probe.v1='L'、aka.ss.probe.boot='3'（WebKit 以 UTF-16LE 存值），与 localStorage 跨进程持久一致",
+    "sessionStorage": "整个 WebsiteData 树下不存在任何 SessionStorage 目录；sessionStorage 为 WebCore SessionStorageNamespace 的内存态，绑 WebView/page 生命周期，wry/Tauri 未开启 incognito、未配置自定义 data store、也未调用 WKSessionState 持久化/恢复"
+  },
+  "conclusion": "dev 与 release 两次实验结论一致：跨进程重启后 sessionStorage 均为 null，localStorage 均读到 'L'、boot 0→1→2 逐轮递增。sessionStorage 只在同一进程内（含页面重载/组件重挂载）存活。「重启回默认」AC 成立；main.tsx 另加显式清除，使该 AC 由代码保证而不依赖平台语义。"
+}

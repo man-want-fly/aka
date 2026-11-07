@@ -64,6 +64,29 @@ export default function App() {
     (async () => {
       try {
         const target = await ipc.diagTarget();
+        // 存储语义探针：验证 WKWebView 下 sessionStorage 是否跨进程存活（两进程各跑一次）
+        if (target.startsWith("ssprobe")) {
+          const key = "aka.ss.probe.v1";
+          const boot = Number(window.localStorage.getItem("aka.ss.probe.boot") ?? "0");
+          await ipc.diagWriteNamed(
+            "ss-probe.json",
+            JSON.stringify(
+              {
+                session: window.sessionStorage.getItem(key),
+                local: window.localStorage.getItem(key),
+                boot,
+                url: window.location.href,
+                at: new Date().toISOString(),
+              },
+              null,
+              2,
+            ),
+          );
+          window.sessionStorage.setItem(key, "A");
+          window.localStorage.setItem(key, "L");
+          window.localStorage.setItem("aka.ss.probe.boot", String(boot + 1));
+          return;
+        }
         // S-02.04-01 抽屉取证：直接进工作台；先占住 S2 的 once 位，避免 S2 套件抢跑。
         if (target === "drawer") {
           sessionStorage.setItem("aka.s2.diag.once", "1");
@@ -82,8 +105,8 @@ export default function App() {
           setLocation({ route: "catalog", code: null });
           return;
         }
-        // S-02.05-02 恢复默认取证：进工作台，占住其它套件的 once 位。
-        if (target === "s205" || target === "restart") {
+        // S-02.05-02 恢复默认取证 / S-01.02 自选取证：进工作台，占住其它套件的 once 位。
+        if (target === "s205" || target === "restart" || target.startsWith("watchlist")) {
           sessionStorage.setItem("aka.s2.diag.once", "1");
           sessionStorage.setItem("aka.drawer.diag.done", "1");
           sessionStorage.setItem("aka.catalog.diag.done", "1");

@@ -10,6 +10,8 @@ interface Props {
   overlayIds: string[];
   /** 副图指标 id 列表（M06 或 V/M 系列），容量 3 */
   subIds: string[];
+  /** 单个副图数据不足时的内联提示（键为指标 id），不阻塞主图 */
+  subNotices?: Record<string, string>;
   /** 副图面板标题（含参数口径，如 MACD(12,26,9)） */
   subLabels: Record<string, string>;
   /** 指标单位（来自 manifest，避免前端二次维护） */
@@ -57,7 +59,7 @@ function pathFor(
   return path.trim();
 }
 
-export function CandleChart({ bars, series, windowSize, overlayIds, subIds, subLabels, units }: Props) {
+export function CandleChart({ bars, series, windowSize, overlayIds, subIds, subNotices, subLabels, units }: Props) {
   const [hover, setHover] = useState<number | null>(null);
 
   const view = useMemo(() => {
@@ -535,6 +537,18 @@ export function CandleChart({ bars, series, windowSize, overlayIds, subIds, subL
                   stroke="var(--line2)"
                   strokeWidth={0.7}
                 />
+              )}
+              {subNotices?.[panel.id] && (
+                <text
+                  data-sub-notice={panel.id}
+                  x={LEFT + 8}
+                  y={panel.top + 10}
+                  fontSize={9.5}
+                  fill="var(--accent)"
+                  className="mono"
+                >
+                  {subNotices[panel.id]}
+                </text>
               )}
               <text
                 data-sub-title={panel.title}

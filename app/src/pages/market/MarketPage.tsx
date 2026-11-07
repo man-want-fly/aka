@@ -311,7 +311,7 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
             total: Math.max(0, current.total + (wasWatched ? -1 : 1)),
             items: wasWatched
               ? current.items.filter((item) => item.security !== security)
-              : [...current.items, { security, groupName: "全部", sortOrder: current.items.length }],
+              : [...current.items, { security, groupName: null, sortOrder: current.items.length }],
           }
         : current,
     );
@@ -325,7 +325,7 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
               ...current,
               total: Math.max(0, current.total + (wasWatched ? 1 : -1)),
               items: wasWatched
-                ? [...current.items, { security, groupName: "全部", sortOrder: current.items.length }]
+                ? [...current.items, { security, groupName: null, sortOrder: current.items.length }]
                 : current.items.filter((item) => item.security !== security),
             }
           : current,

@@ -66,6 +66,19 @@ export function writeSessionParams(params: WorkbenchParams) {
   }
 }
 
+/**
+ * 启动即清空参数记忆，让「重启回默认」由本函数保证。
+ * 不依赖 WKWebView 的 sessionStorage 进程存活语义：wry 升级、换 ephemeral data store
+ * 或有人打开状态恢复时，sessionStorage 可能被带过来，AC 会静默失效。不要当冗余删掉。
+ */
+export function clearSessionParams() {
+  try {
+    window.sessionStorage.removeItem(PARAMS_STORAGE_KEY);
+  } catch {
+    // 存储不可用时参数本就是内存态，无需清理
+  }
+}
+
 export function sameParams(a: WorkbenchParams, b: WorkbenchParams) {
   return (
     a.maPeriod === b.maPeriod &&

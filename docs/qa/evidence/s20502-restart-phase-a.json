@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "phase": "before-exit",
+  "checks": [
+    {
+      "id": "PA-01",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "已选中 300750.SZ，副图标题 MACD(12,26,9)"
+    },
+    {
+      "id": "PA-02",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "应用后副图标题 MACD(10,22,8)"
+    },
+    {
+      "id": "PA-03",
+      "ac": "AC-02.05-04",
+      "layer": "data",
+      "passed": true,
+      "detail": "应用后 sessionStorage = 10/22/8"
+    },
+    {
+      "id": "PA-04",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "应用后 ParamPanel 显示 10/22/8"
+    },
+    {
+      "id": "PA-05",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "恢复后 ParamPanel 显示 12/26/9"
+    },
+    {
+      "id": "PA-06",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "恢复后副图标题 MACD(12,26,9)"
+    },
+    {
+      "id": "PA-07",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "恢复后按钮 disabled=true"
+    },
+    {
+      "id": "PA-08",
+      "ac": "AC-02.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "恢复按钮 tooltip=「当前即为默认参数」"
+    },
+    {
+      "id": "PA-09",
+      "ac": "AC-02.05-04",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "点击禁用按钮前后 indicator.compute 计数 44 → 44"
+    }
+  ],
+  "phaseA": {
+    "finishedAt": "2026-11-06T22:56:35.118Z",
+    "code": "300750.SZ",
+    "appliedBeforeExit": "10/22/8",
+    "storedBeforeExit": "10/22/8",
+    "exitMethod": "kill -TERM aka-desktop 进程（等同关闭应用窗口）"
+  }
+}

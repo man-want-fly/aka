@@ -94,6 +94,31 @@ impl MockProvider {
         }
     }
 
+    /// 取证专用短序列（仅由 `AKA_DIAG=1` 装配时开启）：
+    /// 提供一只只有 `count` 根日线的样本，用于 AC-02.05-04 补3（数据不足）实机取证。
+    pub fn with_diag_short_series(self, count: usize) -> Self {
+        self.push_diag_series("DIAG020.SZ", "诊断短序列", count)
+    }
+
+    /// 取证专用：自选「数据不足（K 线 < 20）」样本，用 12 根明确低于阈值。
+    pub fn with_diag_tiny_series(self, count: usize) -> Self {
+        self.push_diag_series("DIAG012.SZ", "诊断极短序列", count)
+    }
+
+    fn push_diag_series(mut self, code: &str, name: &str, count: usize) -> Self {
+        if count == 0 || self.find_security(code).is_some() {
+            return self;
+        }
+        let security = make_security(code, name, Board::SzMain, false, 10.0);
+        let mut bars = generate_bars(&security, &self.calendar);
+        bars.truncate(count);
+        self.securities.push(security);
+        if let Ok(mut cache) = self.raw_cache.lock() {
+            cache.insert(code.to_string(), std::sync::Arc::new(bars));
+        }
+        self
+    }
+
     pub fn dataset_id(&self) -> &'static str {
         MOCK_DATASET_ID
     }

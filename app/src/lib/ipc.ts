@@ -43,9 +43,10 @@ export function describeError(error: unknown): AppError {
 
 /** 前端唯一允许调用 Tauri 命令的出口。页面与组件禁止直接 import invoke。 */
 export const ipc = {
-  listSecurities: (limit = 200): Promise<SecurityDto[]> =>
+  // 不传 limit = 取 provider 全量代码表（后端按 securities.len() 截断，等价于不截断）
+  listSecurities: (limit?: number): Promise<SecurityDto[]> =>
     invoke<SecurityDto[]>("list_securities", {
-      req: { market: "ALL", limit },
+      req: limit === undefined ? { market: "ALL" } : { market: "ALL", limit },
     }),
 
   getBars: (req: GetBarsRequest): Promise<BarsResponse> =>

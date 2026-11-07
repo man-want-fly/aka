@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-06T21:47:04.190Z",
+  "finishedAt": "2026-11-06T22:31:44.766Z",
   "context": {
     "manifestCount": 105,
     "declaredTotal": 105,
@@ -57,6 +57,20 @@
       "layer": "data",
       "passed": true,
       "detail": "规划项 61 / 占位残留 0 / 手册完整 48 部分 9 未覆盖 4"
+    },
+    {
+      "id": "D-07",
+      "ac": "S-03.01-01(手册)",
+      "layer": "data",
+      "passed": true,
+      "detail": "口径待定 13（D07,D09,E02,E03,E04,E05,E14,F14,F15,F16,M18,M22,M23）/ productDefined 4（E02,F15,F16,M22）/ planned 内 partial 9"
+    },
+    {
+      "id": "D-08",
+      "ac": "S-03.01-01(手册)",
+      "layer": "data",
+      "passed": true,
+      "detail": "E02 预热 61 period 60[20,250] / F16 预热 29 period 10[5,30] / F15 预热 2 notes 含一字板结案=true / M22 productDefined 不实现=true"
     },
     {
       "id": "R-01",
@@ -141,6 +155,13 @@
       "layer": "render",
       "passed": true,
       "detail": "F16 口径待定徽标=true / T06 口径待定徽标=false / F16 文案「F16广度突破Breadth Thrust副图补全口径规划中口径待定摘要」"
+    },
+    {
+      "id": "R-13",
+      "ac": "S-03.01-01(手册)",
+      "layer": "render",
+      "passed": true,
+      "detail": "DOM 口径待定徽标 13（D07,D09,E02,E03,E04,E05,E14,F14,F15,F16,M18,M22,M23）/ manifest 派生 13"
     }
   ]
 }

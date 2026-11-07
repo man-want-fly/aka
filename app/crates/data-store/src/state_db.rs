@@ -17,10 +17,18 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-pub const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 3;
 
 const MIGRATION_001: &str = include_str!("../migrations/001_init.sql");
 const MIGRATION_002: &str = include_str!("../migrations/002_watchlist_positions.sql");
+const MIGRATION_003: &str = include_str!("../migrations/003_watchlist_ungrouped.sql");
+
+/// 自选写入结果：`LimitReached` 表示事务内预检发现已达上限，未写入。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AddWatchOutcome {
+    Added,
+    LimitReached,
+}
 
 #[derive(Debug)]
 pub enum DbError {
@@ -52,7 +60,8 @@ impl DbError {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WatchItem {
     pub security: String,
-    pub group_name: String,
+    /// `None` = 未分组；「全部」是只读派生，不落库
+    pub group_name: Option<String>,
     pub sort_order: i64,
 }
 
@@ -205,6 +214,16 @@ impl StateDb {
                     .map_err(|e| DbError::Write(e.to_string()))?;
                     tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
                 }
+                3 => {
+                    let tx = self.conn.transaction().map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.execute_batch(MIGRATION_003).map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.execute(
+                        "INSERT OR REPLACE INTO schema_versions(version, applied_at, note) VALUES (?, ?, ?)",
+                        params![3_i64, now(), "s0102: ungrouped watchlist / drop builtin 全部"],
+                    )
+                    .map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
+                }
                 other => {
                     return Err(DbError::Corrupt(format!("缺失迁移脚本：v{other}")));
                 }
@@ -274,7 +293,10 @@ impl StateDb {
     pub fn watchlist(&self) -> Result<Vec<WatchItem>, DbError> {
         let mut stmt = self
             .conn
-            .prepare("SELECT security, group_name, sort_order FROM watchlist_items ORDER BY group_name, sort_order, security")
+            .prepare(
+                "SELECT security, group_name, sort_order FROM watchlist_items
+                 ORDER BY (group_name IS NULL), group_name, sort_order, security",
+            )
             .map_err(|err| DbError::Read(err.to_string()))?;
         let rows = stmt
             .query_map([], |row| {
@@ -289,23 +311,44 @@ impl StateDb {
             .map_err(|err| DbError::Read(err.to_string()))
     }
 
-    pub fn add_watch(&self, security: &str, group: &str, sort_order: i64) -> Result<(), DbError> {
-        self.conn
-            .execute(
-                "INSERT INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?, ?, ?, ?)
-                 ON CONFLICT(security, group_name) DO UPDATE SET sort_order = excluded.sort_order",
-                params![security, group, sort_order, now()],
+    /// 事务内预检 + 写入：`count >= limit` 时拒第 limit+1 只（499 放行、落库 500）。
+    pub fn add_watch_with_limit(
+        &self,
+        security: &str,
+        group: Option<&str>,
+        sort_order: i64,
+        limit: i64,
+    ) -> Result<AddWatchOutcome, DbError> {
+        let tx = self.conn.unchecked_transaction().map_err(|e| DbError::Write(e.to_string()))?;
+        let already: i64 = tx
+            .query_row(
+                "SELECT COUNT(*) FROM watchlist_items WHERE security = ?",
+                params![security],
+                |row| row.get(0),
             )
-            .map(|_| ())
-            .map_err(|err| DbError::Write(err.to_string()))
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        if already == 0 {
+            let count: i64 = tx
+                .query_row("SELECT COUNT(DISTINCT security) FROM watchlist_items", [], |row| row.get(0))
+                .map_err(|err| DbError::Read(err.to_string()))?;
+            if count >= limit {
+                // 未写入，事务随 drop 回滚
+                return Ok(AddWatchOutcome::LimitReached);
+            }
+        }
+        tx.execute(
+            "INSERT INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?, ?, ?, ?)
+             ON CONFLICT(security) DO UPDATE SET group_name = excluded.group_name, sort_order = excluded.sort_order",
+            params![security, group, sort_order, now()],
+        )
+        .map_err(|err| DbError::Write(err.to_string()))?;
+        tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
+        Ok(AddWatchOutcome::Added)
     }
 
-    pub fn remove_watch(&self, security: &str, group: &str) -> Result<(), DbError> {
+    pub fn remove_watch(&self, security: &str) -> Result<(), DbError> {
         self.conn
-            .execute(
-                "DELETE FROM watchlist_items WHERE security = ? AND group_name = ?",
-                params![security, group],
-            )
+            .execute("DELETE FROM watchlist_items WHERE security = ?", params![security])
             .map(|_| ())
             .map_err(|err| DbError::Write(err.to_string()))
     }
@@ -381,11 +424,11 @@ impl StateDb {
         tx.commit().map_err(|e| DbError::Write(e.to_string()))
     }
 
-    /// 删除自定义分组；组内标的回落到内置组「全部」，不丢自选。
+    /// 删除自定义分组；组内标的回到「未分组」（group_name = NULL），不丢自选。
     pub fn delete_watch_group(&self, name: &str) -> Result<(), DbError> {
         let tx = self.conn.unchecked_transaction().map_err(|e| DbError::Write(e.to_string()))?;
         tx.execute(
-            "UPDATE watchlist_items SET group_name = '全部' WHERE group_name = ?",
+            "UPDATE watchlist_items SET group_name = NULL WHERE group_name = ?",
             params![name],
         )
         .map_err(|err| DbError::Write(err.to_string()))?;
@@ -595,11 +638,9 @@ mod tests {
             .conn
             .query_row("SELECT COUNT(*) FROM schema_versions", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(logged, 2);
-        let builtin = db.watch_groups().unwrap();
-        assert_eq!(builtin.len(), 1);
-        assert_eq!(builtin[0].name, "全部");
-        assert!(builtin[0].is_builtin);
+        assert_eq!(logged, 3);
+        // v3 起「全部」为只读派生，不再落库
+        assert!(db.watch_groups().unwrap().is_empty());
     }
 
     #[test]
@@ -614,26 +655,47 @@ mod tests {
     #[test]
     fn watchlist_roundtrip() {
         let db = memory();
-        db.add_watch("600519.SH", "全部", 0).unwrap();
-        db.add_watch("000001.SZ", "全部", 1).unwrap();
-        db.add_watch("600519.SH", "全部", 5).unwrap();
+        db.add_watch_with_limit("600519.SH", None, 0, 500).unwrap();
+        db.add_watch_with_limit("000001.SZ", None, 1, 500).unwrap();
+        db.add_watch_with_limit("600519.SH", None, 5, 500).unwrap();
         let items = db.watchlist().unwrap();
         assert_eq!(items.len(), 2);
-        assert_eq!(items[1].security, "600519.SH");
-        assert_eq!(items[1].sort_order, 5);
-        db.remove_watch("600519.SH", "全部").unwrap();
+        assert!(items.iter().all(|item| item.group_name.is_none()));
+        db.remove_watch("600519.SH").unwrap();
         assert_eq!(db.watchlist().unwrap().len(), 1);
     }
 
     #[test]
-    fn group_rename_and_delete_move_items_back_to_builtin() {
+    fn watchlist_limit_is_enforced_inside_transaction() {
+        let db = memory();
+        for index in 0..499 {
+            db.add_watch_with_limit(&format!("S{index:04}"), None, index, 500)
+                .unwrap();
+        }
+        assert_eq!(db.watch_distinct_count().unwrap(), 499);
+        // 第 500 只放行并落库
+        assert_eq!(
+            db.add_watch_with_limit("S0499", None, 499, 500).unwrap(),
+            AddWatchOutcome::Added
+        );
+        assert_eq!(db.watch_distinct_count().unwrap(), 500);
+        // 第 501 只拒写
+        assert_eq!(
+            db.add_watch_with_limit("S0500", None, 500, 500).unwrap(),
+            AddWatchOutcome::LimitReached
+        );
+        assert_eq!(db.watch_distinct_count().unwrap(), 500);
+    }
+
+    #[test]
+    fn group_rename_and_delete_returns_items_to_ungrouped() {
         let db = memory();
         db.create_watch_group("短线").unwrap();
-        db.add_watch("600519.SH", "短线", 0).unwrap();
+        db.add_watch_with_limit("600519.SH", Some("短线"), 0, 500).unwrap();
         db.rename_watch_group("短线", "波段").unwrap();
-        assert_eq!(db.watchlist().unwrap()[0].group_name, "波段");
+        assert_eq!(db.watchlist().unwrap()[0].group_name.as_deref(), Some("波段"));
         db.delete_watch_group("波段").unwrap();
-        assert_eq!(db.watchlist().unwrap()[0].group_name, "全部");
+        assert_eq!(db.watchlist().unwrap()[0].group_name, None);
         assert!(db.watch_groups().unwrap().iter().all(|g| g.name != "波段"));
         assert_eq!(db.watch_distinct_count().unwrap(), 1);
     }

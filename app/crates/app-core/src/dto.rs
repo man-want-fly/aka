@@ -318,7 +318,8 @@ pub struct WatchGroupDto {
 #[serde(rename_all = "camelCase")]
 pub struct WatchItemDto {
     pub security: String,
-    pub group_name: String,
+    /// `null` = 未分组
+    pub group_name: Option<String>,
     pub sort_order: i64,
 }
 

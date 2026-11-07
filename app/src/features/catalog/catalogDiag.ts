@@ -193,6 +193,79 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
     )} 部分 ${bySpec("partial")} 未覆盖 ${bySpec("productDefined")}`,
   );
 
+  // 徽标数量自证：口径待定 = planned 且 specStatus != manualComplete；
+  // productDefined 是全量口径，M22 同时属于 planned 与 productDefined，不得重复计数。
+  const pendingItems = plannedItems.filter((item) => item.specStatus !== "manualComplete");
+  const pendingIds = pendingItems.map((item) => item.id).sort();
+  const productDefinedIds = items
+    .filter((item) => item.specStatus === "productDefined")
+    .map((item) => item.id)
+    .sort();
+  const expectedPending = [
+    "M18",
+    "M22",
+    "M23",
+    "D07",
+    "D09",
+    "E02",
+    "E03",
+    "E04",
+    "E05",
+    "E14",
+    "F14",
+    "F15",
+    "F16",
+  ].sort();
+  push(
+    "D-07",
+    "S-03.01-01(手册)",
+    "data",
+    pendingItems.length === 13 &&
+      pendingIds.join(",") === expectedPending.join(",") &&
+      productDefinedIds.length === 4 &&
+      productDefinedIds.join(",") === ["E02", "F15", "F16", "M22"].sort().join(",") &&
+      bySpec("partial") === 9,
+    `口径待定 ${pendingItems.length}（${pendingIds.join(",")}）/ productDefined ${productDefinedIds.length}（${productDefinedIds.join(
+      ",",
+    )}）/ planned 内 partial ${bySpec("partial")}`,
+  );
+
+  const find = (id: string) => items.find((item) => item.id === id);
+  const e02 = find("E02");
+  const f16 = find("F16");
+  const f15 = find("F15");
+  const m22 = find("M22");
+  const e02Period = e02?.params.find((param) => param.key === "period");
+  const f16Period = f16?.params.find((param) => param.key === "period");
+  const intParam = (param: typeof e02Period) =>
+    param && (param.kind === "int" || param.kind === "float") ? param : undefined;
+  const e02Spec = intParam(e02Period);
+  const f16Spec = intParam(f16Period);
+  push(
+    "D-08",
+    "S-03.01-01(手册)",
+    "data",
+    e02?.warmupBars === 61 &&
+      e02Spec?.default === 60 &&
+      e02Spec.min === 20 &&
+      e02Spec.max === 250 &&
+      f16?.warmupBars === 29 &&
+      f16Spec?.default === 10 &&
+      f16Spec.min === 5 &&
+      f16Spec.max === 30 &&
+      f15?.warmupBars === 2 &&
+      Boolean(f15?.notes.includes("一字板结案")) &&
+      m22?.specStatus === "productDefined" &&
+      Boolean(m22?.notes.includes("本期不实现")),
+    `E02 预热 ${e02?.warmupBars} period ${e02Spec?.default}[${e02Spec?.min},${e02Spec?.max}] / F16 预热 ${
+      f16?.warmupBars
+    } period ${f16Spec?.default}[${f16Spec?.min},${f16Spec?.max}] / F15 预热 ${
+      f15?.warmupBars
+    } notes 含一字板结案=${Boolean(f15?.notes.includes("一字板结案"))} / M22 ${m22?.specStatus} 不实现=${Boolean(
+      m22?.notes.includes("本期不实现"),
+    )}`,
+  );
+
   // ---- 渲染层 ----
   await waitFor(() => q("[data-catalog-root='p3']"));
   const header = q<HTMLElement>("[data-catalog-total]");
@@ -370,6 +443,18 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
     )
       .replace(/\s+/g, " ")
       .trim()}」`,
+  );
+
+  const domPending = qa<HTMLElement>("[data-catalog-spec-pending]")
+    .map((element) => element.dataset.catalogSpecPending ?? "")
+    .filter(Boolean)
+    .sort();
+  push(
+    "R-13",
+    "S-03.01-01(手册)",
+    "render",
+    domPending.length === 13 && domPending.join(",") === expectedPending.join(","),
+    `DOM 口径待定徽标 ${domPending.length}（${domPending.join(",")}）/ manifest 派生 ${pendingIds.length}`,
   );
 
   const report = {
