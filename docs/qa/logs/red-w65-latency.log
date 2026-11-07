@@ -1,0 +1,19 @@
+W-65 红路径：搜索过滤人为延到 260ms（验收上限 250ms）
+======================================================================
+时间：2026-11-08
+基线：main @ 00b6640（W-59 已落，本地取证）
+注入：app/src/features/workbench/IndicatorDrawer.tsx 防抖窗口 200ms → 260ms
+      （仅本地临时改动，取证后立即还原，不提交）
+构建：PATH=/tmp/aka-node/bin:$PATH NODE_ENV=development npm run build（exit 0）
+      cargo clean -p aka-desktop && cargo build -p aka-desktop --features tauri/custom-protocol（exit 0）
+命令：AKA_DIAG=1 AKA_DIAG_TARGET=drawer target/debug/aka-desktop
+证据：~/Library/Application Support/aka/diag/s20401-evidence.json（原地覆盖，未归档）
+结果：ok=false
+      R-LAT passed=false
+      detail：产品承诺 200ms、验收上限 250ms（含调度余量）；本次最慢 271ms；
+              搜索「MACD」超过 250ms 未出现预期结果
+      其余 failed：R-03 R-04 R-05 R-09 R-10 R-11 R-12 R-13
+      （同一防抖窗口下所有 typeQuery 共用 250ms 截止线，属真实连带失败，未跳过、未重试）
+套件行为：超时未抛异常中止；后续检查照常执行；evidence 完整落盘（checks 全量）
+归档口径：ok=false → diag-evidence.sh 同口径退出码 2（非零）
+还原：防抖窗口改回 200ms，重新构建后复跑，见 docs/qa/evidence/s20401-evidence.json 与 -meta.json
