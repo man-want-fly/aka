@@ -5,7 +5,7 @@
 | 项 | 值 |
 |---|---|
 | Story 卡 | 72 张（P0 71 / P1 1 / V1 0） |
-| 人日合计 | 202.9 |
+| 人日合计 | 见卡文件 §1「卡片总览表」 |
 | 主责模块 | 19 个（Rust 6 / 前端 10 / 跨层 3） |
 | 未归属 | 0 |
 
@@ -21,28 +21,30 @@
 
 ## 2. 模块总览
 
-| 层 | 模块 | 主责卡数 | 人日 | 状态分布 |
-|---|---|---|---|---|
-| Rust 壳层 | `A1` aka-desktop | 1 | 2.5 | 未开始 1 |
-| Rust 核心 | `A2` app-core | 7 | 23.0 | Blocked 1 / 已交付 3 / 数值层已具备 1 / 未开始 1 / 条件交付 1 |
-| Rust 核心 | `A3` indicator-core | 15 | 39.9 | Blocked 3 / 数值层已具备 6 / 条件交付 2 / 渲染层已具备 4 |
-| Rust 数据 | `A4` data-provider | 2 | 5.5 | 未开始 2 |
-| Rust 数据 | `A5` data-store | 3 | 13.0 | 数值层已具备 2 / 未开始 1 |
-| Rust 测试 | `A6` indicator-golden | 0 | 0.0 | 无独立卡 |
-| 前端壳层 | `B1` app/pages | 4 | 8.5 | 已交付 1 / 未开始 3 |
-| 前端功能 | `B2` features/market | 6 | 18.5 | 已交付 2 / 未开始 4 |
-| 前端功能 | `B3` features/watchlist | 4 | 8.5 | 数值层已具备 1 / 未开始 3 |
-| 前端功能 | `B4` features/workbench | 5 | 16.0 | Blocked 2 / 已交付 1 / 渲染层已具备 2 |
-| 前端功能 | `B5` features/indicators | 8 | 21.5 | Blocked 2 / 已交付 1 / 未开始 2 / 渲染层已具备 3 |
-| 前端功能 | `B6` features/settings | 2 | 3.5 | 未开始 1 / 渲染层已具备 1 |
-| 前端功能 | `B7` features/data-source | 2 | 3.5 | 未开始 2 |
-| 前端组件 | `B8` components | 2 | 5.0 | Blocked 1 / 已交付 1 |
-| 前端基础 | `B9` lib | 0 | 0.0 | 无独立卡 |
-| 前端基础 | `B10` styles | 3 | 9.5 | Blocked 1 / 未开始 1 / 条件交付 1 |
-| 跨层 | `C1` state-persistence | 0 | 0.0 | 无独立卡 |
-| 跨层 | `C2` 空态与错误态 | 7 | 12.5 | 未开始 7 |
-| 跨层 | `C3` 发布门禁与脚本 | 1 | 12.0 | Blocked-AC 1 |
-| **合计** | | **72** | **202.9** | |
+| 层 | 模块 | 主责卡数 | 状态分布 |
+|---|---|---|---|
+| Rust 壳层 | `A1` aka-desktop | 1 | 未开始 1 |
+| Rust 核心 | `A2` app-core | 7 | Blocked 1 / 已交付 3 / 数值层已具备 1 / 未开始 1 / 条件交付 1 |
+| Rust 核心 | `A3` indicator-core | 15 | Blocked 3 / 数值层已具备 6 / 条件交付 2 / 渲染层已具备 4 |
+| Rust 数据 | `A4` data-provider | 2 | 未开始 2 |
+| Rust 数据 | `A5` data-store | 3 | 数值层已具备 2 / 未开始 1 |
+| Rust 测试 | `A6` indicator-golden | 0 | 无独立卡 |
+| 前端壳层 | `B1` app/pages | 4 | 已交付 1 / 未开始 3 |
+| 前端功能 | `B2` features/market | 6 | 已交付 2 / 未开始 4 |
+| 前端功能 | `B3` features/watchlist | 4 | 数值层已具备 1 / 未开始 3 |
+| 前端功能 | `B4` features/workbench | 5 | Blocked 2 / 已交付 1 / 渲染层已具备 2 |
+| 前端功能 | `B5` features/indicators | 8 | Blocked 2 / 已交付 1 / 未开始 2 / 渲染层已具备 3 |
+| 前端功能 | `B6` features/settings | 2 | 未开始 1 / 渲染层已具备 1 |
+| 前端功能 | `B7` features/data-source | 2 | 未开始 2 |
+| 前端组件 | `B8` components | 2 | Blocked 1 / 已交付 1 |
+| 前端基础 | `B9` lib | 0 | 无独立卡 |
+| 前端基础 | `B10` styles | 3 | Blocked 1 / 未开始 1 / 条件交付 1 |
+| 跨层 | `C1` state-persistence | 0 | 无独立卡 |
+| 跨层 | `C2` 空态与错误态 | 7 | 未开始 7 |
+| 跨层 | `C3` 发布门禁与脚本 | 1 | Blocked-AC 1 |
+| **合计** | | **72** | |
+
+> 人日不在本表复制：各模块人日由逐卡规模估算相加，统一见卡文件 §1「卡片总览表」；本表只做模块归属。
 
 
 ## 3. Rust workspace（6 个 crate）
@@ -285,5 +287,5 @@ E-08 七卡；多数并入宿主卡，统一空态/错误卡规范。
 ## 8. 校验
 
 - 72 张卡全部有且仅有一个主责模块（72 次归属，0 未归属、0 重复）。
-- 人日合计 202.9，与索引一致。
+- 人日合计见卡文件 §1「卡片总览表」，与索引 `estimate_pd` 合计为校验副本（同源核对，不在本文件写值）。
 - `indicator-golden`、`lib`、`state-persistence` 无独立卡，分别作为 A3、前端、宿主卡的协作/测试底座。
