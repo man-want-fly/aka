@@ -137,13 +137,21 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
       field.dispatchEvent(new Event("input", { bubbles: true }));
     };
     type("");
-    const cleared = await waitFor(() => q('[data-drawer-cat][aria-pressed="true"]'), 400, 20)
+    // 清空必须真正渲染回全量（行数 = 当前分类计数），否则 200ms 防抖可能与下一次输入抢跑，
+    // 上次就出现过「清空还没生效就输入 → 结果被清空覆盖」的假超时。
+    const cleared = await waitFor(() => {
+      const category = q<HTMLElement>('[data-drawer-cat][aria-pressed="true"]');
+      if (!category) return null;
+      const full = Number(category.dataset.drawerCatCount ?? "-1");
+      return qa("[data-drawer-row]").length === full ? true : null;
+    }, 400, 20)
       .then(() => true)
       .catch(() => false);
     if (!cleared) {
       searchLatencyFailure ||= "清空搜索后 400ms 内未恢复分类列表";
       return false;
     }
+    type(text);
     const started = performance.now();
     const hit = await waitFor(() => (probe() ? true : null), 250, 20)
       .then(() => true)
