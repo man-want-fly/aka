@@ -1,30 +1,79 @@
 {
-  "note": "W-69 旧格式冻结：文件集与 sha256 由 verify_evidence.mjs 内 LEGACY_WHITELIST_FILE_SHA256 锁定；deadline 为脚本常量 LEGACY_DEADLINE，本字段仅作说明、脚本不读取。改动本文件任一字节即红。",
+  "note": "W-70 旧格式冻结：权威副本为 verify_evidence.mjs 内 LEGACY_WHITELIST_FILE_SHA256；deadline 为脚本常量 LEGACY_DEADLINE，本字段仅作说明。只缩不扩：LEGACY_MAX_FILES=18。改动本文件任一字节即红。",
   "deadline": "2026-11-22",
   "files": {
-    "ac020401-cross-page-evidence.json": "5ef913e3914397b952299f71af4e74b93985af7c6669ce5e2bc5c84005c0f835",
-    "red-wl23c4-evidence.json": "8d1c3887b30278b7a5f19321ac4cb8a1a7e7663ef43bd79a10afcd349be17308",
-    "s0102-watchlist-empty-evidence.json": "9e1275f5b8e86e60aee3a3f568e9d83657c93e1e30ca0a6f5b107f9714534fae",
-    "s0102-watchlist-evidence.json": "ea6af085b7bf3ef1fc0f0e6c651f57de869ec64a139946576582c48ac0cc1030",
-    "s0102-watchlist-readonly-evidence.json": "6a9e0047ca2e2152936c928ab4d5e32aa5a1fbca19cf716a6ede6404081f0b0b",
-    "s010201-star-evidence.json": "2f15767824eb9f89f4fd6f93a4f85db34921c2dce9068696553975a0cf74fa34",
-    "s03010-evidence.json": "1dd7e5f5350546afc16355e299a303b51521a3243ea161adb594a16fc3a30323",
-    "s030201-favorites-evidence.json": "b5ab2f7d4c597ef31dec1b6dfc41f78c25368be2004318160046efe7341a7976",
-    "s0303-verify-docs-v3-firstrun.json": "eb7752388df176d5e7cf5c7124df9363c1624c122a41b6ee6b425c01f1335724",
-    "s0602-display-evidence.json": "04b87a535f19ada8366b2909110633628e582c6e60efb65f5deabc60ece63c05",
-    "s070501-quality-evidence.json": "534c27aed85618eb88d1c4dd9cb63606cd6b698b4f9d9f7306f96b965ebb7a0d",
-    "s070502-provenance-evidence.json": "35d4e044d92be750b2493981410b985ed1ddede8f947b02754dd8a26205ea8f0",
-    "s080204-evidence.json": "71b64347254fb31827a9ee87f2ce7d617360e6f400da846da76e34dda7d100e1",
-    "s2-evidence-p-line-20261107j.json": "d5dbd979c12e0c117bf6e2ac7cc11dcf569a64f6a8565edbd4611029549f3575",
-    "s2-evidence-p-line-20261107k.json": "d9ed9d79ed71fb22d860a170bd4905c1205d780fb75b40ad3a65ac139ee1d20e",
-    "s20502-evidence.json": "9e71db539c996d0ee3cd3d12af074df06c98ed101026dcea8795144c4719f20f",
-    "s20502-restart-evidence.json": "244b908455e87afae6fef383c692a36b9cc453891c2909fc0978503cb4c18a0c",
-    "s20502-restart-merged.json": "47d2d00437a1238ff95da8ba04c7733a6877037d059ad94614cc5fb7ec4c7722",
-    "s20502-restart-phase-a.json": "e553038e91b01ca52e9f66122281c85c2f2de32a90b916c22c05931ace2594d9",
-    "s207-evidence-20261107.json": "6a1adba892cfb37a1eda9e4cc0fccfcc767550e91aa0333b88d84d6276e2a7cb",
-    "s207-evidence-meta-20261107.json": "e691418af69e0550caed31ec731d061626c41dad00b4da9d605a9e152d179185",
-    "s207-wm-compare-20261107.json": "06b490ada03c73394bbaccd227f3c73209d284c694bfdf921c609f63bb705714",
-    "s207-wm-series-20261107.json": "69dff9e7473387efb258fb1e7a44e53d2ace4fe3f3309cc1bf8f5ae48321a6e2",
-    "session-storage-probe.json": "80cbbe93a223a99648fdfa341738c58bef2c94f0df4535b8afab874f5a722f03"
+    "ac020401-cross-page-evidence.json": {
+      "sha256": "5ef913e3914397b952299f71af4e74b93985af7c6669ce5e2bc5c84005c0f835",
+      "expiresOn": "2026-11-22"
+    },
+    "red-wl23c4-evidence.json": {
+      "sha256": "8d1c3887b30278b7a5f19321ac4cb8a1a7e7663ef43bd79a10afcd349be17308",
+      "expiresOn": "2026-11-22"
+    },
+    "s0102-watchlist-empty-evidence.json": {
+      "sha256": "9e1275f5b8e86e60aee3a3f568e9d83657c93e1e30ca0a6f5b107f9714534fae",
+      "expiresOn": "2026-11-22"
+    },
+    "s0102-watchlist-evidence.json": {
+      "sha256": "ea6af085b7bf3ef1fc0f0e6c651f57de869ec64a139946576582c48ac0cc1030",
+      "expiresOn": "2026-11-22"
+    },
+    "s0102-watchlist-readonly-evidence.json": {
+      "sha256": "6a9e0047ca2e2152936c928ab4d5e32aa5a1fbca19cf716a6ede6404081f0b0b",
+      "expiresOn": "2026-11-22"
+    },
+    "s010201-star-evidence.json": {
+      "sha256": "2f15767824eb9f89f4fd6f93a4f85db34921c2dce9068696553975a0cf74fa34",
+      "expiresOn": "2026-11-22"
+    },
+    "s03010-evidence.json": {
+      "sha256": "1dd7e5f5350546afc16355e299a303b51521a3243ea161adb594a16fc3a30323",
+      "expiresOn": "2026-11-22"
+    },
+    "s030201-favorites-evidence.json": {
+      "sha256": "b5ab2f7d4c597ef31dec1b6dfc41f78c25368be2004318160046efe7341a7976",
+      "expiresOn": "2026-11-22"
+    },
+    "s0602-display-evidence.json": {
+      "sha256": "04b87a535f19ada8366b2909110633628e582c6e60efb65f5deabc60ece63c05",
+      "expiresOn": "2026-11-22"
+    },
+    "s070501-quality-evidence.json": {
+      "sha256": "534c27aed85618eb88d1c4dd9cb63606cd6b698b4f9d9f7306f96b965ebb7a0d",
+      "expiresOn": "2026-11-22"
+    },
+    "s070502-provenance-evidence.json": {
+      "sha256": "35d4e044d92be750b2493981410b985ed1ddede8f947b02754dd8a26205ea8f0",
+      "expiresOn": "2026-11-22"
+    },
+    "s080204-evidence.json": {
+      "sha256": "71b64347254fb31827a9ee87f2ce7d617360e6f400da846da76e34dda7d100e1",
+      "expiresOn": "2026-11-22"
+    },
+    "s2-evidence-p-line-20261107k.json": {
+      "sha256": "d9ed9d79ed71fb22d860a170bd4905c1205d780fb75b40ad3a65ac139ee1d20e",
+      "expiresOn": "2026-11-22",
+      "reason": "真实 P 线 release 性能证据，被 3 份文档引用，移出会断链"
+    },
+    "s20502-evidence.json": {
+      "sha256": "9e71db539c996d0ee3cd3d12af074df06c98ed101026dcea8795144c4719f20f",
+      "expiresOn": "2026-11-22"
+    },
+    "s20502-restart-evidence.json": {
+      "sha256": "244b908455e87afae6fef383c692a36b9cc453891c2909fc0978503cb4c18a0c",
+      "expiresOn": "2026-11-22"
+    },
+    "s20502-restart-merged.json": {
+      "sha256": "47d2d00437a1238ff95da8ba04c7733a6877037d059ad94614cc5fb7ec4c7722",
+      "expiresOn": "2026-11-22"
+    },
+    "s20502-restart-phase-a.json": {
+      "sha256": "e553038e91b01ca52e9f66122281c85c2f2de32a90b916c22c05931ace2594d9",
+      "expiresOn": "2026-11-22"
+    },
+    "s207-evidence-20261107.json": {
+      "sha256": "6a1adba892cfb37a1eda9e4cc0fccfcc767550e91aa0333b88d84d6276e2a7cb",
+      "expiresOn": "2026-11-22"
+    }
   }
 }

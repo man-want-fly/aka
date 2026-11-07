@@ -23,8 +23,8 @@
   ],
   "files": {
     "rendered": "docs/qa/evidence/s207-evidence-20261107.json",
-    "seriesDump": "docs/qa/evidence/s207-wm-series-20261107.json",
-    "wmCompare": "docs/qa/evidence/s207-wm-compare-20261107.json"
+    "seriesDump": "docs/qa/raw/s207-20261107/s207-wm-series-20261107.json",
+    "wmCompare": "docs/qa/raw/s207-20261107/s207-wm-compare-20261107.json"
   },
   "note": "证据在提交后重跑生成（generatedAt 晚于 commitTime 13 秒），原始序列 dump 与 W/M 复算报告同批产出，可独立复验。"
 }

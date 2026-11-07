@@ -1,5 +1,14 @@
 /**
- * 证据归属门禁（W-60 / W-67 / W-68 / W-69）
+ * 证据归属门禁（W-60 / W-67 / W-68 / W-69 / W-70）
+ *
+ * W-70 追加断言：
+ *   - 递归扫描证据目录；子目录不静默跳过，跳过清单与理由写死在
+ *     EXCLUDED_DIRS，并在输出里打印被跳过的目录与理由。
+ *   - 同一文件内 check `id` 必须唯一（堵「复制一条已过 check 抬总数」）。
+ *   - 扩展名大小写不敏感：`.JSON` 同样按证据解析；非 JSON 附件只允许
+ *     EXPLICIT_AUX_EXTENSIONS 里显式声明的类型，其余文件一律失败。
+ *   - 白名单只缩不扩：LEGACY_MAX_FILES=18，超出即红；每条必须有
+ *     `expiresOn` 且 ≤ LEGACY_DEADLINE。
  *
  * 断言：
  *   1. 归属闭合：set(checks.card) 必须等于 {result.card} ∪ otherCards[].card；
@@ -32,16 +41,35 @@ const ROOT = path.resolve(HERE, "..", "..");
 const CARD_DOC = path.join(ROOT, "docs", "story-cards", "aka-story-cards-v0.1.md");
 const WHITELIST_PATH = path.join(HERE, "evidence-legacy-whitelist.json");
 
-// —— W-69 白名单三要素（脚本内硬编码，不许由被校验的数据自证）——
+// —— W-69 / W-70 白名单三要素（脚本内硬编码，不许由被校验的数据自证）——
 // 截止日：以 CI 运行时钟为准；本地改钟不算通过，也不得据此改判。
 const LEGACY_DEADLINE = "2026-11-22";
+// 只缩不扩的棘轮：前两轮教训是「靠有人会看」的约束都没被看住；
+// 新增冻结项必须付出「减一份或改本常量」的显式代价。
+const LEGACY_MAX_FILES = 18;
 // 冻结白名单 JSON 的 sha256：改动该 JSON 必须同步改本常量并单独过审。
 const LEGACY_WHITELIST_FILE_SHA256 =
-  "9501db648d6647db27f8e8a09ad0123428627d27489e11f8c8603be8147d7e4a";
+  "d3152a90cd9757b3db806e1a8a89db45bcf9b28387a95d3940f331f158c77cfe";
 // 层名受控，防自建层（缺字段 / "undefined" / "runtime2" 一律红）。
 const ALLOWED_LAYERS = new Set(["data", "render", "runtime"]);
 const AC_TOKEN_RE = /^AC-\d{2}\.\d{2}-\d{2}(（补\d+）)?$/;
 const ANCHOR_RE = /^S-\d{2}\.\d{2}-\d{2}·.+$/;
+
+// 显式不扫描的子目录（相对证据目录，W-70）：理由写死，不许静默跳过。
+// e01：19 条 check 无 card，且 AC-01.01-01/02/03/04 与 AC-02.01-01 在
+// S-01.01-01/02/03、S-02.01-01、S-08.02-04 间交叉引用，归属无法机械判定，
+// 待 TL 裁定 AC 归属后再迁移，禁止按前缀猜 card。
+// s2-20261106：P 线诊断 payload + telemetry 摘录，无 checks，不是可判证据结构。
+const EXCLUDED_DIRS = new Map([
+  [
+    "e01-20261107",
+    "E-01 首轮取证 19 条 check 无 card，AC 归属跨 S-01.01-01/02/03、S-02.01-01、S-08.02-04 交叉，待 TL 裁定",
+  ],
+  ["s2-20261106", "P 线诊断 payload + telemetry 摘录，无 checks，非本门禁可判证据"],
+]);
+
+// 非 JSON 文件名按显式声明放行（仍然打印 WARN），未声明的类型一律红。
+const EXPLICIT_AUX_EXTENSIONS = new Set([".txt", ".jsonl", ".log"]);
 
 const argv = process.argv.slice(2);
 const dirArg = argv.find((item) => item.startsWith("--dir="));
@@ -81,6 +109,7 @@ const stable = (layers) =>
 
 // 旧格式冻结：白名单 JSON 必须与脚本常量摘要一致才可信。
 let freezeMap = {};
+let whitelistUsable = false;
 try {
   const raw = fs.readFileSync(WHITELIST_PATH);
   const digest = crypto.createHash("sha256").update(raw).digest("hex");
@@ -92,7 +121,38 @@ try {
     );
   } else {
     const parsed = JSON.parse(raw.toString("utf8"));
-    freezeMap = parsed.files ?? {};
+    const entries = Object.entries(parsed.files ?? {});
+    let entriesValid = true;
+    if (entries.length > LEGACY_MAX_FILES) {
+      failures.push(
+        `白名单条目 ${entries.length} > LEGACY_MAX_FILES=${LEGACY_MAX_FILES}（只缩不扩：新增冻结项必须减一份或改脚本常量）`,
+      );
+      entriesValid = false;
+    }
+    for (const [name, entry] of entries) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        failures.push(`${name}: 白名单条目必须是 {sha256, expiresOn} 对象，旧版裸 hash 不再接受`);
+        entriesValid = false;
+        continue;
+      }
+      if (typeof entry.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(entry.sha256)) {
+        failures.push(`${name}: 白名单条目缺合法 sha256`);
+        entriesValid = false;
+      }
+      if (typeof entry.expiresOn !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn)) {
+        failures.push(`${name}: 白名单条目缺 expiresOn（必填，YYYY-MM-DD）`);
+        entriesValid = false;
+      } else if (entry.expiresOn > LEGACY_DEADLINE) {
+        failures.push(
+          `${name}: expiresOn=${entry.expiresOn} 超过 LEGACY_DEADLINE=${LEGACY_DEADLINE}（不许续期）`,
+        );
+        entriesValid = false;
+      }
+    }
+    if (entriesValid) {
+      freezeMap = parsed.files ?? {};
+      whitelistUsable = true;
+    }
   }
 } catch (error) {
   failures.push(`冻结白名单读取失败（${error.message}），旧格式一律不放行`);
@@ -144,10 +204,49 @@ const anchorLineMatches = (section, ac) => {
 
 let scanned = 0;
 let frozen = 0;
+let nestedScanned = 0;
+const walkedDirs = [];
+const skippedDirs = [];
+const evidenceFiles = [];
 
-for (const file of fs.readdirSync(EVIDENCE_DIR).sort()) {
-  if (!file.endsWith(".json") || file.endsWith("-meta.json")) continue;
-  const full = path.join(EVIDENCE_DIR, file);
+// W-70：递归扫描。跳过目录必须命名字面量 EXCLUDED_DIRS，理由随输出打印。
+const walk = (dir) => {
+  for (const entry of fs
+    .readdirSync(dir, { withFileTypes: true })
+    .sort((a, b) => a.name.localeCompare(b.name))) {
+    const full = path.join(dir, entry.name);
+    const rel = path.relative(EVIDENCE_DIR, full).split(path.sep).join("/");
+    if (entry.isDirectory()) {
+      const reason = EXCLUDED_DIRS.get(rel);
+      if (reason) {
+        skippedDirs.push(`${rel}：${reason}`);
+        continue;
+      }
+      walkedDirs.push(rel);
+      walk(full);
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    if (/\.json$/i.test(entry.name)) {
+      // 只认小写 `-meta.json` 为 meta；大写 `-META.JSON` 会按证据解析（宁可红）。
+      if (/-meta\.json$/.test(entry.name)) continue;
+      evidenceFiles.push({ full, rel });
+      continue;
+    }
+    const ext = path.extname(entry.name).toLowerCase();
+    if (!EXPLICIT_AUX_EXTENSIONS.has(ext)) {
+      failures.push(
+        `${rel}: 不可识别的文件类型（只认 *.json；非 JSON 附件须在 EXPLICIT_AUX_EXTENSIONS 显式声明）`,
+      );
+    } else {
+      warnings.push(`${rel}: 非证据附件（显式声明 ${ext}，不参与门禁）`);
+    }
+  }
+};
+walk(EVIDENCE_DIR);
+
+for (const { full, rel } of evidenceFiles) {
+  const file = rel;
   let evidence;
   try {
     evidence = JSON.parse(fs.readFileSync(full, "utf8"));
@@ -157,18 +256,18 @@ for (const file of fs.readdirSync(EVIDENCE_DIR).sort()) {
   }
 
   // 旧格式冻结：白名单命中则按 hash 锁死，截止日后一律红。
-  const freezeHash = freezeMap[file];
-  if (freezeHash) {
+  const freezeEntry = whitelistUsable ? freezeMap[path.basename(file)] : undefined;
+  if (freezeEntry) {
     if (!legacyAllowed) {
       failures.push(`${file}: 旧格式白名单已于 ${LEGACY_DEADLINE} 截止（以 CI 时钟为准），必须迁移结构化归属`);
       continue;
     }
-    if (sha256(full) !== freezeHash) {
+    if (sha256(full) !== freezeEntry.sha256) {
       failures.push(`${file}: 冻结白名单 hash 不符（文件被改动），旧格式不许借壳续命`);
       continue;
     }
     frozen += 1;
-    warnings.push(`${file}: 旧格式冻结（白名单命中，截止 ${LEGACY_DEADLINE}）`);
+    warnings.push(`${file}: 旧格式冻结（白名单命中，expiresOn ${freezeEntry.expiresOn}）`);
     continue;
   }
 
@@ -178,8 +277,10 @@ for (const file of fs.readdirSync(EVIDENCE_DIR).sort()) {
     continue;
   }
   scanned += 1;
+  if (file.includes("/")) nestedScanned += 1;
 
   let schemaBroken = false;
+  const ids = new Set();
   for (const [index, check] of evidence.checks.entries()) {
     if (!check || typeof check !== "object" || Array.isArray(check)) {
       failures.push(`${file}: checks[${index}] 不是对象`);
@@ -190,6 +291,11 @@ for (const file of fs.readdirSync(EVIDENCE_DIR).sort()) {
     if (typeof check.id !== "string" || check.id.trim() === "") {
       failures.push(`${label} 的 id 必须为非空字符串`);
       schemaBroken = true;
+    } else if (ids.has(check.id)) {
+      failures.push(`${label} 的 id 在同一文件重复（不许复制已过 check 抬总数）`);
+      schemaBroken = true;
+    } else {
+      ids.add(check.id);
     }
     if (typeof check.card !== "string" || check.card.trim() === "") {
       failures.push(`${label} 的 card 必须为非空字符串`);
@@ -247,7 +353,7 @@ for (const file of fs.readdirSync(EVIDENCE_DIR).sort()) {
     failures.push(`${file}: ${check.id} 的 ac=${JSON.stringify(ac)} 既非整 AC token 也非卡面锚点`);
   }
 
-  const metaPath = full.replace(/\.json$/, "-meta.json");
+  const metaPath = full.replace(/\.json$/i, "-meta.json");
   if (!fs.existsSync(metaPath)) {
     failures.push(`${file}: 无 meta，无法闭合归属`);
     continue;
@@ -347,7 +453,9 @@ if (scanned === 0) {
 for (const warning of warnings) console.warn(`WARN ${warning}`);
 for (const failure of failures) console.error(`FAIL ${failure}`);
 console.log(
-  `证据归属门禁：卡集 ${CARD_SET.size} 张，扫描 ${scanned} 份证据，冻结 ${frozen} 份，` +
-    `失败 ${failures.length} 项（截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
+  `证据归属门禁：卡集 ${CARD_SET.size} 张，递归扫描 ${scanned} 份证据（子目录 ${nestedScanned} 份），` +
+    `冻结 ${frozen} 份，遍历子目录 ${walkedDirs.length} 个，显式跳过 ${skippedDirs.length} 个，` +
+    `失败 ${failures.length} 项（白名单上限 ${LEGACY_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
 );
+for (const skipped of skippedDirs) console.log(`SKIP ${skipped}`);
 process.exit(failures.length === 0 ? 0 : 1);
