@@ -858,7 +858,7 @@
 - 数据不足 `min_bars`：全部 NaN，不补 0、不插值、不画平线。
 - 零区间/零分母：按上表逐一区分「有值（M02 取 50）」与「NaN（M04/M05/M09/M20/M21/M24）」。
 - 停牌：OHLC 取停牌前收盘；M26 记为「是」（振幅 0 为最小）；M24 因 `range=0` 断线，口径页须写明。
-- 参数：`N∈[2,200]`；M08 / M25 要求 `fast<slow`，否则 `E_PARAM_OUT_OF_RANGE`。
+- 参数：`N∈[2,200]`；M08 / M25 的 `fast`、`slow` 各自都在 `[2,200]` 内，越界报 `E_PARAM_OUT_OF_RANGE`，**`fast≥slow`（含相等）报 `E_PARAM_ORDER`**。
 - 性能：2500 根 × 单指标 p95 ≤8ms；M19 滚动极值须 O(N) 实现。
 
 **验收标准**：
@@ -1329,7 +1329,7 @@
 | 错误码 | 类 | 触发 | UI | 恢复 |
 | --- | --- | --- | --- | --- |
 | `E_PARAM_OUT_OF_RANGE` | 可纠正 | 参数越界 | 字段红框 + 范围 | 恢复默认/修正 |
-| `E_PARAM_ORDER` | 可纠正 | 参数顺序不满足（BIAS 三周期不递增 / Ichimoku 三周期不递增 / MACD·PPO fast≥slow） | 字段红框 + 顺序提示 | 恢复默认/修正 |
+| `E_PARAM_ORDER` | 可纠正 | 参数顺序不满足（BIAS 三周期不递增 / Ichimoku 三周期不递增 / **M08 MACD 与 M25 PPO 的 `fast≥slow`（含相等）**） | 字段红框 + 顺序提示 | 恢复默认/修正 |
 | `E_UPSTREAM_TIMEOUT` | 可重试 | 数据批次超时（故障注入） | 局部错误条 + retry_after | 重试缺失批次 |
 | `E_DATASET_CORRUPT` | 不可恢复 | sha256/解析失败 | 全屏错误卡 | 重建/诊断/只读 |
 | `E_UNDEFINED_ZERO_VOLUME` | 可解释 | 零量导致除零 | 面板内联标注 | 换指标/看口径 |

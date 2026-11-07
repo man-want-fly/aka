@@ -3361,14 +3361,14 @@ Confirmation：EMA 首值链、双线/柱形态、三色边界三处可独立判
 | M25 Elder Impulse | H/L/C | `hist=2×(DIF−DEA)`；`impulse=EMA13(hist)`；状态 `{+1,0,-1}`（`eps=1e-9×max(abs(C),1)` 归零） | 46 | absolute 1e-4 |
 
 - 单位：M08 百分比（2 位）；M24 倍率（2 位）；M25 状态为三色标记（无数值小数）。
-- 退化：M08 慢线为 0 → NaN、`fast≥slow` → `E_PARAM_OUT_OF_RANGE`；M24 常数 `range` → 比值 1 → `Mass=25`；`range=0` → NaN；M25 `hist=0` → 状态 0。
+- 退化：M08 慢线为 0 → NaN、`fast≥slow` → `E_PARAM_ORDER`；M24 常数 `range` → 比值 1 → `Mass=25`；`range=0` → NaN；M25 `hist=0` → 状态 0。
 
 #### 6. 异常与边界
 - 数据不足：低于首值下标 + 1 根时整列 NaN。
 - 常数序列：M08 双线恒 0（合法，不 NaN）；M24 `H=11,L=9` 时 `Mass=25.0`；`H=L` 时 NaN。
 - 停牌：价格连续，`range=0`，M24 该根参与求和会使比值 NaN → 整段 NaN，口径页须写明「停牌日 Mass 断线」。
 - 零阈值：M25 的 `hist` 与脉冲差分按 `eps_i=1e-9×max(abs(C[i]),1.0)` 判零；线性上涨只剩 `≈1e−15` 残差，不得判成 `−1`。
-- 参数：`fast<slow`、`N∈[2,200]`；越界 `E_PARAM_OUT_OF_RANGE`。
+- 参数：`N∈[2,200]`；M08/M25 的 `fast`、`slow` 各自都落在 `[2,200]` 内，越界报 `E_PARAM_OUT_OF_RANGE`；**`fast≥slow`（含相等）报 `E_PARAM_ORDER`**，不存在"越界"语义。
 - 性能：2500 根单指标 p95 ≤8ms。
 
 #### 7. UI 与状态
@@ -3377,7 +3377,7 @@ Confirmation：EMA 首值链、双线/柱形态、三色边界三处可独立判
 - 未来渲染要求：M08 双线（无柱）、M24 单线、M25 三色标记 **+1 红 / −1 绿 / 0 蓝**（与 Elder 原版相反，口径页须注明）、NaN 段断开。
 
 #### 8. 验收标准
-- **AC-03.06-17**｜Given 60 根数据、参数 12/26/9；When 计算 M08；Then 下标 33 起双线有值，PPO 线自下标 25 起有值；输出**只有双线、无柱**；Given `fast=26,slow=12`，Then 返回 `E_PARAM_OUT_OF_RANGE` 且不计算。`[数据层]`
+- **AC-03.06-17**｜Given 60 根数据、参数 12/26/9；When 计算 M08；Then 下标 33 起双线有值，PPO 线自下标 25 起有值；输出**只有双线、无柱**；Given `fast=26,slow=12`，Then 返回 `E_PARAM_ORDER` 且不计算、不静默重排为 12/26。`[数据层]`
 - **AC-03.06-18**｜Given 60 根 `H=11,L=9`（`range=2`）；When 计算 M24；Then 下标 0–39 全 NaN，下标 40 起 `Mass=25.0`（误差 ≤1e-9）；Given 60 根 `H=L=C=10`，Then 全 NaN（不得输出 25 或 0）。`[数据层]`
 - **AC-03.06-19**｜Given 60 根**指数上涨** `C[i]=10×1.01^i`（`H=L=C`）；When 计算 M25（`hist=2×(DIF−DEA)` 自下标 33、`impulse=EMA13(hist)` 自下标 45）；Then 下标 45 `hist=0.0590`、`impulse=0.0496` 而 `state` 仍 NaN，下标 46 起 `state=+1`（`hist[46]=0.0604>0` 且 `impulse[46]=0.0512>impulse[45]=0.0496`），46–59 共 14 根全 `+1`；Given 60 根**线性上涨** `C[i]=10+0.5i`，Then `hist` 只剩浮点残差（`abs(hist)≈1.8e−15`），按 `eps=1e-9×max(abs(C[i]),1.0)` 归 0，46–59 全 `0`（裸符号会误判为 `−1`，故不得省略阈值）；Given 上涨转急跌段，Then 出现 `state=−1`；Given `hist>0` 但 `impulse[i]≤impulse[i−1]`，Then `state=0`；状态值只允许 `{−1,0,1}`。`[数据层]`（v0.2 修正：线性上涨的 `hist` 数学上收敛到 0，不能验 `+1`；理由见 `b3-beta-rulings.md` §4.3）
 - **AC-03.06-20**｜Given 同一组 40 根数据；When 分别计算 M06 与 M25；Then `M25.hist[i]=2×(DIF[i]−DEA[i])` 且与 `M06.HIST[i]` 逐根相等（误差 ≤1e-9）；Given 60 根同价，Then M08 双线恒 0、M24 NaN、M25 `state=0`，均不得为 NaN 以外的伪值。`[数据层]`
