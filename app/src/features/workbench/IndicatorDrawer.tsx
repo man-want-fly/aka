@@ -22,6 +22,8 @@ export interface IndicatorDrawerProps {
   onRetry: () => void;
   overlayIds: string[];
   subIds: string[];
+  /** 副图格总数（含成交量格，S-02.03-01 容量口径） */
+  subCount: number;
   /** 当前工作台是否已有有效标的；无标的不允许把指标加进图表 */
   hasTarget: boolean;
   onAddMain: (id: string) => void;
@@ -41,6 +43,7 @@ export function IndicatorDrawer({
   onRetry,
   overlayIds,
   subIds,
+  subCount,
   hasTarget,
   onAddMain,
   onAddSub,
@@ -110,7 +113,7 @@ export function IndicatorDrawer({
       setHint(`主图最多 ${MAX_MAIN_OVERLAYS} 个叠加，请先移除一个`);
       return;
     }
-    if (panel === "sub" && subIds.length >= MAX_SUBPLOTS) {
+    if (panel === "sub" && subCount >= MAX_SUBPLOTS) {
       // 副图满 3 由禁用态拦截，不给 toast
       return;
     }
@@ -129,7 +132,7 @@ export function IndicatorDrawer({
           {implementedCount} 可选 / {plannedCount} 规划中
         </span>
         <span className="caption mono" data-drawer-capacity="1">
-          主图 {overlayIds.length}/{MAX_MAIN_OVERLAYS} · 副图 {subIds.length}/{MAX_SUBPLOTS}
+          主图 {overlayIds.length}/{MAX_MAIN_OVERLAYS} · 副图 {subCount}/{MAX_SUBPLOTS}
         </span>
         {!hasTarget && (
           <span className="caption" data-drawer-no-target="1">
@@ -231,7 +234,7 @@ export function IndicatorDrawer({
               const full =
                 panel === "main"
                   ? overlayIds.length >= MAX_MAIN_OVERLAYS
-                  : subIds.length >= MAX_SUBPLOTS;
+                  : subCount >= MAX_SUBPLOTS;
               const params = item.params.map((param) => String(param.default)).join(",");
               return (
                 <li key={item.id}>
@@ -280,7 +283,7 @@ export function IndicatorDrawer({
                       data-drawer-full={full ? "1" : "0"}
                       disabled={!hasTarget || (!added && !planned && full && panel === "sub")}
                       aria-disabled={!hasTarget || added || planned || full}
-                      title={!hasTarget ? "请先在行情页选择一只标的" : !added && !planned && full ? "请先移除一个指标" : undefined}
+                      title={!hasTarget ? "请先在行情页选择一只标的" : !added && !planned && full ? (panel === "main" ? `主图最多 ${MAX_MAIN_OVERLAYS} 个，请先移除一个` : `副图最多 ${MAX_SUBPLOTS} 个`) : undefined}
                       data-drawer-blocked={!hasTarget ? "1" : "0"}
                       onClick={(event) => {
                         event.stopPropagation();

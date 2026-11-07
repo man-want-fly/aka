@@ -8,6 +8,11 @@ import {
 } from "react";
 import type { BarDto, SeriesDto } from "../lib/types";
 import { formatAmount, formatDate, formatPct, formatPrice, formatVolume } from "../lib/format";
+import {
+  VOLUME_PANEL_ID,
+  clampSubHeight,
+  type SubPlotSetting,
+} from "../features/workbench/model";
 
 /** 可视区间（含端点，绝对下标；start/end 都指向 bars 数组） */
 export interface ChartViewport {
@@ -23,8 +28,10 @@ interface Props {
   onViewportChange: (next: ChartViewport) => void;
   /** B2 主图叠加所选指标（B1 的 8 条图线始终保留） */
   overlayIds: string[];
-  /** 副图指标 id 列表（M06 或 V/M 系列），容量 3 */
-  subIds: string[];
+  /** 副图格（含成交量格 VOL）的形态与顺序，容量 3，见 S-02.03-01 */
+  subPlots: SubPlotSetting[];
+  /** 副图格顺序/高度变化回写工作台（工作台负责全局持久化） */
+  onSubPlotsChange: (next: SubPlotSetting[]) => void;
   /** 单个副图数据不足时的内联提示（键为指标 id），不阻塞主图 */
   subNotices?: Record<string, string>;
   /** 副图面板标题（含参数口径，如 MACD(12,26,9)） */
@@ -36,19 +43,22 @@ interface Props {
 }
 
 const W = 1000;
-const H = 560;
 const LEFT = 6;
 const RIGHT = 938;
+/** 主图价格区顶边 */
 const PRICE_TOP = 12;
-const PRICE_BOTTOM = 300;
-const VOL_TOP = 316;
-const VOL_BOTTOM = 376;
-/** 副图区（原 MACD 区，现按所选副图指标复用） */
-const MACD_TOP = 394;
-const MACD_BOTTOM = 522;
-/** 多副图之间的空隙（2~3 个副图时等分副图区） */
+/** 图表基准高度：副图少时主图吃满空出来的高度（S-02.03-01 补1） */
+const CHART_H_BASE = 738;
+/** 主图价格区最小高度，低于它则整体加高，避免把 K 线压扁 */
+const PRICE_MIN_HEIGHT = 200;
+/** 底部日期轴高度 */
+const DATE_AXIS_H = 26;
+/** 副图格之间的空隙 */
 const SUB_GAP = 10;
-const DATE_Y = 546;
+/** 副图格标题条高度（同时是拖拽换序的抓手） */
+const SUB_HEADER_H = 22;
+/** 副图格底边改高抓手厚度 */
+const SUB_RESIZE_H = 6;
 
 /** S-02.07-01：最小可视 20 根 / 默认 120 根（双击复位）/ 滚轮单格 1.15 倍 */
 const MIN_BARS = 20;
@@ -133,13 +143,49 @@ function isSplitDay(bar: BarDto): boolean {
   return bar.quality.includes("splitDay");
 }
 
+/** 副图格内的一条输出线 */
+interface PanelLine {
+  key: string;
+  label: string;
+  kind: string;
+  color: string;
+  values: (number | null)[];
+  firstValid: number;
+}
+
+/** 副图格（成交量格与指标格共用同一套几何，便于统一拖拽/改高） */
+interface Panel {
+  id: string;
+  kind: "volume" | "indicator";
+  title: string;
+  unit: string;
+  lines: PanelLine[];
+  lo: number;
+  hi: number;
+  spansZero: boolean;
+  /** 整格外框上下边（含标题条） */
+  top: number;
+  bottom: number;
+  /** 可绘制区上下边（标题条之下） */
+  plotTop: number;
+  plotBottom: number;
+  height: number;
+  index: number;
+  zeroY: number;
+  yOf: (value: number) => number;
+  warmup: number;
+  insufficient: boolean;
+  notice: string | undefined;
+}
+
 export function CandleChart({
   bars,
   series,
   viewport,
   onViewportChange,
   overlayIds,
-  subIds,
+  subPlots,
+  onSubPlotsChange,
   subNotices,
   subLabels,
   units,
@@ -167,6 +213,42 @@ export function CandleChart({
     start: number;
     end: number;
   } | null>(null);
+
+  /** S-02.03-01：副图格拖拽（换序 / 改高），同一时刻只允许一个 */
+  const panelDragRef = useRef<{
+    id: string;
+    kind: "reorder" | "resize";
+    y0: number;
+    height0: number;
+    index0: number;
+    height?: number;
+    target?: number;
+  } | null>(null);
+  const [panelDrag, setPanelDrag] = useState<{
+    id: string;
+    kind: "reorder" | "resize";
+    height?: number;
+    target?: number;
+  } | null>(null);
+
+  /** 副图格纵向堆叠几何：自底向上排，主图吃满剩余高度（S-02.03-01 补1） */
+  const layout = useMemo(() => {
+    const plots = subPlots.slice(0, 3);
+    const stackHeights =
+      plots.reduce((sum, item) => sum + item.height, 0) +
+      SUB_GAP * Math.max(0, plots.length - 1);
+    const needed = PRICE_TOP + PRICE_MIN_HEIGHT + SUB_GAP + stackHeights + DATE_AXIS_H;
+    const height = Math.max(CHART_H_BASE, needed);
+    const stackTop = height - DATE_AXIS_H - stackHeights;
+    const priceBottom = stackTop - SUB_GAP;
+    let cursorY = stackTop;
+    const boxes = plots.map((item) => {
+      const box = { id: item.id, height: item.height, top: cursorY, bottom: cursorY + item.height };
+      cursorY += item.height + SUB_GAP;
+      return box;
+    });
+    return { H: height, priceBottom, boxes, plots };
+  }, [subPlots]);
 
   const setOverdragBoth = (value: number) => {
     overdragRef.current = value;
@@ -220,11 +302,70 @@ export function CandleChart({
       });
     });
 
-    // 副图：最多 3 个（S-02.04-02 容量口径），每个独立量程、纵向等分副图区
-    const bandCount = Math.max(1, subIds.length);
-    const bandHeight = (MACD_BOTTOM - MACD_TOP - SUB_GAP * (bandCount - 1)) / bandCount;
-    const subPanels = subIds.map((id, index) => {
-      const sub = series.find((item) => item.indicatorId === id);
+    let priceMin = Infinity;
+    let priceMax = -Infinity;
+    let volMax = 0;
+
+    visible.forEach((bar) => {
+      priceMin = Math.min(priceMin, bar.low);
+      priceMax = Math.max(priceMax, bar.high);
+      volMax = Math.max(volMax, bar.volume);
+    });
+    overlayLines.forEach((line) => {
+      // 整段不足的线不参与量程，避免被隐藏的输出把价格轴撑歪
+      if (line.insufficient) return;
+      line.values.forEach((value) => {
+        if (value !== null && value !== undefined && Number.isFinite(value)) {
+          priceMin = Math.min(priceMin, value);
+          priceMax = Math.max(priceMax, value);
+        }
+      });
+    });
+
+    if (!Number.isFinite(priceMin) || !Number.isFinite(priceMax)) return null;
+    const pad = Math.max((priceMax - priceMin) * 0.06, 0.02);
+    priceMin -= pad;
+    priceMax += pad;
+
+    const step = (RIGHT - LEFT) / count;
+    const xOf = (index: number) => LEFT + index * step + step / 2;
+    const yOfPrice = (value: number) =>
+      layout.priceBottom -
+      ((value - priceMin) / (priceMax - priceMin)) * (layout.priceBottom - PRICE_TOP);
+
+    // 副图格：成交量 + 指标合计最多 3 格，各自量程、按用户高度堆叠（S-02.03-01）
+    const subPanels: Panel[] = layout.boxes.map((box, index) => {
+      const plotTop = box.top + SUB_HEADER_H;
+      const plotBottom = box.bottom;
+      const base = {
+        id: box.id,
+        top: box.top,
+        bottom: box.bottom,
+        plotTop,
+        plotBottom,
+        height: box.height,
+        index,
+      };
+      if (box.id === VOLUME_PANEL_ID) {
+        const scaleMax = volMax > 0 ? volMax : 1;
+        return {
+          ...base,
+          kind: "volume",
+          title: "成交量",
+          unit: "手",
+          lines: [],
+          lo: 0,
+          hi: scaleMax,
+          spansZero: false,
+          zeroY: plotBottom,
+          yOf: (value: number) =>
+            plotBottom - (value / scaleMax) * (plotBottom - plotTop),
+          warmup: 0,
+          insufficient: false,
+          notice: undefined,
+        };
+      }
+      const sub = series.find((item) => item.indicatorId === box.id);
       const lines = (sub?.outputs ?? []).map((output) => ({
         key: output.key,
         label: output.labelZh,
@@ -254,64 +395,31 @@ export function CandleChart({
         lo = -extent;
         hi = extent;
       } else {
-        const pad = Math.max((max - min) * 0.08, Math.abs(max) * 0.04, 1e-6);
-        lo = min - pad;
-        hi = max + pad;
+        const padValue = Math.max((max - min) * 0.08, Math.abs(max) * 0.04, 1e-6);
+        lo = min - padValue;
+        hi = max + padValue;
       }
-      const top = MACD_TOP + index * (bandHeight + SUB_GAP);
-      const bottom = top + bandHeight;
-      const yOf = (value: number) =>
-        bottom - ((value - lo) / (hi - lo)) * (bottom - top);
       const warmup = sub?.warmup ?? 0;
       return {
-        id,
-        title: subLabels[id] ?? id,
-        unit: units[id] ?? "",
+        ...base,
+        kind: "indicator",
+        title: subLabels[box.id] ?? box.id,
+        unit: units[box.id] ?? "",
         lines,
         lo,
         hi,
         spansZero,
-        top,
-        bottom,
-        zeroY: (top + bottom) / 2,
-        yOf,
+        zeroY: (plotTop + plotBottom) / 2,
+        yOf: (value: number) =>
+          plotBottom - ((value - lo) / (hi - lo)) * (plotBottom - plotTop),
         warmup,
         // 整段数据不足：不画任何线段与平线，面板居中提示（S-02.07-02 AC-02.07-03）
         insufficient: sub ? total < warmup + 1 : false,
         notice: sub
-          ? `${subLabels[id] ?? id} 需要 ${warmup + 1} 根，当前 ${total} 根`
-          : subNotices?.[id],
+          ? `${(subLabels[box.id] ?? box.id).split("(")[0]} 需要 ${warmup + 1} 根，当前 ${total} 根`
+          : subNotices?.[box.id],
       };
     });
-
-    let priceMin = Infinity;
-    let priceMax = -Infinity;
-    let volMax = 0;
-
-    visible.forEach((bar, index) => {
-      priceMin = Math.min(priceMin, bar.low);
-      priceMax = Math.max(priceMax, bar.high);
-      volMax = Math.max(volMax, bar.volume);
-      overlayLines.forEach((line) => {
-        // 整段不足的线不参与量程，避免被隐藏的输出把价格轴撑歪
-        if (line.insufficient) return;
-        const value = line.values[index];
-        if (value !== null && value !== undefined && Number.isFinite(value)) {
-          priceMin = Math.min(priceMin, value);
-          priceMax = Math.max(priceMax, value);
-        }
-      });
-    });
-
-    if (!Number.isFinite(priceMin) || !Number.isFinite(priceMax)) return null;
-    const pad = Math.max((priceMax - priceMin) * 0.06, 0.02);
-    priceMin -= pad;
-    priceMax += pad;
-
-    const step = (RIGHT - LEFT) / count;
-    const xOf = (index: number) => LEFT + index * step + step / 2;
-    const yOfPrice = (value: number) =>
-      PRICE_BOTTOM - ((value - priceMin) / (priceMax - priceMin)) * (PRICE_BOTTOM - PRICE_TOP);
 
     const priceTicks = Array.from({ length: 5 }, (_, i) => {
       const value = priceMin + ((priceMax - priceMin) * i) / 4;
@@ -407,20 +515,22 @@ export function CandleChart({
       t13Flips,
       cloudBands,
       splitMarkers,
+      /** 图表可用区底边（日期轴之上） */
+      chartBottom: layout.H - DATE_AXIS_H,
     };
-  }, [bars, series, viewport.start, viewport.end, overlayIds, subIds, subLabels, units, subNotices]);
+  }, [bars, series, viewport.start, viewport.end, overlayIds, layout, subLabels, units, subNotices]);
 
   // 主题/尺寸无关的坐标换算：以 SVG 实际渲染尺寸为准（preserveAspectRatio=meet 居中）
   const geometry = () => {
     const svg = svgRef.current;
     if (!svg) return null;
     const rect = svg.getBoundingClientRect();
-    const scale = Math.min(rect.width / W, rect.height / H);
+    const scale = Math.min(rect.width / W, rect.height / layout.H);
     return {
       rect,
       scale,
       offsetX: (rect.width - W * scale) / 2,
-      offsetY: (rect.height - H * scale) / 2,
+      offsetY: (rect.height - layout.H * scale) / 2,
     };
   };
 
@@ -432,7 +542,7 @@ export function CandleChart({
     if (!geo) return;
     const x = (point.clientX - geo.rect.left - geo.offsetX) / geo.scale;
     const y = (point.clientY - geo.rect.top - geo.offsetY) / geo.scale;
-    if (x < LEFT || x > RIGHT || y < PRICE_TOP || y > MACD_BOTTOM) {
+    if (x < LEFT || x > RIGHT || y < PRICE_TOP || y > view.chartBottom) {
       setHover(null);
       setCursor(null);
       return;
@@ -453,7 +563,7 @@ export function CandleChart({
 
   // hover 走 mousemove（取证脚本也用它驱动）；拖拽走 pointermove 以获得指针捕获
   const handleMouseMove = (event: ReactMouseEvent<SVGSVGElement>) => {
-    if (dragRef.current) return;
+    if (dragRef.current || panelDragRef.current) return;
     moveRef.current = { clientX: event.clientX, clientY: event.clientY };
     if (rafRef.current === null) rafRef.current = window.requestAnimationFrame(applyPointer);
   };
@@ -483,7 +593,7 @@ export function CandleChart({
     if (!geo) return;
     const x = (event.clientX - geo.rect.left - geo.offsetX) / geo.scale;
     const y = (event.clientY - geo.rect.top - geo.offsetY) / geo.scale;
-    if (x < LEFT || x > RIGHT || y < PRICE_TOP || y > MACD_BOTTOM) return;
+    if (x < LEFT || x > RIGHT || y < PRICE_TOP || y > view.chartBottom) return;
     dragRef.current = { x0: event.clientX, start: view.startAbs, end: view.endAbs };
     setDragging(true);
     setHover(null);
@@ -524,6 +634,93 @@ export function CandleChart({
     onViewportChange({ start: view.total - nextCount, end: view.total - 1 });
     setHover(null);
     setCursor(null);
+  };
+
+  /** S-02.03-01：副图格标题条拖拽换序 / 底边拖拽改高（96–220px） */
+  const beginPanelDrag = (
+    event: ReactPointerEvent<SVGRectElement | SVGGElement>,
+    panel: Panel,
+    kind: "reorder" | "resize",
+  ) => {
+    if (event.button !== 0) return;
+    // 不能让指针落到 SVG 根节点，否则会被当成图表平移
+    event.stopPropagation();
+    event.preventDefault();
+    panelDragRef.current = {
+      id: panel.id,
+      kind,
+      y0: event.clientY,
+      height0: panel.height,
+      index0: panel.index,
+      height: panel.height,
+      target: panel.index,
+    };
+    setPanelDrag({ id: panel.id, kind, height: panel.height, target: panel.index });
+    setHover(null);
+    setCursor(null);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // 合成指针事件没有真实 pointerId
+    }
+  };
+
+  const movePanelDrag = (event: ReactPointerEvent<SVGRectElement | SVGGElement>) => {
+    const drag = panelDragRef.current;
+    if (!drag) return;
+    event.stopPropagation();
+    const geo = geometry();
+    if (!geo) return;
+    if (drag.kind === "resize") {
+      const dy = (event.clientY - drag.y0) / geo.scale;
+      drag.height = clampSubHeight(drag.height0 + dy);
+      setPanelDrag({ id: drag.id, kind: "resize", height: drag.height });
+      return;
+    }
+    const y = (event.clientY - geo.rect.top - geo.offsetY) / geo.scale;
+    let target = 0;
+    layout.boxes.forEach((box, index) => {
+      if (y > (box.top + box.bottom) / 2) target = Math.min(index + 1, layout.boxes.length - 1);
+    });
+    drag.target = target;
+    setPanelDrag({ id: drag.id, kind: "reorder", target });
+  };
+
+  /** 移除副图格（成交量格常驻，不给 ×） */
+  const removePanel = (id: string) => {
+    onSubPlotsChange(subPlots.filter((item) => item.id !== id));
+  };
+
+  const endPanelDrag = (event: ReactPointerEvent<SVGRectElement | SVGGElement>) => {
+    const drag = panelDragRef.current;
+    if (!drag) return;
+    event.stopPropagation();
+    panelDragRef.current = null;
+    setPanelDrag(null);
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // 同上
+    }
+    if (drag.kind === "resize") {
+      if (drag.height !== undefined && drag.height !== drag.height0) {
+        onSubPlotsChange(
+          subPlots.map((item) =>
+            item.id === drag.id ? { ...item, height: drag.height as number } : item,
+          ),
+        );
+      }
+      return;
+    }
+    const target = drag.target ?? drag.index0;
+    if (target === drag.index0) return;
+    const moved = subPlots.find((item) => item.id === drag.id);
+    if (!moved) return;
+    const rest = subPlots.filter((item) => item.id !== drag.id);
+    rest.splice(Math.min(target, rest.length), 0, moved);
+    onSubPlotsChange(rest);
   };
 
   // 滚轮缩放：React 的 onWheel 在根节点是 passive，无法 preventDefault，改用原生监听
@@ -602,8 +799,18 @@ export function CandleChart({
   };
 
   const insufficientOverlays = view.overlayLines.filter((line) => line.insufficient);
+  const lastBox = layout.boxes[layout.boxes.length - 1];
+  const insertY =
+    panelDrag?.kind === "reorder" && panelDrag.target !== undefined
+      ? panelDrag.target >= layout.boxes.length
+        ? (lastBox?.bottom ?? layout.priceBottom) + SUB_GAP / 2
+        : layout.boxes[panelDrag.target].top - SUB_GAP / 2
+      : null;
+  const dragBox = panelDrag ? layout.boxes.find((box) => box.id === panelDrag.id) : undefined;
+  const previewY =
+    dragBox && panelDrag?.height !== undefined ? dragBox.top + panelDrag.height : null;
   const hoverPanel =
-    cursor && cursor.uy > PRICE_BOTTOM
+    cursor && cursor.uy > layout.priceBottom
       ? view.subPanels.find((panel) => cursor.uy >= panel.top && cursor.uy <= panel.bottom) ?? null
       : null;
 
@@ -616,7 +823,7 @@ export function CandleChart({
         data-view-start={view.startAbs}
         data-view-end={view.endAbs}
         data-bar-count={view.total}
-        viewBox={`0 0 ${W} ${H}`}
+        viewBox={`0 0 ${W} ${layout.H}`}
         preserveAspectRatio="xMidYMid meet"
         style={{ cursor: dragging ? "grabbing" : "crosshair", touchAction: "none" }}
         onMouseMove={handleMouseMove}
@@ -676,7 +883,7 @@ export function CandleChart({
                     x={x - bodyWidth / 2}
                     y={PRICE_TOP}
                     width={bodyWidth}
-                    height={PRICE_BOTTOM - PRICE_TOP}
+                    height={layout.priceBottom - PRICE_TOP}
                     fill="transparent"
                   />
                 </g>
@@ -715,7 +922,7 @@ export function CandleChart({
           {/* 除权日：K 线下方 4px 三角（S-02.07-02 补3） */}
           {view.splitMarkers.map(({ bar, index }) => {
             const x = view.xOf(index);
-            const y = Math.min(PRICE_BOTTOM - 2, view.yOfPrice(bar.low) + 5);
+            const y = Math.min(layout.priceBottom - 2, view.yOfPrice(bar.low) + 5);
             const factor = splitFactorOf(index);
             return (
               <path
@@ -879,7 +1086,7 @@ export function CandleChart({
                   data-overlay-notice={`${line.indicatorId}-${line.key}`}
                   x={(LEFT + RIGHT) / 2}
                   y={
-                    (PRICE_TOP + PRICE_BOTTOM) / 2 +
+                    (PRICE_TOP + layout.priceBottom) / 2 +
                     (index - (insufficientOverlays.length - 1) / 2) * 13
                   }
                   textAnchor="middle"
@@ -893,59 +1100,47 @@ export function CandleChart({
             </g>
           )}
 
-          {/* 成交量 */}
-          <line
-            x1={LEFT}
-            x2={RIGHT}
-            y1={VOL_BOTTOM}
-            y2={VOL_BOTTOM}
-            stroke="var(--line)"
-            strokeWidth={0.7}
-          />
-          <text x={RIGHT + 8} y={VOL_TOP + 10} fontSize={9.5} fill="var(--faint)" className="mono">
-            VOL
-          </text>
-          {view.visible.map((bar, index) => {
-            // 停牌日量柱为 0 高度（不画），不能画成平线或最小高度
-            if (isSuspended(bar)) {
-              return (
-                <rect
-                  key={`vol-${bar.date}`}
-                  data-vol-suspended={bar.date}
-                  x={view.xOf(index) - bodyWidth / 2}
-                  y={VOL_BOTTOM}
-                  width={bodyWidth}
-                  height={0}
-                  fill="transparent"
-                />
-              );
-            }
-            const rising = bar.close >= bar.open;
-            const height = view.volMax > 0 ? (bar.volume / view.volMax) * (VOL_BOTTOM - VOL_TOP) : 0;
-            return (
-              <rect
-                key={`vol-${bar.date}`}
-                x={view.xOf(index) - bodyWidth / 2}
-                y={VOL_BOTTOM - height}
-                width={bodyWidth}
-                height={height}
-                fill={rising ? "var(--pos)" : "var(--neg)"}
-                opacity={0.55}
-              />
-            );
-          })}
-
-          {/* 副图：最多 3 个（S-02.04-02 容量口径），等分副图区、各自量程 */}
+          {/* 副图：最多 3 格（含成交量格），顺序与高度由 subPlots 决定（S-02.03-01） */}
           {view.subPanels.map((panel, panelIndex) => {
             const isMacd = panel.id === "M06";
             return (
               <g
                 key={`sub-panel-${panel.id}`}
                 data-sub-panel={panel.id}
+                data-sub-index={panel.index}
+                data-sub-height={panel.height}
                 data-sub-empty={panel.insufficient ? "1" : undefined}
                 data-warmup={panel.warmup}
                 className="sub-panel"
               >
+                {/* 标题条抓手：拖拽换序（S-02.03-01 / AC-02.03-03） */}
+                <rect
+                  data-panel-drag={panel.id}
+                  x={LEFT}
+                  y={panel.top}
+                  width={RIGHT - LEFT}
+                  height={SUB_HEADER_H}
+                  fill="transparent"
+                  style={{ cursor: "grab" }}
+                  onPointerDown={(event) => beginPanelDrag(event, panel, "reorder")}
+                  onPointerMove={movePanelDrag}
+                  onPointerUp={endPanelDrag}
+                  onPointerCancel={endPanelDrag}
+                />
+                {/* 底边抓手：拖拽改高，夹在 96~220px（S-02.03-01） */}
+                <rect
+                  data-panel-resize={panel.id}
+                  x={LEFT}
+                  y={panel.bottom - SUB_RESIZE_H}
+                  width={RIGHT - LEFT}
+                  height={SUB_RESIZE_H}
+                  fill="transparent"
+                  style={{ cursor: "ns-resize" }}
+                  onPointerDown={(event) => beginPanelDrag(event, panel, "resize")}
+                  onPointerMove={movePanelDrag}
+                  onPointerUp={endPanelDrag}
+                  onPointerCancel={endPanelDrag}
+                />
                 {panelIndex > 0 && (
                   <line
                     data-sub-sep="1"
@@ -972,25 +1167,79 @@ export function CandleChart({
                   <text
                     data-sub-notice={panel.id}
                     x={panel.insufficient ? (LEFT + RIGHT) / 2 : LEFT + 8}
-                    y={panel.insufficient ? (panel.top + panel.bottom) / 2 : panel.top + 10}
+                    y={panel.insufficient ? (panel.top + panel.bottom) / 2 : panel.top + 15}
                     textAnchor={panel.insufficient ? "middle" : undefined}
                     fontSize={9.5}
                     fill="var(--accent)"
                     className="mono"
+                    pointerEvents="none"
                   >
                     {panel.notice}
                   </text>
                 )}
                 <text
                   data-sub-title={panel.title}
-                  x={RIGHT + 8}
-                  y={panel.top + 10}
-                  fontSize={9.5}
+                  x={RIGHT - 18}
+                  y={panel.top + 15}
+                  textAnchor="end"
+                  fontSize={10}
                   fill="var(--faint)"
                   className="mono"
+                  pointerEvents="none"
                 >
                   {panel.title}
                 </text>
+                {panel.kind !== "volume" && (
+                  <text
+                    data-panel-remove={panel.id}
+                    x={RIGHT - 2}
+                    y={panel.top + 15}
+                    textAnchor="end"
+                    fontSize={12}
+                    fill="var(--muted)"
+                    style={{ cursor: "pointer" }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      removePanel(panel.id);
+                    }}
+                  >
+                    ×
+                  </text>
+                )}
+                {/* 成交量格：柱高按当日量占视窗最大量，红涨绿跌（停牌日 0 高） */}
+                {panel.kind === "volume" &&
+                  view.visible.map((bar, index) => {
+                    if (isSuspended(bar)) {
+                      return (
+                        <rect
+                          key={`vol-${bar.date}`}
+                          data-vol-suspended={bar.date}
+                          x={view.xOf(index) - bodyWidth / 2}
+                          y={panel.plotBottom}
+                          width={bodyWidth}
+                          height={0}
+                          fill="transparent"
+                        />
+                      );
+                    }
+                    const rising = bar.close >= bar.open;
+                    const height =
+                      view.volMax > 0
+                        ? (bar.volume / view.volMax) * (panel.plotBottom - panel.plotTop)
+                        : 0;
+                    return (
+                      <rect
+                        key={`vol-${bar.date}`}
+                        x={view.xOf(index) - bodyWidth / 2}
+                        y={panel.plotBottom - height}
+                        width={bodyWidth}
+                        height={height}
+                        fill={rising ? "var(--pos)" : "var(--neg)"}
+                        opacity={0.55}
+                      />
+                    );
+                  })}
                 {panel.lines.map((line) => {
                   if (line.kind === "histogram") {
                     return (
@@ -1127,12 +1376,39 @@ export function CandleChart({
             );
           })}
 
+          {/* 拖拽反馈：换序时 2px accent 插入线，改高时显示落点（S-02.03-01） */}
+          {insertY !== null && (
+            <line
+              data-panel-insert={panelDrag?.target}
+              x1={LEFT}
+              x2={RIGHT}
+              y1={insertY}
+              y2={insertY}
+              stroke="var(--accent)"
+              strokeWidth={2}
+              pointerEvents="none"
+            />
+          )}
+          {previewY !== null && (
+            <line
+              data-panel-preview-height={panelDrag?.height}
+              x1={LEFT}
+              x2={RIGHT}
+              y1={previewY}
+              y2={previewY}
+              stroke="var(--accent)"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              pointerEvents="none"
+            />
+          )}
+
           {/* 日期刻度 */}
           {view.dateTicks.map((tick) => (
             <text
               key={`date-${tick.index}`}
               x={tick.x}
-              y={DATE_Y}
+              y={layout.H - 8}
               fontSize={9.5}
               fill="var(--faint)"
               className="mono"
@@ -1179,7 +1455,7 @@ export function CandleChart({
               x1={view.xOf(hover)}
               x2={view.xOf(hover)}
               y1={PRICE_TOP}
-              y2={MACD_BOTTOM}
+              y2={lastBox ? lastBox.bottom : layout.priceBottom}
               stroke="var(--accent)"
               strokeWidth={0.8}
               strokeDasharray="3 3"

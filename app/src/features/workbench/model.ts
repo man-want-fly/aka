@@ -131,8 +131,73 @@ export const DEFAULT_B2_OVERLAYS = ["T09", "T24"];
 export const DEFAULT_SUB_ID = "M06";
 /** 主图叠加容量（S-02.04-02）：满 2 后需先移除才能加 */
 export const MAX_MAIN_OVERLAYS = 2;
-/** 副图容量（S-02.04-02）：满 3 后需先移除才能加 */
+/** 副图容量（S-02.04-02 / S-02.03-01）：成交量 + 指标副图合计 3 格 */
 export const MAX_SUBPLOTS = 3;
+
+/** S-02.03-01：副图格（含成交量）的顺序与高度，全局持久化，非按标的 */
+export const VOLUME_PANEL_ID = "VOL";
+export const SUB_HEIGHT_MIN = 96;
+export const SUB_HEIGHT_MAX = 220;
+export const SUB_HEIGHT_DEFAULT = 140;
+const SUBPLOTS_STORAGE_KEY = "aka.workbench.subplots.v1";
+
+export interface SubPlotSetting {
+  id: string;
+  height: number;
+}
+
+/** 默认组合 D-08：成交量 + MACD + RSI（RSI=M01） */
+export const DEFAULT_SUB_PLOTS: SubPlotSetting[] = [
+  { id: VOLUME_PANEL_ID, height: SUB_HEIGHT_DEFAULT },
+  { id: "M06", height: SUB_HEIGHT_DEFAULT },
+  { id: "M01", height: SUB_HEIGHT_DEFAULT },
+];
+
+export function clampSubHeight(height: unknown): number {
+  const value = typeof height === "number" && Number.isFinite(height) ? height : SUB_HEIGHT_DEFAULT;
+  return Math.round(Math.max(SUB_HEIGHT_MIN, Math.min(SUB_HEIGHT_MAX, value)));
+}
+
+/** 读取本地设置；非法 id / 超容量 / 损坏数据一律回退默认组合，不静默半残 */
+export function readSubPlots(): SubPlotSetting[] {
+  try {
+    const raw = window.localStorage.getItem(SUBPLOTS_STORAGE_KEY);
+    if (!raw) return DEFAULT_SUB_PLOTS;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > MAX_SUBPLOTS) {
+      return DEFAULT_SUB_PLOTS;
+    }
+    const seen = new Set<string>();
+    const list: SubPlotSetting[] = [];
+    for (const entry of parsed) {
+      if (!entry || typeof entry !== "object") return DEFAULT_SUB_PLOTS;
+      const id = (entry as { id?: unknown }).id;
+      if (typeof id !== "string") return DEFAULT_SUB_PLOTS;
+      if (id !== VOLUME_PANEL_ID && !MANIFEST_INDEX.has(id)) return DEFAULT_SUB_PLOTS;
+      if (seen.has(id)) return DEFAULT_SUB_PLOTS;
+      seen.add(id);
+      list.push({ id, height: clampSubHeight((entry as { height?: unknown }).height) });
+    }
+    // 成交量格是常驻格：旧数据里缺它时补到首位，保证「成交量 + 指标」合计 3 格
+    if (!list.some((item) => item.id === VOLUME_PANEL_ID)) {
+      list.unshift({ id: VOLUME_PANEL_ID, height: SUB_HEIGHT_DEFAULT });
+    }
+    return list.slice(0, MAX_SUBPLOTS);
+  } catch {
+    return DEFAULT_SUB_PLOTS;
+  }
+}
+
+export function writeSubPlots(plots: SubPlotSetting[]) {
+  try {
+    window.localStorage.setItem(
+      SUBPLOTS_STORAGE_KEY,
+      JSON.stringify(plots.map((item) => ({ id: item.id, height: clampSubHeight(item.height) }))),
+    );
+  } catch {
+    // 存储不可用时退化为仅内存态，不影响本会话布局
+  }
+}
 
 const B2_IDS = [
   "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T23", "T24",

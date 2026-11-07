@@ -1,4 +1,5 @@
 import type { SeriesDto } from "../lib/types";
+import { MAX_SUBPLOTS } from "../features/workbench/model";
 
 interface Props {
   series: SeriesDto[];
@@ -7,6 +8,8 @@ interface Props {
   overlayIds: string[];
   /** 副图指标 id（M06 或 V01–V10） */
   subIds: string[];
+  /** 副图格总数（含成交量格，S-02.03-01） */
+  subCount: number;
   /** manifest 单位表 */
   units: Record<string, string>;
 }
@@ -51,7 +54,7 @@ function Sparkline({
 }
 
 /** TD-B1-02 渲染层证据：R² 与 BIAS 三线以最新值 + 迷你走势呈现；B2 追加叠加/副图读数同步。 */
-export function IndicatorReadouts({ series, barCount, overlayIds, subIds, units }: Props) {
+export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCount, units }: Props) {
   const r2 = series.find((item) => item.indicatorId === "T21");
   const bias = series.find((item) => item.indicatorId === "E13");
   const b2Overlays = [...new Set(overlayIds)]
@@ -137,8 +140,8 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, units 
           data-verification="b2-render-layer"
           style={{ marginTop: 8, borderTop: "1px dashed var(--line)", paddingTop: 6 }}
         >
-          <div className="caption" style={{ marginBottom: 4 }}>
-            B2 读数同步 · 叠加 {overlayIds.join(" / ") || "无"} · 副图 {subIds.join(" / ") || "无"}
+          <div className="caption" style={{ marginBottom: 4 }} data-sub-capacity={subCount}>
+            B2 读数同步 · 叠加 {overlayIds.join(" / ") || "无"} · 副图 {subCount}/{MAX_SUBPLOTS}
           </div>
           <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
             {b2Overlays.flatMap((item) =>

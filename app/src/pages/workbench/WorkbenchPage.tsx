@@ -13,9 +13,14 @@ import {
   SUB_CHOICES,
   DEFAULT_B2_OVERLAYS,
   DEFAULT_PARAMS,
-  DEFAULT_SUB_ID,
   MAX_MAIN_OVERLAYS,
   MAX_SUBPLOTS,
+  SUB_HEIGHT_DEFAULT,
+  VOLUME_PANEL_ID,
+  clampSubHeight,
+  readSubPlots,
+  writeSubPlots,
+  type SubPlotSetting,
   buildInstances,
   defaultsFromIndicators,
   localCheck,
@@ -32,6 +37,7 @@ import {
   type TimeframeCode,
 } from "../../features/workbench/diag";
 import { runS205Diagnostics } from "../../features/workbench/s205Diag";
+import { runS203Diagnostics } from "../../features/workbench/s203Diag";
 import { runS207Diagnostics } from "../../features/workbench/s207Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
 import { runRestartDiagnostics, restartDiagStage } from "../../features/workbench/restartDiag";
@@ -208,7 +214,37 @@ export function WorkbenchPage({
   }, []);
   // B2 主图叠加与副图选择：纯客户端切换，指标实例已全量下发
   const [overlayIds, setOverlayIds] = useState<string[]>(DEFAULT_B2_OVERLAYS);
-  const [subIds, setSubIds] = useState<string[]>([DEFAULT_SUB_ID]);
+  // S-02.03-01：副图格（含成交量）的顺序与高度，全局持久化
+  const [subPlots, setSubPlots] = useState<SubPlotSetting[]>(readSubPlots);
+  const subIds = useMemo(
+    () => subPlots.filter((item) => item.id !== VOLUME_PANEL_ID).map((item) => item.id),
+    [subPlots],
+  );
+  const commitSubPlots = useCallback((next: SubPlotSetting[]) => {
+    const clamped = next
+      .slice(0, MAX_SUBPLOTS)
+      .map((item) => ({ id: item.id, height: clampSubHeight(item.height) }));
+    setSubPlots(clamped);
+    writeSubPlots(clamped);
+  }, []);
+  /** 取证读取当前副图配置（effect 闭包不随 state 更新） */
+  const subPlotsRef = useRef(subPlots);
+  subPlotsRef.current = subPlots;
+  // 兼容既有入口（工具栏多选 / 取证脚本）：只改副图指标，保留成交量格
+  const updateSubIds = useCallback((ids: string[]) => {
+    setSubPlots((prev) => {
+      const vol = prev.find((item) => item.id === VOLUME_PANEL_ID);
+      const next: SubPlotSetting[] = vol ? [{ ...vol }] : [];
+      for (const id of ids) {
+        if (next.length >= MAX_SUBPLOTS) break;
+        if (next.some((item) => item.id === id)) continue;
+        const old = prev.find((item) => item.id === id);
+        next.push({ id, height: old?.height ?? SUB_HEIGHT_DEFAULT });
+      }
+      writeSubPlots(next);
+      return next;
+    });
+  }, []);
   // S-02.04-01 指标抽屉：Esc 先关抽屉，不能再触发行情返回
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerOpenRef = useRef(false);
@@ -599,6 +635,92 @@ export function WorkbenchPage({
     };
   }, [manifest, registry, securities, defaultParams]);
 
+  // S-02.03-01 副图取证：AKA_DIAG_TARGET=s203 时自跑；两轮验证「布局/拖拽」与「重启恢复」
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    const restartPhase = window.localStorage.getItem("aka.s203.diag.phase") === "restart";
+    if (!restartPhase && window.sessionStorage.getItem("aka.s203.diag.done") === "1") return;
+    let alive = true;
+    let minWait = 0;
+    const waitReady = async (label: string, timeoutMs = 4000) => {
+      if (minWait > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, minWait));
+        minWait = 0;
+      }
+      let previous = "";
+      let stable = 0;
+      let lastNode = false;
+      const startedAt = performance.now();
+      while (performance.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, 120));
+        const frame = barsRef.current;
+        const result = calcRef.current;
+        const node = document.querySelector('[data-chart="candle"]');
+        lastNode = node !== null;
+        const signature = [
+          frame?.security,
+          frame?.timeframe,
+          frame?.adj,
+          frame?.bars.length,
+          result?.generation,
+          result?.barCount,
+          node?.getAttribute("data-bar-count"),
+          node?.getAttribute("data-view-start"),
+          node?.getAttribute("data-view-end"),
+        ].join("|");
+        if (frame && result && node && result.barCount === frame.bars.length && signature === previous) {
+          stable += 1;
+          if (stable >= 2) return;
+        } else {
+          stable = 0;
+          previous = signature;
+        }
+      }
+      throw new Error(
+        `等待就绪超时：${label}（node=${lastNode ? "有" : "无"} 末次签名=${previous} error=${
+          document.querySelector(".error-box")?.textContent?.slice(0, 120) ?? "无"
+        }）`,
+      );
+    };
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s203" || !alive) return;
+      window.sessionStorage.setItem("aka.s203.diag.done", "1");
+      setDiagStatus("S-02.03-01 取证：运行中");
+      try {
+        const report = await runS203Diagnostics({
+          getSubPlots: () => subPlotsRef.current,
+          setSubPlots: commitSubPlots,
+          setDateRange: (from, to) => {
+            minWait = 700;
+            setDateFrom(from);
+            setDateTo(to);
+          },
+          clearDateRange: () => {
+            minWait = 700;
+            setDateFrom("");
+            setDateTo("");
+          },
+          bars: () => barsRef.current,
+          calc: () => calcRef.current,
+          waitReady,
+        });
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-02.03-01 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_S203_EVIDENCE__ = report;
+      } catch (err) {
+        if (!alive) return;
+        setDiagStatus(`S-02.03-01 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, registry, securities, commitSubPlots]);
+
   // S-02.07-01/02 缩放·十字光标·数据不足取证：AKA_DIAG_TARGET=s207 时自跑一次
   useEffect(() => {
     if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
@@ -699,7 +821,7 @@ export function WorkbenchPage({
           },
           setSubIds: (ids) => {
             minWait = 200;
-            setSubIds(ids);
+            updateSubIds(ids);
           },
           bars: () => barsRef.current,
           calc: () => calcRef.current,
@@ -822,10 +944,16 @@ export function WorkbenchPage({
   const subLabels = useMemo(() => {
     const labels: Record<string, string> = {};
     for (const item of manifest?.indicators ?? []) {
-      labels[item.id] =
-        item.id === "M06"
-          ? `MACD(${appliedParams.fast},${appliedParams.slow},${appliedParams.signal})`
-          : item.abbr;
+      if (item.id === "M06") {
+        labels[item.id] = `MACD(${appliedParams.fast},${appliedParams.slow},${appliedParams.signal})`;
+        continue;
+      }
+      if (item.id === "M01") {
+        const period = item.params.find((param) => param.key === "period")?.default;
+        labels[item.id] = period !== undefined ? `RSI(${period})` : item.abbr;
+        continue;
+      }
+      labels[item.id] = item.abbr;
     }
     return labels;
   }, [manifest, appliedParams.fast, appliedParams.slow, appliedParams.signal]);
@@ -1099,7 +1227,7 @@ export function WorkbenchPage({
                   const picked = Array.from(event.target.selectedOptions).map(
                     (option) => option.value,
                   );
-                  setSubIds(picked.slice(0, MAX_SUBPLOTS));
+                  updateSubIds(picked.slice(0, MAX_SUBPLOTS - 1));
                 }}
               >
                 {SUB_CHOICES.map((item) => (
@@ -1130,7 +1258,8 @@ export function WorkbenchPage({
                     }
                     onViewportChange={setViewport}
                     overlayIds={overlayIds}
-                    subIds={subIds}
+                    subPlots={subPlots}
+                    onSubPlotsChange={commitSubPlots}
                     subNotices={calcNotices ?? undefined}
                     subLabels={subLabels}
                     units={units}
@@ -1141,6 +1270,7 @@ export function WorkbenchPage({
                     barCount={bars.bars.length}
                     overlayIds={overlayIds}
                     subIds={subIds}
+                    subCount={subPlots.length}
                     units={units}
                   />
                   </ChartCrashBoundary>
@@ -1174,6 +1304,7 @@ export function WorkbenchPage({
                 onRetry={() => window.location.reload()}
                 overlayIds={overlayIds}
                 subIds={subIds}
+                subCount={subPlots.length}
                 hasTarget={Boolean(security)}
                 onAddMain={(id) =>
                   setOverlayIds((prev) =>
@@ -1182,11 +1313,12 @@ export function WorkbenchPage({
                       : [...prev, id],
                   )
                 }
-                onAddSub={(id) =>
-                  setSubIds((prev) =>
-                    prev.includes(id) || prev.length >= MAX_SUBPLOTS ? prev : [...prev, id],
-                  )
-                }
+                onAddSub={(id) => {
+                  if (subPlots.some((item) => item.id === id) || subPlots.length >= MAX_SUBPLOTS) {
+                    return;
+                  }
+                  commitSubPlots([...subPlots, { id, height: SUB_HEIGHT_DEFAULT }]);
+                }}
                 onClose={closeDrawer}
               />
             )}
