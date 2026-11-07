@@ -1748,6 +1748,61 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 
 ---
 
+### 4.7.41 `W-74`/`W-75`（`11e0b96` → `dc05a7f`）复核：`W-74` 签、`W-75` 不签、`E_PARAM_ORDER` 与 AC 冲突
+
+**一、`W-74` 验收（自跑）**
+
+| 项 | 实测 | 结论 |
+|---|---|---|
+| `e01` | `commit=8daf2e2`、`dirty=false`、`ok=true`、19/19、`render 4/4`、无卡 0、半角 0 | 通过 |
+| 三态判据 | 抽到 `changePct.ts`；`diag.ts` 按 `snapshot.rows` 的 `security → changePct` 逐行比 `null`/`0`/非零 | 通过 |
+| 负例 | 9/9（5 必红 + 4 对照），`verify:r03` 已进 CI 且该步 success | 通过 |
+| 卡面 | `AC-01.01-01（补1）` 已按 §4.7.40 判据改写（`11e0b96`） | 通过 |
+| 门禁 | 本地复跑 `verify:docs` / `verify:constants` / `verify:evidence` 全绿；证据 3 份 / 冻结 18 / `exit=0` | 通过 |
+
+结论：**签 `dc05a7f`**，`sign_scope` = `changePct.ts` + `market/diag.ts` R-03 + `verify:r03` CI 接线 + `AC-01.01-01（补1）` + `e01`。Gate C 转 `PASS`；`S-01.01-01` 仍不签（Gate A 的 G5、Gate B 仍 `FAIL`）。
+
+**二、`data-code` 绑的是 `security`：只错一处，没有历史假绿**
+
+- DOM 的 `data-code` = `row.security`（`000001.SH`），而数据行同时有裸 `code`（`000001`）与 `security`。`e2eb3dc` 首版按 `row.code` 建映射，120 行全落「数据层无对应行」；`8daf2e2` 改 `row.security` 后归零。
+- 该错位**只存在于 `W-74` 自己的新断言**，首跑即红、同一单内修正，没有进入过任何验收结论。
+- 其余用 `dataset.code` 的套件只有两处：market R-05 的 `[data-code="300750.SZ"]`（全 id，正确）、`starDiag` 的 `row.dataset.code` 与 `item.security` 比（两边都是全 id，正确）；watchlist 走 `data-wl-item`，不涉及。**过去的绿不是假的。**
+- 但属性名 `data-code` 与实际语义（security 全 id）不符，是下一次错位的种子。建议（不阻塞）：改名 `data-security` 并同步 3 处查询，或在组件源码写明「此属性是 security 全 id」。
+
+**三、`E_PARAM_ORDER` 口径裁定**
+
+- **顺序**：三处都是严格序——卡 L2450 `period1 < period2 < period3`、L2776 `tenkan < kijun < senkou`、L3371 `fast < slow`。因此**相等也判错**；实现用 `>=` 正确。
+- **码**：三处统一 `E_PARAM_ORDER`。理由：每个参数各自都在 `[2,200]`/`[2,500]` 内，返回 `E_PARAM_OUT_OF_RANGE`（UI 文案「参数越界 2–500」）是假话；R-02-B 与新增 PRD 行要求的也是「快线周期需小于慢线周期」。这是我上轮 §4.7.40 只写 BIAS/MACD、未核对 `AC-03.06-17` 的漏项，现更正。
+- **但当前实现与契约冲突，不能签**：`AC-03.06-17` 与 PRD L806 明写 MACD/M25 `fast<slow` 否则 `E_PARAM_OUT_OF_RANGE`；运行时 M08/PPO/M25 已返回 `E_PARAM_ORDER`；dev A 新增的 PRD L1332 行又写「MACD·PPO fast≥slow → `E_PARAM_ORDER`」，与同页 L806 自相矛盾。**让新增表格行去覆盖既有 AC，就是实现反向改契约。**
+- 处理：`W-76` 由 BA 改 `AC-03.06-17`、`L3371`、PRD L806，并在 L1332 行补 `M25`（该段卡覆盖 M08/M25）。证据目录 grep `E_PARAM`/`INSUFFICIENT_BARS` = 0，**无需重取证**，只改文字。
+
+**四、`fast≥slow` 的判错时机**
+
+- 现有两层：UI `localCheck` 在变更/失焦/应用即拦（`paramsIssue` 阻止 apply，不等算完）；引擎在每个指标计算入口 `>=` 即返回，是兜底。不存在「要等算完才报」。
+- 但前端 `error` 分支（`WorkbenchPage.tsx:1937`）只放行 `E_PARAM_OUT_OF_RANGE` / `E_INVALID_ARGUMENT`，引擎返回的 `E_PARAM_ORDER` 会被吞掉；交叉字段也只亮顶部「参数无效」徽标，没有字段红框 + 顺序提示，与 PRD 该行 UI 不符。并入 `W-76`。
+
+**五、bench 与 W-34 / W-49**
+
+- `f547a00` 同提交更新 `bench/ipc-snapshots/10-error-unknown-security.json`（`E_UNKNOWN_SECURITY`）。
+- CI run `42414768250`，`headSha=dc05a7f`（即最终 tip）。job `macOS build / test / golden` success，其中：
+  - `bench 快照可复现门禁（W-34 / TD-BENCH-01）` success；
+  - `release 注入符号门禁（W-49 / W-64）` success；
+  - `诊断入口源码层门禁（W-49 / W-58 / W-64）` success；
+  - `R-03 三态负例（verify:r03）` success。
+- 结论：`W-34` / `W-49` 已在合并 tip 上跑过，run id `42414768250`。
+
+**六、旧错误码与冻结证据**
+
+- `verify_evidence.mjs` 不校验 `code`/`error` 字段，只校验 `ac` / `card` / `layer` / `passed` / 集合闭合与 `meta.result.layers` 现算比对。
+- 证据目录 grep `E_PARAM_RANGE`、`INSUFFICIENT_BARS`、`E_PARAM_ORDER` = 0。
+- 所以冻结件不会让 `ac`/`code` 校验「假通过」，也不需要「带解释进白名单」。但也不能把冻结当免检：11-22 前重取证或移 `raw/` 的口径不变；若将来某份冻结件的 `detail` 写了旧码，只能重取证，不许加解释性白名单。
+
+**七、`W-72` 仍未完**
+
+行为（去夹取、MA 上限 500、N=500/501/1）成立；但 `localCheck` 的「MA 周期」仍写 2–200，而 T01 manifest 已是 500。工作台 MA 周期没有卡面定义：若与 T01 同源就必须改 500，若不同源就要补一条卡面范围。答清前不签。
+
+---
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。

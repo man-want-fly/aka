@@ -1588,6 +1588,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 4. **负例（必须红）**：① 真实平盘（`0`）渲染成 `—`；② 缺前收/停牌（`null`）渲染成 `0.00%`。两条都要在沙箱或注入通道实测，不许只写注释。
 5. **重取证**：在提交后的干净树重出 `e01`（`commit`/`dirty=false`），`R-03` 应转 `true`、19/19；再单独签 `S-01.01-01`（本单不代签）。
 6. **验收**：`e01` 19/19、`failed=0`；`verify:evidence` exit 0；两条负例各红一次；卡面半角 0。
+7. **TL 复核（2026-11-08，见审计 §4.7.41）：签 `dc05a7f`。** `sign_scope` = `app/src/lib/changePct.ts` + `market/diag.ts` 的 R-03 + `verify:r03` CI 接线 + `AC-01.01-01（补1）`（`11e0b96`）+ `e01`（`commit=8daf2e2`、`dirty=false`、19/19、render 4/4）。Gate C 改 `PASS`；**`S-01.01-01` 不签**（Gate A 的 G5、Gate B 仍 `FAIL`）。不覆盖 `E_PARAM_ORDER` 相关码（见 `W-76`）。
 
 ### W-75（dev A + BA）错误码唯一口径：`E_` 前缀与 `E_PARAM_ORDER`
 
@@ -1597,7 +1598,22 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 2. **运行时补前缀**：`ErrorCode` 序列化改为带 `E_`（逐 variant `rename`），`INSUFFICIENT_DATA` → `E_INSUFFICIENT_DATA`；前端分支（`WorkbenchPage.tsx` 两处）与证据/断言里的码字符串同提交同步。
 3. **`E_PARAM_ORDER` 补实现**：BIAS 周期不递增、MACD `fast ≥ slow` 返回 `E_PARAM_ORDER`，不再与越界同码；卡面 L2470 已写该码，按卡落实现。
 4. **卡面/PRD 去重**：`E_PARAM_RANGE` 全量改 `E_PARAM_OUT_OF_RANGE`（卡 15 处 + PRD 3 处）；`INSUFFICIENT_BARS` 若指数据不足则改 `E_INSUFFICIENT_DATA`，若另有语义则补进错误码表，不许两种叫法并存。
-5. **验收**：全仓 grep `E_PARAM_RANGE` 0、`INSUFFICIENT_BARS` 0；前端 `code` 分支与运行时逐一对齐；`verify:docs`/`verify:constants`/`verify:evidence` 绿；bench/证据快照同提交重生成；`W-72` 随之签。
+5. **验收**：生产面（`app/src` / `app/crates` / `docs/prd` / `docs/story-cards`）grep `E_PARAM_RANGE` 0、`INSUFFICIENT_BARS` 0（审计/工单里的历史表述允许保留）；前端 `code` 分支与运行时逐一对齐；`verify:docs`/`verify:constants`/`verify:evidence` 绿；bench/证据快照同提交重生成；`W-72` 随之签。
+
+**TL 复核（2026-11-08，见审计 §4.7.41）：不签。**
+- 通过：`E_` 前缀全量落地（`bench/10-error-unknown-security.json` 同提交为 `E_UNKNOWN_SECURITY`）；BIAS `AC-03.04-14` 与 Ichimoku 的 `E_PARAM_ORDER` 成立；运行/卡/PRD 已无 `E_PARAM_RANGE`。
+- 阻断：`AC-03.06-17` 与 PRD L806 明写 MACD/M25 `fast<slow` 否则 `E_PARAM_OUT_OF_RANGE`，而运行时 M08/PPO/M25 已返回 `E_PARAM_ORDER`；dev A 新增的 PRD 1328 行又写「MACD·PPO fast≥slow → E_PARAM_ORDER」，PRD 内部自相矛盾。**这是实现反向改契约，不能签。**
+- 裁定（见 `W-76`）：三处顺序判据统一为 `E_PARAM_ORDER`（各参数各自在范围内，"越界"是假话；顺序严格、相等即错），由 BA 改 `AC-03.06-17`、PRD L806、PRD 1328 行补 M25；证据目录 0 处引用这两个码，无需重取证。
+- 另：引擎返回的 `E_PARAM_ORDER` 未进前端 `error` 分支（`WorkbenchPage.tsx:1937`），交叉字段只亮「参数无效」徽标、无字段红框+顺序提示，与 PRD 该行 UI 不符，同 `W-76`。
+
+### W-76（BA + dev A）`E_PARAM_ORDER` 契约对齐：MACD 三处 + 前端呈现
+
+1. **BA 改 AC**：`AC-03.06-17`（`S-03.06`）的 `fast=26,slow=12` 期望码由 `E_PARAM_OUT_OF_RANGE` 改为 `E_PARAM_ORDER`；同段 `L3371` 的「越界 `E_PARAM_OUT_OF_RANGE`」拆成两句——单参数出 `[2,200]` → `E_PARAM_OUT_OF_RANGE`，`fast≥slow` → `E_PARAM_ORDER`。
+2. **BA 改 PRD**：L806 的 M08/M25 同上拆两句；1328 错误码表 `E_PARAM_ORDER` 行补 `M25`（该段卡覆盖 M08/M25）；`E_PARAM_OUT_OF_RANGE` 行去掉顺序含义。
+3. **dev A 前端**：`WorkbenchPage.tsx:1937` 的 `error` 白名单加 `E_PARAM_ORDER`；交叉字段错误落到具体字段（`slow`）红框 + 内联「快线周期需小于慢线周期」，不是只亮顶部「参数无效」徽标。引擎侧 `>=` 判定保持（相等即错）。
+4. **不动**：BIAS/Ichimoku 的严格序与 `E_PARAM_ORDER` 已正确；`localCheck` 的即时拦截保留（失焦/变更/应用），引擎是兜底。
+5. **验收**：`AC-03.06-17` 按新码可过；`fast=26,slow=12` 与 `fast=slow` 两例都返回 `E_PARAM_ORDER` 且前端有字段级提示；`verify:docs`/`verify:constants` 绿；`W-75` 随之签。
+6. **`W-72` 附带确认**：`localCheck` 的「MA 周期」仍是 2–200，而 T01 manifest 已 500。工作台 MA 周期无卡面定义——若与 T01 同源，改 500；若不同源，补一条卡面范围。答清前 `W-72` 不签。
 
 ### W-73（BA）`W-66` 归属收口：改号条件、补号归卡、丢失基条、冻结件半角
 
@@ -1662,4 +1678,4 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）、**W-41**（blocked 归零 + 证据归档 + `WL-15` 改判据 + 格式化扫描）、**W-43**（白名单收窄 + `WL-10/10r` 归卡 + 缺项补证）必须一并落地；**W-45**（自选空态 / 损坏库页 / 移出失败文案）、**W-46**（只读与损坏库注入通道 + 星标证据入库）为 `S-01.02-01/02/03` 的收口前置；**W-49**（CI release 构建 + 注入符号断言，含红路径取证）把 W-47 的本地实测转为常设门禁（**W-49 已于当日作废，由 W-58 接手**：断言对象改为入口名并加源码级断言）；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。W-33 功能部分已签 `7cbad20`（说明文字见 **W-39**）；W-34 已签 `5131f89`（首跑 run `42355133312` 成功，红路径反例见 **W-39**）。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63/W-64/W-65/W-66/W-67/W-68/W-69/W-70/W-71/W-72/W-73/W-74/W-75）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；**`W-63` 全签 `8ae6bdc`**、`W-58` 签 `8ae6bdc`；`W-66` 六条全落（`d27f640` + `045cbd6`）结项、`W-67` 签 `f3037e6`；`W-59` 待落地、`W-65` 待补 260ms 红路径；**`W-68` 复核不签（8 类绕过，见 §4.7.36）**；**`W-69` 代码层 8/8 已封、整单不签**（白名单扩到 24 + 子目录未覆盖，见 §4.7.37）；**`W-70` 复核不签**（`EXCLUDED_DIRS` 可藏证据、`e01` 无 commit 套壳，见 §4.7.38），开 `W-71`；**`W-71` 签 `da228d9`（仅门禁范围，不含 `S-01.01-01`）**；`W-72` 行为已验、错误码三套并存暂不签（§4.7.40）→ `W-75`；`R-03` 判卡面过宽（真实平盘 `0.00%` 合法）→ `W-74`；**`W-66` 归属落地（`b74783c`）仍差 3 项**（`AC-03.03-03（补5）` 挂错基号、`AC-08.01-05` 基条丢失、PRD 无 `AC-07.05-04`），见 §4.7.39 → `W-73`。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63/W-64/W-65/W-66/W-67/W-68/W-69/W-70/W-71/W-72/W-73/W-74/W-75/W-76）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；**`W-63` 全签 `8ae6bdc`**、`W-58` 签 `8ae6bdc`；`W-66` 六条全落（`d27f640` + `045cbd6`）结项、`W-67` 签 `f3037e6`；`W-59` 待落地、`W-65` 待补 260ms 红路径；**`W-68` 复核不签（8 类绕过，见 §4.7.36）**；**`W-69` 代码层 8/8 已封、整单不签**（白名单扩到 24 + 子目录未覆盖，见 §4.7.37）；**`W-70` 复核不签**（`EXCLUDED_DIRS` 可藏证据、`e01` 无 commit 套壳，见 §4.7.38），开 `W-71`；**`W-71` 签 `da228d9`（仅门禁范围，不含 `S-01.01-01`）**；`W-72` 行为已验、错误码三套并存暂不签（§4.7.40）→ `W-75`；`R-03` 判卡面过宽（真实平盘 `0.00%` 合法）→ `W-74`；**`W-74` 签 `dc05a7f`**（Gate C `PASS`，`S-01.01-01` 仍不签）；**`W-75` 复核不签**：MACD/PPO/M25 已返回 `E_PARAM_ORDER`，但 `AC-03.06-17` 与 PRD L806 仍写 `E_PARAM_OUT_OF_RANGE`，且新增 PRD 行与 L806 自相矛盾，见 §4.7.41 → `W-76`；**`W-66` 归属落地（`b74783c`）仍差 3 项**（`AC-03.03-03（补5）` 挂错基号、`AC-08.01-05` 基条丢失、PRD 无 `AC-07.05-04`），见 §4.7.39 → `W-73`。
