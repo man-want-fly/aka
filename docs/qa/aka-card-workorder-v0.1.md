@@ -6,6 +6,15 @@
 > 改完一条，把 `docs/qa/constants-baseline-v0.1.json` 里对应的 `pattern` 删除；再跑 `npm run verify:constants`。
 > **引用纪律（审计报告制度第 13 条）**：凡百分比、行数、计数进入结论，必须带口径。行数须写明是「变更行数（`git diff --numstat`）」还是「显示行数（`git diff | wc -l`）」——两者不等；例：`app/bench` 重生成在 `2ec7385` 上 = **3408 变更行** / **9622 显示行**。
 
+## 0.1 双线开发复核口径（2026-11-07 起）
+
+> 配置：新增第二位资深开发（dev B），方向数据层与指标内核；主树 `/Users/sixmillion/Documents/AKA` 仍归 dev A，dev B 在独立 worktree `/Users/sixmillion/Documents/AKA-dev2`、分支 `dev2` 上作业（已初始化到 `8add7ce`）。
+
+1. **各自报批、各自签字。** dev B 分支上的证据**不算主树已交付**。合并进 `main` 前只作参考；合并后必须在**合并后的 commit** 上复核一次并重新落签，「签后被改即失效」照旧。合并前的绿与合并后的绿是两回事，不许拿前者顶后者。
+2. **合并冲突由 TL 先裁。** `app/bench` 与 `app/manifest/indicators.json` 两边都会动：**谁先合谁定基线**，后合的一方按基线重生成，不许双方各改一处糊过去。**每次合并后必须重跑 `W-34`**（`git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）——两边各自的绿拼起来可能是红的，合并后的红才是真红。
+3. **台账仍由 BA 单一维护**，只维护 `main` 上那一份；不按分支各记一份，也不合并两份台账。
+4. **给 dev B 的 W-49 边界提醒**：CI 的注入符号门禁只证明 **release 产物**里没有符号，**不证明源码没有死引用**（被优化掉的 `let _ = diag_flag(…)` 二进制里就是 0 命中）。改数据层时若碰到 `#[cfg(debug_assertions)]` 附近，必须人工核对边界，不许用 `strings` 计数 0 当「源码干净」引用。
+
 ## 0. 总览
 
 | 顺序 | 卡号 | 工单 | 优先级 | 阻塞类型 | 一句话 |
