@@ -697,12 +697,14 @@
         {
           "key": "long",
           "labelZh": "多头止损",
+          "aliases": ["多头止损"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "short",
           "labelZh": "空头止损",
+          "aliases": ["空头止损"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -760,12 +762,14 @@
         {
           "key": "long",
           "labelZh": "多头止损",
+          "aliases": ["多头止损"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "short",
           "labelZh": "空头止损",
+          "aliases": ["空头止损"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -933,6 +937,7 @@
         {
           "key": "psar",
           "labelZh": "PSAR",
+          "aliases": ["PSAR"],
           "kind": "dot",
           "color": "#f59e0b"
         }
@@ -1514,6 +1519,7 @@
         {
           "key": "wr",
           "labelZh": "%R",
+          "aliases": ["%R"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -1562,6 +1568,7 @@
         {
           "key": "cci",
           "labelZh": "CCI",
+          "aliases": ["CCI"],
           "kind": "line",
           "color": "var(--accent)"
         }
@@ -2197,12 +2204,14 @@
         {
           "key": "aroonUp",
           "labelZh": "Aroon Up",
+          "aliases": ["Aroon Up"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "aroonDown",
           "labelZh": "Aroon Down",
+          "aliases": ["Aroon Down"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -2306,6 +2315,7 @@
         {
           "key": "cmo",
           "labelZh": "CMO",
+          "aliases": ["CMO"],
           "kind": "line",
           "color": "var(--accent)"
         }
@@ -2513,12 +2523,14 @@
         {
           "key": "impulse",
           "labelZh": "脉冲线",
+          "aliases": ["脉冲线"],
           "kind": "line",
           "color": "var(--accent)"
         },
         {
           "key": "state",
           "labelZh": "三色状态",
+          "aliases": ["三色状态"],
           "kind": "dot",
           "color": "#94a3b8"
         }
