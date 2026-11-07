@@ -189,6 +189,27 @@ pub struct AppCore {
     state: Option<Mutex<StateDb>>,
 }
 
+/// 取证运行注入短序列 / 停牌 / 报价样本；正常启动不注入，产品行为不变。
+/// release 整段编译掉，`AKA_DIAG` 环境变量字符串不进产物（W-49）。
+#[cfg(debug_assertions)]
+fn with_diag_samples(provider: MockProvider) -> MockProvider {
+    if std::env::var("AKA_DIAG").ok().as_deref() != Some("1") {
+        return provider;
+    }
+    provider
+        .with_diag_short_series(20)
+        .with_diag_tiny_series(12)
+        // S-02.07-02 取证样本：120 根中第 80~99 根为停牌合成行（量/额为 0）
+        .with_diag_suspended_series(120, 80, 20)
+        // S-02.01-01 取证样本：前收 10.00 / 10.03、末日停牌、上市首日、指数 000300.SH
+        .with_diag_quote_samples()
+}
+
+#[cfg(not(debug_assertions))]
+fn with_diag_samples(provider: MockProvider) -> MockProvider {
+    provider
+}
+
 impl AppCore {
     pub async fn new(provider: Box<dyn DataProvider>) -> Result<Self, AppError> {
         let dataset_coverage = provider
@@ -271,19 +292,7 @@ impl AppCore {
 
     /// MVP 装配：mock 是唯一启用的数据源。
     pub async fn new_mock() -> Result<Self, AppError> {
-        let provider = MockProvider::new();
-        // 取证运行注入 20 根短序列样本；正常启动不注入，产品行为不变
-        let provider = if std::env::var("AKA_DIAG").ok().as_deref() == Some("1") {
-            provider
-                .with_diag_short_series(20)
-                .with_diag_tiny_series(12)
-                // S-02.07-02 取证样本：120 根中第 80~99 根为停牌合成行（量/额为 0）
-                .with_diag_suspended_series(120, 80, 20)
-                // S-02.01-01 取证样本：前收 10.00 / 10.03、末日停牌、上市首日、指数 000300.SH
-                .with_diag_quote_samples()
-        } else {
-            provider
-        };
+        let provider = with_diag_samples(MockProvider::new());
         Self::new(Box::new(provider)).await
     }
 

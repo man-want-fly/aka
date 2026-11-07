@@ -73,7 +73,7 @@ fn cleanup_stale_diag_temp() {
 
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .setup(move |app| {
             #[cfg(debug_assertions)]
             cleanup_stale_diag_temp();
@@ -148,36 +148,67 @@ pub fn run() {
                 }
             }
             Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
-            commands::list_securities,
-            commands::get_bars,
-            commands::indicator_registry,
-            commands::indicator_manifest,
-            commands::dataset_manifest,
-            commands::calc_indicators,
-            commands::telemetry_dump,
-            commands::market_snapshot,
-            commands::watchlist_read,
-            commands::watch_toggle,
-            commands::watch_group_create,
-            commands::watch_group_rename,
-            commands::watch_group_delete,
-            commands::dataset_regenerate,
-            commands::storage_rebuild,
-            commands::diag_faults,
-            commands::view_state_get,
-            commands::view_state_set,
-            commands::positions_read,
-            commands::position_save,
-            commands::position_delete,
-            commands::diag_enabled,
-            commands::diag_target,
-            commands::diag_build_info,
-            commands::diag_write,
-            commands::diag_write_named,
-            commands::telemetry_note,
-        ])
+        });
+    // W-49：诊断写入口只在 debug 构建注册；release 的 handler 里不出现 diag_write/diag_faults，
+    // 命令名与实现都不进产物（读侧 diag_enabled/diag_target 保留为恒 false/空串的桩，供前端探测）。
+    #[cfg(debug_assertions)]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        commands::list_securities,
+        commands::get_bars,
+        commands::indicator_registry,
+        commands::indicator_manifest,
+        commands::dataset_manifest,
+        commands::calc_indicators,
+        commands::telemetry_dump,
+        commands::market_snapshot,
+        commands::watchlist_read,
+        commands::watch_toggle,
+        commands::watch_group_create,
+        commands::watch_group_rename,
+        commands::watch_group_delete,
+        commands::dataset_regenerate,
+        commands::storage_rebuild,
+        commands::diag_faults,
+        commands::view_state_get,
+        commands::view_state_set,
+        commands::positions_read,
+        commands::position_save,
+        commands::position_delete,
+        commands::diag_enabled,
+        commands::diag_target,
+        commands::diag_build_info,
+        commands::diag_write,
+        commands::diag_write_named,
+        commands::telemetry_note,
+    ]);
+    #[cfg(not(debug_assertions))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        commands::list_securities,
+        commands::get_bars,
+        commands::indicator_registry,
+        commands::indicator_manifest,
+        commands::dataset_manifest,
+        commands::calc_indicators,
+        commands::telemetry_dump,
+        commands::market_snapshot,
+        commands::watchlist_read,
+        commands::watch_toggle,
+        commands::watch_group_create,
+        commands::watch_group_rename,
+        commands::watch_group_delete,
+        commands::dataset_regenerate,
+        commands::storage_rebuild,
+        commands::view_state_get,
+        commands::view_state_set,
+        commands::positions_read,
+        commands::position_save,
+        commands::position_delete,
+        commands::diag_enabled,
+        commands::diag_target,
+        commands::diag_build_info,
+        commands::telemetry_note,
+    ]);
+    builder
         .run(tauri::generate_context!())
         .expect("AKA 启动失败");
 }

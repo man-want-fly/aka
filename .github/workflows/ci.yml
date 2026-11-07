@@ -95,14 +95,18 @@ jobs:
 
       # W-49：release 二进制不得残留 QA 注入入口，把 W-47 的本地验收变成常设门禁。
       # 写法要点：grep -c 在 0 命中时自身 exit 1，必须先取计数再判 -ne 0；
-      # 四个符号各自独立断言，失败不提前退出，避免一条掩盖其余三条。
+      # 每个符号独立断言，失败不提前退出，避免一条掩盖其余。
+      # 2026-11 QA 复核后扩围：除四个启动参数外，另拦环境变量与诊断写入口/文件名。
       - name: release 注入符号门禁（W-49）
         run: |
           cargo build --release -p aka-desktop
           BIN=target/release/aka-desktop
           strings "$BIN" > /tmp/aka-release-strings.txt
           fail=0
-          for symbol in "AKA-DIAG-CORRUPT" "--corrupt-db" "--readonly-db" "--empty-dataset"; do
+          for symbol in \
+            "AKA-DIAG-CORRUPT" "--corrupt-db" "--readonly-db" "--empty-dataset" \
+            "AKA_DIAG" "AKA_DIAG_TARGET" "AKA_DIAG_INF" \
+            "diag_write_named" "diag_write" "diag_faults" "s2-evidence"; do
             count=$(grep -F -c -- "$symbol" /tmp/aka-release-strings.txt || true)
             echo "注入符号 $symbol：$count（期望 0）"
             if [ "$count" -ne 0 ]; then

@@ -132,11 +132,11 @@ pub async fn storage_rebuild(state: State<'_, AppState>) -> Result<(), AppError>
 }
 
 /// QA 取证入口：当前故障注入开关（仅 debug 构建且 `AKA_DIAG=1` 时可信）。
+/// release 不注册该命令（W-49），函数体也整段编译掉。
+#[cfg(debug_assertions)]
 #[tauri::command]
 pub async fn diag_faults(state: State<'_, AppState>) -> Result<crate::state::DiagFaults, AppError> {
-    if !cfg!(debug_assertions)
-        || std::env::var("AKA_DIAG").ok().as_deref() != Some("1")
-    {
+    if std::env::var("AKA_DIAG").ok().as_deref() != Some("1") {
         return Ok(crate::state::DiagFaults::default());
     }
     Ok(state.faults())
@@ -177,17 +177,26 @@ pub async fn position_delete(state: State<'_, AppState>, security: String) -> Re
 }
 
 /// S2 实机取证：只有 debug 构建且显式设置 `AKA_DIAG=1` 启动时才允许前端自跑诊断。
+/// release 保留同名命令但恒为 false，前端探测不会抛「命令不存在」。
 #[tauri::command]
 pub async fn diag_enabled() -> Result<bool, AppError> {
-    Ok(cfg!(debug_assertions)
-        && std::env::var("AKA_DIAG").ok().as_deref() == Some("1"))
+    #[cfg(debug_assertions)]
+    let enabled = std::env::var("AKA_DIAG").ok().as_deref() == Some("1");
+    #[cfg(not(debug_assertions))]
+    let enabled = false;
+    Ok(enabled)
 }
 
 /// 取证落地页：P/G 线共用同一套采样，但 release 必须直接落到工作台；
 /// `AKA_DIAG_TARGET=s2` 时前端启动即跳工作台，避免行情页把 S2 套件锁掉。
+/// release 读不到该变量（W-49），恒返回空串。
 #[tauri::command]
 pub async fn diag_target() -> Result<String, AppError> {
-    Ok(std::env::var("AKA_DIAG_TARGET").unwrap_or_default())
+    #[cfg(debug_assertions)]
+    let target = std::env::var("AKA_DIAG_TARGET").unwrap_or_default();
+    #[cfg(not(debug_assertions))]
+    let target = String::new();
+    Ok(target)
 }
 
 /// 取证留档所需的构建元数据（口径 R-S0-07-01）。
@@ -226,6 +235,8 @@ const RELEASE_CODEGEN_UNITS: &str = "16";
 const TARGET_TRIPLE: &str = "x86_64-apple-darwin";
 
 /// S2 实机取证：把前端采样结果落盘为 JSON，便于作为验收材料归档。
+/// 仅 debug 构建注册与编译（W-49）：release 无写入能力、也无文件名/路径字符串。
+#[cfg(debug_assertions)]
 #[tauri::command]
 pub async fn diag_write(
     app: tauri::AppHandle,
@@ -246,6 +257,8 @@ pub async fn telemetry_note(
 }
 
 /// 命名诊断落盘：不同批次（S2 / E-01 / E-02）证据分开存档，避免互相覆盖。
+/// 仅 debug 构建注册与编译（W-49）：release 不可写诊断文件。
+#[cfg(debug_assertions)]
 #[tauri::command]
 pub async fn diag_write_named(
     app: tauri::AppHandle,
@@ -262,6 +275,7 @@ pub async fn diag_write_named(
     write_diag(&app, &safe, &payload)
 }
 
+#[cfg(debug_assertions)]
 fn write_diag(app: &tauri::AppHandle, name: &str, payload: &str) -> Result<String, String> {
     use tauri::Manager;
     let dir = app

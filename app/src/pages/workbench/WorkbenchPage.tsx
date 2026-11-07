@@ -99,19 +99,22 @@ class ChartCrashBoundary extends Component<{ children: ReactNode }, { message: s
   state = { message: "" };
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    void ipc.diagWriteNamed(
-      "s207-crash.json",
-      JSON.stringify(
-        {
-          at: new Date().toISOString(),
-          message: error.message,
-          stack: error.stack ?? "",
-          componentStack: info.componentStack ?? "",
-        },
-        null,
-        2,
-      ),
-    );
+    void ipc
+      .diagWriteNamed(
+        "s207-crash.json",
+        JSON.stringify(
+          {
+            at: new Date().toISOString(),
+            message: error.message,
+            stack: error.stack ?? "",
+            componentStack: info.componentStack ?? "",
+          },
+          null,
+          2,
+        ),
+      )
+      // release 不注册诊断写命令（W-49），这里失败是预期，不能变成未捕获拒绝。
+      .catch(() => undefined);
     this.setState({ message: error.message });
   }
 
