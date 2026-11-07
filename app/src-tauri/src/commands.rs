@@ -269,13 +269,13 @@ pub async fn telemetry_note(
 
 /// 命名诊断落盘：不同批次（S2 / E-01 / E-02）证据分开存档，避免互相覆盖。
 /// 仅 debug 构建注册与编译（W-49）：release 不可写诊断文件。
+#[cfg(debug_assertions)]
 #[tauri::command]
 pub async fn diag_write_named(
     app: tauri::AppHandle,
     name: String,
     payload: String,
 ) -> Result<String, String> {
-    use tauri::Manager;
     let safe: String = name
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
@@ -283,18 +283,7 @@ pub async fn diag_write_named(
     if safe.is_empty() || safe.contains("..") {
         return Err("非法诊断文件名".to_string());
     }
-    let dir = app
-        .path()
-        .home_dir()
-        .map_err(|err| format!("无法解析 home 目录：{err}"))?
-        .join("Library")
-        .join("Application Support")
-        .join("aka")
-        .join("diag");
-    std::fs::create_dir_all(&dir).map_err(|err| format!("创建诊断目录失败：{err}"))?;
-    let path = dir.join(&safe);
-    std::fs::write(&path, &payload).map_err(|err| format!("写入诊断结果失败：{err}"))?;
-    Ok(path.display().to_string())
+    write_diag(&app, &safe, &payload)
 }
 
 #[cfg(debug_assertions)]

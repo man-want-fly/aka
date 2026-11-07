@@ -129,7 +129,7 @@ jobs:
           for symbol in \
             "AKA-DIAG-CORRUPT" "--corrupt-db" "--readonly-db" "--empty-dataset" \
             "AKA_DIAG" "AKA_DIAG_TARGET" "AKA_DIAG_INF" \
-            "diag_write" "diag_faults" "s2-evidence" "aka/diag"; do
+            "diag_write_named" "diag_write" "diag_faults" "s2-evidence" "aka/diag"; do
             count=$(raw_count "$symbol")
             # 扣掉更长符号里的同名子串，避免一条断言兜住另一条（漏项实验要能看出来）。
             case "$symbol" in

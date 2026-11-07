@@ -12,6 +12,7 @@ const SYMBOLS = [
   "AKA_DIAG",
   "AKA_DIAG_TARGET",
   "AKA_DIAG_INF",
+  "diag_write_named",
   "diag_write",
   "diag_faults",
   "s2-evidence",
