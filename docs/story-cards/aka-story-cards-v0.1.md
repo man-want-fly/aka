@@ -5074,10 +5074,10 @@ Confirmation：6 行齐全；刷新后有耗时与时间戳；版本变化后旧
 | 已产出 | `SUSPENDED` | 停牌日检查 | 单根 |
 | 已产出 | `ZERO_VOLUME` | 零成交量检查 | 单根 |
 | 已产出 | `PRICE_ANOMALY` | 价格异常检查 | 单根 |
-| 预留 | `MISSING` | 当前无产出方；缺失交易日是区间层结论，落在报告行 / 字段级「缺失」+ `E_PROVENANCE_MISSING` | 区间 / 报告 |
-| 预留 | `APPROXIMATED` | 当前无产出方；涨跌停价推导标记（D-18） | 涨跌停列 / 报告 |
+| 报告行名（非单根） | `MISSING` | 缺失交易日区间扫描结论，落在报告行 / 字段级「缺失」+ `E_PROVENANCE_MISSING` | 区间 / 报告 |
+| 报告行名（非单根） | `APPROXIMATED` | 涨跌停价推导标记（D-18） | 涨跌停列 / 报告 |
 
-预留两项**不写 AC 断言**，也不得当成单根 K 线标记或实现缺口。
+这两项是报告行名，**不写单根 AC 断言**；`BarRow` 的 `QualityFlag` 无此变体，单根浮层不出现属预期。
 
 **异常与边界**
 - **全部停牌**（极端样本）：停牌日为信息项，零成交量为 0；不误判为数据缺失。
@@ -5142,7 +5142,7 @@ Confirmation：6 字段齐全；质量标记与 S-07.05-01 报告一致；从报
 
 **主流程**
 1. 在工作台点击某根 K 线（或十字光标停留 + 快捷键）→ 打开溯源浮层。
-2. 浮层字段：日期、provider（`mock`）、batch_id、ingested_at、dataset_id、adj_mode（不复权/前复权/后复权）、quality_flags（已产出 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`/无；`APPROXIMATED`/`MISSING` 为预留词表，当前无产出方）。
+2. 浮层字段：日期、provider（`mock`）、batch_id、ingested_at、dataset_id、adj_mode（不复权/前复权/后复权）、quality_flags（单根只出 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`/无）。
 3. 质量标记以标签展示，点击任一标签跳 P9 对应检查项。
 4. 数据缺失 → 对应字段显示「缺失」，并给 `E_PROVENANCE_MISSING` 错误码；不显示空白或 `null`。
 5. 从 P9 质量报告点「查看示例」→ 直接定位到某根 K 线并打开同一浮层。
@@ -5157,13 +5157,14 @@ Confirmation：6 字段齐全；质量标记与 S-07.05-01 报告一致；从报
 | ingested_at | `YYYY-MM-DD HH:mm:ss` |
 | dataset_id | 与 manifest 一致 |
 | adj_mode | 该根展示所用复权模式（跟随视图设置） |
-| quality_flags | **已产出（单根）**：`EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`，可多值，无标记显示「无」。**预留（当前无产出方，不写断言）**：`MISSING` 是区间层结论（落在质量报告行、字段级缺失 + `E_PROVENANCE_MISSING`），`APPROXIMATED` 属涨跌停推导（D-18），二者都不是单根 K 线标记 |
+| quality_flags | 单根可达标记只有 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`，可多值，无标记显示「无」。`MISSING`/`APPROXIMATED` 是**质量报告行名**（S-07.05-01），不是单根标记：`MISSING` 为区间扫描结论，`APPROXIMATED` 为涨跌停推导（D-18），二者都写不回 `BarRow`；同名在不同层级各表其义，单根浮层不出现 |
 | 缺失 | 任一字段为空 → 显示「缺失」+ `E_PROVENANCE_MISSING` |
 
 **异常与边界**
 - **该根为停牌日**：显示 `SUSPENDED`，OHLC 说明「= 停牌前收盘」，量显示 `0.0手`。
 - **该根为除权日**：显示 `EX_RIGHTS` + 「已按 adj_factor 复权」，并给复权前后价对照（2 位）。
-- **预留标记不得当缺陷**：`APPROXIMATED`/`MISSING` 当前无产出方，浮层不出现属预期；`MISSING` 在质量报告行与字段级「缺失」上体现，`APPROXIMATED` 只在涨跌停推导列使用。
+- **首根无前值**：第 1 根没有 `adj_factor` 前值，不做除权判定、不标 `EX_RIGHTS`；首根无标记不等于未除权。
+- **同名的报告层标记**：`MISSING`（区间扫描结论）与 `APPROXIMATED`（涨跌停推导）只作 S-07.05-01 报告行名，`BarRow` 无此变体，浮层不出现属预期、不是缺陷。
 - **复权模式切换后查看同一根**：`adj_mode` 随当前视图变化，数值随之变化，标记不变。
 - **字段缺失**（旧数据无 batch_id）：显示「缺失」并可「导出诊断」，不阻塞浏览。
 - **数据集已重建**：溯源显示新 `dataset_id`，旧标记不再出现。
@@ -5171,7 +5172,7 @@ Confirmation：6 字段齐全；质量标记与 S-07.05-01 报告一致；从报
 
 **UI 与状态**
 - 浮层：设计稿 P2 右下角信息卡；宽 300px，字段 2 列。
-- 质量标记：pill，`EX_RIGHTS` 用中性蓝、`SUSPENDED` 灰、`PRICE_ANOMALY`/`ZERO_VOLUME` 红；`APPROXIMATED` 黄与 `MISSING` 红仅用于 S-07.05-01 报告与涨跌停列，单根浮层不出现。
+- 质量标记：pill，`EX_RIGHTS` 用中性蓝、`SUSPENDED` 灰、`PRICE_ANOMALY`/`ZERO_VOLUME` 红；`APPROXIMATED`/`MISSING` 不作单根 pill，只在报告行与涨跌停列以文字标记出现。
 - 状态：正常 / 缺失字段 / 停牌 / 除权 / 标的失效。
 
 **承接方（渲染缺口）**
@@ -5179,7 +5180,7 @@ Confirmation：6 字段齐全；质量标记与 S-07.05-01 报告一致；从报
 - `[渲染层]`（当前 `0/2` failed）：`AC-07.05-02`（点击 K 线唤起溯源浮层）与 `AC-07.05-02（补3）`（P9「查看示例」跳转）**转 dev A**，由新开前端卡 `S-07.05-03` 承接；`补1`/`补2`/`补4` 的浮层渲染同批验证。本卡不把这两条计入自身交付。
 
 **验收标准**
-- **AC-07.05-02**｜Given 工作台；When 点击任一 K 线；Then 浮层展示 provider、batch_id、ingested_at、dataset_id、adj_mode、quality_flags 六类信息，缺失字段显示「缺失」；`quality_flags` 只含 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY` 或「无」，不要求出现 `MISSING`/`APPROXIMATED`。`[渲染层]`（承接方：dev A，`S-07.05-03`）
+- **AC-07.05-02**｜Given 工作台；When 点击任一 K 线；Then 浮层展示 provider、batch_id、ingested_at、dataset_id、adj_mode、quality_flags 六类信息，缺失字段显示「缺失」；`quality_flags` 只含 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY` 或「无」（`MISSING`/`APPROXIMATED` 为报告行名，单根不出现）。`[渲染层]`（承接方：dev A，`S-07.05-03`）
 - **AC-07.05-02（补1）**｜Given 某根为除权日；When 查看溯源；Then `quality_flags` 含 `EX_RIGHTS`，并显示复权前后价（2 位）。`[渲染层]` + `[数据层]`
 - **AC-07.05-02（补2）**｜Given 某根为停牌日；When 查看溯源；Then 含 `SUSPENDED`，成交量显示 `0.0手`，OHLC 说明为停牌前收盘。`[渲染层]`
 - **AC-07.05-02（补3）**｜Given P9 质量报告「停牌日」行；When 点击「查看示例」；Then 跳转到对应标的与日期并打开同一溯源浮层。`[渲染层]`（承接方：dev A，`S-07.05-03`）
