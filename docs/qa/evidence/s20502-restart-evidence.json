@@ -1,16 +1,16 @@
 {
   "ok": true,
   "phase": "after-restart",
-  "finishedAt": "2026-11-07T13:16:58.561Z",
+  "finishedAt": "2026-11-07T15:56:05.121Z",
   "phaseA": {
-    "finishedAt": "2026-11-07T13:16:44.493Z",
+    "finishedAt": "2026-11-07T15:55:53.163Z",
     "code": "DIAG020.SZ",
     "appliedBeforeExit": "10/22/8",
     "storedBeforeExit": "10/22/8",
     "exitMethod": "kill -TERM aka-desktop 进程（等同关闭应用窗口）"
   },
   "phaseB": {
-    "finishedAt": "2026-11-07T13:16:58.561Z",
+    "finishedAt": "2026-11-07T15:56:05.121Z",
     "firstScreen": "12/26/9",
     "stored": null,
     "restoreDisabled": true,
@@ -21,59 +21,84 @@
   "checks": [
     {
       "id": "PA-10",
-      "ac": "AC-02.05-04",
+      "card": "S-02.05-02",
+      "ac": "AC-02.05-04（补2）",
       "layer": "data",
       "passed": true,
       "detail": "重启后 sessionStorage = 空"
     },
     {
       "id": "PA-11",
-      "ac": "AC-02.05-04",
+      "card": "S-02.05-02",
+      "ac": "AC-02.05-04（补2）",
       "layer": "render",
       "passed": true,
       "detail": "重启后首屏参数 12/26/9（manifest 默认 12/26/9）"
     },
     {
       "id": "PA-12",
-      "ac": "AC-02.05-04",
+      "card": "S-02.05-02",
+      "ac": "AC-02.05-04（补2）",
       "layer": "render",
       "passed": true,
       "detail": "重启后恢复按钮 disabled=true"
     },
     {
       "id": "PA-13",
-      "ac": "AC-02.05-04",
+      "card": "S-02.05-02",
+      "ac": "AC-02.05-04（补2）",
       "layer": "render",
       "passed": true,
       "detail": "重启首屏无残留 MACD(10,22,8)"
     },
     {
       "id": "PA-14",
-      "ac": "AC-02.05-04",
+      "card": "S-02.05-02",
+      "ac": "AC-02.05-04（补2）",
       "layer": "render",
       "passed": true,
       "detail": "打开 DIAG020.SZ 后副图标题 MACD(12,26,9)"
     },
     {
       "id": "PA-15",
-      "ac": "AC-02.05-04",
+      "card": "S-02.05-02",
+      "ac": "AC-02.05-04（补3）",
       "layer": "render",
       "passed": true,
       "detail": "副图提示「MACD 需要 34 根，当前 20 根」"
     },
     {
       "id": "PA-16",
-      "ac": "AC-02.05-04",
+      "card": "S-02.05-02",
+      "ac": "AC-02.05-04（补3）",
       "layer": "render",
       "passed": true,
       "detail": "20 根时无全局错误条"
     },
     {
       "id": "PA-17",
-      "ac": "AC-02.05-04",
+      "card": "S-02.05-02",
+      "ac": "AC-02.05-04（补3）",
       "layer": "render",
       "passed": true,
       "detail": "20 根时恢复默认后 ParamPanel 显示 12/26/9"
     }
-  ]
+  ],
+  "cardSummary": {
+    "card": "S-02.05-02",
+    "checks": "8/8",
+    "layers": {
+      "data": "1/1",
+      "render": "7/7"
+    },
+    "acCovered": "2/4",
+    "coveredAcs": [
+      "AC-02.05-04（补2）",
+      "AC-02.05-04（补3）"
+    ],
+    "uncoveredAcs": [
+      "AC-02.05-04",
+      "AC-02.05-04（补1）"
+    ]
+  }
 }

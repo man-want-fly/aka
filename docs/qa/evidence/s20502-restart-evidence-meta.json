@@ -1,8 +1,8 @@
 {
   "suite": "S-02.05-02 参数恢复默认与本次会话记忆",
-  "label": "20261107-211712",
-  "runAt": "2026-11-07T21:17:12+08:00",
-  "commit": "8add7ce63a448a2ee43bd4acf0d85ab4cb77117e",
+  "label": "20261107-235553",
+  "runAt": "2026-11-07T23:55:53+08:00",
+  "commit": "8b399c8cf0558ef0048ecaec34ff3f0fe5139a14",
   "dirty": false,
   "command": "两段：AKA_DIAG=1 AKA_DIAG_TARGET=\"restart\" target/debug/aka-desktop（A 段写 sessionStorage 后 kill -TERM；B 段新进程复看）",
   "fixture": "默认 state.db；副图 MACD 参数 12/26/9→10/22/8→恢复；DIAG020.SZ（20 根）用于数据不足断言",
@@ -10,9 +10,11 @@
   "formatScan": null,
   "result": {
     "ok": true,
+    "card": "S-02.05-02",
+    "acCovered": "4/4（A 段 AC-02.05-04 / 补1，B 段 补2 / 补3）",
     "layers": {
-      "render": "14/14",
       "data": "2/2",
+      "render": "14/14",
       "runtime": "1/1"
     },
     "blocked": [],
