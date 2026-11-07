@@ -376,6 +376,26 @@
 | 关闭标准 | 组件层不再出现指标 id 字面量（改读 `workbenchRole`）；Rust DTO 与目录徽标同步；`registry_matches_manifest` 仍通过；无视觉回归 |
 | 记录要求 | 本条目不得被删除或标「已清偿」，只允许在偿还后改为「已清偿」并附 commit 与证据 |
 
+## 新增登记（W-03 批次）
+
+### TD-S3-02 · 口径页门禁在 CI 临时降为非阻断（预期失败）
+
+- **当前缺口**：`app/scripts/verify_indicator_docs.mjs` 已按 TL 判据落地并自测通过（4/4），
+  但内容库 `app/content/indicators/` 由 **S-03.03-03** 交付，尚未存在；脚本按判据 1 返回 **exit 2**。
+  CI 步骤「指标口径页门禁（W-03）」因此暂设 `continue-on-error: true`，并在输出打印
+  `EXPECTED RED until S-03.03-03`。**长期常红的门禁等于没有门禁**，故不串 `prebuild`（本地 `npm run build`
+  不受影响），只在 CI 保留独立步骤并显式标注预期失败。
+- **为何可带病运行**：门禁脚本的覆盖集合、四段长度、公式锚点、版本、确定性判据均已生效；
+  `--self-test` 四用例（库缺失 exit 2 / 缺页 exit 1 / 缺段 exit 1 / 全绿 exit 0）已通过，缺的只有内容本身。
+- **触发条件（满足即翻阻断，不必另行评审）**：`app/content/indicators/` 落地且本地
+  `npm run verify:docs` 退出码为 **0**（摘要显示 `覆盖：44/44（已实现 ∩ P0 = 44）`）。
+- **翻阻断动作**：删除 `.github/workflows/ci.yml` 该步骤的 `continue-on-error: true` 与
+  `EXPECTED RED until S-03.03-03` 打印行；**不**在 `app/package.json` 恢复 `prebuild` 串联
+  （本地构建与门禁解耦，门禁只在 CI 阻断）。
+- **责任人**：S-03.03-03 交付人（开发）执行翻阻断；QA 复核 CI 一次绿；TL 在验收记录中确认
+  commit 与 CI 运行链接。翻阻断前本条不得标「已清偿」。
+- **关闭标准**：CI 该步骤无 `continue-on-error`、无 EXPECTED RED 文案，且一次完整 CI 运行中该步骤绿。
+
 ## 防污染声明（S1 期间适用，已归档）
 
 - 上述 9 条在 S1 的 manifest、黄金夹具报告、bench 基线、README 中**均不得出现「已通过」**。

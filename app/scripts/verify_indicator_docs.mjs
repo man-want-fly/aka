@@ -11,11 +11,11 @@
  *   1 = 内容不合格（缺页 / 多页 / 段落不足 / 版本不符 / 公式缺锚点）
  *   2 = 输入缺失（manifest 不可解析，或 content 库不存在/为空）—— 绝不空跑 PASS
  *
- * 口径说明（TL 判据中的一处表述冲突，已在报告中列出，未自行取舍）：
- *   - 判据 2 要求「84 个 P0 每个都有页」；manifest 的 84 个 P0 里有 40 条 status=planned。
- *   - 判据 3 写「61 个 P1/planned 不得有内容页」，但 manifest 里 61 个 planned = 40 个 P0 + 21 个 P1。
- *   - 为同时满足两条可执行判据，这里按「P0 全覆盖（含 planned P0）」+「P1 不得有页」执行，
- *     即 planned_with_content 只统计 priority=P1 的计划中指标。此取舍待 TL/BA 确认后改。
+ * 覆盖口径（2026-11-07 TL 裁定，原「P0 全覆盖（含 planned P0）」口径作废）：
+ *   内容页覆盖集合 = 已实现 ∩ P0；planned 无论 P0/P1 一律不得有页；
+ *   摘要分母由该集合派生，不写死 84。
+ *   理由：给未实现的指标写口径页，等于在文档里立一个不存在的东西。
+ *   当前该集合 = 44 条（manifest 105 / 已实现 44 / P0 84 / planned 61）。
  */
 
 import fs from "node:fs";
@@ -52,6 +52,11 @@ function parseManifest() {
   }
 }
 
+/** 覆盖集合 = 已实现 ∩ P0（planned 一律无页，不进入集合） */
+function coverageSet(items) {
+  return items.filter((item) => item.status !== "planned" && item.priority === "P0");
+}
+
 /** 从 formulaSummary 提取核心符号；提不出锚点时返回 []（该指标跳过公式锚点检查，但四段长度仍校验） */
 function anchorSymbols(summary) {
   if (!summary) return [];
@@ -72,8 +77,10 @@ function listContentFiles(dir) {
     .sort();
 }
 
-function buildReport({ items, p0, constants, files, parseErrors }) {
+function buildReport({ items, coverage, constants, files, parseErrors }) {
   const catalogIds = new Set(items.map((item) => item.id));
+  const coverageIds = new Set(coverage.map((item) => item.id));
+  const plannedIds = new Set(items.filter((item) => item.status === "planned").map((item) => item.id));
   const pages = new Map();
   parseErrors.sort((a, b) => a.localeCompare(b));
 
@@ -90,16 +97,20 @@ function buildReport({ items, p0, constants, files, parseErrors }) {
     }
   }
 
-  const missing = p0.filter((item) => !pages.has(item.id)).map((item) => item.id);
+  const missing = coverage.filter((item) => !pages.has(item.id)).map((item) => item.id);
   const extra = files
     .filter((name) => !catalogIds.has(name.replace(/\.json$/i, "")))
     .map((name) => name);
   const plannedWithContent = items
-    .filter((item) => item.status === "planned" && item.priority === "P1" && pages.has(item.id))
+    .filter((item) => plannedIds.has(item.id) && pages.has(item.id))
     .map((item) => item.id);
+  // 已实现但非 P0 的页（当前为 0）也属越界；规则由「覆盖集合 = 已实现 ∩ P0」派生
+  const outOfScope = [...pages.keys()]
+    .filter((id) => !coverageIds.has(id) && !plannedIds.has(id))
+    .sort();
   const failed = [...parseErrors];
 
-  for (const item of p0) {
+  for (const item of coverage) {
     const page = pages.get(item.id);
     if (!page) continue;
     for (const section of SECTIONS) {
@@ -122,23 +133,26 @@ function buildReport({ items, p0, constants, files, parseErrors }) {
   return {
     version: constants.version,
     total: items.length,
-    p0: p0.length,
-    covered: p0.filter((item) => pages.has(item.id)).length,
+    implemented: items.filter((item) => item.status !== "planned").length,
+    coverage: coverage.length,
+    covered: coverage.filter((item) => pages.has(item.id)).length,
     missing,
     extra,
     planned_with_content: plannedWithContent.sort(),
+    out_of_scope: outOfScope,
     failed: failed.sort(),
   };
 }
 
 function stableJson(report) {
-    const { generatedAt, ...rest } = report;
+  const { generatedAt, ...rest } = report;
   return JSON.stringify({ ...rest, generatedAt: "<ignored>" });
 }
 
 function main() {
   const manifest = parseManifest();
   const items = manifest.indicators ?? manifest;
+  const coverage = coverageSet(items);
   let constants;
   try {
     constants = JSON.parse(fs.readFileSync(CONSTANTS_PATH, "utf8"));
@@ -152,12 +166,11 @@ function main() {
   const files = listContentFiles(CONTENT_DIR);
   if (files.length === 0) failHard(`content_library_missing: app/content/indicators`);
 
-  const p0 = items.filter((item) => item.priority === "P0");
-  const report = buildReport({ items, p0, constants, files, parseErrors: [] });
+  const report = buildReport({ items, coverage, constants, files, parseErrors: [] });
   report.generatedAt = new Date().toISOString();
 
   // 判据 7：同一输入连续两次构建，除 generatedAt 外字节一致
-  const second = buildReport({ items, p0, constants, files, parseErrors: [] });
+  const second = buildReport({ items, coverage, constants, files, parseErrors: [] });
   second.generatedAt = report.generatedAt;
   if (stableJson(report) !== stableJson(second)) {
     const a = stableJson(report).split("\n");
@@ -172,10 +185,13 @@ function main() {
 
   console.log("指标口径页覆盖检查");
   console.log(`内容库：${path.relative(APP, CONTENT_DIR)}`);
-  console.log(`覆盖：${report.covered}/${constants.catalog.p0}`);
+  console.log(
+    `覆盖：${report.covered}/${report.coverage}（已实现 ∩ P0 = ${report.coverage}；manifest ${report.total} / 已实现 ${report.implemented}）`,
+  );
   if (report.missing.length) console.log(`  缺页：${report.missing.join(", ")}`);
   if (report.extra.length) console.log(`  多出：${report.extra.join(", ")}`);
-  if (report.planned_with_content.length) console.log(`  P1 计划中却有内容页：${report.planned_with_content.join(", ")}`);
+  if (report.planned_with_content.length) console.log(`  planned 却有内容页：${report.planned_with_content.join(", ")}`);
+  if (report.out_of_scope.length) console.log(`  越界内容页：${report.out_of_scope.join(", ")}`);
   if (report.failed.length) console.log(`  不合格：${report.failed.join(", ")}`);
   console.log(`报告：${path.relative(APP, REPORT_PATH)}`);
 
@@ -183,6 +199,7 @@ function main() {
     report.missing.length === 0 &&
     report.extra.length === 0 &&
     report.planned_with_content.length === 0 &&
+    report.out_of_scope.length === 0 &&
     report.failed.length === 0;
   console.log(ok ? "结论：PASS" : "结论：FAIL");
   process.exit(ok ? 0 : 1);
@@ -212,7 +229,7 @@ function writeFixturePages(dir, items, opts = {}) {
 function runSelfTest() {
   const manifest = parseManifest();
   const items = manifest.indicators ?? manifest;
-  const p0 = items.filter((item) => item.priority === "P0");
+  const coverage = coverageSet(items);
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "aka-docs-"));
   const self = fileURLToPath(import.meta.url);
   const run = (dir, reportDir) =>
@@ -229,29 +246,33 @@ function runSelfTest() {
   record("用例1 库缺失 → exit 2", r1.status === 2 && /content_library_missing/.test(r1.stderr + r1.stdout), `exit=${r1.status}`);
 
   const oneDir = path.join(root, "one");
-  writeFixturePages(oneDir, p0.slice(0, 1));
+  writeFixturePages(oneDir, coverage.slice(0, 1));
   const report2Dir = path.join(root, "report2");
   const r2 = run(oneDir, report2Dir);
-  const missing2 = JSON.parse(fs.readFileSync(path.join(report2Dir, "content-coverage-report.json"), "utf8")).missing;
-  record("用例2 缺 83 页 → exit 1", r2.status === 1 && missing2.length === 83, `exit=${r2.status} missing=${missing2.length}`);
+  const report2 = JSON.parse(fs.readFileSync(path.join(report2Dir, "content-coverage-report.json"), "utf8"));
+  record(
+    `用例2 缺 ${coverage.length - 1} 页 → exit 1`,
+    r2.status === 1 && report2.missing.length === coverage.length - 1,
+    `exit=${r2.status} missing=${report2.missing.length} coverage=${report2.coverage}`,
+  );
 
   const dropDir = path.join(root, "drop");
-  writeFixturePages(dropDir, p0, { dropUsageOf: p0[0].id });
+  writeFixturePages(dropDir, coverage, { dropUsageOf: coverage[0].id });
   const r3 = run(dropDir, path.join(root, "report3"));
   record(
     "用例3 删 usage → exit 1 且指到 id+usage",
-    r3.status === 1 && r3.stdout.includes(`${p0[0].id}:usage`),
+    r3.status === 1 && r3.stdout.includes(`${coverage[0].id}:usage`),
     `exit=${r3.status}`,
   );
 
   const fullDir = path.join(root, "full");
-  writeFixturePages(fullDir, p0);
+  writeFixturePages(fullDir, coverage);
   const r4 = run(fullDir, path.join(root, "report4"));
   const report4 = JSON.parse(fs.readFileSync(path.join(root, "report4", "content-coverage-report.json"), "utf8"));
   record(
-    "用例4 全绿 → exit 0 且 covered=84 / p0=84",
-    r4.status === 0 && report4.covered === report4.p0 && report4.p0 === constantsP0(),
-    `exit=${r4.status} covered=${report4.covered}/${report4.p0}`,
+    `用例4 全绿 → exit 0 且 covered=coverage=${coverage.length}`,
+    r4.status === 0 && report4.covered === report4.coverage && report4.coverage === coverage.length,
+    `exit=${r4.status} covered=${report4.covered}/${report4.coverage}`,
   );
 
   console.log("指标口径页门禁自测");
@@ -259,14 +280,6 @@ function runSelfTest() {
   const ok = results.every((item) => item.ok);
   console.log(ok ? "结论：PASS" : "结论：FAIL");
   process.exit(ok ? 0 : 1);
-}
-
-function constantsP0() {
-  try {
-    return JSON.parse(fs.readFileSync(CONSTANTS_PATH, "utf8")).catalog.p0;
-  } catch {
-    return 84;
-  }
 }
 
 if (argv.has("--self-test")) runSelfTest();
