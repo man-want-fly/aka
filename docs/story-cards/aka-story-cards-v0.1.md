@@ -1950,7 +1950,7 @@ Confirmation：加入后切到工作台能看到该指标；无标的时按钮�
 | 优先级 | P0（Must） |
 | PRD 验收 | AC-03.02-01、AC-03.02-02、AC-03.02-03 |
 
-**3C**｜Card：指标可收藏，首次安装预置 8 个默认收藏（`T01` SMA、`T02` EMA、`T09` BOLL、`M06` MACD、`M01` RSI、`M02` KDJ、`V01` ATR、`M05` CCI，8 项均为注册表 `status=normal`），收藏区在目录页与工作台抽屉都能一键取用，取消收藏即回列表。
+**3C**｜Card：指标可收藏，首次安装预置 8 个默认收藏（`T01` SMA、`T02` EMA、`T09` BOLL、`M06` MACD、`M01` RSI、`M02` KDJ、`V01` ATR、`D01` OBV，8 项均为注册表 `status=normal`），收藏区在目录页与工作台抽屉都能一键取用，取消收藏即回列表。
 Conversation：默认 8 个能否一键清空——不能，只能逐个取消（避免误删整组）；收藏是否影响顺序——收藏区按「用户添加时间倒序」，默认 8 个按预置顺序。
 Confirmation：首次安装收藏数为 8 且 id 与 PRD 指定一致；收藏状态跨重启保持；收藏数无上限但显示计数。
 
@@ -1973,7 +1973,7 @@ Confirmation：首次安装收藏数为 8 且 id 与 PRD 指定一致；收藏�
 5. 收藏项右键/「⋯」→「查看口径」跳 S-03.03-01。
 
 **字段与口径**
-- 默认 8 个（顺序固定；id 为注册表真 id，8 项 `status` 均 `normal`，参数取注册表默认值）：`T01` SMA(20)、`T02` EMA(20)、`T09` BOLL(20,2)、`M06` MACD(12,26,9)、`M01` RSI(14)、`M02` KDJ(9,3,3)、`V01` ATR(14)、`M05` CCI(20)。旧稿的 `VOL`（注册表无此 id）、`OBV`（`planned`）、`RVOL`（`planned`）一律不用。
+- 默认 8 个（顺序固定；id 为注册表真 id，8 项 `status` 均 `normal`，参数取注册表默认值）：`T01` SMA(20)、`T02` EMA(20)、`T09` BOLL(20,2)、`M06` MACD(12,26,9)、`M01` RSI(14)、`M02` KDJ(9,3,3)、`V01` ATR(14)、`D01` OBV（无参数）。旧稿的 `VOL`（注册表无此 id）、`OBV` 转正前用过的 `M05 CCI` 不再作为默认项。**只对新装生效**：已装用户不补、不换（`ensure_default` 仅在无初始化标记且 `favorites` 表空时写入）。
 - 收藏表：`indicator_id`、`added_at`、`sort_order`；`is_default` 标记仅用于首装识别，用户取消后不再自动恢复。
 - 收藏数：无硬上限，但 >30 时提示「收藏过多，建议精简」（不阻断）。
 
@@ -1991,7 +1991,7 @@ Confirmation：首次安装收藏数为 8 且 id 与 PRD 指定一致；收藏�
 - 状态：空（未收藏任何）/ 默认 8 / 用户自定义 / 含 P1 / 含已下线 / 写入失败。
 
 **验收标准**
-- **AC-03.02-01**｜Given 首次安装（`favorites` 表空且无初始化标记）；When 打开指标目录；Then 收藏区显示 **8 个** chip，id 依次为 `T01`、`T02`、`T09`、`M06`、`M01`、`M02`、`V01`、`M05`（chip 名显示各自 abbr），计数显示 `收藏 8`。`[渲染层]` + `[数据层]`
+- **AC-03.02-01**｜Given 首次安装（`favorites` 表空且无初始化标记）；When 打开指标目录；Then 收藏区显示 **8 个** chip，id 依次为 `T01`、`T02`、`T09`、`M06`、`M01`、`M02`、`V01`、`D01`（chip 名显示各自 abbr），计数显示 `收藏 8`。`[渲染层]` + `[数据层]`
 - **AC-03.02-02**｜Given 收藏区有 8 个；When 点某指标（如 DMI）的「☆」；Then 收藏数变 9、chip 出现在收藏区、该行星标为实心，重启后仍为 9。`[渲染层]` + `[数据层]`
 - **AC-03.02-03**｜Given DMI 已被收藏；When 再次点「★」取消收藏；Then 收藏数变 8、chip 消失、行星标变空心，重启后仍为 8。`[渲染层]` + `[数据层]`
 - **AC-03.02-03（补1）**｜Given 用户已取消全部 8 个默认收藏；When 重启应用；Then 收藏区为空态，**不自动补回**默认 8 个。`[渲染层]` + `[数据层]`
@@ -5174,11 +5174,15 @@ Confirmation：6 字段齐全；质量标记与 S-07.05-01 报告一致；从报
 - 质量标记：pill，`EX_RIGHTS` 用中性蓝、`SUSPENDED` 灰、`PRICE_ANOMALY`/`ZERO_VOLUME` 红；`APPROXIMATED` 黄与 `MISSING` 红仅用于 S-07.05-01 报告与涨跌停列，单根浮层不出现。
 - 状态：正常 / 缺失字段 / 停牌 / 除权 / 标的失效。
 
+**承接方（渲染缺口）**
+- `[数据层]`（dev B）：质量报告字段与标记口径，已 `7/7`。
+- `[渲染层]`（当前 `0/2` failed）：`AC-07.05-02`（点击 K 线唤起溯源浮层）与 `AC-07.05-02（补3）`（P9「查看示例」跳转）**转 dev A**，由新开前端卡 `S-07.05-03` 承接；`补1`/`补2`/`补4` 的浮层渲染同批验证。本卡不把这两条计入自身交付。
+
 **验收标准**
-- **AC-07.05-02**｜Given 工作台；When 点击任一 K 线；Then 浮层展示 provider、batch_id、ingested_at、dataset_id、adj_mode、quality_flags 六类信息，缺失字段显示「缺失」；`quality_flags` 只含 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY` 或「无」，不要求出现 `MISSING`/`APPROXIMATED`。`[渲染层]`
+- **AC-07.05-02**｜Given 工作台；When 点击任一 K 线；Then 浮层展示 provider、batch_id、ingested_at、dataset_id、adj_mode、quality_flags 六类信息，缺失字段显示「缺失」；`quality_flags` 只含 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY` 或「无」，不要求出现 `MISSING`/`APPROXIMATED`。`[渲染层]`（承接方：dev A，`S-07.05-03`）
 - **AC-07.05-02（补1）**｜Given 某根为除权日；When 查看溯源；Then `quality_flags` 含 `EX_RIGHTS`，并显示复权前后价（2 位）。`[渲染层]` + `[数据层]`
 - **AC-07.05-02（补2）**｜Given 某根为停牌日；When 查看溯源；Then 含 `SUSPENDED`，成交量显示 `0.0手`，OHLC 说明为停牌前收盘。`[渲染层]`
-- **AC-07.05-02（补3）**｜Given P9 质量报告「停牌日」行；When 点击「查看示例」；Then 跳转到对应标的与日期并打开同一溯源浮层。`[渲染层]`
+- **AC-07.05-02（补3）**｜Given P9 质量报告「停牌日」行；When 点击「查看示例」；Then 跳转到对应标的与日期并打开同一溯源浮层。`[渲染层]`（承接方：dev A，`S-07.05-03`）
 - **AC-07.05-02（补4）**｜Given 人为清空某根 `batch_id`；When 查看溯源；Then 该字段显示「缺失」与 `E_PROVENANCE_MISSING`，其余字段正常。`[渲染层]`
 
 **依赖与关联 Story**
