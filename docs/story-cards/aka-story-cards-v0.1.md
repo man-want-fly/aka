@@ -1971,6 +1971,7 @@ Confirmation：首次安装收藏数为 8 且 id 与 PRD 指定一致；收藏�
 
 **字段与口径**
 - 默认 8 个：`MA(20)`、`EMA(12)`、`MACD(12,26,9)`、`KDJ(9,3,3)`、`RSI(14)`、`BOLL(20,2)`、`VOL`、`OBV`（id 以注册表为准）。
+  - W-51 裁定：默认 8 项必须全部 `status=normal`。`VOL` 不在注册表、`OBV`(D01) 与 `RVOL`(D11) 均为 `planned`，转 `normal` 前不得进入默认集；当前第 8 项取 `CCI`(M05)，量能项另立工单后再替换。
 - 收藏表：`indicator_id`、`added_at`、`sort_order`；`is_default` 标记仅用于首装识别，用户取消后不再自动恢复。
 - 收藏数：无硬上限，但 >30 时提示「收藏过多，建议精简」（不阻断）。
 

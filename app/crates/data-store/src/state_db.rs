@@ -925,7 +925,7 @@ mod tests {
         fs::remove_dir_all(&dir).ok();
     }
 
-    const DEFAULTS: [&str; 8] = ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "D11"];
+    const DEFAULTS: [&str; 8] = ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "M05"];
 
     #[test]
     fn first_install_seeds_eight_defaults_once() {

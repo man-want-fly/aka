@@ -68,11 +68,11 @@ fn push_flag(flags: &mut Vec<String>, flag: &str) {
     }
 }
 
-/// 首装默认收藏（PRD 默认组合）：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / RVOL。
-/// 卡面 §字段 写的是 MA/EMA/MACD/KDJ/RSI/BOLL/VOL/OBV，但 VOL 不在注册表、OBV 为 planned；
-/// 按「id 以注册表为准」取注册表 id，冲突已上报待 BA 裁定。
+/// 首装默认收藏：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / CCI。
+/// W-51：默认 8 项必须全部 `status=normal`。注册表内量能类 D01~D15 全为 `planned`，
+/// 因此本批不含量能项；量能项须先由单独立项把指标升为 `normal`，不能靠默认集硬塞。
 pub const DEFAULT_INDICATOR_FAVORITES: [&str; 8] =
-    ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "D11"];
+    ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "M05"];
 
 fn favorite_status(status: &str) -> &'static str {
     match status {
@@ -1620,12 +1620,15 @@ mod tests {
             seeded.favorites[3].param_summary, "12 / 26 / 9",
             "MACD 参数摘要按注册表默认值"
         );
-        let planned = seeded
-            .favorites
-            .iter()
-            .find(|f| f.indicator_id == "D11")
-            .unwrap();
-        assert_eq!(planned.status, "planned", "planned 指标也要显示 P1 badge");
+        // W-51：默认 8 项必须全部 normal，planned/beta 一律不得进默认集。
+        assert!(
+            seeded.favorites.iter().all(|f| f.status == "normal"),
+            "默认收藏只能是 normal 指标"
+        );
+        assert!(
+            !seeded.favorites.iter().any(|f| f.indicator_id == "D11"),
+            "D11（RVOL）为 planned，不得靠默认集硬塞"
+        );
 
         // 重复收藏/取消：行数不变、不报错
         core.set_indicator_favorite("M03", true).unwrap();
