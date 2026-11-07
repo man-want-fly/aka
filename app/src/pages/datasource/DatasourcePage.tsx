@@ -4,6 +4,7 @@ import { formatRowCount } from "../../features/workbench/datasetOverview";
 import { formatFixed } from "../../lib/format";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { DatasourceCapabilityDto, DatasourceStatusDto } from "../../lib/types";
+import { BackfillSection } from "./BackfillSection";
 
 interface Props {
   onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
@@ -290,6 +291,8 @@ export function DatasourcePage({ onNavigate }: Props) {
           </header>
           <p className="ds-op-note">离线 MVP 不联网；健康检查与启用交互在 S-07.01-02。</p>
         </section>
+
+        <BackfillSection />
       </main>
     </AppShell>
   );

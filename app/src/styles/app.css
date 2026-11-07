@@ -2339,3 +2339,84 @@ mark {
 .ds-card--tushare .ds-card-head {
   margin-bottom: 8px;
 }
+
+/* ---------------- P9 历史回填（S-07.04-01，全禁用） ---------------- */
+.ds-backfill-note {
+  margin: -4px 0 12px;
+}
+
+.bf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.bf-table th {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+}
+
+.bf-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bf-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.bf-action-cell {
+  text-align: right;
+}
+
+.bf-action-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.bf-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 禁用按钮不派发点击，用覆盖层承接点击只弹说明。 */
+.bf-click-catcher {
+  position: absolute;
+  inset: 0;
+  cursor: not-allowed;
+}
+
+.bf-footnotes {
+  margin: 10px 0 0;
+  padding-left: 16px;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.bf-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 8px 14px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--surface2);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  color: var(--text2);
+  font-size: 12px;
+}
