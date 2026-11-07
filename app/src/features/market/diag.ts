@@ -5,6 +5,7 @@ type Layer = "data" | "render";
 
 interface Check {
   id: string;
+  card: string;
   ac: string;
   layer: Layer;
   passed: boolean;
@@ -75,6 +76,22 @@ function inBoard(row: MarketSnapshotDto["rows"][number], board: string): boolean
 }
 
 /**
+ * AC 归属（W-71 第 6 条，TL 裁定，不重编号）：
+ *   AC-01.01-01 → S-01.01-01（含补1、补2）
+ *   AC-01.01-02 / AC-01.01-03 → S-01.01-02（含补1、补2）
+ *   AC-01.01-04 → S-01.01-03（含补1）
+ *   AC-02.01-01 → S-02.01-01
+ * 仅按基号派生 card；补号沿用全角 `（补n）`，卡面是唯一标准。
+ */
+const CARD_BY_BASE_AC: Record<string, string> = {
+  "AC-01.01-01": "S-01.01-01",
+  "AC-01.01-02": "S-01.01-02",
+  "AC-01.01-03": "S-01.01-02",
+  "AC-01.01-04": "S-01.01-03",
+  "AC-02.01-01": "S-02.01-01",
+};
+
+/**
  * E-01 行情列表渲染层自证（S-01.01-01/02/03）。
  * 只在 AKA_DIAG=1 时由 MarketPage 触发；所有断言直接打在真实 DOM 与 state.db 上。
  */
@@ -87,7 +104,9 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       .catch(() => undefined);
   };
   const push = (id: string, ac: string, layer: Layer, passed: boolean, detail: string) => {
-    checks.push({ id, ac, layer, passed, detail });
+    // RUN 失败行没有 AC，card 留空让门禁判红；正常条目必须登记过归属。
+    const card = CARD_BY_BASE_AC[ac.replace(/（补\d+）$/, "")] ?? "";
+    checks.push({ id, card, ac, layer, passed, detail });
     progress(`done:${id}`);
   };
   progress("start");
@@ -126,7 +145,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       .sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0));
     push(
       "D-03",
-      "AC-01.01-01(补2)",
+      "AC-01.01-01（补2）",
       "data",
       byAmount.length >= 4 &&
         [0, 1, 2].every((i) => (byAmount[i].amount ?? 0) > (byAmount[i + 1].amount ?? 0)),
@@ -220,13 +239,13 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
         if (pct !== "—") suspendedProblems.push(`${row.dataset.code} 停牌却显示 ${pct}`);
         const name = row.querySelector<HTMLElement>('[data-cell="name"]');
         if (!name?.textContent?.includes("停牌")) suspendedProblems.push(`${row.dataset.code} 缺停牌徽标`);
-      } else if (!/^[+-]\d+\.\d{2}%$/.test(pct)) {
+      } else if (!/^(?:[+]|−)\d+\.\d{2}%$/.test(pct)) {
         pctProblems.push(`${row.dataset.code}=${pct}`);
       }
     }
     push(
       "R-03",
-      "AC-01.01-01(补1)",
+      "AC-01.01-01（补1）",
       "render",
       pctProblems.length === 0 && suspendedProblems.length === 0,
       `符号异常=${pctProblems.length} 停牌异常=${suspendedProblems.length} ${
@@ -241,7 +260,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       .slice(0, 4);
     push(
       "R-04",
-      "AC-01.01-01(补2)",
+      "AC-01.01-01（补2）",
       "render",
       firstAmounts.every((value, index) => index === 0 || value <= firstAmounts[index - 1]),
       `DOM 前 4 行成交额=${firstAmounts.join(" / ")}`,
@@ -338,7 +357,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
     const ratioValues = cellValues("volumeRatio").slice(0, 5);
     push(
       "R-07",
-      "AC-01.01-03(补2)",
+      "AC-01.01-03（补2）",
       "render",
       sortDirOf("volumeRatio") === "desc" &&
         ratioNulls.length > 0 &&
@@ -362,7 +381,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
       .map((row) => row.dataset.code ?? "");
     push(
       "R-07B",
-      "AC-01.01-03(补2)",
+      "AC-01.01-03（补2）",
       "render",
       sortDirOf("turnoverPct") === "desc" &&
         turnoverNulls.length > 0 &&
@@ -401,7 +420,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
     } | null;
     push(
       "R-08",
-      "AC-01.01-03(补1)",
+      "AC-01.01-03（补1）",
       "render",
       stored?.board === "chinext" &&
         stored?.sortKey === "turnoverPct" &&
@@ -613,7 +632,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
     const distinctObserved = [...new Set(observedCodes)];
     push(
       "R-13",
-      "AC-01.01-04(补1)",
+      "AC-01.01-04（补1）",
       "render",
       gaps.every((gap) => gap <= 50) &&
         hashEvents.length === 1 &&

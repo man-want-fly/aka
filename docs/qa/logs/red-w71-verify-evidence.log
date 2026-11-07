@@ -1,0 +1,123 @@
+# W-71 负例：W-69/W-70 回归 22 组 + W-71 新增 5 组
+
+- 日期：2026-11-08
+- 对象：`app/scripts/verify_evidence.mjs`（W-71 版：删 EXCLUDED_DIRS、全角 token、定义行唯一、补号同卡）
+- 沙箱：`/tmp/w71-sandbox`（脚本 + 白名单 + 卡面副本），未改动仓库证据目录
+- 每组独立目录、单独判 `exit`，不互相兜底
+- 白名单上限 18；截止日以 CI 时钟为准，本地改钟不算通过
+
+```
+--- 攻击 #1 单条合法 check（基线） —— 期望 exit=0，实测 exit=0
+    证据归属门禁：卡集 74 张，扫描 1 份证据（全部平铺），冻结 0 份，失败 0 项（白名单上限 18，截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #2 checks 改成字符串 + 同目录合法文件 —— 期望 exit=1，实测 exit=1
+    FAIL broken-evidence.json: checks 不是对象数组（坏 JSON 不许静默跳过）
+
+--- 攻击 #3 passed:"false" —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check base-1 的 passed="false" 不是布尔（"false" 不算通过）
+
+--- 攻击 #4 ac:"AC-0"（真 AC 前缀） —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: base-1 的 ac="AC-0" 既非整 AC token 也非卡面锚点
+
+--- 攻击 #5 ac:"随手写" —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: base-1 的 ac="随手写" 既非整 AC token 也非卡面锚点
+
+--- 攻击 #6 缺 layer + meta 声明 "undefined":"1/1" —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check base-1 的 layer=undefined 不在 data|render|runtime
+
+--- 攻击 #7 layer:"runtime2" —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check base-1 的 layer="runtime2" 不在 data|render|runtime
+
+--- 攻击 #8 otherCards 同一张卡声明两次 —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: otherCards[1].card=S-03.01-04 重复声明
+    FAIL f-evidence.json: 声明分母合计 3 != checks.length 2（不许跳过现算）
+
+--- 攻击 #9 otherCards 声明某卡但 0 条 check —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: 声明了卡 S-08.01-03 但没有任何 check
+
+--- 攻击 #10 card / result.card 小写 —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check base-1 的 card=s-02.04-01 不在卡集
+
+--- 攻击 #11 空证据目录 —— 期望 exit=1，实测 exit=1
+    FAIL 未在 /tmp/w71-sandbox/cases/c11 扫描到任何证据（拒绝空转）
+
+--- 攻击 #12 一份证据 0 条 check —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: 声明了卡 S-02.04-01 但没有任何 check
+    FAIL f-evidence.json-meta: result.layers={"render":"1/1"} 与 checks 现算={} 不一致
+    FAIL f-evidence.json: 声明分母合计 1 != checks.length 0（不许跳过现算）
+
+--- 攻击 #13 全新证据加进白名单（自助后门） —— 期望 exit=1，实测 exit=1
+    FAIL app/scripts/evidence-legacy-whitelist.json: sha256=c9e9051c… != 脚本常量 d3152a90…（白名单被改动，全部冻结条目失效；改白名单必须改脚本并单独过审）
+    FAIL evil-new-evidence.json: check evil-1 的 card 必须为非空字符串
+    FAIL evil-new-evidence.json: check evil-1 的 layer=undefined 不在 data|render|runtime
+
+--- 攻击 #14 正文假锚点（不是锚点行） —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: base-1 的 ac=S-02.04-01·假锚点（不是锚点行） 未命中卡 S-02.04-01 的「卡面锚点：」整行（正文提及不算）
+
+--- 攻击 #15 同一文件重复 id —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check X-1 的 id 在同一文件重复（不许复制已过 check 抬总数）
+
+--- 攻击 #16 .JSON 大写扩展名（坏 JSON） —— 期望 exit=1，实测 exit=1
+    FAIL bad-evidence.JSON: checks 不是对象数组（坏 JSON 不许静默跳过）
+    FAIL 未在 …/cases/c16 扫描到任何证据（拒绝空转）
+
+--- 攻击 #16b .JSON 大写扩展名（合法证据，对照） —— 期望 exit=0，实测 exit=0
+    证据归属门禁：卡集 74 张，扫描 1 份证据（全部平铺），冻结 0 份，失败 0 项
+
+--- 攻击 #17 白名单第 19 条（只缩不扩棘轮） —— 期望 exit=1，实测 exit=1
+    FAIL 白名单条目 19 > LEGACY_MAX_FILES=18（只缩不扩：新增冻结项必须减一份或改脚本常量）
+
+--- 攻击 #18 白名单条目缺 expiresOn —— 期望 exit=1，实测 exit=1
+    FAIL ac020401-cross-page-evidence.json: 白名单条目缺 expiresOn（必填，YYYY-MM-DD）
+
+--- 攻击 #19 expiresOn 超过截止日 —— 期望 exit=1，实测 exit=1
+    FAIL ac020401-cross-page-evidence.json: expiresOn=2027-01-01 超过 LEGACY_DEADLINE=2026-11-22（不许续期）
+
+--- 攻击 #20 子目录坏证据（出现子目录即红） —— 期望 exit=1，实测 exit=1
+    FAIL subdir: 证据根下出现子目录（跳过机制已删除；证据必须平铺，归档请移 docs/qa/raw/）
+    FAIL 未在 …/cases/c20 扫描到任何证据（拒绝空转）
+
+--- 攻击 #21 未声明的文件类型（.yaml） —— 期望 exit=1，实测 exit=1
+    FAIL notes.yaml: 不可识别的文件类型（只认 *.json；非 JSON 附件须在 EXPLICIT_AUX_EXTENSIONS 显式声明）
+
+--- 攻击 #22 半角 (补1)（不做双兼容） —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: h-1 的 ac=AC-02.04-01(补1) 用了半角括号，请改全角（卡面只认 AC-xx.xx-xx（补n））
+
+--- 攻击 #23 补号定义跨卡（基号在别卡） —— 期望 exit=1，实测 exit=1
+    FAIL AC-08.01-05（补2）: 补号定义在 S-03.03-03，但 AC-08.01-05 的定义行在 S-08.01-03（补号必须与基号同卡）
+
+--- 攻击 #24 补号无基号定义行 —— 期望 exit=1，实测 exit=1
+    FAIL AC-09.09-09（补1）: 基号 AC-09.09-09 在全卡面无定义行（补号必须先有基条定义）
+
+--- 攻击 #25 合法证据放进子目录（双层全合法） —— 期望 exit=1，实测 exit=1
+    FAIL s2-20261106: 证据根下出现子目录（跳过机制已删除；证据必须平铺，归档请移 docs/qa/raw/）
+    FAIL 未在 …/cases/c25 扫描到任何证据（拒绝空转）
+
+--- 攻击 #26 基号定义行重复（两卡各一处） —— 期望 exit=1，实测 exit=1
+    FAIL AC-02.04-01: 定义行出现 2 处（每个基号只能 1 处定义，其余出现处写「依赖」）
+
+=== 汇总：符合期望 27 / 27，不符合 0 / 27
+```
+
+## 说明
+
+- #20 期望语义已随 W-71 变更：旧版「递归进子目录扫坏 JSON」，现在是「出现子目录即红」，两版都 `exit=1`，但失败理由不同。
+- #25 是 W-71 第 8 条正面攻击：目录名与旧 EXCLUDED_DIRS 之一完全相同（`s2-20261106`），证据本身完全合法且带 meta；旧版会 `exit 0`，现在红。
+- #23/#24 是 TL 追加要求的两条：补号必须与基号同卡、基号必须有定义行；当前卡面已归零，故用沙箱副本注入。
+- 攻击 #13 的摘要按日志截断显示，实际完整值见运行时输出。
+
+## 还原后真实证据目录
+
+```
+证据归属门禁：卡集 74 张，扫描 3 份证据（全部平铺），冻结 18 份，失败 0 项（白名单上限 18，截止 2026-11-22，以 CI 时钟为准）
+exit=0
+```
+
+- `docs/qa/evidence/` 只剩平铺文件：`ac020401-cross-page-evidence.json`（冻结）、`e01-market-evidence.json`（新取证，带 commit/dirty/card/otherCards）、`s2-evidence-p-line-20261107k.json`（冻结）。
+- `s2-20261106/`、`e01-20261107/` 已整体移至 `docs/qa/raw/`，`EXCLUDED_DIRS` 已删除，脚本无「显式跳过」计数。
+
+## 半角 `（补n）` 盘点（TL 口径 18 处）
+
+- 重取证前：`e01` 7 + `s03010` 3 + `s080204` 8 = 18。
+- 重取证后：`e01` 7 处随「带 commit 重新取证」全部改为全角；剩余 **11 处**在 `s03010-evidence.json`（3）与 `s080204-evidence.json`（8）。
+- 这两份在冻结名单内，改一字节 sha256 即失效，禁止直接改；由上表攻击 #22 锁死「新证据半角一律红」，旧档靠冻结摘要兜底。

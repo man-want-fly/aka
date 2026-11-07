@@ -306,6 +306,11 @@ fn with_diag_samples(provider: MockProvider) -> MockProvider {
     if std::env::var("AKA_DIAG").ok().as_deref() != Some("1") {
         return provider;
     }
+    // E-01 行情列表自证要求原始 120 只样本；关闭注入可避免 S-02.07 / S-02.01
+    // 的专用样本把行数抬到 128。仅 debug+AKA_DIAG 的组合可用，正常启动不受影响。
+    if std::env::var("AKA_DIAG_NO_SAMPLES").ok().as_deref() == Some("1") {
+        return provider;
+    }
     provider
         .with_diag_short_series(20)
         .with_diag_tiny_series(12)

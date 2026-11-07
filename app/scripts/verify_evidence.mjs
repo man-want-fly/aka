@@ -1,9 +1,14 @@
 /**
- * 证据归属门禁（W-60 / W-67 / W-68 / W-69 / W-70）
+ * 证据归属门禁（W-60 / W-67 / W-68 / W-69 / W-70 / W-71）
+ *
+ * W-71 追加断言：
+ *   - 删除 EXCLUDED_DIRS：证据根只允许平铺，出现子目录即红（「跳过」本身可判红）。
+ *     归档/诊断数据一律放 docs/qa/raw/。
+ *   - 补号只认全角 `（补n）`；半角 `(补n)` 专门报「请改全角」，不做双兼容。
+ *   - 基号 AC 的定义行全卡面只能 1 处（其余出现处写「依赖」）。
+ *   - 补号定义行必须满足：基号有定义行，且补号与基号同卡（跨卡/基条缺失都红）。
  *
  * W-70 追加断言：
- *   - 递归扫描证据目录；子目录不静默跳过，跳过清单与理由写死在
- *     EXCLUDED_DIRS，并在输出里打印被跳过的目录与理由。
  *   - 同一文件内 check `id` 必须唯一（堵「复制一条已过 check 抬总数」）。
  *   - 扩展名大小写不敏感：`.JSON` 同样按证据解析；非 JSON 附件只允许
  *     EXPLICIT_AUX_EXTENSIONS 里显式声明的类型，其余文件一律失败。
@@ -53,20 +58,13 @@ const LEGACY_WHITELIST_FILE_SHA256 =
 // 层名受控，防自建层（缺字段 / "undefined" / "runtime2" 一律红）。
 const ALLOWED_LAYERS = new Set(["data", "render", "runtime"]);
 const AC_TOKEN_RE = /^AC-\d{2}\.\d{2}-\d{2}(（补\d+）)?$/;
+// W-71：卡面 `（补n）` 是唯一标准，半角一律红；两种写法会让 grep、覆盖矩阵、证据核对各漏一次。
+const HALF_WIDTH_SUPPLEMENT_RE = /^AC-\d{2}\.\d{2}-\d{2}\(补\d+\)$/;
 const ANCHOR_RE = /^S-\d{2}\.\d{2}-\d{2}·.+$/;
-
-// 显式不扫描的子目录（相对证据目录，W-70）：理由写死，不许静默跳过。
-// e01：19 条 check 无 card，且 AC-01.01-01/02/03/04 与 AC-02.01-01 在
-// S-01.01-01/02/03、S-02.01-01、S-08.02-04 间交叉引用，归属无法机械判定，
-// 待 TL 裁定 AC 归属后再迁移，禁止按前缀猜 card。
-// s2-20261106：P 线诊断 payload + telemetry 摘录，无 checks，不是可判证据结构。
-const EXCLUDED_DIRS = new Map([
-  [
-    "e01-20261107",
-    "E-01 首轮取证 19 条 check 无 card，AC 归属跨 S-01.01-01/02/03、S-02.01-01、S-08.02-04 交叉，待 TL 裁定",
-  ],
-  ["s2-20261106", "P 线诊断 payload + telemetry 摘录，无 checks，非本门禁可判证据"],
-]);
+// 基号 AC 的定义行（`- **AC-xx.xx-xx**｜...`）全卡面只能 1 处；其余出现处写「依赖」。
+const AC_DEFINITION_RE = /^[-*]\s+\*\*(AC-\d{2}\.\d{2}-\d{2})\*\*｜/;
+// 补号定义行（`- **AC-xx.xx-xx（补n）**｜...`）：基号必须有定义行，且补号与基号同卡。
+const AC_SUPPLEMENT_DEFINITION_RE = /^[-*]\s+\*\*(AC-\d{2}\.\d{2}-\d{2}（补\d+）)\*\*｜/;
 
 // 非 JSON 文件名按显式声明放行（仍然打印 WARN），未声明的类型一律红。
 const EXPLICIT_AUX_EXTENSIONS = new Set([".txt", ".jsonl", ".log"]);
@@ -101,6 +99,43 @@ heads.forEach((match, index) => {
 if (CARD_SET.size === 0) {
   console.error(`未能从 ${path.relative(ROOT, CARD_DOC)} 解析出任何卡片 id`);
   process.exit(1);
+}
+
+// W-71：基号 AC 的定义行全卡面唯一（其余出现处只能写「依赖」）；
+// 补号定义行必须满足「基号有定义行」且「补号与基号同卡」。
+const definitionCards = new Map();
+for (const [cardId, section] of CARD_SECTION) {
+  for (const rawLine of section.split("\n")) {
+    const matched = AC_DEFINITION_RE.exec(rawLine.trim());
+    if (!matched) continue;
+    const list = definitionCards.get(matched[1]) ?? [];
+    list.push(cardId);
+    definitionCards.set(matched[1], list);
+  }
+}
+for (const [token, cards] of definitionCards) {
+  if (cards.length > 1) {
+    failures.push(
+      `${token}: 定义行出现 ${cards.length} 处（每个基号只能 1 处定义，其余出现处写「依赖」）`,
+    );
+  }
+}
+for (const [cardId, section] of CARD_SECTION) {
+  for (const rawLine of section.split("\n")) {
+    const matched = AC_SUPPLEMENT_DEFINITION_RE.exec(rawLine.trim());
+    if (!matched) continue;
+    const token = matched[1];
+    const base = token.replace(/（补\d+）$/, "");
+    const definitionOwners = definitionCards.get(base) ?? [];
+    if (definitionOwners.length === 0) {
+      failures.push(`${token}: 基号 ${base} 在全卡面无定义行（补号必须先有基条定义）`);
+    } else if (!definitionOwners.includes(cardId)) {
+      failures.push(
+        `${token}: 补号定义在 ${cardId}，但 ${base} 的定义行在 ${definitionOwners.join("/")}` +
+          `（补号必须与基号同卡）`,
+      );
+    }
+  }
 }
 
 const sha256 = (file) => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -204,12 +239,11 @@ const anchorLineMatches = (section, ac) => {
 
 let scanned = 0;
 let frozen = 0;
-let nestedScanned = 0;
-const walkedDirs = [];
-const skippedDirs = [];
 const evidenceFiles = [];
 
-// W-70：递归扫描。跳过目录必须命名字面量 EXCLUDED_DIRS，理由随输出打印。
+// W-71：删除 EXCLUDED_DIRS。证据根只允许平铺；出现子目录即红——
+// 「跳过」本身必须能被判红，否则把合法证据塞进被声明的目录仍是 exit 0。
+// 归档/诊断数据一律放 docs/qa/raw/，证据目录不再有二级目录。
 const walk = (dir) => {
   for (const entry of fs
     .readdirSync(dir, { withFileTypes: true })
@@ -217,13 +251,9 @@ const walk = (dir) => {
     const full = path.join(dir, entry.name);
     const rel = path.relative(EVIDENCE_DIR, full).split(path.sep).join("/");
     if (entry.isDirectory()) {
-      const reason = EXCLUDED_DIRS.get(rel);
-      if (reason) {
-        skippedDirs.push(`${rel}：${reason}`);
-        continue;
-      }
-      walkedDirs.push(rel);
-      walk(full);
+      failures.push(
+        `${rel}: 证据根下出现子目录（跳过机制已删除；证据必须平铺，归档请移 docs/qa/raw/）`,
+      );
       continue;
     }
     if (!entry.isFile()) continue;
@@ -277,7 +307,6 @@ for (const { full, rel } of evidenceFiles) {
     continue;
   }
   scanned += 1;
-  if (file.includes("/")) nestedScanned += 1;
 
   let schemaBroken = false;
   const ids = new Set();
@@ -328,6 +357,12 @@ for (const { full, rel } of evidenceFiles) {
     const ac = typeof check.ac === "string" ? check.ac.trim() : "";
     if (!ac) {
       failures.push(`${file}: ${check.id} 缺 ac`);
+      continue;
+    }
+    if (HALF_WIDTH_SUPPLEMENT_RE.test(ac)) {
+      failures.push(
+        `${file}: ${check.id} 的 ac=${ac} 用了半角括号，请改全角（卡面只认 AC-xx.xx-xx（补n））`,
+      );
       continue;
     }
     if (AC_TOKEN_RE.test(ac)) {
@@ -453,9 +488,8 @@ if (scanned === 0) {
 for (const warning of warnings) console.warn(`WARN ${warning}`);
 for (const failure of failures) console.error(`FAIL ${failure}`);
 console.log(
-  `证据归属门禁：卡集 ${CARD_SET.size} 张，递归扫描 ${scanned} 份证据（子目录 ${nestedScanned} 份），` +
-    `冻结 ${frozen} 份，遍历子目录 ${walkedDirs.length} 个，显式跳过 ${skippedDirs.length} 个，` +
-    `失败 ${failures.length} 项（白名单上限 ${LEGACY_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
+  `证据归属门禁：卡集 ${CARD_SET.size} 张，扫描 ${scanned} 份证据（全部平铺），` +
+    `冻结 ${frozen} 份，失败 ${failures.length} 项` +
+    `（白名单上限 ${LEGACY_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
 );
-for (const skipped of skippedDirs) console.log(`SKIP ${skipped}`);
 process.exit(failures.length === 0 ? 0 : 1);

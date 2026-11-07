@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 取证并归档：当次 evidence JSON + meta 一起落到 docs/qa/evidence/（W-41 第 2 项）。
-# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204
+# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market
 # 前置：app/ 根目录执行 npm run build 与 cargo build -p aka-desktop --features tauri/custom-protocol
 # 取证必须用 debug 构建：QA 注入开关在 release 里已整体编译掉（W-47）。
 set -euo pipefail
@@ -11,7 +11,7 @@ DIAG_DIR="$HOME/Library/Application Support/aka/diag"
 TELEMETRY="$HOME/Library/Application Support/aka/logs/telemetry.jsonl"
 OUT="$APP_DIR/../docs/qa/evidence"
 DB="$HOME/Library/Application Support/aka/state.db"
-SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204}"
+SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market}"
 LABEL="$(date +%Y%m%d-%H%M%S)"
 # 本次取证运行的起始时刻（epoch ms）：文件断言只认此时间窗之后落盘的文件，排除历史残档。
 RUN_STARTED_MS="$(python3 -c 'import time; print(int(time.time()*1000))')"
@@ -98,6 +98,14 @@ PY
     export AKA_DIAG_INF=1
     EXTRA_ENV="AKA_DIAG_INF=1"
     ;;
+  market)
+    TARGET="market"
+    JSON="$DIAG_DIR/e01-market-evidence.json"
+    NAME="e01-market-evidence"
+    FIXTURE="默认 state.db；E-01 行情套件（数据层 + 渲染层）直接打真实 DOM 与 state.db；只读，不改库"
+    EXTRA_ENV="AKA_DIAG_NO_SAMPLES=1"
+    BAK=""
+    ;;
   star)
     TARGET="s010201"
     JSON="$DIAG_DIR/s010201-star-evidence.json"
@@ -157,7 +165,7 @@ esac
 before=0
 if [ -f "$JSON" ]; then before=$(stat -f %m "$JSON"); fi
 
-AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" "$APP_BIN" $FLAGS &
+AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" env $EXTRA_ENV "$APP_BIN" $FLAGS &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true; sleep 1; restore_db' EXIT
 
