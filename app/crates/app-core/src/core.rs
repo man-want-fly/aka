@@ -20,10 +20,12 @@ use crate::dto::{
     PositionDto, ProvenanceDto, RangeDto, RegistryResponse, SecurityDto, SeriesDto, WatchGroupDto,
     WatchItemDto, WatchToggleResult, WatchlistDto,
 };
+use serde_json::Value;
+
 use crate::error::{AppError, ErrorCode};
 use crate::telemetry::{
     Telemetry, EVENT_CACHE_HIT, EVENT_CACHE_MISS, EVENT_COMPUTE_COUNT, EVENT_COMPUTE_SKIP,
-    EVENT_INDICATOR_COMPUTE,
+    EVENT_INDEFINITE, EVENT_INDICATOR_COMPUTE,
 };
 
 /// 自选上限（跨分组按标的去重计数）
@@ -74,13 +76,22 @@ fn summary_row(sec: &Security, rows: &[data_provider::BarRow]) -> MarketRowDto {
     let last_price = last.map(|row| row.close).filter(|p| p.is_finite() && *p > 0.0);
     let prev_close = prev.map(|row| row.close).filter(|p| p.is_finite() && *p > 0.0);
 
-    let change_abs = match (last_price, prev_close) {
-        (Some(last), Some(prev)) => Some(last - prev),
-        _ => None,
+    // 停牌日无成交：涨跌额/涨跌幅无定义，显示 —；振幅按 0.00% 展示。
+    let change_abs = if suspended {
+        None
+    } else {
+        match (last_price, prev_close) {
+            (Some(last), Some(prev)) => Some(last - prev),
+            _ => None,
+        }
     };
-    let change_pct = match (last_price, prev_close) {
-        (Some(last), Some(prev)) => Some((last - prev) / prev * 100.0),
-        _ => None,
+    let change_pct = if suspended {
+        None
+    } else {
+        match (last_price, prev_close) {
+            (Some(last), Some(prev)) => Some((last - prev) / prev * 100.0),
+            _ => None,
+        }
     };
 
     // 模拟域的流通股本口径：与 mock 成交量同量级派生（指数不适用）。
@@ -112,11 +123,15 @@ fn summary_row(sec: &Security, rows: &[data_provider::BarRow]) -> MarketRowDto {
             .flatten()
     };
 
-    let amplitude_pct = match (last, prev_close) {
-        (Some(row), Some(prev)) if row.high.is_finite() && row.low.is_finite() => {
-            Some((row.high - row.low) / prev * 100.0)
+    let amplitude_pct = if suspended && last.is_some() {
+        Some(0.0)
+    } else {
+        match (last, prev_close) {
+            (Some(row), Some(prev)) if row.high.is_finite() && row.low.is_finite() => {
+                Some((row.high - row.low) / prev * 100.0)
+            }
+            _ => None,
         }
-        _ => None,
     };
 
     let mut flags: Vec<String> = last
@@ -715,7 +730,7 @@ impl AppCore {
         let mut request_cache: HashMap<String, Arc<Vec<Vec<f64>>>> = HashMap::new();
         let mut output = Vec::with_capacity(req.instances.len());
 
-        for instance in &req.instances {
+        for (index, instance) in req.instances.iter().enumerate() {
             let indicator = lookup(&instance.indicator_id)
                 .ok_or_else(|| AppError::unknown_indicator(&instance.indicator_id))?;
             let meta = indicator.meta();
@@ -770,6 +785,21 @@ impl AppCore {
                         indicator
                             .calc(&view, &params, &mut values)
                             .map_err(|err| calc_error(meta.id, err))?;
+                        // S-08.02-04 取证注入：仅 debug 构建 + `AKA_DIAG=1` + `AKA_DIAG_INF=1` 时，
+                        // 把首个实例首个输出的末值改成 +∞，走真实的「Infinity → None + E_INDEFINITE」路径。
+                        // 正常启动与发布构建都编译掉，产品行为不变（W-47）。
+                        #[cfg(debug_assertions)]
+                        if index == 0
+                            && std::env::var("AKA_DIAG").ok().as_deref() == Some("1")
+                            && std::env::var("AKA_DIAG_INF").ok().as_deref() == Some("1")
+                        {
+                            if let Some(first) = values.first_mut() {
+                                let last = window.end - 1;
+                                if last < first.len() {
+                                    first[last] = f64::INFINITY;
+                                }
+                            }
+                        }
                         let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
                         computed_ms += elapsed_ms;
                         computed += 1;
@@ -802,15 +832,37 @@ impl AppCore {
                 .outputs
                 .iter()
                 .zip(raw.iter())
-                .map(|(spec, values)| OutputSeriesDto {
-                    key: spec.key,
-                    label_zh: spec.label_zh,
-                    kind: spec.kind,
-                    color: spec.color,
-                    values: values[window.start..window.end]
-                        .iter()
-                        .map(|v| if v.is_finite() { Some(*v) } else { None })
-                        .collect(),
+                .map(|(spec, values)| {
+                    let mut indefinite = false;
+                    let mut out = Vec::with_capacity(window.end - window.start);
+                    for value in &values[window.start..window.end] {
+                        if value.is_finite() {
+                            out.push(Some(*value));
+                        } else {
+                            if value.is_infinite() {
+                                indefinite = true;
+                            }
+                            out.push(None);
+                        }
+                    }
+                    if indefinite {
+                        self.telemetry.emit(
+                            EVENT_INDEFINITE,
+                            vec![
+                                ("code", Value::from("E_INDEFINITE")),
+                                ("instanceId", Value::from(instance.instance_id.as_str())),
+                                ("indicatorId", Value::from(meta.id)),
+                                ("key", Value::from(spec.key)),
+                            ],
+                        );
+                    }
+                    OutputSeriesDto {
+                        key: spec.key,
+                        label_zh: spec.label_zh,
+                        kind: spec.kind,
+                        color: spec.color,
+                        values: out,
+                    }
                 })
                 .collect();
 
@@ -1352,6 +1404,61 @@ mod tests {
         assert!(boards.get("创业板").copied().unwrap_or(0) > 0);
         assert!(boards.get("科创板").copied().unwrap_or(0) > 0);
         assert!(boards.get("指数").copied().unwrap_or(0) > 0);
+    }
+
+    fn test_security() -> Security {
+        Security {
+            code: "TEST.SZ".into(),
+            name: "测试标的".into(),
+            market: data_provider::Market::Sz,
+            board: data_provider::Board::SzMain,
+            is_index: false,
+            base_price: 10.0,
+        }
+    }
+
+    fn test_rows(volumes: &[f64], close: f64) -> Vec<data_provider::BarRow> {
+        let mut date = Date::new(2026, 1, 1);
+        let mut rows = Vec::new();
+        for &volume in volumes {
+            rows.push(data_provider::BarRow {
+                date,
+                open: close,
+                high: close,
+                low: close,
+                close,
+                volume,
+                amount: volume * close,
+                adj_factor: 1.0,
+                quality: vec![],
+            });
+            date = date.next_weekday();
+        }
+        rows
+    }
+
+    #[test]
+    fn suspended_row_hides_change_and_keeps_zero_amplitude() {
+        let rows = test_rows(&[1_000.0, 1_000.0, 1_000.0, 1_000.0, 1_000.0, 0.0], 10.0);
+        let row = summary_row(&test_security(), &rows);
+        assert!(row.suspended, "最后一日成交量为 0 应判停牌");
+        assert_eq!(row.volume, Some(0.0));
+        assert_eq!(row.change_abs, None, "停牌日涨跌额应为 —");
+        assert_eq!(row.change_pct, None, "停牌日涨跌幅应为 —");
+        assert_eq!(row.amplitude_pct, Some(0.0), "停牌日振幅应为 0.00%");
+        assert_eq!(row.volume_ratio, None, "停牌日量比应为 —");
+    }
+
+    #[test]
+    fn zero_prior_volume_makes_ratio_indefinite() {
+        let rows = test_rows(&[0.0, 0.0, 0.0, 0.0, 0.0, 1_000.0], 10.0);
+        let row = summary_row(&test_security(), &rows);
+        assert!(!row.suspended, "当日有成交不应判停牌");
+        assert_eq!(
+            row.volume_ratio, None,
+            "过去 5 日均量为 0 时量比无定义，返回 None 而不是 Infinity"
+        );
+        assert_eq!(row.change_pct, Some(0.0));
     }
 
     #[tokio::test]

@@ -1,12 +1,13 @@
 //! 结构化埋点（TD-S0-04 / 05 / 06 / 07 清偿）。
 //!
-//! 六类事件（名称冻结，QA 按名字过滤）：
+//! 七类事件（名称冻结，QA 按名字过滤）：
 //! - `indicator.compute`：一次真实计算，含 `computeMs` / `cacheHit=false` / 上下文键；
 //! - `compute.count`：一次请求实际执行的计算条数（去重后）；
 //! - `compute.skip`：一次请求内因「同键去重」被跳过、复用已有结果的实例数；
 //! - `cache.hit` / `cache.miss`：按指标缓存键判定的单指标命中情况；
 //! - `indicator.cold_ms`：冷计算耗时样本（P95 由 `Telemetry::cold_p95_ms` 计算）；
-//! - `param.debounce`：前端防抖参数（`inputGapMs=40`、`quietMs=120`）与触发结果。
+//! - `param.debounce`：前端防抖参数（`inputGapMs=40`、`quietMs=120`）与触发结果；
+//! - `value.indefinite`：指标输出为 ±Infinity（`code=E_INDEFINITE`），返回前已转 `None`。
 //!
 //! 事件同时写入内存环形队列（供 IPC 导出）与可选 JSONL 文件（`logs/telemetry.jsonl`）。
 //! 文件写失败不阻断业务：埋点是旁路，不能把计算请求拖挂。
@@ -27,6 +28,8 @@ pub const EVENT_CACHE_HIT: &str = "cache.hit";
 pub const EVENT_CACHE_MISS: &str = "cache.miss";
 pub const EVENT_COLD_MS: &str = "indicator.cold_ms";
 pub const EVENT_PARAM_DEBOUNCE: &str = "param.debounce";
+/// 指标输出出现 ±Infinity（无法定义）时记一次；值在返回前统一转 `None`，不落盘、不画线。
+pub const EVENT_INDEFINITE: &str = "value.indefinite";
 
 const RING_CAPACITY: usize = 4_096;
 

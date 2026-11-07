@@ -39,7 +39,8 @@ export function formatSigned(value: number, digits = 2): string {
 
 export function formatPct(value: number, digits = 2): string {
   if (!Number.isFinite(value)) return DASH;
-  return `${value >= 0 ? "+" : MINUS}${Math.abs(value).toFixed(digits)}%`;
+  if (value === 0) return `${(0).toFixed(digits)}%`;
+  return `${value > 0 ? "+" : MINUS}${Math.abs(value).toFixed(digits)}%`;
 }
 
 /** 万/亿归一：≥1 亿 → 亿，≥1 万 → 万，其余原值；均带千分位。 */

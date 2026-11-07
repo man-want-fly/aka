@@ -36,8 +36,9 @@ export function Watchlist({
 }: Props) {
   const [watchlist, setWatchlist] = useState<WatchlistDto | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
-  /** state.db 坏库：展示不可恢复页（trace id + 「重新生成数据」） */
+  /** state.db 坏库：展示不可恢复页（trace id + 「重新生成数据」/「导出诊断」） */
   const [traceId, setTraceId] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string>("");
   const [rebuilding, setRebuilding] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string>(ALL);
@@ -59,12 +60,14 @@ export function Watchlist({
       setWatchlist(data);
       setReadError(null);
       setTraceId(null);
+      setErrorCode("");
       if (data.groups.some((group) => group.name === activeGroup)) return;
       setActiveGroup(ALL);
     } catch (err) {
       const failure = describeError(err);
       const details = failure.details as { traceId?: unknown } | undefined;
       setReadError(failure.message);
+      setErrorCode(failure.code);
       setTraceId(typeof details?.traceId === "string" ? details.traceId : null);
     }
   };
@@ -225,18 +228,53 @@ export function Watchlist({
     }
   };
 
+  /** S-08.02-04 补1：损坏卡除「重建」外还要能导出诊断（无文件系统插件时以剪贴板 + 下载双通道）。 */
+  const exportDiagnostics = async () => {
+    const payload = JSON.stringify(
+      {
+        at: new Date().toISOString(),
+        scope: "watchlist/state.db",
+        code: errorCode || "E_UNKNOWN",
+        traceId,
+        message: readError,
+      },
+      null,
+      2,
+    );
+    try {
+      await navigator.clipboard?.writeText(payload);
+    } catch {
+      /* 剪贴板不可用时仍走下载通道 */
+    }
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `aka-diagnostics-${traceId ?? "unknown"}.json`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  };
+
   if (traceId) {
     return (
       <aside className="watchlist" data-wl-root>
         <div className="wl-error-page" data-wl-unrecoverable>
           <b>自选数据不可恢复</b>
           <span className="wl-error-page__message">{readError}</span>
+          <span className="wl-error-page__code mono" data-wl-error-code>
+            {errorCode || "E_UNKNOWN"}
+          </span>
           <span className="wl-error-page__trace" data-wl-trace-id>
             {traceId}
           </span>
-          <button type="button" data-wl-rebuild disabled={rebuilding} onClick={() => void rebuild()}>
-            重新生成数据
-          </button>
+          <div className="wl-error-page__actions">
+            <button type="button" data-wl-rebuild disabled={rebuilding} onClick={() => void rebuild()}>
+              重新生成数据
+            </button>
+            <button type="button" data-wl-export onClick={() => void exportDiagnostics()}>
+              导出诊断
+            </button>
+          </div>
         </div>
       </aside>
     );

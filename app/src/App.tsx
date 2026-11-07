@@ -143,8 +143,8 @@ export default function App() {
           setLocation({ route: "workbench", code: null });
           return;
         }
-        // S-01.02-01 星标取证：先进行情页，再由页面内套件切工作台。
-        if (target === "s010201") {
+        // S-01.02-01 星标取证 / S-08.02-04 无定义值取证：先进行情页，再由页面内套件切工作台。
+        if (target === "s010201" || target === "s080204") {
           sessionStorage.setItem("aka.s2.diag.once", "1");
           sessionStorage.setItem("aka.drawer.diag.done", "1");
           sessionStorage.setItem("aka.catalog.diag.done", "1");

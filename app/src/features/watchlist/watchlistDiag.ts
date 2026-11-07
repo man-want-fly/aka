@@ -725,6 +725,9 @@ async function runCorruptMode(push: Push) {
     q("[data-wl-empty='all']") || q("[data-wl-empty='group']") || q("[data-wl-empty='search']"),
   );
   const rows = document.querySelectorAll("[data-wl-item]").length;
+  const code = (q<HTMLElement>("[data-wl-error-code]")?.textContent ?? "").trim();
+  const exportAction = page ? buttonByText("导出诊断", page) : undefined;
+  const retryAction = page ? buttonByText("重试", page) : undefined;
   push(
     "WL-23",
     "render",
@@ -736,6 +739,18 @@ async function runCorruptMode(push: Push) {
       !emptySelf &&
       rows === 0,
     `不可恢复页=${Boolean(page)}，trace id「${trace}」，动作「重新生成数据」=${Boolean(action)}，未显示空自选=${!emptySelf && rows === 0}`,
+  );
+  push(
+    "WL-23B",
+    "render",
+    "S-08.02-04",
+    "AC-08.02-05（补1）",
+    Boolean(page) &&
+      code.length > 0 &&
+      Boolean(action) &&
+      Boolean(exportAction) &&
+      !retryAction,
+    `错误码「${code}」/ 重建=${Boolean(action)} / 导出诊断=${Boolean(exportAction)} / 重试=${Boolean(retryAction)}`,
   );
 }
 

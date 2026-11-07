@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 取证并归档：当次 evidence JSON + meta 一起落到 docs/qa/evidence/（W-41 第 2 项）。
-# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star
+# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204
 # 前置：app/ 根目录执行 npm run build 与 cargo build -p aka-desktop --features tauri/custom-protocol
 # 取证必须用 debug 构建：QA 注入开关在 release 里已整体编译掉（W-47）。
 set -euo pipefail
@@ -11,10 +11,11 @@ DIAG_DIR="$HOME/Library/Application Support/aka/diag"
 TELEMETRY="$HOME/Library/Application Support/aka/logs/telemetry.jsonl"
 OUT="$APP_DIR/../docs/qa/evidence"
 DB="$HOME/Library/Application Support/aka/state.db"
-SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star}"
+SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204}"
 LABEL="$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT" "$DIAG_DIR"
 FLAGS=""
+EXTRA_ENV=""
 
 pkill -f "target/debug/aka-desktop" 2>/dev/null || true
 sleep 1
@@ -85,6 +86,15 @@ conn.executemany(
 conn.commit()
 print(f"fixture 已注入 {len(rows)} 条只读标的（组内 6 + 待移出 1）")
 PY
+    ;;
+  s080204)
+    TARGET="s080204"
+    JSON="$DIAG_DIR/s080204-evidence.json"
+    NAME="s080204-evidence"
+    FIXTURE="默认 state.db；AKA_DIAG_INF=1 把工作台首实例（T01）窗口末值注入 +∞，验证 Infinity→「—」且日志记 E_INDEFINITE；只读行情/目录/工作台，不改库"
+    BAK=""
+    export AKA_DIAG_INF=1
+    EXTRA_ENV="AKA_DIAG_INF=1"
     ;;
   star)
     TARGET="s010201"
@@ -216,9 +226,9 @@ if [ "$SUITE" = "s0602" ]; then
   cat "$SCAN_FILE"
 fi
 
-python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" <<'PY'
+python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" "$EXTRA_ENV" <<'PY'
 import json, subprocess, sys, datetime
-evidence_path, meta_path, label, target, fixture, scan_file, scan_rc, flags = sys.argv[1:9]
+evidence_path, meta_path, label, target, fixture, scan_file, scan_rc, flags, extra_env = sys.argv[1:10]
 d = json.load(open(evidence_path))
 root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 commit = subprocess.check_output(["git", "-C", root, "rev-parse", "HEAD"], text=True).strip()
@@ -233,7 +243,7 @@ meta = {
     "runAt": now,
     "commit": commit,
     "dirty": dirty,
-    "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" target/debug/aka-desktop {flags}".strip(),
+    "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" {extra_env} target/debug/aka-desktop {flags}".replace("  ", " ").strip(),
     "fixture": fixture,
     "environment": "macOS 本机；vite build 产物 + cargo build（debug，含 QA 注入）--features tauri/custom-protocol",
     "formatScan": (

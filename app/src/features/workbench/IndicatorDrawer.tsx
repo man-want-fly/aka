@@ -200,6 +200,7 @@ export function IndicatorDrawer({
             description="目录由 manifest 提供，加载失败时不展示任何条目。"
             error={error}
             actionLabel="重试"
+            retryAction
             onAction={onRetry}
             anchor="drawer-error"
           />

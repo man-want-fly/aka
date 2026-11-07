@@ -18,6 +18,7 @@ import {
   type Density,
 } from "../../lib/settings";
 import { runMarketDiagnostics } from "../../features/market/diag";
+import { runIndefiniteDiagnostics } from "../../features/market/s080204Diag";
 import { StarButton } from "../../components/StarButton";
 import { runStarDiagnostics } from "../../features/watchlist/starDiag";
 import type {
@@ -316,6 +317,21 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
       .catch(() => undefined);
   }, [snapshot, viewLoaded, loading]);
 
+  // S-08.02-04 零成交量/无定义取证：AKA_DIAG_TARGET=s080204 时在行情页自跑一次。
+  useEffect(() => {
+    if (!isTauriRuntime() || !snapshot || !viewLoaded || loading) return;
+    if (sessionStorage.getItem("aka.s080204.diag.done")) return;
+    void ipc
+      .diagTarget()
+      .then((target) => {
+        if (target !== "s080204") return;
+        if (sessionStorage.getItem("aka.s080204.diag.done")) return;
+        sessionStorage.setItem("aka.s080204.diag.done", "1");
+        void runIndefiniteDiagnostics();
+      })
+      .catch(() => undefined);
+  }, [snapshot, viewLoaded, loading]);
+
   const watched = useMemo(
     () => new Set((watchlist?.items ?? []).map((item) => item.security)),
     [watchlist],
@@ -498,6 +514,7 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
             description="本地数据读取未完成，列表未渲染，避免展示半截数据。"
             error={error}
             actionLabel="重试"
+            retryAction
             onAction={() => void load()}
             anchor="market-error"
           />
@@ -627,6 +644,16 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
                       className="market-cell num mono"
                       data-cell="volumeRatio"
                       data-value={row.volumeRatio ?? ""}
+                      data-indefinite={row.volumeRatio == null ? "1" : "0"}
+                      title={
+                        row.volumeRatio != null
+                          ? undefined
+                          : row.isIndex
+                            ? "指数不适用量比"
+                            : row.suspended
+                              ? "停牌日无成交，量比无定义"
+                              : "过去 5 日无成交，量比无定义"
+                      }
                     >
                       {row.volumeRatio == null ? "—" : formatPrice(row.volumeRatio)}
                     </span>

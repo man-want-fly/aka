@@ -461,6 +461,16 @@ select {
   user-select: text;
 }
 
+.wl-error-page__code {
+  font-size: 11px;
+  color: var(--faint);
+  border: 1px dashed var(--line2);
+  border-radius: var(--r2);
+  padding: 2px 8px;
+}
+
+.wl-error-page__actions { display: flex; gap: 8px; }
+
 .wl-error-page button {
   padding: 3px 10px;
   border: 1px solid var(--line2);
@@ -1187,6 +1197,19 @@ select {
   cursor: pointer;
 }
 .state-card__action:hover { border-color: var(--accent); color: var(--accent); }
+.state-card__action--secondary { background: transparent; color: var(--text2); }
+.state-card__meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.state-card__meta .state-card__code { margin-top: 0; }
+.state-card__trace {
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--faint);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: copy;
+}
+.state-card__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ---------------- P1 行情列表（E-01） ---------------- */
 .market {
