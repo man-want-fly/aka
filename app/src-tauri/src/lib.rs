@@ -154,6 +154,8 @@ pub fn run() {
             commands::get_bars,
             commands::indicator_registry,
             commands::indicator_manifest,
+            commands::indicator_favorites,
+            commands::set_indicator_favorite,
             commands::dataset_manifest,
             commands::calc_indicators,
             commands::telemetry_dump,

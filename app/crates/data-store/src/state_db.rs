@@ -17,11 +17,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-pub const SCHEMA_VERSION: i64 = 3;
+pub const SCHEMA_VERSION: i64 = 4;
 
 const MIGRATION_001: &str = include_str!("../migrations/001_init.sql");
 const MIGRATION_002: &str = include_str!("../migrations/002_watchlist_positions.sql");
 const MIGRATION_003: &str = include_str!("../migrations/003_watchlist_ungrouped.sql");
+const MIGRATION_004: &str = include_str!("../migrations/004_indicator_favorites.sql");
+
+/// 首装默认收藏写入标记：用户删光后不得自动补回。
+pub const FAVORITES_INITIALIZED_KEY: &str = "favorites_initialized";
 
 /// 自选写入结果：`LimitReached` 表示事务内预检发现已达上限，未写入。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,6 +92,15 @@ pub struct DatasetMeta {
     pub simulated: bool,
     pub checksum: String,
     pub generated_at: i64,
+}
+
+/// 指标收藏行；`is_default` 仅用于首装识别与排序，不代表不可取消。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndicatorFavorite {
+    pub indicator_id: String,
+    pub added_at: i64,
+    pub sort_order: i64,
+    pub is_default: bool,
 }
 
 pub struct StateDb {
@@ -224,6 +237,16 @@ impl StateDb {
                     .map_err(|e| DbError::Write(e.to_string()))?;
                     tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
                 }
+                4 => {
+                    let tx = self.conn.transaction().map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.execute_batch(MIGRATION_004).map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.execute(
+                        "INSERT OR REPLACE INTO schema_versions(version, applied_at, note) VALUES (?, ?, ?)",
+                        params![4_i64, now(), "s0302: indicator favorites"],
+                    )
+                    .map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
+                }
                 other => {
                     return Err(DbError::Corrupt(format!("缺失迁移脚本：v{other}")));
                 }
@@ -269,6 +292,9 @@ impl StateDb {
     #[doc(hidden)]
     pub fn apply_rollback_v1_for_tests(&self) -> Result<(), DbError> {
         self.conn
+            .execute_batch(include_str!("../migrations/004_indicator_favorites_rollback.sql"))
+            .map_err(|e| DbError::Write(e.to_string()))?;
+        self.conn
             .execute_batch(include_str!("../migrations/002_watchlist_positions_rollback.sql"))
             .map_err(|e| DbError::Write(e.to_string()))?;
         self.conn
@@ -298,6 +324,114 @@ impl StateDb {
             )
             .map(|_| ())
             .map_err(|err| DbError::Write(err.to_string()))
+    }
+
+    // ---------- indicator favorites（S-03.02-01） ----------
+
+    /// 排序：用户后加的在前（added_at 倒序），默认 8 个随后按预置 sort_order。
+    pub fn indicator_favorites(&self) -> Result<Vec<IndicatorFavorite>, DbError> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT indicator_id, added_at, sort_order, is_default FROM indicator_favorites
+                 ORDER BY is_default ASC,
+                          (CASE WHEN is_default = 0 THEN -sort_order ELSE sort_order END) ASC,
+                          indicator_id ASC",
+            )
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(IndicatorFavorite {
+                    indicator_id: row.get(0)?,
+                    added_at: row.get(1)?,
+                    sort_order: row.get(2)?,
+                    is_default: row.get::<_, i64>(3)? != 0,
+                })
+            })
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(|err| DbError::Read(err.to_string()))
+    }
+
+    pub fn indicator_favorite_count(&self) -> Result<i64, DbError> {
+        self.conn
+            .query_row("SELECT COUNT(*) FROM indicator_favorites", [], |row| row.get(0))
+            .map_err(|err| DbError::Read(err.to_string()))
+    }
+
+    /// 首装写入默认 8 个：仅当「无初始化标记且表为空」时写入并置标记。
+    /// 用户删光后重启不会补回（标记已存在）。
+    pub fn ensure_default_indicator_favorites(&self, defaults: &[&str]) -> Result<usize, DbError> {
+        let tx = self.conn.unchecked_transaction().map_err(|e| DbError::Write(e.to_string()))?;
+        let initialized: Option<String> = tx
+            .query_row(
+                "SELECT value FROM settings WHERE key = ?",
+                params![FAVORITES_INITIALIZED_KEY],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        if initialized.is_some() {
+            return Ok(0);
+        }
+
+        let existing: i64 = tx
+            .query_row("SELECT COUNT(*) FROM indicator_favorites", [], |row| row.get(0))
+            .map_err(|err| DbError::Read(err.to_string()))?;
+
+        let mut inserted = 0usize;
+        if existing == 0 {
+            for (index, id) in defaults.iter().enumerate() {
+                inserted += tx
+                    .execute(
+                        "INSERT OR IGNORE INTO indicator_favorites(indicator_id, added_at, sort_order, is_default)
+                         VALUES (?, ?, ?, 1)",
+                        params![id, now(), index as i64],
+                    )
+                    .map_err(|err| DbError::Write(err.to_string()))?;
+            }
+        }
+        tx.execute(
+            "INSERT INTO settings(key, value, updated_at) VALUES (?, '1', ?)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+            params![FAVORITES_INITIALIZED_KEY, now()],
+        )
+        .map_err(|err| DbError::Write(err.to_string()))?;
+        tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
+        Ok(inserted)
+    }
+
+    /// 收藏写入幂等：连点多次只保留一行，`added_at` 与排序不被后写覆盖。
+    pub fn add_indicator_favorite(&self, indicator_id: &str) -> Result<bool, DbError> {
+        let next: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM indicator_favorites WHERE is_default = 0",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        let changed = self
+            .conn
+            .execute(
+                "INSERT INTO indicator_favorites(indicator_id, added_at, sort_order, is_default)
+                 VALUES (?, ?, ?, 0)
+                 ON CONFLICT(indicator_id) DO NOTHING",
+                params![indicator_id, now(), next],
+            )
+            .map_err(|err| DbError::Write(err.to_string()))?;
+        Ok(changed > 0)
+    }
+
+    pub fn remove_indicator_favorite(&self, indicator_id: &str) -> Result<bool, DbError> {
+        let changed = self
+            .conn
+            .execute(
+                "DELETE FROM indicator_favorites WHERE indicator_id = ?",
+                params![indicator_id],
+            )
+            .map_err(|err| DbError::Write(err.to_string()))?;
+        Ok(changed > 0)
     }
 
     // ---------- watchlist ----------
@@ -639,6 +773,7 @@ mod tests {
             "chart_layout",
             "view_state",
             "indicator_params",
+            "indicator_favorites",
             "dataset_meta",
             "positions",
             "schema_versions",
@@ -650,7 +785,7 @@ mod tests {
             .conn
             .query_row("SELECT COUNT(*) FROM schema_versions", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(logged, 3);
+        assert_eq!(logged, 4);
         // v3 起「全部」为只读派生，不再落库
         assert!(db.watch_groups().unwrap().is_empty());
     }
@@ -788,5 +923,90 @@ mod tests {
         assert_eq!(backups.len(), 1, "坏库应被改名保留");
         assert_eq!(db.schema_version(), SCHEMA_VERSION);
         fs::remove_dir_all(&dir).ok();
+    }
+
+    const DEFAULTS: [&str; 8] = ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "D11"];
+
+    #[test]
+    fn first_install_seeds_eight_defaults_once() {
+        let db = memory();
+        assert_eq!(db.ensure_default_indicator_favorites(&DEFAULTS).unwrap(), 8);
+        let rows = db.indicator_favorites().unwrap();
+        assert_eq!(rows.len(), 8);
+        assert_eq!(
+            rows.iter().map(|r| r.indicator_id.as_str()).collect::<Vec<_>>(),
+            DEFAULTS.to_vec(),
+            "默认收藏按预置顺序"
+        );
+        assert!(rows.iter().all(|r| r.is_default));
+        assert_eq!(db.setting(FAVORITES_INITIALIZED_KEY).unwrap().as_deref(), Some("1"));
+
+        // 已有标记：不再写入
+        assert_eq!(db.ensure_default_indicator_favorites(&DEFAULTS).unwrap(), 0);
+        assert_eq!(db.indicator_favorite_count().unwrap(), 8);
+    }
+
+    #[test]
+    fn deleting_all_defaults_is_not_reseeded_on_restart() {
+        let db = memory();
+        db.ensure_default_indicator_favorites(&DEFAULTS).unwrap();
+        for id in DEFAULTS {
+            assert!(db.remove_indicator_favorite(id).unwrap());
+        }
+        assert_eq!(db.indicator_favorite_count().unwrap(), 0);
+
+        // 模拟重启：同一库再次调用初始化
+        assert_eq!(db.ensure_default_indicator_favorites(&DEFAULTS).unwrap(), 0);
+        assert_eq!(db.indicator_favorite_count().unwrap(), 0, "用户删光后不得自动补回");
+    }
+
+    #[test]
+    fn add_and_remove_are_idempotent_under_rapid_clicks() {
+        let db = memory();
+        db.ensure_default_indicator_favorites(&DEFAULTS).unwrap();
+        for _ in 0..5 {
+            db.add_indicator_favorite("M03").unwrap();
+        }
+        assert_eq!(db.indicator_favorite_count().unwrap(), 9);
+        assert_eq!(
+            db.indicator_favorites()
+                .unwrap()
+                .iter()
+                .filter(|r| r.indicator_id == "M03")
+                .count(),
+            1,
+            "同一 id 最多一行"
+        );
+
+        for _ in 0..3 {
+            db.remove_indicator_favorite("M03").unwrap();
+        }
+        assert_eq!(db.indicator_favorite_count().unwrap(), 8);
+    }
+
+    #[test]
+    fn user_favorites_are_listed_before_defaults_and_newest_first() {
+        let db = memory();
+        db.ensure_default_indicator_favorites(&DEFAULTS).unwrap();
+        db.add_indicator_favorite("M03").unwrap();
+        db.add_indicator_favorite("M04").unwrap();
+        let ids: Vec<String> = db
+            .indicator_favorites()
+            .unwrap()
+            .into_iter()
+            .map(|r| r.indicator_id)
+            .collect();
+        assert_eq!(&ids[..2], &["M04", "M03"], "用户后加的排在最前");
+        assert_eq!(&ids[2..], &DEFAULTS[..]);
+    }
+
+    #[test]
+    fn user_favorite_survives_initialize_after_existing_rows() {
+        let db = memory();
+        // 升级路径：表里已有用户收藏但没有初始化标记 → 置标记但不重复插默认
+        db.add_indicator_favorite("M03").unwrap();
+        assert_eq!(db.ensure_default_indicator_favorites(&DEFAULTS).unwrap(), 0);
+        assert_eq!(db.indicator_favorite_count().unwrap(), 1);
+        assert_eq!(db.setting(FAVORITES_INITIALIZED_KEY).unwrap().as_deref(), Some("1"));
     }
 }

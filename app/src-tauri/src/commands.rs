@@ -3,8 +3,9 @@
 
 use app_core::{
     AppError, BarsResponse, CalcRequest, CalcResponse, DatasetManifest, GetBarsRequest,
-    ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto, RegistryRequest,
-    RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
+    IndicatorFavoritesResponse, ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto,
+    RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult,
+    WatchlistDto,
 };
 use serde_json::Value;
 use tauri::State;
@@ -44,6 +45,23 @@ pub async fn indicator_manifest(
     state: State<'_, AppState>,
 ) -> Result<&'static Manifest, AppError> {
     Ok(state.core.indicator_manifest())
+}
+
+/// S-03.02-01：首次读取时写入默认 8 个收藏。
+#[tauri::command]
+pub async fn indicator_favorites(
+    state: State<'_, AppState>,
+) -> Result<IndicatorFavoritesResponse, AppError> {
+    state.core.indicator_favorites()
+}
+
+#[tauri::command]
+pub async fn set_indicator_favorite(
+    state: State<'_, AppState>,
+    indicator_id: String,
+    favorited: bool,
+) -> Result<IndicatorFavoritesResponse, AppError> {
+    state.core.set_indicator_favorite(&indicator_id, favorited)
 }
 
 /// S-02.08-01：页脚 7 段同源；provider 不提供 manifest 时返回 null，前端整条显示 `—`。

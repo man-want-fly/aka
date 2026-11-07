@@ -9,16 +9,18 @@ use data_provider::{
 };
 use data_store::state_db::{AddWatchOutcome, StateDb};
 use data_store::{CacheStats, Candle, CandleSeries, CandleStore, SeriesKey};
+use indicator_core::manifest as registry;
 use indicator_core::{
     all, implemented_count, lookup, merge_defaults, validate, CalcError, Category, Indicator,
-    OhlcvView, ParamError, Params, ENGINE_VERSION, PLANNED_INDICATOR_COUNT,
+    ManifestParam, OhlcvView, ParamError, Params, ENGINE_VERSION, PLANNED_INDICATOR_COUNT,
 };
 
 use crate::dto::{
-    BarDto, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, IndicatorMetaDto, InputsDto,
-    ListSecuritiesRequest, MarketRowDto, MarketSnapshotDto, OutputSeriesDto, OutputSpecDto,
-    PositionDto, ProvenanceDto, RangeDto, RegistryResponse, SecurityDto, SeriesDto, WatchGroupDto,
-    WatchItemDto, WatchToggleResult, WatchlistDto,
+    BarDto, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, IndicatorFavoriteDto,
+    IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto, ListSecuritiesRequest, MarketRowDto,
+    MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto, RangeDto,
+    RegistryResponse, SecurityDto, SeriesDto, WatchGroupDto, WatchItemDto, WatchToggleResult,
+    WatchlistDto,
 };
 use crate::error::{AppError, ErrorCode};
 use crate::telemetry::{
@@ -54,6 +56,51 @@ fn validate_group_name(name: &str) -> Result<&str, AppError> {
 fn group_duplicate(name: &str) -> AppError {
     AppError::invalid_argument(format!("分组已存在：{name}"))
         .with_details(serde_json::json!({ "reason": "GROUP_DUPLICATE", "name": name }))
+}
+
+/// 首装默认收藏（PRD 默认组合）：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / RVOL。
+/// 卡面 §字段 写的是 MA/EMA/MACD/KDJ/RSI/BOLL/VOL/OBV，但 VOL 不在注册表、OBV 为 planned；
+/// 按「id 以注册表为准」取注册表 id，冲突已上报待 BA 裁定。
+pub const DEFAULT_INDICATOR_FAVORITES: [&str; 8] =
+    ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "D11"];
+
+fn favorite_status(status: &str) -> &'static str {
+    match status {
+        "planned" => "planned",
+        "beta" => "beta",
+        "normal" => "normal",
+        _ => "beta",
+    }
+}
+
+fn format_param_number(value: f64) -> String {
+    let mut text = format!("{value:.4}");
+    while text.contains('.') && text.ends_with('0') {
+        text.pop();
+    }
+    if text.ends_with('.') {
+        text.pop();
+    }
+    text
+}
+
+fn param_summary(params: &[ManifestParam]) -> String {
+    params
+        .iter()
+        .map(|param| match param {
+            ManifestParam::Int { default, .. } => default.to_string(),
+            ManifestParam::Float { default, .. } => format_param_number(*default),
+            ManifestParam::Enum { default, .. } => default.clone(),
+            ManifestParam::Bool { default, .. } => {
+                if *default {
+                    "ON".to_string()
+                } else {
+                    "OFF".to_string()
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" / ")
 }
 
 fn board_label(sec: &Security) -> &'static str {
@@ -365,6 +412,79 @@ impl AppCore {
             generated_at,
             rows,
         })
+    }
+
+    // ---------- 指标收藏（S-03.02-01） ----------
+
+    /// 读取收藏；首次调用时按「无初始化标记且表为空」写入默认 8 个。
+    pub fn indicator_favorites(&self) -> Result<IndicatorFavoritesResponse, AppError> {
+        let rows = {
+            let db = self
+                .state_db()
+                .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+            db.ensure_default_indicator_favorites(&DEFAULT_INDICATOR_FAVORITES)
+                .map_err(AppError::from)?;
+            db.indicator_favorites().map_err(AppError::from)?
+        };
+
+        let favorites = rows
+            .into_iter()
+            .map(|row| {
+                let meta = registry::entry(&row.indicator_id);
+                let (abbr, name_zh, status, panel, summary) = match meta {
+                    Some(meta) => (
+                        meta.abbr.clone(),
+                        meta.name_zh.clone(),
+                        favorite_status(&meta.status),
+                        meta.panel.as_str(),
+                        param_summary(&meta.params),
+                    ),
+                    // 注册表已移除：保留行、显示已下线，不静默删收藏。
+                    None => (
+                        row.indicator_id.clone(),
+                        row.indicator_id.clone(),
+                        "offline",
+                        "",
+                        String::new(),
+                    ),
+                };
+                IndicatorFavoriteDto {
+                    indicator_id: row.indicator_id,
+                    abbr,
+                    name_zh,
+                    status,
+                    panel,
+                    param_summary: summary,
+                    is_default: row.is_default,
+                    added_at: row.added_at,
+                    sort_order: row.sort_order,
+                }
+            })
+            .collect();
+        Ok(IndicatorFavoritesResponse { favorites })
+    }
+
+    /// 收藏/取消收藏均可重复调用：重复收藏不新增行，重复取消不报错。
+    pub fn set_indicator_favorite(
+        &self,
+        indicator_id: &str,
+        favorited: bool,
+    ) -> Result<IndicatorFavoritesResponse, AppError> {
+        let id = indicator_id.trim();
+        if id.is_empty() {
+            return Err(AppError::invalid_argument("indicatorId 不能为空"));
+        }
+        {
+            let db = self
+                .state_db()
+                .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+            if favorited {
+                db.add_indicator_favorite(id).map_err(AppError::from)?;
+            } else {
+                db.remove_indicator_favorite(id).map_err(AppError::from)?;
+            }
+        }
+        self.indicator_favorites()
     }
 
     // ---------- 自选 ----------
@@ -1311,6 +1431,87 @@ mod tests {
             generated_at: 0,
             candles,
         }
+    }
+
+    #[tokio::test]
+    async fn indicator_favorites_seed_eight_and_toggle_is_idempotent() {
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+
+        let seeded = core.indicator_favorites().unwrap();
+        let ids: Vec<&str> = seeded
+            .favorites
+            .iter()
+            .map(|f| f.indicator_id.as_str())
+            .collect();
+        assert_eq!(ids, DEFAULT_INDICATOR_FAVORITES.to_vec());
+        assert!(seeded.favorites.iter().all(|f| f.is_default));
+        assert_eq!(seeded.favorites[0].abbr, "SMA");
+        assert_eq!(seeded.favorites[0].param_summary, "20");
+        assert_eq!(
+            seeded.favorites[3].param_summary, "12 / 26 / 9",
+            "MACD 参数摘要按注册表默认值"
+        );
+        let planned = seeded
+            .favorites
+            .iter()
+            .find(|f| f.indicator_id == "D11")
+            .unwrap();
+        assert_eq!(planned.status, "planned", "planned 指标也要显示 P1 badge");
+
+        // 重复收藏/取消：行数不变、不报错
+        core.set_indicator_favorite("M03", true).unwrap();
+        core.set_indicator_favorite("M03", true).unwrap();
+        let after_add = core.indicator_favorites().unwrap();
+        assert_eq!(after_add.favorites.len(), 9);
+        assert_eq!(after_add.favorites[0].indicator_id, "M03", "新收藏排在最前");
+
+        core.set_indicator_favorite("M03", false).unwrap();
+        core.set_indicator_favorite("M03", false).unwrap();
+        assert_eq!(core.indicator_favorites().unwrap().favorites.len(), 8);
+    }
+
+    #[tokio::test]
+    async fn removed_indicator_stays_favorited_as_offline() {
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        core.indicator_favorites().unwrap();
+        core.set_indicator_favorite("XX99", true).unwrap();
+        let row = core
+            .indicator_favorites()
+            .unwrap()
+            .favorites
+            .into_iter()
+            .find(|f| f.indicator_id == "XX99")
+            .unwrap();
+        assert_eq!(row.status, "offline");
+        assert_eq!(row.name_zh, "XX99");
+    }
+
+    #[tokio::test]
+    async fn deleting_all_favorites_is_not_reseeded() {
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        // 先完成首装（写入初始化标记），再删光
+        assert_eq!(core.indicator_favorites().unwrap().favorites.len(), 8);
+        for id in DEFAULT_INDICATOR_FAVORITES {
+            core.set_indicator_favorite(id, false).unwrap();
+        }
+        assert!(core.indicator_favorites().unwrap().favorites.is_empty());
+        // 再次读取（等价重启后的首次读取）不得补回默认项
+        assert!(core.indicator_favorites().unwrap().favorites.is_empty());
+    }
+
+    #[tokio::test]
+    async fn indicator_favorites_requires_state_db() {
+        let core = AppCore::new_mock().await.unwrap();
+        assert!(core.indicator_favorites().is_err());
     }
 
     #[tokio::test]

@@ -193,6 +193,29 @@ pub struct RegistryResponse {
     pub indicators: Vec<IndicatorMetaDto>,
 }
 
+/// 收藏 chip：注册表已移除时 `status = "offline"`，UI 显示「已下线」且不可加入图表。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndicatorFavoriteDto {
+    pub indicator_id: String,
+    pub abbr: String,
+    pub name_zh: String,
+    /// `normal` | `beta` | `planned` | `offline`
+    pub status: &'static str,
+    pub panel: &'static str,
+    /// 参数摘要，如 `20` / `12 / 26 / 9`
+    pub param_summary: String,
+    pub is_default: bool,
+    pub added_at: i64,
+    pub sort_order: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndicatorFavoritesResponse {
+    pub favorites: Vec<IndicatorFavoriteDto>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceRequest {
