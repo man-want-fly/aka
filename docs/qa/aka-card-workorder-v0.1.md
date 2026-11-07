@@ -1180,13 +1180,34 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   ```
 - **边界**：V1 的 3.0 **不从**卡集总量扣（对外口径 207.9）；MVP 口径 204.9 / 剩余 168.4 只在内部排期材料出现，不入台账总账行。
 
+### W-37｜`S-09.01-01` Gate A 两项缺项（dev 先、BA 后）
+
+- **依据**：报告 4.7.12 四。Gate A 判 FAIL：G5（模块数 `19` 裸写 8 处，`verify_constants` 不覆盖模块数）、G8（交付物路径 `docs/architecture/aka-tech-architecture-v0.1.md` 不存在且未标 `planned`）。
+- **顺序不能反**：**dev 先加校验**，BA 后改卡；否则 BA 改完重跑 Gate A 仍会因「校验器不覆盖」判 FAIL（第 9 条）。
+- **dev 改动**：`app/scripts/verify_constants.mjs` 增一条派生校验——
+  - 名称：`模块数｜脚本自动｜docs/architecture/aka-story-cards-by-tech-module-v0.1.md §2`
+  - 口径：文档 §2 中 `^\| [ABC][0-9]+ ` 行数 = **19**（现算现比，不入 `constants.json`）
+  - 反向用例：临时删一行须 exit ≠ 0（按 W-03 self-test 惯例补断言）
+- **BA 改动（卡面 4 类，共 8 处裸写）**：
+  1. 表头「交付物」行的路径后标 `（planned，本卡交付）`，满足 4.5 的 G8 豁免形态；
+  2. `19 个模块` / `19/19` / `19 节` / `19 与链数 4` 等改为「模块数（见模块文档 §2，脚本现算）」；
+  3. `AC-09.01-03` 的期望值改为「= 模块文档 §2 编号数（当前 19）」，并保留 `rg -c '^### 模块 [ABC][0-9]+'` 复算命令；
+  4. 不新增模块、不改 5 层 / 4 条链 / 6 条 AC 的语义。
+- **验收**：
+
+  ```bash
+  cd app && npm run verify:constants   # 期望新增一行 PASS 模块数 19
+  grep -c "19 个模块\|19/19\|19 节" docs/story-cards/aka-story-cards-v0.1.md   # 期望 0
+  ```
+- **收口**：改完由 TL 重跑 Gate A 并更新 `gate-log`；Gate C 仍是 FAIL（交付物未产出），本工单不解除不可放行。
+
 ---
 
 ## 3. 执行顺序与验收
 
 1. **已完成（BA，2026-11-07）**：W-01、W-02、W-04～W-22。baseline 14 条 → **0 条**（`sector-12` 两条由 W-31 清零）。
-2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）、**W-35**（卡集 `31 Feature / 9 Epic / P0 71+V1 1` 四处改对）、**W-36**（台账 73 张派生数 11 处一次改全）。改完各跑一次 `npm run verify:constants`。
+2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）、**W-35**（卡集 `31 Feature / 9 Epic / P0 71+V1 1` 四处改对）、**W-36**（台账 73 张派生数 11 处一次改全）、**W-37**（`S-09.01-01` 卡面 8 处模块数改派生 + 交付物标 planned；**须等 dev 校验先落地**）。改完各跑一次 `npm run verify:constants`。
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36）须由 TL 按验收判据复核后才能签。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37）须由 TL 按验收判据复核后才能签。
