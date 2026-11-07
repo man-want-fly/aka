@@ -82,7 +82,6 @@ const raw = readFileSync(GATE_LOG, "utf8");
 const rows = parseCsv(raw);
 const header = rows.shift();
 const failures = [];
-const warnings = [];
 
 if (header.join(",") !== COLUMNS.join(",")) {
   failures.push(`表头必须严格为 ${COLUMNS.join(",")}；实际 ${header.join(",")}`);
@@ -132,7 +131,7 @@ for (let i = 0; i < rows.length; i += 1) {
   if (!OWNER.test(r.owner)) fail(`owner 不合规：${r.owner || "空"}`);
   if (!r.note.trim()) fail("note 为空");
 
-  if (r.gate_c === "PASS" && !r.gate_c_source.trim()) warnings.push(`第 ${line} 行 ${r.card_id}：Gate C=PASS 但 gate_c_source 为空（历史行，不阻断）`);
+  if (r.gate_c === "PASS" && !r.gate_c_source.trim()) fail("Gate C=PASS 但 gate_c_source 为空");
   if (r.gate_c_source.trim() && !SOURCE_PREFIX.has(r.gate_c_source.trim().split(/\s+/)[0])) {
     fail(`gate_c_source 前缀必须是 ${[...SOURCE_PREFIX].join("/")}：${r.gate_c_source}`);
   }
@@ -181,5 +180,4 @@ if (failures.length > 0) {
   for (const f of failures) console.error(`::error::${f}`);
   process.exit(1);
 }
-for (const w of warnings) console.warn(`::warning::${w}`);
 console.log(`verify:gate-log 通过：${out.length - 1} 行，${seen.size} 张卡`);

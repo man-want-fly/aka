@@ -541,7 +541,7 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - **被取消 run 必须登记**：在 `cancelled_runs` 写 `run_id@sha`，`note` 写取消原因（`concurrency cancel-in-progress`）与覆盖它的 `run_id@tip`；不得留悬空记录，也不得把被取消 run 当成证据。
     - **不选 B/C/D**：B（main 不取消）与 C（按 sha 分组）都变成每次 push 全量跑，macOS runner 成本与排队上升；D（手工 rerun）在活跃推送期会与后续 push 互相取消，形成乒乓。A 的零额外 CI 成本是唯一可持续解。
 17. **两份台账分主（2026-11-08 写死）**：`docs/qa/aka-card-gate-log-v0.1.csv` 由 **TL 写**（Gate A/B/C、`gate_c_source`、`blocker`、`ledger_status` 的签字相关格、`sign_commit`、`sign_scope`），BA 与 dev **只读不写**；`docs/qa/aka-story-completion-ledger-v0.1.md` 由 **BA 写**（逐卡完成状态、人日、派生数），TL 与 dev **只读不写**。越权写入按无效处理：同一提交回退并在审计记一条。两份台账冲突时，完成状态与人日以 BA 台账为准，Gate 与签字以 gate-log 为准，不得互相替代。
-18. **已签卡面改动与失效申报（2026-11-08 起）**：已签字卡面**只允许 BA 改**；任何提交若 diff 击中已签卡（故事卡分节或 `sign_scope` 中的文件路径），提交信息必须带 `Sign-Invalidates: S-xx.xx-xx, ...`，且与 `verify:sign-impact` 实算集合**完全一致**；漏报、多报、非法卡号一律红。TL 在批次边界重签，重签前旧签字按规则 8 失效。失效集合由工具现算，不允许维护「哪些卡已签」的人手名单。
+18. **已签卡面改动与失效申报（2026-11-08 起）**：已签字卡面**只允许 BA 改**；任何提交若 diff 击中已签卡（故事卡分节或 `sign_scope` 中的文件路径），提交信息必须带 `Sign-Invalidates: S-xx.xx-xx, ...`，且与 `verify:sign-impact` 实算集合**完全一致**；漏报、多报、非法卡号一律红。TL 在批次边界重签，重签前旧签字按规则 8 失效。失效集合由工具现算，不允许维护「哪些卡已签」的人手名单。**trailer 由工具生成**：提交前跑 `npm run verify:sign-impact -- --staged --print-trailer`，把输出原样粘进提交信息（或走 `git commit -F`）；校验按**集合相等**，不要求字节/顺序一致——工具输出就是全量，少一个即红，因此不存在「应付得过去的最小集合」。
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
 
@@ -2043,6 +2043,26 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 
 - 现状：29 个非空 `sign_scope` 中只有 1 个含 ASCII 逗号（`S-02.05-01` 的 `[2,500]`），属**个例**，不是普遍写法。
 - 仍选「引号内允许」而非「禁止逗号」：禁逗号靠人记，范围写法（`[2,500]`）和文件列表迟早再犯；RFC4180 引号 + 规范重序列化能在 CI 里机械拦截整类问题。代价是编辑器必须按 CSV 规则写引号，`--fix` 可规整。
+
+#### 4.7.49 黄灯清零与 trailer 生成模式（2026-11-08）
+
+**一、`S-01.01-01` 不再只告警**
+
+- 选「补 `gate_c_source`」：该行 Gate C=`PASS` 但不填来源，是唯一一条，且来源就在 note 里（W-74 的 e01 取证）。补为 `dev 8daf2e2 + e01（19/19 render 4/4）`。
+- `verify_gate_log` 同步把「Gate C=PASS 但 `gate_c_source` 为空」从 warning 升为 **error**；现 18 行 Gate C=PASS 全部有来源，无黄灯。
+- 不选棘轮：只剩一条、可一次补齐，加 `expiresOn` 等于给未来留豁免口；升红更干净。
+
+**二、`Sign-Invalidates` 由工具生成**
+
+- `verify_sign_impact` 新增 `--print-trailer`（只打印不校验）与 `--staged`（对 index 与 HEAD 求差，隐含 print）。输出一行：
+  `Sign-Invalidates: S-03.04-02, S-03.05-02`；无命中时输出 `Sign-Invalidates: none`。命中卡与原签 SHA 打到 stderr。
+- `git commit -F` 用法：
+  ```bash
+  { printf 'fix: 改已签卡面\n\n'; npm run --prefix app -s verify:sign-impact -- --staged --print-trailer; } > /tmp/msg
+  git commit -F /tmp/msg
+  ```
+- **判定选集合相等，不选逐字一致**：git 会重排/折行提交信息，逐字比较只会制造无意义红；而集合相等已经杜绝「最小应付集合」——工具算的就是全量，少一个即红，多一个也红。
+- 实测：`--base f547a00^ --head f547a00 --print-trailer` 输出 4 张命中卡；临时改 `S-02.05-01` 卡面并 stage，`--staged` 输出 `Sign-Invalidates: S-02.05-01`，还原后工作区干净。
 
 ---
 

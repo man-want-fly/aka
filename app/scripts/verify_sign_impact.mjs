@@ -26,7 +26,9 @@ const arg = (name, fallback) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
 const head = arg("head", "HEAD");
-const base = arg("base", "");
+const PRINT = args.includes("--print-trailer");
+const STAGED = args.includes("--staged");
+const base = arg("base", STAGED ? "HEAD" : "");
 
 function git(gitArgs) {
   return execFileSync("git", gitArgs, { cwd: ROOT, encoding: "utf8" }).trim();
@@ -37,6 +39,9 @@ function gitFile(rev) {
   } catch {
     return "";
   }
+}
+function gitIndexFile() {
+  return execFileSync("git", ["show", `:${CARDS}`], { cwd: ROOT, encoding: "utf8" });
 }
 function parseCsv(text) {
   const rows = [];
@@ -89,9 +94,13 @@ const rows = parseCsv(readFileSync(GATE_LOG, "utf8")).slice(1);
 const signed = new Map(rows.filter((r) => (r[10] ?? "").trim()).map((r) => [r[0], r[10].trim()]));
 
 const oldMap = cardMap(gitFile(base));
-const newMap = cardMap(gitFile(head));
+const newMap = cardMap(STAGED ? gitIndexFile() : gitFile(head));
 
-const diff = execFileSync("git", ["diff", "-U0", base, head, "--", CARDS], { cwd: ROOT, encoding: "utf8" });
+const diff = execFileSync(
+  "git",
+  STAGED ? ["diff", "--cached", "-U0", base, "--", CARDS] : ["diff", "-U0", base, head, "--", CARDS],
+  { cwd: ROOT, encoding: "utf8" },
+);
 const hit = new Set();
 for (const line of diff.split("\n")) {
   const m = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
@@ -102,7 +111,11 @@ for (const line of diff.split("\n")) {
 }
 
 // sign_scope 中的文件路径也纳入命中范围。
-const changedFiles = execFileSync("git", ["diff", "--name-only", base, head], { cwd: ROOT, encoding: "utf8" })
+const changedFiles = execFileSync(
+  "git",
+  STAGED ? ["diff", "--cached", "--name-only", base] : ["diff", "--name-only", base, head],
+  { cwd: ROOT, encoding: "utf8" },
+)
   .split("\n")
   .map((s) => s.trim())
   .filter(Boolean);
@@ -122,6 +135,18 @@ for (const r of rows) {
 }
 
 const invalidated = [...hit].filter((card) => signed.has(card)).sort();
+
+// --print-trailer：只打印，供人粘贴或 git commit -F。--staged 隐含此模式。
+if (PRINT || STAGED) {
+  console.log(`Sign-Invalidates: ${invalidated.length > 0 ? invalidated.join(", ") : "none"}`);
+  if (invalidated.length > 0) {
+    console.error(
+      `已签卡命中：${invalidated.map((c) => `${c}（原签 ${signed.get(c).slice(0, 7)}）`).join("、")}`,
+    );
+  }
+  process.exit(0);
+}
+
 if (invalidated.length === 0) {
   console.log("verify:sign-impact 通过：本次 diff 未击中已签卡");
   process.exit(0);
