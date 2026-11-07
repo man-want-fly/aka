@@ -33,6 +33,13 @@ jobs:
           node-version: "22"
       - name: verify:sign --check（台账列与实算不一致即红）
         run: node app/scripts/verify_sign_coverage.mjs --check
+      - name: verify:gate-log（结构 / 枚举 / 40 位 SHA / 与 verify:sign 对齐）
+        run: node app/scripts/verify_gate_log.mjs
+      - name: verify:sign-impact（已签卡面被改必须申报失效）
+        env:
+          BASE: ${{ github.event.before || github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node app/scripts/verify_sign_impact.mjs --base "$BASE" --head "$HEAD_SHA"
 
   build-test:
     name: macOS build / test / golden

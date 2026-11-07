@@ -541,6 +541,7 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - **被取消 run 必须登记**：在 `cancelled_runs` 写 `run_id@sha`，`note` 写取消原因（`concurrency cancel-in-progress`）与覆盖它的 `run_id@tip`；不得留悬空记录，也不得把被取消 run 当成证据。
     - **不选 B/C/D**：B（main 不取消）与 C（按 sha 分组）都变成每次 push 全量跑，macOS runner 成本与排队上升；D（手工 rerun）在活跃推送期会与后续 push 互相取消，形成乒乓。A 的零额外 CI 成本是唯一可持续解。
 17. **两份台账分主（2026-11-08 写死）**：`docs/qa/aka-card-gate-log-v0.1.csv` 由 **TL 写**（Gate A/B/C、`gate_c_source`、`blocker`、`ledger_status` 的签字相关格、`sign_commit`、`sign_scope`），BA 与 dev **只读不写**；`docs/qa/aka-story-completion-ledger-v0.1.md` 由 **BA 写**（逐卡完成状态、人日、派生数），TL 与 dev **只读不写**。越权写入按无效处理：同一提交回退并在审计记一条。两份台账冲突时，完成状态与人日以 BA 台账为准，Gate 与签字以 gate-log 为准，不得互相替代。
+18. **已签卡面改动与失效申报（2026-11-08 起）**：已签字卡面**只允许 BA 改**；任何提交若 diff 击中已签卡（故事卡分节或 `sign_scope` 中的文件路径），提交信息必须带 `Sign-Invalidates: S-xx.xx-xx, ...`，且与 `verify:sign-impact` 实算集合**完全一致**；漏报、多报、非法卡号一律红。TL 在批次边界重签，重签前旧签字按规则 8 失效。失效集合由工具现算，不允许维护「哪些卡已签」的人手名单。
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
 
@@ -2002,7 +2003,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **三、缺行口径：一卡一行，不按工单级合并**
 
 - 理由：gate-log 的主键是 `card_id`，Gate A/B/C 与 `sign_commit` 都是卡级；工单级一行无法承载多卡 Gate 状态，会让「签了但没有 Gate」的卡藏在 note 里。工单级签字只在**无卡面改动**时保留在审计 §4.7.45 表。
-- `W-75` 实测扫到 **15 张卡**（`S-03.04-01/02/03`、`S-03.05-01`–`08`、`S-03.06-01`–`04`）：已有 4 行（`S-03.04-01`、`S-03.04-02`、`S-03.05-02`、`S-03.05-05`）追加 W-75 备注并把签字重绑 `c111f5f`（`f547a00` 改卡面后原签失效）；缺的 11 行补齐，`sign_scope` 明确写「仅 W-75 错误码文字（非卡交付、不改 Gate）」。`ledger_status` 按 BA 台账/index 原状，不因文字签字升交付。
+- `W-75` 实测扫到 **15 张卡**（`S-03.04-01/02/03`、`S-03.05-01`–`08`、`S-03.06-01`–`04`）：已有 3 张已签卡（`S-03.04-02`、`S-03.05-02`、`S-03.05-05`）因 `f547a00` 改卡面重绑 `c111f5f`；`S-03.04-01` 此前未签，只追加备注；缺的 11 行补齐。**这 12 张未签卡一律不写 `sign_commit`/`sign_scope`**，只在 note 记「W-75 工单签 `c111f5f`（仅文字，非卡签字）」，避免把文字单伪装成卡级签字。
 - `W-76` 对应 `S-03.06-04`：补行，`workorder=W-75;W-76`，注明 `AC-03.06-17` 与卡 `L3364`/`L3371`/`L3395` 统一 `E_PARAM_ORDER`。
 - `W-77` 对应 `S-02.05-01`：已在原行更新，不另开。
 - `W-72` 无卡面改动（代码与 `s20501Diag`），不补卡行；签字以 §4.7.45 工单表为准，并在 `S-02.05-01` 的 `sign_scope` 留痕。
@@ -2016,6 +2017,32 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - `42420150354@32d238c` success：`sign-ledger` job 首次接线绿，脚本 `--check` 在 CI 生效。
 - `42421317428@4838bb2` failure：W-59 红路径预期（`verify:docs` 转 required 后内容缺失 `exit 2`），不作签字证据。
 - `42421496454@ea107f7`、`42421602469@c338edc` 均被 `42421684077@00b6640` 覆盖（`cancel-in-progress`）；已按第 16 条入台账，note 写明取消原因与覆盖 run，本行非签字。
+
+#### 4.7.48 gate-log 结构门禁与已签卡面拦截（2026-11-08）
+
+**一、结构门禁（`npm run verify:gate-log`）**
+
+- 脚本：`app/scripts/verify_gate_log.mjs`；CI 在 `sign-ledger` job（`fetch-depth: 0`）内执行。
+- 硬校验：
+  - 严格 12 列；按 RFC4180 解析后必须能规范重序列化（未加引号的逗号、坏引号、多余空白都会现形）。
+  - `card_id` 唯一且匹配 `S-xx.xx-xx`；`ledger_status`、Gate A/B/C、`gate_c_source` 前缀（`BA/dev/TL/CI/自动化/合并`）、`owner` 均在枚举内；`card_id`、`ledger_status`、`gate_a`、`owner`、`note` 必填。
+  - `sign_commit` 必须 40 位小写 hex 且 `git cat-file -e` 可解析；非空时 Gate C 必须 `PASS`、`gate_c_source` 与 `sign_scope` 非空。
+  - 与 `verify:sign` 对齐：若 `sign_commit` 是台账任一 `signed_sha` 的后代（即台账时代之后），必须已登记，且 `relation∈{equal,ancestor}`、`ancestor_check=0`、`conclusion=success`。历史签字（早于台账）只告警不阻断。
+- 逗号规则：**允许逗号，但必须在引号内**；选它而不是「禁止逗号」的理由见第三节。
+- 数据修复：12 张「仅文字」行不再写 `sign_commit`/`sign_scope`（`S-03.04-01` 及 11 张新行）；`S-09.01-01` 的 Gate B 签字 `56c576c` 从 `sign_commit` 移入 note（该列只记 Gate C 通过的卡级签字）；11 个历史短 SHA 补全为 40 位。修后 45 行 / 45 张卡，15 张签字行全部 Gate C=`PASS`。
+- 红路径实测：未加引号的逗号 → 列数/规范形式红；Gate 值改成 `OK` → 枚举红；40 位 SHA 改回 7 位 → 红。还原后绿。
+
+**二、已签卡面拦截（`npm run verify:sign-impact`）**
+
+- 口径：已签卡面**只允许 BA 改**；提交必须带 `Sign-Invalidates: <卡号,...>`，与工具实算完全一致；TL 在批次边界重签。
+- 机制：`app/scripts/verify_sign_impact.mjs` 解析故事卡分节，把 `git diff -U0` 的增删行映射到卡号，再叠加 `sign_scope` 里的文件路径命中；不需要维护「已签卡名单」。这与 `verify:constants` 同属一类：**集合由源文件现算，期望值不住进被校验的数据**。
+- 实测：`f547a00^..f547a00` 报出 4 张已签卡（`S-03.04-02`、`S-03.05-02`、`S-03.05-05` 卡面被改；`S-02.08-01` 因 `sign_scope` 含 `WorkbenchPage.tsx` 被同提交改动命中），缺 trailer 即红；`00b6640..59c8f43` 仅动 `docs/qa`，绿。
+- 限制：`sign_scope` 是自由文本，文件命中靠路径 token；新签字应在 `sign_scope` 写明受影响文件，否则只能靠卡面分节兜底。
+
+**三、逗号是否普遍**
+
+- 现状：29 个非空 `sign_scope` 中只有 1 个含 ASCII 逗号（`S-02.05-01` 的 `[2,500]`），属**个例**，不是普遍写法。
+- 仍选「引号内允许」而非「禁止逗号」：禁逗号靠人记，范围写法（`[2,500]`）和文件列表迟早再犯；RFC4180 引号 + 规范重序列化能在 CI 里机械拦截整类问题。代价是编辑器必须按 CSV 规则写引号，`--fix` 可规整。
 
 ---
 
