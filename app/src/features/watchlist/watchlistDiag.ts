@@ -234,7 +234,9 @@ export async function runWatchlistDiagnostics() {
     "WL-07",
     "render",
     "S-01.02-02",
-    confirmText.includes("（未分组）"),
+    confirmText.includes("未分组") &&
+      !confirmText.includes("（未分组）") &&
+      confirmText.includes(`${groupACount} 只标的`),
     `二次确认文案「${confirmText.replace(/\s+/g, " ").trim()}」`,
   );
   buttonByText("确认删除", confirm)?.click();
@@ -246,6 +248,20 @@ export async function runWatchlistDiagnostics() {
     .filter((item) => item.security === TINY_CODE)
     .every((item) => item.groupName === null);
   const ungroupedTab = groupTab("未分组");
+  // 双击确认：第二次删除同一组必须幂等成功，不弹错误条。
+  let secondDeleteOk = true;
+  try {
+    await ipc.deleteWatchGroup(GROUP_A);
+  } catch {
+    secondDeleteOk = false;
+  }
+  push(
+    "WL-08b",
+    "data",
+    "S-01.02-02",
+    secondDeleteOk,
+    `二次删除同一组返回 ${secondDeleteOk ? "成功（幂等）" : "失败"}`,
+  );
   push(
     "WL-08",
     "data",

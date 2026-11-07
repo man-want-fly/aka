@@ -507,8 +507,9 @@ impl AppCore {
             .state_db()
             .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
         let groups = db.watch_groups().map_err(AppError::from)?;
+        // 重复删除（双击确认）幂等成功：组已不存在即视为完成，不报错。
         let Some(group) = groups.iter().find(|g| g.name == name) else {
-            return Err(AppError::invalid_argument(format!("自选分组不存在：{name}")));
+            return Ok(());
         };
         if group.is_builtin {
             return Err(AppError::invalid_argument("内置分组「全部」不可删除"));

@@ -123,13 +123,25 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
   const renameGroup = () => {
     if (!renaming) return;
     const next = renaming.value.trim();
-    if (!next) return;
+    if (!next || next.length > 20) return;
     void runWrite(async () => {
       await ipc.renameWatchGroup(renaming.name, next);
       setRenaming(null);
       setActiveGroup(next);
     });
   };
+
+  const renameTrimmed = renaming?.value.trim() ?? "";
+  const renameError = renaming
+    ? renameTrimmed === ""
+      ? "分组名不能为空"
+      : groups.some(
+            (group) =>
+              group.name !== renaming.name && group.name.trim().toLowerCase() === renameTrimmed.toLowerCase(),
+          )
+        ? "已有同名分组"
+        : ""
+    : "";
 
   const deleteGroup = (name: string) => {
     void runWrite(async () => {
@@ -248,14 +260,23 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
             >
               <input
                 value={renaming.value}
+                maxLength={20}
                 onChange={(event) => setRenaming({ name: renaming.name, value: event.target.value })}
                 aria-label="重命名分组"
+                aria-invalid={renameError !== ""}
                 autoFocus
               />
-              <button type="submit">保存</button>
+              <button type="submit" disabled={renameError !== ""}>
+                保存
+              </button>
               <button type="button" onClick={() => setRenaming(null)}>
                 取消
               </button>
+              {renameError && (
+                <span className="wl-hint wl-hint--error" data-wl-rename-error>
+                  {renameError}
+                </span>
+              )}
             </form>
           ) : (
             <button type="button" onClick={() => setRenaming({ name: activeGroup, value: activeGroup })}>
@@ -282,7 +303,10 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
 
       {confirmDelete && (
         <div className="wl-confirm" data-wl-confirm>
-          <span>删除分组「{confirmDelete}」？组内标的将回到「（未分组）」</span>
+          <span>
+            删除分组「{confirmDelete}」？该组{" "}
+            {groups.find((group) => group.name === confirmDelete)?.count ?? 0} 只标的将回到「未分组」，不会从自选删除
+          </span>
           <button type="button" onClick={() => deleteGroup(confirmDelete)}>
             确认删除
           </button>

@@ -1963,3 +1963,8 @@ mark {
   padding: 2px 8px;
   cursor: pointer;
 }
+
+.wl-hint--error {
+  color: var(--warn);
+  font-size: 11.5px;
+}
