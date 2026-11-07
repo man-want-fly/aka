@@ -1349,6 +1349,38 @@ Gate C：`S-03.04-02` 按 BA `a846473` 的「可签」录入 PASS；`S-06.01-01`
 
 ---
 
+#### 4.7.28 dev B 返工五提交复核：三卡不签、词表以代码为准、证据结构未封死（2026-11-07）
+
+**对象**：`5d8dd5e`（默认第 8 项）、`45baea4`（词表）、`6056c78`（周月断言 + `bar_provenance`）、`1cf06dd`（证据包）、`a6b93e8`（`OBV` 升 `normal`）。
+
+**一、`APPROXIMATED`/`MISSING` 冲突：删对了，改卡面**
+- 我在 `8f0e2f1` 判的是「词表可预留、不写断言」，预留是指**日后可加**，不是「现在留一个不可达变体」。dev B 删掉两个变体，方向正确：枚举是**单根可达状态**的集合，`MISSING` 是区间级扫描结论、`APPROXIMATED` 是涨跌停推导（D-18），两者都写不回 `BarRow`。
+- 核实卡面：**不存在「已产出/预留」两段**。`S-07.05-02` 仍在两处把两标记列为单根标记——L5130 的 `quality_flags` 六项、L5159 的 pill 配色（`APPROXIMATED` 黄、`MISSING` 红）。所以不是「保留 vs 删除」之争，是**卡面漏改**。
+- 判：代码保持删除；改卡面两处，单根词表只留 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`。`S-07.05-01` 与 PRD 里 `APPROXIMATED`/`MISSING` 的用法属**报告行名**，不是 bar 标记，不动，但要在卡面写明这层区分。`W-61`。
+
+**二、`W-53` 结论够，补一句边界**
+- 断言在 `6056c78`，证据 check 挂 `AC-07.05-02（补1） / W-53`，卡面 L5151 写的是「周/月只能定位到聚合根，日线可到日」。这三件齐了，结论成立，`aggregate_bars` 不改。
+- 补一句：**首根无前值不判除权**（实现是 `prev.map(...).unwrap_or(false)`）。不补的话，用户会把「首根无标记」读成「没有除权」。
+- 这是用户可见说明，不属「已知限制（待填）」；「待填」二字不许留在卡上。
+
+**三、`S-07.05-02` 分层诚实，但卡不签**
+- meta 写 `ok:false`、`layers: {data:"7/7", render:"0/2"}`、`failed` 具名两条（`render:provenance-overlay`、`render:p9-example-jump-to-overlay`）、`scope` 写明 `app/src` 归 UI 负责人。这是诚实记法，不是条件交付。
+- **不签、不计交付，也不记条件交付**：卡的主 AC 是 `[渲染层]`，渲染 0/2 就是行为不在，按第 10 条记 `failed`。数据层 7/7 只在分层台账里记，不能当整卡进度。
+- `S-03.02-01`（数据 11/11、渲染 AC 不在本批）与 `S-07.05-01`（数据 11/11，但 `AC-07.05-01` 含 `[渲染层]`）同理：**均不签**。
+
+**四、`a6b93e8` 合规**
+- `manifest` 加 `volume` 输入、`D01` 升 `normal`、bench 快照重生成，**同一提交**，符合「注册表变更同提交重生成」。测试计数同步 44→45、61→60，防止污染。快照里 `D01` 为 `implemented=true`、`volume=true`。
+- `VOL` 仍不是指标 id，只是 `inputs.volume` 字段，口径未变；`W-54` 的解锁（`AC-03.01-05`）仍要等副图用例实跑，不能拿注册表绿当卡绿。
+
+**五、证据 meta：结构上**还**写得出「借分母」**
+- 现在是 `suite` 自由文本 + `commit` + 手填 `layers`；`checks` 里只有 `ac`/`layer`，没有 `card`。把别卡 check 塞进同一数组，仍然能通过——上次 `20/20` 就是这么来的。
+- 要封死，三件（`W-60`）：meta 增 `cardId`；每条 check 增 `card`；加 `verify:evidence` 断言 `set(check.card) == {meta.cardId}`，且 `layers` 由脚本从 `checks` 现算，**不许手填**。结构成立后才能说「写不出来」。
+
+**六、合并前置不放宽**
+- `main` 现在工作区脏（`Watchlist.tsx`、`watchlistDiag.ts`、`drawerDiag.ts`、`app.css`、PRD 未提交），`dev2` 落后 12 个 commit。三条前置不变：main 干净、已 push、CI 在 tip 绿（`67e8d40` 已绿）；dev B 先提交自己的工作区再 merge。
+
+---
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。
