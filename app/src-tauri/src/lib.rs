@@ -88,7 +88,8 @@ pub fn run() {
                 }
                 #[cfg(not(debug_assertions))]
                 {
-                    let _ = &args;
+                    // TEMP-W49-RED: 仅用于红路径取证，验证后必须还原，不合入。
+                    let _ = args.iter().any(|arg| arg == "--corrupt-db");
                     DiagFaults::default()
                 }
             };
