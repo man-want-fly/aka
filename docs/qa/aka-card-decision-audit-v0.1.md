@@ -540,6 +540,7 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - **台账列（每次签字一行，记入审计 §4.7.45 表）**：`run_id`、`head_sha`、`signed_sha`、`relation(equal|ancestor)`、`ancestor_check(0|非0)`、`conclusion`、`cancelled_runs`、`note`。`conclusion≠success` 或 `ancestor_check≠0` → 不得签。
     - **被取消 run 必须登记**：在 `cancelled_runs` 写 `run_id@sha`，`note` 写取消原因（`concurrency cancel-in-progress`）与覆盖它的 `run_id@tip`；不得留悬空记录，也不得把被取消 run 当成证据。
     - **不选 B/C/D**：B（main 不取消）与 C（按 sha 分组）都变成每次 push 全量跑，macOS runner 成本与排队上升；D（手工 rerun）在活跃推送期会与后续 push 互相取消，形成乒乓。A 的零额外 CI 成本是唯一可持续解。
+17. **两份台账分主（2026-11-08 写死）**：`docs/qa/aka-card-gate-log-v0.1.csv` 由 **TL 写**（Gate A/B/C、`gate_c_source`、`blocker`、`ledger_status` 的签字相关格、`sign_commit`、`sign_scope`），BA 与 dev **只读不写**；`docs/qa/aka-story-completion-ledger-v0.1.md` 由 **BA 写**（逐卡完成状态、人日、派生数），TL 与 dev **只读不写**。越权写入按无效处理：同一提交回退并在审计记一条。两份台账冲突时，完成状态与人日以 BA 台账为准，Gate 与签字以 gate-log 为准，不得互相替代。
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
 
@@ -1942,7 +1943,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 | `W-77` | `c111f5f` | 卡 `L1156`–`L1167` 参数表回抄 + `AC-02.05-03（补1）` 双框 + `model.ts` MA 一行 | 签 |
 
 - `S-02.05-01` 的 Gate 行在 `c111f5f` 重签：Gate A/B 沿用结论但卡面已改，故同 commit 重新确认；Gate C 来源改为 `dev c111f5f + s20501Diag（11/11）`。技术决策未变，仅范围/呈现回抄 `ParamSpec`。
-- `S-03.04`、`S-03.06` 在 `gate-log` 无行（未交付卡），签字以本表 + 工单为准，不补造卡行。
+- `S-03.04`、`S-03.06` 的缺行按 §4.7.47 补齐（一卡一行）：`W-75` 的 15 张卡全部有行，`W-76` 落 `S-03.06-04`；`W-72` 无卡面改动，不补卡行。
 
 **三、制度第 16 条（CI 包含性口径，选 A；原误写第 15 条，重号已改）**
 
@@ -1982,6 +1983,32 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - **批前欠账（不占卡容量，必须先进场）**：① 制度 15/16 改号（本轮已落）；② `verify:sign` 脚本与台账（本轮已落，CI 首次接线需一个绿 run 确认）。
 - **随批做的欠账**：dev A 的 `W-59`（`verify:docs` 转 required，先红一次）与 `W-65`（260ms 红路径）列为本批先做项，做完再开三张新卡；BA 的 `W-73` 三项归属收口随下一批 BA 内容页交付一并复核，不阻塞 dev。
 - **不进本批**：`S-03.01-01`、`S-03.03-01`、`S-03.03-03`、`S-08.02-04` 仍在 Blocked/Blocked-AC，先解 Gate A/C，不占开发容量。
+
+#### 4.7.47 台账分主、`S-02.05-01` 陈留备注与 W-75 缺行补齐（2026-11-08）
+
+**一、分主写死（制度第 17 条）**
+
+- `aka-card-gate-log-v0.1.csv` = **TL 写**，BA / dev 只读；`aka-story-completion-ledger-v0.1.md` = **BA 写**，TL / dev 只读。冲突时完成状态与人日以 BA 台账为准，Gate 与签字以 gate-log 为准。
+- 因此 `db0bfa1` 对 `S-02.05-01` 写 `gate_a/b/c`、`gate_c_source`、`sign_commit`、`sign_scope` **合规**，不属越权；BA 指出「BA 不直接写 gate-log」与我此前口头说的「台账只由 BA 写」两句都只对一半，按本条统一。
+- 同次核对发现两处数据问题，已修：① 该行 `sign_scope` 含 `[2,500]` 的逗号未加引号，CSV 被拆成 13 列；② `gate_c_source` 与 `blocker` 错位（来源写进了 `blocker`，`gate_c_source` 留成 `BA c111f5f`）。修正后 `gate_c_source=dev c111f5f + s20501Diag（11/11）`、`blocker` 为空。
+
+**二、`S-02.05-01` 陈留备注**
+
+- 删除「台账待 BA 升已交付（W-38：11→13 张 / 36.5→42.5）」。
+- 改为已结清实际数：`v0.23（2b638fb）已交付 19 张 / 54.5 人日，剩余 55 张 / 153.4 人日（25.7% / 26.2%）；19+7+4+8+10+1+25=74`。
+- `workorder` 补 `W-72;W-77`，`sign_scope` 补 W-72 参数去夹取；`S-02.05-01` 仍是本批唯一有完整 Gate 行的卡。
+
+**三、缺行口径：一卡一行，不按工单级合并**
+
+- 理由：gate-log 的主键是 `card_id`，Gate A/B/C 与 `sign_commit` 都是卡级；工单级一行无法承载多卡 Gate 状态，会让「签了但没有 Gate」的卡藏在 note 里。工单级签字只在**无卡面改动**时保留在审计 §4.7.45 表。
+- `W-75` 实测扫到 **15 张卡**（`S-03.04-01/02/03`、`S-03.05-01`–`08`、`S-03.06-01`–`04`）：已有 4 行（`S-03.04-01`、`S-03.04-02`、`S-03.05-02`、`S-03.05-05`）追加 W-75 备注并把签字重绑 `c111f5f`（`f547a00` 改卡面后原签失效）；缺的 11 行补齐，`sign_scope` 明确写「仅 W-75 错误码文字（非卡交付、不改 Gate）」。`ledger_status` 按 BA 台账/index 原状，不因文字签字升交付。
+- `W-76` 对应 `S-03.06-04`：补行，`workorder=W-75;W-76`，注明 `AC-03.06-17` 与卡 `L3364`/`L3371`/`L3395` 统一 `E_PARAM_ORDER`。
+- `W-77` 对应 `S-02.05-01`：已在原行更新，不另开。
+- `W-72` 无卡面改动（代码与 `s20501Diag`），不补卡行；签字以 §4.7.45 工单表为准，并在 `S-02.05-01` 的 `sign_scope` 留痕。
+
+**四、BA 交付确认**
+
+- 逐卡台账 v0.23（`2b638fb`）：四单统一 `c111f5f`；`W-73` 三项收口（④ PRD 追溯标注 + index 补行、⑤ 冻结件维持冻结不阻塞、⑥ 五项门禁全 PASS）已收。gate-log 只读该台账，不反向改数。
 
 ---
 
