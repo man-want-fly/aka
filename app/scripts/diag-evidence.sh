@@ -331,6 +331,45 @@ status = subprocess.check_output(
 )
 dirty = bool(status.strip())
 now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).isoformat(timespec="seconds")
+checks = d.get("checks", [])
+card_order = []
+card_stats = {}
+for check in checks:
+    card = check.get("card")
+    if not card:
+        continue
+    if card not in card_stats:
+        card_stats[card] = {"passed": 0, "total": 0, "layers": {}}
+        card_order.append(card)
+    stat = card_stats[card]
+    stat["total"] += 1
+    if check.get("passed"):
+        stat["passed"] += 1
+    layer = check.get("layer", "?")
+    passed, total = stat["layers"].get(layer, (0, 0))
+    stat["layers"][layer] = (passed + (1 if check.get("passed") else 0), total + 1)
+
+
+def layer_text(stat):
+    return {key: f"{passed}/{total}" for key, (passed, total) in sorted(stat["layers"].items())}
+
+
+result = {"ok": d.get("ok"), "blocked": d.get("blocked", [])}
+if card_order:
+    primary = card_order[0]
+    result["card"] = primary
+    result["layers"] = layer_text(card_stats[primary])
+    result["otherCards"] = [
+        {
+            "card": card,
+            "checks": f"{card_stats[card]['passed']}/{card_stats[card]['total']}",
+            "layers": layer_text(card_stats[card]),
+        }
+        for card in card_order[1:]
+    ]
+else:
+    result["layers"] = d.get("layers", {})
+
 meta = {
     "suite": d.get("suite", ""),
     "label": label,
@@ -350,7 +389,7 @@ meta = {
         if scan_file
         else None
     ),
-    "result": {"ok": d.get("ok"), "layers": d.get("layers", {}), "blocked": d.get("blocked", [])},
+    "result": result,
 }
 json.dump(meta, open(meta_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 print(f"已归档：{evidence_path}")

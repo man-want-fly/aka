@@ -1,0 +1,23 @@
+{
+  "deadline": "2026-11-22",
+  "note": "W-68 旧格式冻结：按 sha256 锁死，改动一字节即红；截止后缺结构化归属一律红。仅允许尚未迁移的历史证据。",
+  "files": {
+    "ac020401-cross-page-evidence.json": "5ef913e3914397b952299f71af4e74b93985af7c6669ce5e2bc5c84005c0f835",
+    "red-wl23c4-evidence.json": "8d1c3887b30278b7a5f19321ac4cb8a1a7e7663ef43bd79a10afcd349be17308",
+    "s0102-watchlist-empty-evidence.json": "9e1275f5b8e86e60aee3a3f568e9d83657c93e1e30ca0a6f5b107f9714534fae",
+    "s0102-watchlist-evidence.json": "ea6af085b7bf3ef1fc0f0e6c651f57de869ec64a139946576582c48ac0cc1030",
+    "s0102-watchlist-readonly-evidence.json": "6a9e0047ca2e2152936c928ab4d5e32aa5a1fbca19cf716a6ede6404081f0b0b",
+    "s010201-star-evidence.json": "2f15767824eb9f89f4fd6f93a4f85db34921c2dce9068696553975a0cf74fa34",
+    "s03010-evidence.json": "1dd7e5f5350546afc16355e299a303b51521a3243ea161adb594a16fc3a30323",
+    "s030201-favorites-evidence.json": "b5ab2f7d4c597ef31dec1b6dfc41f78c25368be2004318160046efe7341a7976",
+    "s0602-display-evidence.json": "04b87a535f19ada8366b2909110633628e582c6e60efb65f5deabc60ece63c05",
+    "s070501-quality-evidence.json": "534c27aed85618eb88d1c4dd9cb63606cd6b698b4f9d9f7306f96b965ebb7a0d",
+    "s070502-provenance-evidence.json": "35d4e044d92be750b2493981410b985ed1ddede8f947b02754dd8a26205ea8f0",
+    "s080204-evidence.json": "71b64347254fb31827a9ee87f2ce7d617360e6f400da846da76e34dda7d100e1",
+    "s20502-evidence.json": "9e71db539c996d0ee3cd3d12af074df06c98ed101026dcea8795144c4719f20f",
+    "s20502-restart-evidence.json": "244b908455e87afae6fef383c692a36b9cc453891c2909fc0978503cb4c18a0c",
+    "s20502-restart-merged.json": "47d2d00437a1238ff95da8ba04c7733a6877037d059ad94614cc5fb7ec4c7722",
+    "s20502-restart-phase-a.json": "e553038e91b01ca52e9f66122281c85c2f2de32a90b916c22c05931ace2594d9",
+    "s207-evidence-20261107.json": "6a1adba892cfb37a1eda9e4cc0fccfcc767550e91aa0333b88d84d6276e2a7cb"
+  }
+}

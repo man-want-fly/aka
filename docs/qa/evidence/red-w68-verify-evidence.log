@@ -1,0 +1,46 @@
+W-68 verify:evidence 负例自测
+时间：2026-11-08（Asia/Shanghai）
+对象：app/scripts/verify_evidence.mjs（--dir 指向独立 fixture 目录，不污染真实证据）
+基线：五个负例各自单独 exit=1，互不兜底；最后在真实证据目录恢复为 0 失败。
+
+[负例 1] 塞一条他卡 check（未在 otherCards 声明）
+fixture：case1-extra-card，向 corrupt 证据追加 card=S-03.01-04 的 check
+$ node scripts/verify_evidence.mjs --dir=/tmp/w68-cases/case1-extra-card
+FAIL s0102-watchlist-corrupt-evidence.json: check 含未声明的卡 S-03.01-04
+FAIL s0102-watchlist-corrupt-evidence.json: 声明分母合计 11 != checks.length 12（不许跳过现算）
+证据归属门禁：卡集 74 张，扫描 1 份证据，失败 2 项，警告 0 项（旧格式冻结 0 份，截止 2026-11-22）
+exit=1
+
+[负例 2] metaTotal 改错
+fixture：case2-metatotal，把 corrupt meta 的 render 从 1/1 改成 2/2
+$ node scripts/verify_evidence.mjs --dir=/tmp/w68-cases/case2-metatotal
+FAIL s0102-watchlist-corrupt-evidence.json-meta: result.layers={"data":"1/1","render":"2/2"} 与 checks 现算={"render":"1/1","data":"1/1"} 不一致
+FAIL s0102-watchlist-corrupt-evidence.json: 声明分母合计 12 != checks.length 11（不许跳过现算）
+证据归属门禁：卡集 74 张，扫描 1 份证据，失败 2 项，警告 0 项（旧格式冻结 0 份，截止 2026-11-22）
+exit=1
+
+[负例 3] layers 乱填（分母总数不变）
+fixture：case3-layers，把 s20401 meta 的 render 从 7/7 改成 6/7
+$ node scripts/verify_evidence.mjs --dir=/tmp/w68-cases/case3-layers
+FAIL s20401-evidence.json-meta: result.layers={"data":"1/1","render":"6/7","runtime":"1/1"} 与 checks 现算={"data":"1/1","render":"7/7","runtime":"1/1"} 不一致
+证据归属门禁：卡集 74 张，扫描 1 份证据，失败 1 项，警告 0 项（旧格式冻结 0 份，截止 2026-11-22）
+exit=1
+
+[负例 4] 旧白名单文件改一个字节
+fixture：case4-legacy-byte，复制 s080204-evidence.json 后追加一个换行
+$ node scripts/verify_evidence.mjs --dir=/tmp/w68-cases/case4-legacy-byte
+FAIL s080204-evidence.json: 冻结白名单 hash 不符（文件被改动），旧格式不许借壳续命
+证据归属门禁：卡集 74 张，扫描 1 份证据，失败 1 项，警告 0 项（旧格式冻结 0 份，截止 2026-11-22）
+exit=1
+
+[负例 5] ac 写不存在的卡面锚点（workorder W-68 第 4 条）
+fixture：case5-ac-anchor，把 WL-23C1 的 ac 改成 S-08.02-04·导出五态（渲染层）
+$ node scripts/verify_evidence.mjs --dir=/tmp/w68-cases/case5-ac-anchor
+FAIL s0102-watchlist-corrupt-evidence.json: WL-23C1 的卡面锚点 ac=S-08.02-04·导出五态（渲染层） 在卡面全文不存在
+证据归属门禁：卡集 74 张，扫描 1 份证据，失败 1 项，警告 0 项（旧格式冻结 0 份，截止 2026-11-22）
+exit=1
+
+[恢复] 真实证据目录
+$ npm run verify:evidence
+证据归属门禁：卡集 74 张，扫描 19 份证据，失败 0 项，警告 17 项（旧格式冻结 17 份，截止 2026-11-22）
+exit=0
