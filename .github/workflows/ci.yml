@@ -18,6 +18,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # 制度第 16 条：签字台账的 relation / ancestor_check 必须由脚本实算，
+  # 故本 job 需要完整历史（fetch-depth: 0），单独跑在 ubuntu，避免 macOS runner 成本。
+  sign-ledger:
+    name: 签字覆盖台账（制度第 16 条）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: verify:sign --check（台账列与实算不一致即红）
+        run: node app/scripts/verify_sign_coverage.mjs --check
+
   build-test:
     name: macOS build / test / golden
     runs-on: macos-latest

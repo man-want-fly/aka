@@ -533,9 +533,10 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
 14. **批次边界复核（2026-11-07 改节奏，替代逐条复核）**：TL 只在这两个时点进场——dev 报**一批卡**完成、BA 报**一批内容页**完成；其余时间不逐条复核、不打断开发，中间态「卡做完但未签」的堆积是预期的，不提前提醒。
     - 进场时仍一次给全三项：**待签清单**、**每项绑的 `sign_commit` + `sign_scope`**、**不签的理由**；签字规则一条不放松（未绑 commit 不认、签后被改即失效）。
     - 当前批次边界：**dev** `S-02.08-01` → `W-33` → `W-34`（含已完成的 `W-32`、`S-02.05-01`）；**BA** 8 页内容页 + 5 个中文别名登记。本批进场时一并补 `S-09.01-01` 的 Gate 状态（该卡尚无 Gate A/B/C 记录）。
-15. **CI 绿 run 与被签 commit 的包含关系（2026-11-08 起，替代「每个 commit 各得一次绿 run」）**：`main` 上 `concurrency: group: ci-${{ github.ref }}` + `cancel-in-progress: true`，同 ref 新推送会取消在跑 run，机制上做不到「每个中间 commit 各有一个绿 run」，故签字口径改为——
+15. **开发只报数字与证据，不改台账**（2026-11-07 已判，见 §4.7.20 判 3）：台账 diff 只能由 BA 产生；开发可以在提交说明里给「建议数字」，进台账必须经 BA 重算。本条的原始引用见 §4.7.20，原编号即 15，现补入本清单，避免只存在于 changelog。
+16. **CI 绿 run 与被签 commit 的包含关系（2026-11-08 起，替代「每个 commit 各得一次绿 run」）**：`main` 上 `concurrency: group: ci-${{ github.ref }}` + `cancel-in-progress: true`，同 ref 新推送会取消在跑 run，机制上做不到「每个中间 commit 各有一个绿 run」，故签字口径改为——
     - **判定式**：绿 run 的 `headSha` 必须**包含**被签 commit，即 `git merge-base --is-ancestor <signed_sha> <run.headSha>` 退出码为 `0`。`signed_sha == headSha` 时 `relation=equal`，**自动豁免**该检查；其余必须是 `ancestor`。
-    - **机器校验**：签字前必须实际执行上述命令，并把退出码写入台账 `ancestor_check`；不许口头说「它在里面」。
+    - **机器校验（脚本产出，不许手改）**：`relation` 与 `ancestor_check` 由 `npm run verify:sign`（`app/scripts/verify_sign_coverage.mjs`）读取台账后实算 `git merge-base --is-ancestor` 并写回；CI 用校验模式跑，台账列与实算不一致即红。人手只填 `run_id`、`head_sha`、`signed_sha`、`conclusion`、`cancelled_runs`、`note`，填 `relation`/`ancestor_check` 视为伪造证据。
     - **台账列（每次签字一行，记入审计 §4.7.45 表）**：`run_id`、`head_sha`、`signed_sha`、`relation(equal|ancestor)`、`ancestor_check(0|非0)`、`conclusion`、`cancelled_runs`、`note`。`conclusion≠success` 或 `ancestor_check≠0` → 不得签。
     - **被取消 run 必须登记**：在 `cancelled_runs` 写 `run_id@sha`，`note` 写取消原因（`concurrency cancel-in-progress`）与覆盖它的 `run_id@tip`；不得留悬空记录，也不得把被取消 run 当成证据。
     - **不选 B/C/D**：B（main 不取消）与 C（按 sha 分组）都变成每次 push 全量跑，macOS runner 成本与排队上升；D（手工 rerun）在活跃推送期会与后续 push 互相取消，形成乒乓。A 的零额外 CI 成本是唯一可持续解。
@@ -1943,12 +1944,44 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - `S-02.05-01` 的 Gate 行在 `c111f5f` 重签：Gate A/B 沿用结论但卡面已改，故同 commit 重新确认；Gate C 来源改为 `dev c111f5f + s20501Diag（11/11）`。技术决策未变，仅范围/呈现回抄 `ParamSpec`。
 - `S-03.04`、`S-03.06` 在 `gate-log` 无行（未交付卡），签字以本表 + 工单为准，不补造卡行。
 
-**三、制度第 15 条（CI 包含性口径，选 A）**
+**三、制度第 16 条（CI 包含性口径，选 A；原误写第 15 条，重号已改）**
 
 - 机制不再要求「每个 commit 各得绿 run」：绿 run 的 `headSha` 包含被签 commit 即可。判定式固定为 `git merge-base --is-ancestor <signed_sha> <run.headSha>`（退出码 0）；`signed_sha == headSha` 记 `relation=equal`，自动豁免。
 - 台账列：`run_id`、`head_sha`、`signed_sha`、`relation(equal|ancestor)`、`ancestor_check(0|非0)`、`conclusion`、`cancelled_runs`、`note`。`conclusion≠success` 或 `ancestor_check≠0` 不得签。
 - 被取消 run 一律按上表登记原因与覆盖 run，禁止当作证据、禁止留悬空。
 - 不选 B/C/D：B、C 都是每次 push 全量跑，runner 成本与排队上升；D 在活跃推送期会与后续 push 互相取消，形成乒乓。
+
+#### 4.7.46 制度第 16 条脚本化与下一批分配（2026-11-08）
+
+**一、第 15/16 条边界（核实际条文后）**
+
+- **第 15 条 = 开发只报数字与证据，不改台账**：原条未丢，本轮补入制度清单；它管「谁改台账」，不涉及 CI 覆盖。
+- **第 16 条 = CI 绿 run 必须包含被签 commit**：新开，不并入 15。§4.7.45 原写「制度第 15 条」是笔误，已连同工单收尾、本节引用一起改为 16。
+- 两条不合并的理由：15 是**写入权限**，16 是**证据充分性**；合并会让「开发改台账」与「CI 覆盖不足」共用一个编号，读条文时无法判断违反的是哪一类。
+
+**二、脚本化判定：必须做，且是批前欠账**
+
+- 落地：`app/scripts/verify_sign_coverage.mjs`、台账 `docs/qa/aka-ci-sign-ledger-v0.1.csv`、`npm run verify:sign`（写回）/ `verify:sign:check`（只校验）、CI 独立 `sign-ledger` job（`fetch-depth: 0`，ubuntu）。
+- 写回列：`relation`、`ancestor_check` 由脚本实算 `git merge-base --is-ancestor`；人手填这两列在 `--check` 下即红。
+- 另有两条硬红：`conclusion≠success` 的 run 不得作为签字行（被取消 run 只登记在覆盖行的 `cancelled_runs`，`note` 必须点名取消 run 与被谁覆盖）；commit 解析不到直接红（不可判定不得视为通过）。
+- 红路径实测：把 `ancestor_check` 改成 `9` → `exit 1`；把 `conclusion` 改成 `cancelled` → `exit 1`；还原后 `--check` 绿（3 行）。本轮 `42418865354@c111f5f`（equal）、`42418383503@b03b2f4` 覆盖 `580a991`/`8332668` 已入台账。
+- 结论：**脚本未绿之前不接受任何新签字**；它与改号不同，改号是文档更正、不阻塞开发，脚本是第 16 条的生效前提。
+
+**三、下一批分配（第 14 条，只在批次边界进场）**
+
+| 线 | 卡 | 说明 |
+|---|---|---|
+| dev A | `S-02.06-01` 按需计算与缓存 | P0，`D-06`；与已签的参数/工作台同域 |
+| dev A | `S-02.07-01` 图表交互与数据不足 | P0；缩放/数据不足边界 |
+| dev A | `S-07.05-03` 溯源浮层 | `W-62` 已立项、卡面归 dev A；承接 `S-07.05-02` 渲染缺口 |
+| dev B | `S-07.01-01` 数据源状态 | P0；数据源可用性口径 |
+| dev B | `S-07.04-01` 回填方案 | P0；手动回填边界 |
+| dev B | `S-07.05-01` 数据质量报告证据包 | `W-53`；6 行检查 + 过期前后快照 |
+| dev B | `S-08.01-02` 指标空态与搜索范围 | P0；与 `W-73` 的 `AC-08.01-05` 无依赖，不互相卡 |
+
+- **批前欠账（不占卡容量，必须先进场）**：① 制度 15/16 改号（本轮已落）；② `verify:sign` 脚本与台账（本轮已落，CI 首次接线需一个绿 run 确认）。
+- **随批做的欠账**：dev A 的 `W-59`（`verify:docs` 转 required，先红一次）与 `W-65`（260ms 红路径）列为本批先做项，做完再开三张新卡；BA 的 `W-73` 三项归属收口随下一批 BA 内容页交付一并复核，不阻塞 dev。
+- **不进本批**：`S-03.01-01`、`S-03.03-01`、`S-03.03-03`、`S-08.02-04` 仍在 Blocked/Blocked-AC，先解 Gate A/C，不占开发容量。
 
 ---
 

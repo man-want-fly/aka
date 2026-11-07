@@ -10,6 +10,8 @@
     "verify:evidence": "node scripts/verify_evidence.mjs",
     "verify:format": "node scripts/verify-number-format.mjs",
     "verify:r03": "node scripts/verify-r03-three-state.mjs",
+    "verify:sign": "node scripts/verify_sign_coverage.mjs",
+    "verify:sign:check": "node scripts/verify_sign_coverage.mjs --check",
     "verify:docs": "node scripts/verify_indicator_docs.mjs",
     "verify:index-pd": "node scripts/verify_index_estimate_pd.mjs",
     "typecheck": "tsc --noEmit",
