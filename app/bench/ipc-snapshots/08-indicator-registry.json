@@ -37,7 +37,7 @@
             "key": "period",
             "kind": "int",
             "label": "周期",
-            "max": 200,
+            "max": 500,
             "min": 2,
             "step": 1
           }
@@ -76,7 +76,7 @@
             "key": "period",
             "kind": "int",
             "label": "周期",
-            "max": 200,
+            "max": 500,
             "min": 2,
             "step": 1
           }
@@ -115,7 +115,7 @@
             "key": "period",
             "kind": "int",
             "label": "周期",
-            "max": 200,
+            "max": 500,
             "min": 2,
             "step": 1
           }
@@ -154,7 +154,7 @@
             "key": "period",
             "kind": "int",
             "label": "周期",
-            "max": 200,
+            "max": 500,
             "min": 2,
             "step": 1
           }
@@ -193,7 +193,7 @@
             "key": "period",
             "kind": "int",
             "label": "周期",
-            "max": 200,
+            "max": 500,
             "min": 2,
             "step": 1
           }
