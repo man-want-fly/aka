@@ -1486,6 +1486,25 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 5. 产物层单一来源：`verify-diag-gate.mjs --emit-symbols` 输出符号表，`ci.yml` 循环读取，删掉第二份手写列表；`ci.yml` 的 `dist` 零命中 `aka.diag.export` 断言一并复验（`W-63` 遗留）。
 6. **红路径重跑一次**：任一诊断命令移出 `cfg` 并注册进 release handler，源码层与产物层必须同时红；贴 run id。派生死后没有可删的行，**不再要求重跑「删名单」漏项**。
 7. **验收**：红/绿两份 run；`--emit-symbols` 输出与源码实际出现逐条一致；`W-58` 按新方式重签。
+8. **`WL-23-file` 绑定到具体支**：至少 `C1`（已复制+已下载）与 `C2`（仅已下载）各一条，不许全局一条把四种结果混在一起。
+9. **文件断言加时间窗与内容校验**：`mtime > runAt`，并解析 JSON 校验 `code`/`message`/`traceId`；禁止按 mtime 取最新——`aka-diagnostics-xxx(1).json` 残档现在也能过。
+10. **`WL-23C4` 补一次红**：去掉 `both-fail` 注入后该条必须失败，贴 run id；随后还原。
+
+### W-65（dev A）指标抽屉时延口径：上限压到 200ms，超时单条红且写 evidence
+
+**背景**：卡面产品口径 200ms，测试等待上限现为 300ms，250ms 的产品也能过；且超时整套中止、不写 evidence，失败无记录。
+
+1. 等待上限压到 **200ms**。若 CI 抖动确有需要，最多放宽到 250ms，并同时在卡面写「产品承诺 200ms、验收上限 250ms（含调度余量）」；**300ms 不接受**。
+2. 超时改为**单条 `failed`**：照常写 evidence、退出码非零，不许整套中止后什么都不留。
+3. **验收**：人为把过滤延到 260ms，该步必须红且 evidence 里有对应失败条；还原后绿。
+
+### W-66（BA）`S-08.02-04` 卡面补导出四态限定句
+
+**背景**：卡面没有任何 AC 承诺「导出四态各自可达」，而 `WL-23C1..C4` 被挂到 `AC-08.02-05（补1）`，读起来像失败路径已验证。
+
+1. 在 `S-08.02-04` 的「导出诊断」段补：「四种状态文案各自正确渲染；`ok`/`no-download`/`both-fail` 由 dev-only 注入，注入在 release 不生效，不代表失败路径已真实发生。」
+2. **不新增 AC、不涨分母**；断言映射改到卡面锚点 `S-08.02-04·导出四态（渲染层）`，由 dev A 在 `W-64` 同步改。
+3. **验收**：`verify:docs` / `verify:constants` 绿；索引 74 / 207.9 不变。
 
 ### W-59（dev A）`verify:docs` 转 required
 
@@ -1517,7 +1536,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 2. **拆断言**：三/四支各自判定，禁止析取。期望：① 复制成功 → 「已复制…并下载」；② 复制成功、下载被拦 → 「已复制（下载被拦截）」；③ 剪贴板不可用 → 「已下载」；④ 两者都失败 → 「导出失败」且带错误码与追踪号。
 3. **落盘也要证**：「已下载」不能只看 `anchor.click()` 没抛；断言 `fs.stat` 到文件、大小 > 0。
 4. **验收**：④ 支必须先红一次（去掉注入后断言失败），再绿；其余三支各有一条独立断言；`verify:diag-gate` 绿。
-5. **TL 签（2026-11-08，见 §4.7.31）**：`sign_commit = a9745e9`；`sign_scope = app/src/lib/diagExport.ts`、`app/src/components/Watchlist.tsx`、`app/src/features/watchlist/watchlistDiag.ts`、`app/scripts/diag-evidence.sh`。已核：四支各一条无 `||`、按整串相等比；注入为 `import.meta.env.DEV` 守卫、键名只在 `diagExport.ts`；「已下载」由 `stat` 核 `~/Downloads/aka-diagnostics-<trace>*.json` 且 `size>0` + `traceId` 匹配。`ci.yml` 的 `dist` 零命中断言不在签署范围，随 `W-64` 复验。
+5. **TL 签（2026-11-08，见 §4.7.31 / §4.7.32）：有条件签（渲染层），非全量 PASS。** `sign_commit = a9745e9`；`sign_scope = app/src/lib/diagExport.ts`、`app/src/components/Watchlist.tsx`、`app/src/features/watchlist/watchlistDiag.ts`、`app/scripts/diag-evidence.sh`。成立的是「四支文案各自正确渲染、无 `||`、注入 dev-only」；**不成立**的是「四条失败路径真会发生」——`ok`/`no-download` 直接设 `copied=true`、`both-fail` 直接设两支 false，只有下载是真调用。升级条件见 `W-64` 第 8–10 条；三条会改同两个文件，现签届时自动失效并重签。`ci.yml` 的 `dist` 零命中断言不在签署范围，随 `W-64` 复验。
 
 
 
@@ -1541,4 +1560,4 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）、**W-41**（blocked 归零 + 证据归档 + `WL-15` 改判据 + 格式化扫描）、**W-43**（白名单收窄 + `WL-10/10r` 归卡 + 缺项补证）必须一并落地；**W-45**（自选空态 / 损坏库页 / 移出失败文案）、**W-46**（只读与损坏库注入通道 + 星标证据入库）为 `S-01.02-01/02/03` 的收口前置；**W-49**（CI release 构建 + 注入符号断言，含红路径取证）把 W-47 的本地实测转为常设门禁（**W-49 已于当日作废，由 W-58 接手**：断言对象改为入口名并加源码级断言）；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。W-33 功能部分已签 `7cbad20`（说明文字见 **W-39**）；W-34 已签 `5131f89`（首跑 run `42355133312` 成功，红路径反例见 **W-39**）。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63/W-64）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；**`W-63` 已于 2026-11-08 签 `a9745e9`**；`W-58` 本实现不签、由 `W-64` 派生清单后重签；`W-59` 待落地。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63/W-64/W-65/W-66）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；**`W-63` 为「有条件签（渲染层）」`a9745e9`**，待 `W-64` 第 8–10 条落地后重签；`W-58` 本实现不签、由 `W-64` 派生清单后重签；`W-59`/`W-65`/`W-66` 待落地。
