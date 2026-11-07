@@ -66,6 +66,7 @@ pub fn run() {
             commands::get_bars,
             commands::indicator_registry,
             commands::indicator_manifest,
+            commands::dataset_manifest,
             commands::calc_indicators,
             commands::telemetry_dump,
             commands::market_snapshot,

@@ -68,4 +68,9 @@ pub trait DataProvider: Send + Sync {
     fn dataset_coverage(&self) -> Option<(Date, Date)> {
         None
     }
+
+    /// 数据集 manifest（S-02.08-01 页脚同源字段）；不支持或不提供时返回 `None`。
+    fn dataset_manifest(&self) -> Option<crate::dataset_manifest::DatasetManifest> {
+        None
+    }
 }

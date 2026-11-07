@@ -4,6 +4,7 @@ import type {
   BarsResponse,
   CalcRequest,
   CalcResponse,
+  DatasetManifestDto,
   DiagBuildInfo,
   GetBarsRequest,
   ManifestResponse,
@@ -60,6 +61,10 @@ export const ipc = {
   /** 指标目录唯一事实来源；生成指标列表/参数面板应优先用它。 */
   indicatorManifest: (): Promise<ManifestResponse> =>
     invoke<ManifestResponse>("indicator_manifest"),
+
+  /** S-02.08-01：数据集 manifest；provider 不提供时返回 null。 */
+  datasetManifest: (): Promise<DatasetManifestDto | null> =>
+    invoke<DatasetManifestDto | null>("dataset_manifest"),
 
   calcIndicators: (req: CalcRequest): Promise<CalcResponse> =>
     invoke<CalcResponse>("calc_indicators", { req }),

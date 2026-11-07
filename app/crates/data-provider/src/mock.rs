@@ -4,7 +4,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use async_trait::async_trait;
 
 use crate::date::Date;
+use crate::dataset_manifest::DatasetManifest;
 use crate::provider::{BarBatch, BarRequest, DataProvider, FactorBatch, SecurityMaster};
+use crate::sha256::sha256_hex;
+use crate::sim_dataset::canonical_csv;
 use crate::types::{
     Adjust, AdjustFactor, BarRow, Board, Capabilities, Health, Market, NotSupported, ProviderError,
     ProviderId, QualityFlag, RatePolicy, Security, Timeframe,
@@ -75,6 +78,8 @@ pub struct MockProvider {
     calendar: Vec<Date>,
     generated_at: i64,
     raw_cache: std::sync::Mutex<HashMap<String, std::sync::Arc<Vec<BarRow>>>>,
+    /// 全量数据集 manifest（S-02.08-01 页脚）；按需计算一次后缓存。
+    manifest: std::sync::OnceLock<crate::dataset_manifest::DatasetManifest>,
 }
 
 impl Default for MockProvider {
@@ -91,6 +96,7 @@ impl MockProvider {
             calendar,
             generated_at: now_epoch(),
             raw_cache: std::sync::Mutex::new(HashMap::new()),
+            manifest: std::sync::OnceLock::new(),
         }
     }
 
@@ -253,6 +259,34 @@ impl MockProvider {
         self.securities.iter().find(|s| s.code == code)
     }
 
+    /// 全量数据集摘要：按标的主表顺序拼接各自的规范 CSV（含表头）再取 sha256。
+    /// 页面不确定这条记录怎么来——它只消费 manifest，不自己算行数或区间。
+    fn build_dataset_manifest(&self) -> DatasetManifest {
+        let mut csv = String::new();
+        let mut rows = 0_u64;
+        for security in &self.securities {
+            // 取证样本（DIAG*、000300.SH）只在诊断进程里存在，不属于对外数据集，不能进 manifest
+            if is_diag_only(&security.code) {
+                continue;
+            }
+            if let Some(bars) = self.raw_bars(&security.code) {
+                rows += bars.len() as u64;
+                csv.push_str(&canonical_csv(&bars));
+            }
+        }
+        let sha = sha256_hex(csv.as_bytes());
+        DatasetManifest::build(
+            "sim",
+            fnv1a(MOCK_DATASET_ID),
+            &self.first_date().iso(),
+            &self.last_date().iso(),
+            rows,
+            "v1.0",
+            &sha,
+            self.generated_at,
+        )
+    }
+
     fn raw_bars(&self, code: &str) -> Option<std::sync::Arc<Vec<BarRow>>> {
         if let Some(cached) = self.raw_cache.lock().ok()?.get(code).cloned() {
             return Some(cached);
@@ -275,6 +309,14 @@ impl DataProvider for MockProvider {
     /// mock 数据集的 manifest 覆盖区间即日历首末日。
     fn dataset_coverage(&self) -> Option<(Date, Date)> {
         Some((self.first_date(), self.last_date()))
+    }
+
+    fn dataset_manifest(&self) -> Option<DatasetManifest> {
+        Some(
+            self.manifest
+                .get_or_init(|| self.build_dataset_manifest())
+                .clone(),
+        )
     }
 
     fn capabilities(&self) -> Capabilities {
@@ -432,6 +474,11 @@ fn build_calendar(start: Date, count: usize) -> Vec<Date> {
         cursor = cursor.next_day();
     }
     dates
+}
+
+/// 诊断专用样本：只随取证进程注入，不属于对外数据集。
+fn is_diag_only(code: &str) -> bool {
+    code.starts_with("DIAG") || code == "000300.SH"
 }
 
 fn build_securities() -> Vec<Security> {

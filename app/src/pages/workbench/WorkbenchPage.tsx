@@ -50,6 +50,8 @@ import {
 } from "../../features/workbench/diag";
 import { runS205Diagnostics } from "../../features/workbench/s205Diag";
 import { runS20501Diagnostics } from "../../features/workbench/s20501Diag";
+import { runS20801Diagnostics } from "../../features/workbench/s20801Diag";
+import { datasetSegments as buildDatasetSegments } from "../../features/workbench/datasetOverview";
 import { runS203Diagnostics } from "../../features/workbench/s203Diag";
 import { runS20202Diagnostics } from "../../features/workbench/s20202Diag";
 import { runS20101Diagnostics } from "../../features/workbench/s20101Diag";
@@ -66,11 +68,11 @@ import type {
   ManifestResponse,
   RegistryResponse,
   SecurityDto,
+  DatasetManifestDto,
 } from "../../lib/types";
 import {
   formatAmount,
   formatComputedMs,
-  formatDate,
   formatPct,
   formatPrice,
   formatSigned,
@@ -168,6 +170,9 @@ export function WorkbenchPage({
   const [securities, setSecurities] = useState<SecurityDto[]>([]);
   const [registry, setRegistry] = useState<RegistryResponse | null>(null);
   const [manifest, setManifest] = useState<ManifestResponse | null>(null);
+  // S-02.08-01：页脚 7 段唯一来源；不提供 manifest 时整段显示 —
+  const [datasetManifest, setDatasetManifest] = useState<DatasetManifestDto | null>(null);
+  const [shaCopied, setShaCopied] = useState(false);
   const units = useMemo(
     () =>
       Object.fromEntries(
@@ -403,6 +408,15 @@ export function WorkbenchPage({
   const [error, setError] = useState<AppError | null>(null);
   // 数据不足的内联提示按指标 id 归位，不上升为全局错误条
   const [calcNotices, setCalcNotices] = useState<Record<string, string> | null>(null);
+  // S-02.08-01：7 段全部派生自 manifest + 当前口径；顺序由 DATASET_SEGMENTS 固定
+  const datasetFooter = buildDatasetSegments({
+    manifest: datasetManifest,
+    adj,
+    timeframe,
+    computedMs: calc?.computedMs ?? null,
+    cacheHit: calc?.cacheHit ?? null,
+    loading,
+  });
   const restartStarted = useRef(false);
   const watchlistStarted = useRef(false);
   const generation = useRef(0);
@@ -442,6 +456,56 @@ export function WorkbenchPage({
       diagWaiters.current.push(wrapped);
     });
   }, []);
+
+  // S-02.08-01：页脚只消费 manifest 下发的字段；取不到就整段显示 —，不在前端补默认数字
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let alive = true;
+    ipc
+      .datasetManifest()
+      .then((meta) => {
+        if (alive) setDatasetManifest(meta);
+      })
+      .catch(() => {
+        /* manifest 取不到不阻塞行情主流程，页脚降级为 — */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const copyDatasetSha = useCallback(async () => {
+    const sha = datasetManifest?.sha256;
+    if (!sha) return;
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(sha);
+        copied = true;
+      }
+    } catch {
+      /* 走 textarea 兜底 */
+    }
+    if (!copied) {
+      // wry 的 custom protocol 不一定是 secure context，剪贴板 API 可能不可用
+      const area = document.createElement("textarea");
+      area.value = sha;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      try {
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      }
+      area.remove();
+    }
+    if (!copied) return;
+    setShaCopied(true);
+    window.setTimeout(() => setShaCopied(false), 1_500);
+  }, [datasetManifest]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -826,6 +890,34 @@ export function WorkbenchPage({
       alive = false;
     };
   }, [manifest, registry, securities, defaultParams]);
+
+  // S-02.08-01 数据集概览取证：等 manifest 到位后再跑，避免把 null 当缺字段
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !datasetManifest) return;
+    if (window.sessionStorage.getItem("aka.s20801.diag.done") === "1") return;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s20801" || !alive) return;
+      window.sessionStorage.setItem("aka.s20801.diag.done", "1");
+      setDiagStatus("S-02.08-01 取证：运行中");
+      try {
+        await new Promise((resolve) => window.setTimeout(resolve, 600));
+        const report = await runS20801Diagnostics({ manifest: datasetManifest });
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-02.08-01 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_S20801_EVIDENCE__ = report;
+      } catch (err) {
+        setDiagStatus(`S-02.08-01 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, datasetManifest]);
 
   // S-02.03-01 副图取证：AKA_DIAG_TARGET=s203 时自跑；两轮验证「布局/拖拽」与「重启恢复」
   useEffect(() => {
@@ -1771,50 +1863,42 @@ export function WorkbenchPage({
           />
         </div>
 
-        <footer className="status">
-          <span>
-            <i className="dot" />
-            模拟数据 · 非真实行情
-          </span>
-          <span>
-            provider <b>{bars?.provenance.provider ?? "mock"}</b>
-          </span>
-          <span>
-            dataset <b>{bars?.provenance.datasetId ?? "sim-default"}</b>
-          </span>
-          <span>
-            版本 <b>{bars?.provenance.dataVersion ?? "sim-v1.0"}</b>
-          </span>
-          <span>
-            引擎 <b>{calc?.engineVersion ?? "aka-engine-0.1.0"}</b>
-          </span>
-          <span>
-            目录 <b>{manifest ? `${manifest.indicators.length} 条 / schema v${manifest.schemaVersion}` : "—"}</b>
-          </span>
-          <span data-wb-returned={bars?.bars.length ?? 0}>
-            区间 <b>{bars ? `${bars.range.returnedFrom ?? "—"} ~ ${bars.range.returnedTo ?? "—"}` : "—"}</b>
-            {bars?.range.clamped ? "（已吸附）" : ""}
-          </span>
-          <span>
-            样本 <b>{bars?.totalBars ?? 0}</b>
-          </span>
-          <span>
-            计算 <b>{calc ? formatComputedMs(calc.computedMs) : "—"} ms</b>
-          </span>
-          <span>
-            缓存 <b>{calc ? (calc.cacheHit ? "命中" : "未命中") : "—"}</b>
-          </span>
-          <span>
-            渲染{" "}
-            <b>
-              {viewport
-                ? viewport.end - viewport.start + 1 >= (bars?.bars.length ?? 0)
-                  ? "全部"
-                  : `${viewport.end - viewport.start + 1} 根`
-                : "—"}
-            </b>
-          </span>
-          <span className="mono">{bars ? formatDate(lastBar?.date ?? "") : ""}</span>
+        <footer className="status dataset-status" data-dataset-overview="1">
+          {datasetFooter.map((segment) =>
+            segment.key === "version" ? (
+              <button
+                key={segment.key}
+                type="button"
+                className="dataset-seg dataset-seg--sha mono"
+                data-dataset-seg={segment.key}
+                data-dataset-missing={segment.missing ? "1" : "0"}
+                title={
+                  segment.missing
+                    ? "manifest 字段缺失"
+                    : `数据集 ${datasetManifest?.datasetId ?? ""} · 点击复制完整 sha256`
+                }
+                disabled={segment.missing}
+                onClick={copyDatasetSha}
+              >
+                {segment.text}
+              </button>
+            ) : (
+              <span
+                key={segment.key}
+                className={segment.key === "calc" ? "dataset-seg mono" : "dataset-seg"}
+                data-dataset-seg={segment.key}
+                data-dataset-missing={segment.missing ? "1" : "0"}
+                title={segment.missing ? "manifest 字段缺失" : segment.label}
+              >
+                {segment.text}
+              </span>
+            ),
+          )}
+          {shaCopied && (
+            <span className="dataset-copied" data-sha-copied="1" role="status">
+              已复制
+            </span>
+          )}
           {diagStatus && <span className="diag-status">{diagStatus}</span>}
         </footer>
       </div>

@@ -15,3 +15,4 @@ pub use telemetry::{
     TYPICAL_INPUT_GAP_MS,
 };
 pub use indicator_core::{Manifest, ManifestIndicator, ManifestInputs, ManifestParam, ManifestOutput};
+pub use data_provider::DatasetManifest;

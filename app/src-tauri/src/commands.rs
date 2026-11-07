@@ -2,9 +2,9 @@
 //! 新增命令必须保持在这个形状，超过 15 行说明业务该下沉到 app-core。
 
 use app_core::{
-    AppError, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, ListSecuritiesRequest,
-    Manifest, MarketSnapshotDto, PositionDto, RegistryRequest, RegistryResponse, SecurityDto,
-    TelemetrySummary, WatchToggleResult, WatchlistDto,
+    AppError, BarsResponse, CalcRequest, CalcResponse, DatasetManifest, GetBarsRequest,
+    ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto, RegistryRequest,
+    RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
 };
 use serde_json::Value;
 use tauri::State;
@@ -40,6 +40,14 @@ pub async fn indicator_manifest(
     state: State<'_, AppState>,
 ) -> Result<&'static Manifest, AppError> {
     Ok(state.core.indicator_manifest())
+}
+
+/// S-02.08-01：页脚 7 段同源；provider 不提供 manifest 时返回 null，前端整条显示 `—`。
+#[tauri::command]
+pub async fn dataset_manifest(
+    state: State<'_, AppState>,
+) -> Result<Option<DatasetManifest>, AppError> {
+    Ok(state.core.dataset_manifest())
 }
 
 #[tauri::command]

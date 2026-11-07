@@ -199,6 +199,19 @@ export interface BarsResponse {
   provenance: ProvenanceDto;
 }
 
+/** 数据集 manifest（S-02.08-01 页脚 7 段的唯一来源） */
+export interface DatasetManifestDto {
+  datasetId: string;
+  dataVersion: string;
+  rowCount: number;
+  coverageStart: string;
+  coverageEnd: string;
+  seed: number;
+  sha256: string;
+  provider: string;
+  generatedAt: number;
+}
+
 export interface GetBarsRequest {
   security: string;
   timeframe: "D" | "W" | "M";

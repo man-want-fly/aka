@@ -1025,6 +1025,49 @@ select {
   font-weight: 600;
 }
 
+/* S-02.08-01 数据集概览：7 段单行；窄屏横向滚动，不换行不缩字 */
+.dataset-status {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  height: 24px;
+  padding: 0 14px;
+  gap: 0;
+  font-size: 11px;
+  scrollbar-width: thin;
+}
+
+.dataset-seg {
+  white-space: nowrap;
+}
+
+.dataset-seg + .dataset-seg::before {
+  content: "·";
+  margin: 0 8px;
+  color: var(--line);
+}
+
+.dataset-seg--sha {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text2);
+  font: inherit;
+  cursor: pointer;
+  border-bottom: 1px dotted var(--line);
+}
+
+.dataset-seg--sha:disabled {
+  color: var(--faint);
+  border-bottom-color: transparent;
+  cursor: default;
+}
+
+.dataset-copied {
+  color: var(--pos);
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
 .pos { color: var(--pos); }
 .neg { color: var(--neg); }
 .flat { color: var(--text2); }

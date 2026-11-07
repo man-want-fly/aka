@@ -579,6 +579,12 @@ impl AppCore {
         indicator_core::manifest()
     }
 
+    /// S-02.08-01：页脚 7 段全部从这份 manifest 派生，页面不另写数字。
+    /// provider 侧按需计算并缓存（mock 为 OnceLock），不在启动路径上付全量摘要成本。
+    pub fn dataset_manifest(&self) -> Option<data_provider::DatasetManifest> {
+        self.provider.dataset_manifest()
+    }
+
     pub fn indicator_registry(&self, category: Option<&str>) -> RegistryResponse {
         let wanted = category.map(|c| c.to_ascii_lowercase());
         let indicators = all()
