@@ -18,6 +18,8 @@ import {
   type Density,
 } from "../../lib/settings";
 import { runMarketDiagnostics } from "../../features/market/diag";
+import { StarButton } from "../../components/StarButton";
+import { runStarDiagnostics } from "../../features/watchlist/starDiag";
 import type {
   AppError,
   MarketRowDto,
@@ -281,6 +283,9 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
     (async () => {
       const enabled = await ipc.diagEnabled();
       if (!enabled) return;
+      // 只有 AKA_DIAG_TARGET=market 时跑 E-01；其它套件也落在行情页，不能抢跑。
+      const target = await ipc.diagTarget().catch(() => "");
+      if (target !== "market") return;
       marketDiagHasRun = true;
       // 工作台 S2 套件会在 diagnostics 中切换标的，会干扰本流程的报价头断言
       sessionStorage.setItem("aka.s2.diag.once", "1");
@@ -294,6 +299,21 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
         setDiagStatus(`E-01 取证：失败 ${describeError(err).message}`);
       }
     })();
+  }, [snapshot, viewLoaded, loading]);
+
+  // S-01.02-01 星标取证：AKA_DIAG_TARGET=s010201 时在行情页自跑一次。
+  useEffect(() => {
+    if (!isTauriRuntime() || !snapshot || !viewLoaded || loading) return;
+    if (sessionStorage.getItem("aka.s010201.diag.done")) return;
+    void ipc
+      .diagTarget()
+      .then((target) => {
+        if (target !== "s010201") return;
+        if (sessionStorage.getItem("aka.s010201.diag.done")) return;
+        sessionStorage.setItem("aka.s010201.diag.done", "1");
+        void runStarDiagnostics();
+      })
+      .catch(() => undefined);
   }, [snapshot, viewLoaded, loading]);
 
   const watched = useMemo(
@@ -356,7 +376,8 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
             }
           : current,
       );
-      setToast(describeError(err).message);
+      const failure = describeError(err).message;
+      setToast(failure.startsWith("自选上限") ? failure : `自选未保存：${failure}`);
     }
   };
 
@@ -549,16 +570,11 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
                   }}
                 >
                   <span className="market-cell market-cell--star">
-                    <button
-                      type="button"
-                      className={`star ${watched.has(row.security) ? "watched" : ""}`}
-                      aria-label={watched.has(row.security) ? "移出自选" : "加入自选"}
-                      data-star={row.security}
-                      data-watched={watched.has(row.security) ? "1" : "0"}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void toggleStar(row.security);
-                      }}
+                    <StarButton
+                      code={row.security}
+                      name={row.name}
+                      watched={watched.has(row.security)}
+                      onToggle={() => void toggleStar(row.security)}
                     />
                   </span>
                   {visible.has("code") && (

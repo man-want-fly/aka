@@ -143,6 +143,17 @@ export default function App() {
           setLocation({ route: "workbench", code: null });
           return;
         }
+        // S-01.02-01 星标取证：先进行情页，再由页面内套件切工作台。
+        if (target === "s010201") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          sessionStorage.setItem("aka.s0602.diag.done", "1");
+          if (window.location.hash.startsWith("#/market")) return;
+          window.location.hash = "#/market";
+          setLocation({ route: "market", code: null });
+          return;
+        }
         // S-06.02-01 密度与格式取证：直接进设置页，占住其它套件的 once 位。
         if (target === "s0602") {
           sessionStorage.setItem("aka.s2.diag.once", "1");

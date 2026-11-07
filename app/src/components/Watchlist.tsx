@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { describeError, ipc } from "../lib/ipc";
+import { StarButton } from "./StarButton";
 import type { SecurityDto, WatchItemDto, WatchlistDto } from "../lib/types";
 
 interface Props {
@@ -96,7 +97,7 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
       return true;
     } catch (err) {
       const message = describeError(err).message || LIMIT_MESSAGE;
-      setWriteError(`未保存：${message}`);
+      setWriteError(`自选未保存：${message}`);
       return false;
     }
   };
@@ -369,17 +370,25 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
                   </span>
                 )}
               </button>
-              {!insufficient && (
-                <button
-                  type="button"
-                  className="wl-remove"
-                  data-wl-remove={item.security}
-                  title="移出自选"
-                  onClick={() => removeItem(item)}
-                >
-                  ×
-                </button>
-              )}
+              {!insufficient &&
+                (missing ? (
+                  <button
+                    type="button"
+                    className="wl-remove"
+                    data-wl-remove={item.security}
+                    title="移出自选"
+                    onClick={() => removeItem(item)}
+                  >
+                    ×
+                  </button>
+                ) : (
+                  <StarButton
+                    code={item.security}
+                    name={security?.name ?? ""}
+                    watched
+                    onToggle={() => removeItem(item)}
+                  />
+                ))}
             </div>
           );
         })}

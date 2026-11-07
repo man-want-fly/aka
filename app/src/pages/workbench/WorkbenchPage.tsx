@@ -12,6 +12,7 @@ import { IndicatorReadouts } from "../../components/IndicatorReadouts";
 import { ParamPanel } from "../../components/ParamPanel";
 import { SimBadge } from "../../components/SimBadge";
 import { Watchlist } from "../../components/Watchlist";
+import { StarButton } from "../../components/StarButton";
 import { IndicatorDrawer } from "../../features/workbench/IndicatorDrawer";
 import { runDrawerDiagnostics } from "../../features/workbench/drawerDiag";
 import {
@@ -406,6 +407,48 @@ export function WorkbenchPage({
       .catch(() => undefined);
   }, [loading]);
   const [error, setError] = useState<AppError | null>(null);
+  // S-01.02-01：报价头星标与自选同源；写库失败必须回滚并给出错误条。
+  const [watched, setWatched] = useState(false);
+  const [watchBusy, setWatchBusy] = useState(false);
+  const [watchError, setWatchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      setWatched(false);
+      return;
+    }
+    let alive = true;
+    ipc
+      .watchlist()
+      .then((data) => {
+        if (alive) setWatched(data.items.some((item) => item.security === activeCode));
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [activeCode]);
+
+  const toggleWatch = () => {
+    if (watchBusy) return;
+    const next = !watched;
+    setWatched(next);
+    setWatchBusy(true);
+    setWatchError(null);
+    void ipc
+      .toggleWatch(activeCode)
+      .then((result) => {
+        setWatched(result.watched);
+        window.dispatchEvent(new Event("aka:watchlist-refresh"));
+      })
+      .catch((err) => {
+        setWatched(!next);
+        const message = describeError(err).message;
+        setWatchError(message.startsWith("自选上限") ? message : `自选未保存：${message}`);
+      })
+      .finally(() => window.setTimeout(() => setWatchBusy(false), 200));
+  };
+
   // 数据不足的内联提示按指标 id 归位，不上升为全局错误条
   const [calcNotices, setCalcNotices] = useState<Record<string, string> | null>(null);
   // S-02.08-01：7 段全部派生自 manifest + 当前口径；顺序由 DATASET_SEGMENTS 固定
@@ -1440,6 +1483,14 @@ export function WorkbenchPage({
   return (
     <AppShell active="workbench" onNavigate={onNavigate}>
       <div className="workbench">
+        {watchError && (
+          <div className="watch-error-bar" data-wb-watch-error role="alert">
+            <span>{watchError}</span>
+            <button type="button" onClick={toggleWatch}>
+              重试
+            </button>
+          </div>
+        )}
         <header className="wb-header">
           <div className="sec-identity">
             {initialCode && (
@@ -1462,6 +1513,13 @@ export function WorkbenchPage({
               </span>
             )}
             <SimBadge />
+            <StarButton
+              code={activeCode}
+              name={security?.name ?? ""}
+              watched={watched}
+              busy={watchBusy}
+              onToggle={toggleWatch}
+            />
           </div>
 
           <div className="quote">
