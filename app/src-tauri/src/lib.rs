@@ -212,6 +212,7 @@ pub fn run() {
         commands::diag_enabled,
         commands::diag_target,
         commands::diag_build_info,
+        commands::diag_write_named,
         commands::telemetry_note,
     ]);
     builder
