@@ -1417,6 +1417,42 @@ Gate C：`S-03.04-02` 按 BA `a846473` 的「可签」录入 PASS；`S-06.01-01`
 
 ---
 
+#### 4.7.31 漏项实验的绿证明门禁可被改绿：诊断清单必须从源码派生（2026-11-08）
+
+**判：派生可行，必须派生；`W-58` 现实现不签，开 `W-64`。**
+
+一、漏项实验暴露的是门禁对象错了，不是漏项没被抓到
+- `50a9f02`（run `42395059436` success）只做了一件事：把 `SYMBOLS` 里的一行删掉，同时保留 release 里真实注册的写入口。门禁照样绿——因为断言的是「我列的名字没出现」，不是「release 里没有写入口」。
+- 同一份名单有两份副本：`app/scripts/verify-diag-gate.mjs` 的 `SYMBOLS`/`WRITE_COMMANDS`，和 `.github/workflows/ci.yml` 的 `strings` 循环。删任意一份都能绿。手维护的名字表不是门禁，是可编辑的期望值。
+- 源码层虽然解析了 `invoke_handler` 两个块，但「哪些命令算写命令」仍由手写 `WRITE_COMMANDS` 决定；`invoke_handler` 只是被检查的对象，不是判据来源。
+
+二、派生规则（`W-64`）
+1. **命令集从注解派生**：扫 `src-tauri/src/**/*.rs`（含 `crates/app-core`）的 `#[tauri::command]` 得命令全集；release handler 集合与 debug handler 集合必须都 ⊆ 全集，且 debug ⊋ release 只允许差在诊断命令上。
+2. **诊断性由行为派生，不由名字派生**：命令函数体及其一层被调函数里出现 `write_diag` / `aka/diag` / `AKA_DIAG` / `s2-evidence` 的，判为诊断命令；release handler 与诊断命令交集必须为空。
+3. **物质不变量兜底**：`commands.rs` 与 `app-core` 里任何 `fs::write` / `OpenOptions::write` / `File::create` 调用，必须落在诊断命令内，且该命令不在 release 集合里。这条比名字可靠——新加一条换个名字的写入口也会被拦。
+4. **字面量改成全覆盖，不再列名单**：扫源码里诊断字面量的每一处出现，断言其所在行区间被 `#[cfg(debug_assertions)]` 覆盖；不再有「漏掉某个符号」这种失败模式。
+5. **产物层用同一份派生结果**：`verify-diag-gate.mjs --emit-symbols` 输出符号表，`ci.yml` 循环读它，删掉第二份手写列表。
+6. **等价漏项实验**：派生后没有可删的行。唯一能让绿复现的方式是把入口移出 `cfg` 或加未分类写入口——那正是红路径，已由 `2228f2f` 覆盖。所以 `W-64` 只需重跑一次红，**不再要求重跑「删名单」漏项**。
+
+三、`W-58` 签字
+- **不签现实现**。有效并保留的证据：红 `2228f2f` / run `42394835110` failure（日志点名 `diag_write_named`）；还原 `git diff --quiet a9745e9 HEAD` = 0；最终绿 `11405ed` / run `42395425939` success；源码断言 12 符号 + `aka/diag`、两层分工写入 `ci.yml` 注释，均属实。
+- 缺的只有门禁对象。`W-64` 派生落地后重跑红路径 + `--emit-symbols` 对账，`W-58` 按新方式重签。
+
+四、`W-63`：可签
+- `sign_commit = a9745e9`；`sign_scope = app/src/lib/diagExport.ts`、`app/src/components/Watchlist.tsx`、`app/src/features/watchlist/watchlistDiag.ts`、`app/scripts/diag-evidence.sh`。
+- 已核：`WL-23C1..C4` 四支各一条、无 `||`，四支按整串相等比；注入走 `import.meta.env.DEV` + `localStorage` 键 `aka.diag.export`，键名只在 `diagExport.ts` 出现，不新增 IPC / 环境变量；「已下载」由 `diag-evidence.sh` 真 `stat` `~/Downloads/aka-diagnostics-<trace>*.json`，`size > 0` 且文件内 `traceId` 匹配，记 `WL-23-file`。
+- `ci.yml` 里 `dist` 零命中 `aka.diag.export` 的断言不在本次签署范围（`W-64` 会改该文件），随 `W-64` 一并重验。
+
+五、两张卡的实际状态（分母改对之后）
+- **`S-02.04-01` = 8/8**（data 1/1、render 7/7、AC 6/6，含 `AC-02.04-02（补3）`）。分母已对，但**不能签**：① `gate-log` 该卡 `gate_c=PASS` 却 `sign_commit` 为空，按规则 8 这条 PASS 不成立；② `s20401-evidence-meta.json` 记 `commit=366634c`、`dirty=true`，其后 `a9745e9` 改了 `drawerDiag.ts`/`Watchlist.tsx`/`watchlistDiag.ts`/`diagExport.ts` 四个被测文件，证据不绑被测代码。须在干净 tip 重跑（`dirty=false`）后补签。
+- **`S-08.01-02` = 0/1**。`R-06` 已改归 `S-02.04-01`/`AC-02.04-02（补3）`，本卡无 check，维持「未开始」；指标侧由 `S-02.04-01` 覆盖，标的侧仍待 `S-05.01-02`。
+
+六、dev2 合并前置
+- main 侧三条**已满足**：`ahead=0`、工作区干净、`11405ed` run `42395425939` success。
+- 但 dev2 现为 **ahead 8 / behind 31**，先同步 main 再合，不许带着 31 个落后提交直接合；合后重跑 `W-34`/`W-49`/`verify:constants`/`verify:docs` 再重签三卡。
+
+---
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。

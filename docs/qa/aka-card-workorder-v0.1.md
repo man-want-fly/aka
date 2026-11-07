@@ -1473,6 +1473,19 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 4. **红路径**：任选一条入口移出 `#[cfg]`，该步必须 `failure`；**漏项**：单删一条断言，其余不许兜底。
 5. **验收**：绿/红/漏项三份 run id；`S-01.02-01` 等卡行为回归不变；证据归档后 TL 重签 `W-58`，`W-47`/`W-49` 只记「作废」不复活。
 6. **注意**：`6598804` 已推送，CI run `42385574040` **completed/success**（11 符号断言绿）。但「绿」只说明当前实现过门，红路径、漏项、源码级断言三项仍缺——没红过的门禁不算门禁。
+7. **裁定（2026-11-08，见 §4.7.31）**：红路径/还原/最终绿三项**有效保留**，但**本实现不签**——漏项实验 `50a9f02` 删一行名单仍绿，证明门禁守的是「我列的名字没出现」。清单改由源码派生，见 `W-64`；派生后重跑红 + `--emit-symbols` 对账，再按新方式重签本单。
+
+### W-64（dev A）诊断门禁清单从源码派生，删掉两份手写名单
+
+**背景**：`50a9f02`（run `42395059436` success）删掉 `SYMBOLS` 一行、保留 release 活入口，门禁全绿。手写名单有两份副本（`verify-diag-gate.mjs` 的 `SYMBOLS`/`WRITE_COMMANDS`、`ci.yml` 的 `strings` 循环），删任一份都能绿。名单是可编辑的期望值，不是门禁。
+
+1. 删 `SYMBOLS`/`WRITE_COMMANDS`，改为：扫 `src-tauri/src/**/*.rs`（含 `crates/app-core`）的 `#[tauri::command]` 得命令全集；release/debug handler 集合都须 ⊆ 全集。
+2. 诊断性按行为派生：命令函数体及其一层被调函数出现 `write_diag` / `aka/diag` / `AKA_DIAG` / `s2-evidence` 即判诊断；`release handler ∩ 诊断命令 = ∅`。
+3. 物质不变量兜底：`commands.rs`/`app-core` 里任何 `fs::write`/`OpenOptions::write`/`File::create` 必须落在诊断命令内，且该命令不在 release 集合里。
+4. 字面量改为全覆盖：扫每处出现，断言所在行区间被 `#[cfg(debug_assertions)]` 覆盖，不再列名单。
+5. 产物层单一来源：`verify-diag-gate.mjs --emit-symbols` 输出符号表，`ci.yml` 循环读取，删掉第二份手写列表；`ci.yml` 的 `dist` 零命中 `aka.diag.export` 断言一并复验（`W-63` 遗留）。
+6. **红路径重跑一次**：任一诊断命令移出 `cfg` 并注册进 release handler，源码层与产物层必须同时红；贴 run id。派生死后没有可删的行，**不再要求重跑「删名单」漏项**。
+7. **验收**：红/绿两份 run；`--emit-symbols` 输出与源码实际出现逐条一致；`W-58` 按新方式重签。
 
 ### W-59（dev A）`verify:docs` 转 required
 
@@ -1504,6 +1517,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 2. **拆断言**：三/四支各自判定，禁止析取。期望：① 复制成功 → 「已复制…并下载」；② 复制成功、下载被拦 → 「已复制（下载被拦截）」；③ 剪贴板不可用 → 「已下载」；④ 两者都失败 → 「导出失败」且带错误码与追踪号。
 3. **落盘也要证**：「已下载」不能只看 `anchor.click()` 没抛；断言 `fs.stat` 到文件、大小 > 0。
 4. **验收**：④ 支必须先红一次（去掉注入后断言失败），再绿；其余三支各有一条独立断言；`verify:diag-gate` 绿。
+5. **TL 签（2026-11-08，见 §4.7.31）**：`sign_commit = a9745e9`；`sign_scope = app/src/lib/diagExport.ts`、`app/src/components/Watchlist.tsx`、`app/src/features/watchlist/watchlistDiag.ts`、`app/scripts/diag-evidence.sh`。已核：四支各一条无 `||`、按整串相等比；注入为 `import.meta.env.DEV` 守卫、键名只在 `diagExport.ts`；「已下载」由 `stat` 核 `~/Downloads/aka-diagnostics-<trace>*.json` 且 `size>0` + `traceId` 匹配。`ci.yml` 的 `dist` 零命中断言不在签署范围，随 `W-64` 复验。
 
 
 
@@ -1527,4 +1541,4 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）、**W-41**（blocked 归零 + 证据归档 + `WL-15` 改判据 + 格式化扫描）、**W-43**（白名单收窄 + `WL-10/10r` 归卡 + 缺项补证）必须一并落地；**W-45**（自选空态 / 损坏库页 / 移出失败文案）、**W-46**（只读与损坏库注入通道 + 星标证据入库）为 `S-01.02-01/02/03` 的收口前置；**W-49**（CI release 构建 + 注入符号断言，含红路径取证）把 W-47 的本地实测转为常设门禁（**W-49 已于当日作废，由 W-58 接手**：断言对象改为入口名并加源码级断言）；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。W-33 功能部分已签 `7cbad20`（说明文字见 **W-39**）；W-34 已签 `5131f89`（首跑 run `42355133312` 成功，红路径反例见 **W-39**）。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；`W-58`/`W-59` 待落地。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63/W-64）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；**`W-63` 已于 2026-11-08 签 `a9745e9`**；`W-58` 本实现不签、由 `W-64` 派生清单后重签；`W-59` 待落地。
