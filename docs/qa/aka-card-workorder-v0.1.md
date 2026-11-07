@@ -1656,6 +1656,30 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **验收**：`grep -r "暂无数据" app/src` = 0；空态说明的 `{T}`/`{M}` 与 `manifest/indicators.json` 现算值逐字一致；`verify:constants` 绿（`constants.json` 已是 60/45，本单不改注册表）。
 4. **不动其他卡**：`S-06.03-01` 的「44 / 105」与 PRD 正文同类数字属另一批文档漂移，不在本单扩张；随下一次 BA 文档批按同一原则改派生。
 
+### W-79（TL/BA）卡↔页面门禁 + `S-08.01-02` 降 Blocked
+
+**背景**：本批第二张「AC 指向不存在页面」的卡（`S-08.01-02`→P7、`S-07.05-03`→P9）都到批次边界才发现，Blocked 名单里没有它们。
+
+1. **页面索引**：`docs/qa/aka-page-registry-v0.1.csv` 登记 P1–P10；`exists` 必须写 `anchor_file` + `anchor_text`。当前 exists = P1/P2/P3/P4（P3 右栏详情）/P8。
+2. **校验器**：`app/scripts/verify_card_pages.mjs`；`verify:docs` 已串上，CI 既有步骤自动生效。判据：
+   - 卡面「页面 / 状态」与 AC 行引用的 Pn 必须已登记；
+   - 交付类状态引用 `absent` 页面即红；
+   - `Blocked`/`Blocked-AC` 引用 `absent` 页面时 blocker 不得为空；
+   - 锚点文件/文本缺失即红。
+3. **`S-08.01-02`**：整卡记 `Blocked`，blocker = `S-05.01-01;S-05.01-02（P7 搜索浮层未落地）`；指标侧完成（dev2 `a60a504`/`cb5ec5e`，data 3/3、render 6/6）只入 note，不单独签。
+4. **验收**：`npm run verify:docs` 绿；红路径已实测（交付卡引用 P7、Blocked 无 blocker 均 exit 1）。
+
+### W-80（dev A）`S-07.05-03` 溯源浮层：只交 AC-07.05-04，补1 Blocked-AC
+
+**交付边界**：只做 K 线点击 → 六字段浮层；P9「查看示例」联动不做、不伪造入口。`AC-07.05-04（补1）` 标 `Blocked-AC`，依赖对象 `S-07.05-01`（P9 页面/路由与报告入口），未落地前不计 PASS、不计跳过。
+
+**证据要求**：
+1. ≥3 根 bar：正常、缺失字段、含 `quality_flags`；逐根列六字段。
+2. 缺失字段显示「缺失」；`quality_flags` 只出 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY` 或「无」。
+3. ESC 与点外关闭、切标的清空浮层。
+4. 无新增 IPC（复用 `S-07.05-02`）；证据分别写 `AC-07.05-04=PASS`、`补1=BLOCKED`。
+5. 台账 `S-07.05-03` 记 `Blocked-AC`；补1 转 PASS 前卡不签。
+
 ### W-73（BA）`W-66` 归属收口：改号条件、补号归卡、丢失基条、冻结件半角
 
 1. **D-AC-01 增补「改号 vs 重编号」判据**：判「该号**作为本卡 AC** 是否已被引用」，不是「该 token 在仓库是否出现过」；允许改号须同时满足：① 本卡无 `check.ac`/`sign_scope`/验收行引用（全仓 + 证据双查）；② 新号在本卡号段空位、不撞别卡；③ 同一提交同步卡面/`ac_ids` 索引/PRD/台账；④ 本卡一经证据或签字即冻结，只能新增补号/基号。`AC-07.05-03 → 04` 按此条放行。

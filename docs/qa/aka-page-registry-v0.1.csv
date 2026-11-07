@@ -1,0 +1,11 @@
+page_id,page_name,status,anchor_file,anchor_text,owner_story,note
+P1,行情列表,exists,app/src/pages/market/MarketPage.tsx,MarketPage,,
+P2,个股工作台,exists,app/src/pages/workbench/WorkbenchPage.tsx,WorkbenchPage,,
+P3,指标目录,exists,app/src/pages/catalog/CatalogPage.tsx,CatalogPage,,
+P4,指标口径页,exists,app/src/pages/catalog/CatalogPage.tsx,catalog-detail,S-03.03-01,作为 P3 右栏详情实现，无独立路由
+P5,自选页,absent,,,,S-04.01-01,
+P6,指数与板块页,absent,,,,S-04.03-01,
+P7,搜索浮层,absent,,,,S-05.01-01,
+P8,设置页,exists,app/src/pages/settings/SettingsPage.tsx,SettingsPage,,
+P9,数据源状态页,absent,,,,S-07.01-01,dev2 有实现，main 未合入
+P10,已安装摘要页,absent,,,,S-07.03-01,
