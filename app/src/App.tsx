@@ -105,13 +105,14 @@ export default function App() {
           setLocation({ route: "catalog", code: null });
           return;
         }
-        // S-02.05-02 恢复默认取证 / S-01.02 自选取证 / S-02.07 图表取证 / S-02.03 副图取证 / S-02.02-02 复权切换：进工作台，占住其它套件的 once 位。
+        // S-02.05-02 恢复默认取证 / S-01.02 自选取证 / S-02.07 图表取证 / S-02.03 副图取证 / S-02.02-02 复权切换 / S-02.01-01 报价头：进工作台，占住其它套件的 once 位。
         if (
           target === "s205" ||
           target === "restart" ||
           target === "s207" ||
           target === "s203" ||
           target === "s20202" ||
+          target === "s20101" ||
           target.startsWith("watchlist")
         ) {
           sessionStorage.setItem("aka.s2.diag.once", "1");

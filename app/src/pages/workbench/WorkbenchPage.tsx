@@ -37,6 +37,11 @@ import {
   type WorkbenchParams,
 } from "../../features/workbench/model";
 import {
+  LIMIT_APPROX_TITLE,
+  deriveLimitPrices,
+  showLimitApprox,
+} from "../../features/workbench/quote";
+import {
   runS2Diagnostics,
   seriesSignature,
   type DiagPhase,
@@ -46,6 +51,7 @@ import {
 import { runS205Diagnostics } from "../../features/workbench/s205Diag";
 import { runS203Diagnostics } from "../../features/workbench/s203Diag";
 import { runS20202Diagnostics } from "../../features/workbench/s20202Diag";
+import { runS20101Diagnostics } from "../../features/workbench/s20101Diag";
 import { runS207Diagnostics } from "../../features/workbench/s207Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
 import { runRestartDiagnostics, restartDiagStage } from "../../features/workbench/restartDiag";
@@ -1094,6 +1100,55 @@ export function WorkbenchPage({
     };
   }, [manifest, registry, securities]);
 
+  // S-02.01-01 报价头取证：AKA_DIAG_TARGET=s20101 时自跑一次
+  const s20101Started = useRef(false);
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (s20101Started.current) return;
+    let alive = true;
+    const waitRendered = async (code: string, timeoutMs = 6000) => {
+      const startedAt = performance.now();
+      while (performance.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, 120));
+        const head = document.querySelector('[data-quote-head="1"]');
+        if (
+          head &&
+          head.getAttribute("data-quote-code") === code &&
+          barsRef.current?.security === code &&
+          !inFlightRef.current
+        ) {
+          await new Promise((resolve) => window.setTimeout(resolve, 60));
+          return;
+        }
+      }
+      throw new Error(`报价头未切到 ${code}`);
+    };
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s20101" || !alive) return;
+      s20101Started.current = true;
+      setDiagStatus("S-02.01-01 取证：运行中");
+      try {
+        const report = await runS20101Diagnostics({
+          setCode: (code) => setActiveCode(code),
+          waitRendered,
+        });
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-02.01-01 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_S20101_EVIDENCE__ = report;
+      } catch (err) {
+        if (!alive) return;
+        setDiagStatus(`S-02.01-01 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, registry, securities]);
+
   // S-02.05-02 物理重启验证：AKA_DIAG_TARGET=restart 时按 localStorage 标记跑第一次或第二次启动
   useEffect(() => {
     if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
@@ -1199,6 +1254,15 @@ export function WorkbenchPage({
   const changePct =
     lastBar && prevBar ? (lastBar.close / prevBar.close - 1) * 100 : Number.NaN;
   const changeAbs = lastBar && prevBar ? lastBar.close - prevBar.close : Number.NaN;
+  // AC-02.01-01：停牌由合成行判定（量/额为 0），涨跌停价按板块规则推导
+  const suspended = lastBar ? !(lastBar.volume > 0) : false;
+  const limitPrices = deriveLimitPrices(prevBar?.close, security?.board ?? "");
+  const limitApprox = showLimitApprox({
+    board: security?.board ?? "",
+    isIndex: Boolean(security?.isIndex),
+    suspended,
+    prices: limitPrices,
+  });
 
   const handleApply = () => {
     const issue = localCheck(params);
@@ -1237,17 +1301,22 @@ export function WorkbenchPage({
             <h1 data-wb-name>{security?.name ?? "未选择标的"}</h1>
             <span className="sec-code">{activeCode}</span>
             <span className="pill">{security?.board ?? "—"}</span>
+            {suspended && (
+              <span className="tag tag--warn" data-quote-suspended="1">
+                停牌
+              </span>
+            )}
             <SimBadge />
           </div>
 
           <div className="quote">
             <span className="last mono">{lastBar ? formatPrice(lastBar.close) : "—"}</span>
-            <span className={`chg mono ${changePct >= 0 ? "up" : "down"}`}>
-              {formatSigned(changeAbs)}　{formatPct(changePct)}
+            <span className={`chg mono ${changePct >= 0 ? "up" : "down"}`} data-quote-change="1">
+              {suspended ? "—" : `${formatSigned(changeAbs)}　${formatPct(changePct)}`}
             </span>
           </div>
 
-          <div className="header-stats">
+          <div className="header-stats" data-quote-head="1" data-quote-code={activeCode}>
             <span>
               开<b>{lastBar ? formatPrice(lastBar.open) : "—"}</b>
             </span>
@@ -1256,6 +1325,25 @@ export function WorkbenchPage({
             </span>
             <span>
               低<b>{lastBar ? formatPrice(lastBar.low) : "—"}</b>
+            </span>
+            <span data-quote-prev-close="1">
+              昨收<b>{prevBar ? formatPrice(prevBar.close) : "—"}</b>
+            </span>
+            <span data-limit-row="1" data-limit-approx={limitApprox ? "1" : "0"}>
+              涨停
+              <b
+                data-limit-price="up"
+                title={limitApprox ? LIMIT_APPROX_TITLE : undefined}
+              >
+                {limitApprox && limitPrices ? `≈${formatPrice(limitPrices.up)}` : "—"}
+              </b>
+              跌停
+              <b
+                data-limit-price="down"
+                title={limitApprox ? LIMIT_APPROX_TITLE : undefined}
+              >
+                {limitApprox && limitPrices ? `≈${formatPrice(limitPrices.down)}` : "—"}
+              </b>
             </span>
             <span>
               量<b>{lastBar ? formatVolume(lastBar.volume) : "—"}</b>

@@ -242,6 +242,8 @@ impl AppCore {
                 .with_diag_tiny_series(12)
                 // S-02.07-02 取证样本：120 根中第 80~99 根为停牌合成行（量/额为 0）
                 .with_diag_suspended_series(120, 80, 20)
+                // S-02.01-01 取证样本：前收 10.00 / 10.03、末日停牌、上市首日、指数 000300.SH
+                .with_diag_quote_samples()
         } else {
             provider
         };

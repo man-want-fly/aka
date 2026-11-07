@@ -162,6 +162,69 @@ impl MockProvider {
         self
     }
 
+    /// 取证专用：报价头样本（AC-02.01-01 补2/补3/补4）。
+    /// - `DIAGQ10.SZ` 前收 10.00、`DIAGQ1003.SZ` 前收 10.03：主板 10% 推导容差与两位小数；
+    /// - `DIAGQNEW.SZ` 仅剩 1 根（上市首日，无昨收）；
+    /// - `DIAGQSUP.SZ` 末日停牌；`000300.SH` 为指数。
+    pub fn with_diag_quote_samples(mut self) -> Self {
+        self = self.push_diag_quote("DIAGQ10.SZ", "诊断报价十元", 10.00, 10.10);
+        self = self.push_diag_quote("DIAGQ1003.SZ", "诊断报价十元零三", 10.03, 10.20);
+        self = self.push_diag_quote("DIAGQNEW.SZ", "诊断上市首日", 10.00, 10.30);
+        if let Ok(mut cache) = self.raw_cache.lock() {
+            if let Some(bars) = cache.get_mut("DIAGQNEW.SZ") {
+                if let Some(last) = bars.last().cloned() {
+                    *bars = std::sync::Arc::new(vec![last]);
+                }
+            }
+        }
+        self = self.push_diag_suspended("DIAGQSUP.SZ", "诊断停牌末日", 30, 29, 1);
+        self.push_diag_index("000300.SH", "沪深300", 3200.0)
+    }
+
+    fn push_diag_quote(
+        mut self,
+        code: &str,
+        name: &str,
+        prev_close: f64,
+        last_close: f64,
+    ) -> Self {
+        if self.find_security(code).is_some() {
+            return self;
+        }
+        let security = make_security(code, name, Board::SzMain, false, prev_close);
+        let mut bars = generate_bars(&security, &self.calendar);
+        bars.truncate(30);
+        let len = bars.len();
+        if len >= 2 {
+            let prev = &mut bars[len - 2];
+            prev.close = prev_close;
+            prev.high = prev.high.max(prev_close);
+            prev.low = prev.low.min(prev_close);
+            let last = &mut bars[len - 1];
+            last.close = last_close;
+            last.high = last.high.max(last_close);
+            last.low = last.low.min(last_close);
+        }
+        self.securities.push(security);
+        if let Ok(mut cache) = self.raw_cache.lock() {
+            cache.insert(code.to_string(), std::sync::Arc::new(bars));
+        }
+        self
+    }
+
+    fn push_diag_index(mut self, code: &str, name: &str, price: f64) -> Self {
+        if self.find_security(code).is_some() {
+            return self;
+        }
+        let security = make_security(code, name, Board::Index, true, price);
+        let bars = generate_bars(&security, &self.calendar);
+        self.securities.push(security);
+        if let Ok(mut cache) = self.raw_cache.lock() {
+            cache.insert(code.to_string(), std::sync::Arc::new(bars));
+        }
+        self
+    }
+
     pub fn dataset_id(&self) -> &'static str {
         MOCK_DATASET_ID
     }
