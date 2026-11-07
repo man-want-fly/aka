@@ -42,8 +42,7 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
     (if month <= 2 { year + 1 } else { year }, month, day)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorCode {
     UnknownSecurity,
     DatasetMissing,
@@ -51,8 +50,32 @@ pub enum ErrorCode {
     InvalidArgument,
     UnknownIndicator,
     ParamOutOfRange,
+    ParamOrder,
     InsufficientData,
     Internal,
+}
+
+impl ErrorCode {
+    /// W-75：错误码以 PRD L1328 错误码表为唯一权威，统一 `E_` 前缀。
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ErrorCode::UnknownSecurity => "E_UNKNOWN_SECURITY",
+            ErrorCode::DatasetMissing => "E_DATASET_MISSING",
+            ErrorCode::Unsupported => "E_UNSUPPORTED",
+            ErrorCode::InvalidArgument => "E_INVALID_ARGUMENT",
+            ErrorCode::UnknownIndicator => "E_UNKNOWN_INDICATOR",
+            ErrorCode::ParamOutOfRange => "E_PARAM_OUT_OF_RANGE",
+            ErrorCode::ParamOrder => "E_PARAM_ORDER",
+            ErrorCode::InsufficientData => "E_INSUFFICIENT_DATA",
+            ErrorCode::Internal => "E_INTERNAL",
+        }
+    }
+}
+
+impl Serialize for ErrorCode {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
 }
 
 /// 跨 IPC 的统一错误形状；前端按 `code` 分支，不解析 message。

@@ -34,13 +34,13 @@ export function describeError(error: unknown): AppError {
     }
     if ("message" in error && typeof (error as Error).message === "string") {
       return {
-        code: "INTERNAL",
+        code: "E_INTERNAL",
         message: (error as Error).message,
         retryable: false,
       };
     }
   }
-  return { code: "INTERNAL", message: String(error), retryable: false };
+  return { code: "E_INTERNAL", message: String(error), retryable: false };
 }
 
 /** 前端唯一允许调用 Tauri 命令的出口。页面与组件禁止直接 import invoke。 */

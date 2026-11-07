@@ -303,7 +303,7 @@ impl Indicator for Ppo {
         let slow = period_of_key(params, "slow", 26);
         let signal = period_of_key(params, "signal", 9);
         if fast >= slow {
-            return Err(CalcError::InvalidParam("fast 必须小于 slow".to_string()));
+            return Err(CalcError::ParamOrder("fast 必须小于 slow".to_string()));
         }
         if view.len() < slow {
             return Ok(());
@@ -541,7 +541,7 @@ impl Indicator for ElderImpulse {
         let signal = period_of_key(params, "signal", 9);
         let ema_period = period_of_key(params, "ema", 13);
         if fast >= slow {
-            return Err(CalcError::InvalidParam("fast 必须小于 slow".to_string()));
+            return Err(CalcError::ParamOrder("fast 必须小于 slow".to_string()));
         }
         if view.len() < slow {
             return Ok(());

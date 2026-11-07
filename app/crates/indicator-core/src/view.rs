@@ -54,6 +54,7 @@ impl<'a> OhlcvView<'a> {
 pub enum CalcError {
     InsufficientData { required: usize, got: usize },
     InvalidParam(String),
+    ParamOrder(String),
     Internal(String),
 }
 
@@ -64,6 +65,7 @@ impl fmt::Display for CalcError {
                 write!(f, "数据不足：需要 {required} 根，当前 {got} 根")
             }
             CalcError::InvalidParam(msg) => write!(f, "参数不合法：{msg}"),
+            CalcError::ParamOrder(msg) => write!(f, "参数顺序不合法：{msg}"),
             CalcError::Internal(msg) => write!(f, "指标内核错误：{msg}"),
         }
     }

@@ -315,13 +315,18 @@ impl Indicator for Ichimoku {
 
     fn calc(&self, view: &OhlcvView<'_>, params: &Params, out: &mut [Vec<f64>]) -> Result<(), CalcError> {
         ensure_shape(view, out, 5, T15_ID)?;
-        for column in out.iter_mut() {
-            column.fill(f64::NAN);
-        }
         let tenkan_period = period_of_key(params, "tenkan", 9);
         let kijun_period = period_of_key(params, "kijun", 26);
         let senkou_period = period_of_key(params, "senkou", 52);
         let displacement = period_of_key(params, "displacement", 26);
+        if !(tenkan_period < kijun_period && kijun_period < senkou_period) {
+            return Err(CalcError::ParamOrder(
+                "tenkan < kijun < senkou 必须递增".to_string(),
+            ));
+        }
+        for column in out.iter_mut() {
+            column.fill(f64::NAN);
+        }
         let len = view.len();
         let tenkan = midline(view, tenkan_period);
         let kijun = midline(view, kijun_period);
@@ -730,6 +735,24 @@ mod tests {
         let mut out = vec![vec![0.0; len]; indicator.meta().outputs.len()];
         indicator.calc(&view, &params, &mut out).unwrap();
         out
+    }
+
+    #[test]
+    fn t15_rejects_non_increasing_periods() {
+        let (open, high, low, close) = sample_view(80);
+        let volume = vec![1.0; close.len()];
+        let amount = vec![1.0; close.len()];
+        let view = OhlcvView::new(&open, &high, &low, &close, &volume, &amount);
+        let indicator = lookup(T15_ID).unwrap();
+        let mut params = merge_defaults(indicator.meta().params, &Params::new());
+        params.insert("tenkan".into(), ParamValue::Int(26));
+        params.insert("kijun".into(), ParamValue::Int(9));
+        let mut out = vec![vec![0.0; close.len()]; indicator.meta().outputs.len()];
+        let err = indicator.calc(&view, &params, &mut out).unwrap_err();
+        assert!(
+            matches!(err, crate::CalcError::ParamOrder(_)),
+            "tenkan≥kijun 必须 E_PARAM_ORDER，不许静默排序"
+        );
     }
 
     #[test]

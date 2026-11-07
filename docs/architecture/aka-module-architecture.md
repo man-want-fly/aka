@@ -117,16 +117,16 @@ flowchart LR
 | 命令 | 请求 | 响应 | 错误码 | 骨架状态 |
 |---|---|---|---|---|
 | `list_securities` | `{ market?, limit? }` | `SecurityDto[]`（code / name / market / board / isIndex / basePrice） | — | 已实现（mock 全量，120 只） |
-| `get_bars` | `{ security, timeframe: "D", adj: "none"\|"qfq"\|"hfq", from?, to? }`（`from`/`to` 为**数组下标**，含端点） | `BarsResponse { security, timeframe, adj, datasetId, totalBars, bars: BarDto[], provenance }` | `UNKNOWN_SECURITY` / `INVALID_ARGUMENT` | 已实现（仅 D / mock） |
+| `get_bars` | `{ security, timeframe: "D", adj: "none"\|"qfq"\|"hfq", from?, to? }`（`from`/`to` 为**数组下标**，含端点） | `BarsResponse { security, timeframe, adj, datasetId, totalBars, bars: BarDto[], provenance }` | `E_UNKNOWN_SECURITY` / `E_INVALID_ARGUMENT` | 已实现（仅 D / mock） |
 | `indicator_registry` | `RegistryRequest { category? }` | `RegistryResponse { plannedCount, implementedCount, indicators: IndicatorMetaDto[] }` | — | 已实现（2 个示例） |
-| `calc_indicators` | `CalcRequest { security, timeframe, adj, from?, to?, generation, instances: InstanceRequest[] }` | `CalcResponse { generation, datasetId, engineVersion, computedMs, cacheHit, barCount, series: SeriesDto[] }` | `PARAM_OUT_OF_RANGE` / `UNKNOWN_INDICATOR` / `INSUFFICIENT_DATA` / `INVALID_ARGUMENT` | 已实现（MA / MACD） |
+| `calc_indicators` | `CalcRequest { security, timeframe, adj, from?, to?, generation, instances: InstanceRequest[] }` | `CalcResponse { generation, datasetId, engineVersion, computedMs, cacheHit, barCount, series: SeriesDto[] }` | `E_PARAM_OUT_OF_RANGE` / `E_UNKNOWN_INDICATOR` / `E_INSUFFICIENT_DATA` / `E_INVALID_ARGUMENT` | 已实现（MA / MACD） |
 | `app_info` | 无 | `AppInfo { version, engineVersion, registryCount, platform, isFree }` | — | 规划（未注册） |
 | `provider_status` | 无 | `ProviderStatus { active, providers: ProviderCard[], networkEnabled: false }` | — | 规划（未注册） |
-| `dataset_manifest` | 无 | `ManifestDto { datasetId, provider, generatedAt, securityCount, barCount, from, to, seed, sim, sha256 }` | `DATASET_MISSING` | 规划（未注册） |
-| `indicator_spec` | `{ id }` | `IndicatorSpecDto`（口径页四段 + 版本 + 黄金用例摘要） | `UNKNOWN_INDICATOR` | 规划（未注册） |
+| `dataset_manifest` | 无 | `ManifestDto { datasetId, provider, generatedAt, securityCount, barCount, from, to, seed, sim, sha256 }` | `E_DATASET_MISSING` | 规划（未注册） |
+| `indicator_spec` | `{ id }` | `IndicatorSpecDto`（口径页四段 + 版本 + 黄金用例摘要） | `E_UNKNOWN_INDICATOR` | 规划（未注册） |
 | `load_state` | `{ scope }` | `AppStateDto`（settings / watchlist / favorites） | `STATE_READ_FAILED` | 规划（未注册） |
 | `save_state` | `{ scope, patch }` | `{ ok: true }` | `STATE_WRITE_FAILED` | 规划（未注册） |
-| `quality_report` | `{ datasetId? }` | `QualityReportDto`（6 项检查 / 标记 / 过期） | `DATASET_MISSING` | 规划（未注册） |
+| `quality_report` | `{ datasetId? }` | `QualityReportDto`（6 项检查 / 标记 / 过期） | `E_DATASET_MISSING` | 规划（未注册） |
 | `export_diagnostics` | `{ includeLogs: bool }` | `{ path, bytes, excluded: string[] }` | `EXPORT_FAILED` | 规划（未注册） |
 | `rebuild_dataset` | `{ seed, securityCount }` | `ManifestDto` | `REBUILD_FAILED` | 规划（未注册） |
 
@@ -209,7 +209,7 @@ await invoke<CalcResponse>("calc_indicators", {
 });
 
 // 统一错误（Rust serde → TS）
-// { code: "PARAM_OUT_OF_RANGE", message: "参数 period 超出范围",
+// { code: "E_PARAM_OUT_OF_RANGE", message: "参数 period 超出范围",
 //   retryable: false, details: { indicatorId: "ma", field: "period" } }
 ```
 

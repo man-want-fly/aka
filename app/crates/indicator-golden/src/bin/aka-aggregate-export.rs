@@ -287,7 +287,7 @@ async fn main() -> io::Result<()> {
         .get_bars(&bars_req("999999.XX", "D", None, None))
         .await
         .err()
-        .map(|err| serde_json::to_value(&err).unwrap_or_else(|_| json!({ "code": "INTERNAL" })))
+        .map(|err| serde_json::to_value(&err).unwrap_or_else(|_| json!({ "code": "E_INTERNAL" })))
         .unwrap_or_else(|| json!({ "unexpected": "应返回错误" }));
     snapshots_out.push((
         "10-error-unknown-security".into(),

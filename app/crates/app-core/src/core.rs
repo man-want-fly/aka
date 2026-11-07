@@ -1713,6 +1713,10 @@ fn calc_error(indicator_id: &str, err: CalcError) -> AppError {
             ErrorCode::ParamOutOfRange,
             format!("{indicator_id} 参数不合法：{message}"),
         ),
+        CalcError::ParamOrder(message) => AppError::new(
+            ErrorCode::ParamOrder,
+            format!("{indicator_id} 参数顺序不合法：{message}"),
+        ),
         CalcError::Internal(message) => AppError::internal(message),
     }
 }

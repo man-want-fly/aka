@@ -134,7 +134,7 @@ const RANGES = [
 /** 输入静默 120ms 后才发请求：连续输入（典型间隔 40ms）只保留最后一次，避免抖动请求 */
 const REQUEST_DEBOUNCE_MS = 120;
 
-/** AC-02.05-04 补3：把后端 INSUFFICIENT_DATA 的 details 转成副图内联文案 */
+/** AC-02.05-04 补3：把后端 E_INSUFFICIENT_DATA 的 details 转成副图内联文案 */
 function noticesFrom(error: AppError, manifest: ManifestResponse | null) {
   const details = error.details as
     | { indicatorId?: string; required?: number; got?: number }
@@ -689,7 +689,7 @@ export function WorkbenchPage({
             setCalc(null);
             calcRef.current = null;
             const failure = calcResult.failure;
-            if (failure.code === "INSUFFICIENT_DATA") {
+            if (failure.code === "E_INSUFFICIENT_DATA") {
               setCalcNotices(
                 noticesForBars(nextBars.bars.length, subIds, manifest) ??
                   noticesFrom(failure, manifest),
@@ -1934,7 +1934,7 @@ export function WorkbenchPage({
             onRestore={handleRestoreDefaults}
             isDefault={sameParams(params, defaultParams)}
             busy={loading}
-            error={error?.code === "PARAM_OUT_OF_RANGE" || error?.code === "INVALID_ARGUMENT" ? error.message : null}
+            error={error?.code === "E_PARAM_OUT_OF_RANGE" || error?.code === "E_INVALID_ARGUMENT" ? error.message : null}
             computedMs={calc?.computedMs ?? null}
             cacheHit={calc?.cacheHit ?? null}
           />

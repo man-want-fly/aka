@@ -263,6 +263,11 @@ impl Indicator for Bias {
             period_of_key(params, "period2", 12),
             period_of_key(params, "period3", 24),
         ];
+        if !(periods[0] < periods[1] && periods[1] < periods[2]) {
+            return Err(CalcError::ParamOrder(
+                "period1 < period2 < period3 必须递增".to_string(),
+            ));
+        }
         for column in out.iter_mut() {
             column.fill(f64::NAN);
         }
@@ -293,7 +298,7 @@ impl Indicator for Macd {
         let slow = period_of_key(params, "slow", 26);
         let signal = period_of_key(params, "signal", 9);
         if fast >= slow {
-            return Err(CalcError::InvalidParam("fast 必须小于 slow".to_string()));
+            return Err(CalcError::ParamOrder("fast 必须小于 slow".to_string()));
         }
 
         for column in out.iter_mut() {
@@ -508,6 +513,26 @@ mod tests {
         assert!(out[0][warmup].is_finite());
         let i = warmup + 2;
         assert!((out[2][i] - 2.0 * (out[0][i] - out[1][i])).abs() < 1e-9);
+    }
+
+    #[test]
+    fn e13_rejects_non_increasing_periods() {
+        let close = sample_close();
+        let view = view_of(&close);
+        let meta = lookup(E13_ID).unwrap().meta();
+        let mut params = params(meta);
+        params.insert("period1".into(), crate::ParamValue::Int(12));
+        params.insert("period2".into(), crate::ParamValue::Int(6));
+        params.insert("period3".into(), crate::ParamValue::Int(24));
+        let mut out = vec![vec![0.0; close.len()]; 3];
+        let err = lookup(E13_ID)
+            .unwrap()
+            .calc(&view, &params, &mut out)
+            .unwrap_err();
+        assert!(
+            matches!(err, crate::CalcError::ParamOrder(_)),
+            "period1≥period2 必须 E_PARAM_ORDER，不许静默重排"
+        );
     }
 
     #[test]

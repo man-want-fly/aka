@@ -2304,7 +2304,7 @@ Confirmation：5 指标 × 4 类边界（基础 / 数据不足 / 常数 / 首根
 - **首根**：第 1 根为 NaN，禁止回填。
 - **涨跌停**：一字板不改变均线定义，不得截断或跳过样本。
 - **非正价（≤0，数据异常）**：该根 NaN + 日志 `data.invalid_price`，不参与后续窗口。
-- **参数越界（<2 或 >500）**：拒绝计算并返回 `E_PARAM_RANGE`，不夹取（与 AC-02.05-01 同一套校验）。
+- **参数越界（<2 或 >500）**：拒绝计算并返回 `E_PARAM_OUT_OF_RANGE`，不夹取（与 AC-02.05-01 同一套校验）。
 - **超时**：2500 根 × N=500 单指标 p95 ≤8ms（bench 阈值），不触发 300ms 超时。
 
 **UI 与状态**
@@ -2393,7 +2393,7 @@ T19–T22 是「趋势强度」的数值骨架：斜率与 R² 直接决定用�
 - **除权**：用复权后收盘；不复权模式下除权日跳变会显著抬高斜率，属预期，口径页须标注。
 - **非正价**：该根 NaN，有效样本不足则整窗口 NaN。
 - **`Syy` 极小但非 0**：R² 仍按公式计算并裁剪到 [0,1]，不因浮点噪声输出 >1。
-- **参数越界**：返回 `E_PARAM_RANGE`，不计算。
+- **参数越界**：返回 `E_PARAM_OUT_OF_RANGE`，不计算。
 - **超时**：2500 根 × N=500 p95 ≤8ms。
 
 **UI 与状态**
@@ -2468,7 +2468,7 @@ BIAS 是「价格离均线多远」的最直观读数，常用于判断偏离压
 - **零均值（全 0 收盘）**：三条全 NaN + `DIVIDE_BY_ZERO`，不显示 `0.00%`、不显示 `inf`。
 - **停牌**：停牌日以停牌前收盘占位，分母非 0，正常计算。
 - **除权**：前复权序列无跳变；不复权模式下除权日 BIAS 假跳变属预期，口径页须标注。
-- **参数不递增 / 越界**：返回 `E_PARAM_ORDER` / `E_PARAM_RANGE`，不计算。
+- **参数不递增 / 越界**：返回 `E_PARAM_ORDER` / `E_PARAM_OUT_OF_RANGE`，不计算。
 - **计算超时（>300ms）**：按 S-08.02-02 统一错误卡处理，不空白等待。
 - **停牌叠加零量**：价格连续，不影响 BIAS（量类指标才 NaN）。
 
@@ -2544,7 +2544,7 @@ Confirmation：首值位、三轨关系、常数序列退化，全部可用手�
 - 数据不足 `N` 根：三轨全部 NaN，不补 0、不插值、不画平线。
 - 常数序列（`SD=0`）：T09 上=中=下；T08 `pct=0` 时三轨重合；均合法。
 - 停牌：OHLC 取停牌前收盘，窗口统计照常参与，不改变公式。
-- 参数越界（`N<2` 或 `N>500`、`pct<0`）：`E_PARAM_RANGE`，不进入计算。
+- 参数越界（`N<2` 或 `N>500`、`pct<0`）：`E_PARAM_OUT_OF_RANGE`，不进入计算。
 - 性能：2500 根 × 20 日窗口，单指标 p95 ≤ 8ms。
 
 #### 7. UI 与状态
@@ -2569,7 +2569,7 @@ Confirmation：首值位、三轨关系、常数序列退化，全部可用手�
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`bars`、`elapsed_ms`、`nan_ratio`。
-- 埋点 `indicator.error`：`indicator_id`、`error_code`（`E_PARAM_RANGE` / `INSUFFICIENT_BARS`）。
+- 埋点 `indicator.error`：`indicator_id`、`error_code`（`E_PARAM_OUT_OF_RANGE` / `E_INSUFFICIENT_DATA`）。
 - 不采集用户持仓与自选明细。
 
 ---
@@ -2620,7 +2620,7 @@ Confirmation：种子、首值位、零波动退化三处可独立判定。
 - 常数 OHLC：`TR=0` → `ATR=0`，合法，不转 NaN；V02 在 `close>0` 时为 0。
 - `close=0`（异常数据）：V02 输出 NaN，并记 `DIVIDE_BY_ZERO`，不得输出 ∞。
 - 停牌：`H=L=C=前收`，`TR=0` 正常参与平滑，不跳过该根。
-- 参数：`N=14`，允许 2–500；越界 `E_PARAM_RANGE`。
+- 参数：`N=14`，允许 2–500；越界 `E_PARAM_OUT_OF_RANGE`。
 
 #### 7. UI 与状态
 - **已进 UI**：4 条副图线已渲染并带读数与单位，通用采样通过；虚线、断开、分色等差异条款未逐条断言。
@@ -2645,7 +2645,7 @@ Confirmation：种子、首值位、零波动退化三处可独立判定。
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`bars`、`elapsed_ms`。
-- 埋点 `indicator.error`：`E_PARAM_RANGE`、`DIVIDE_BY_ZERO`。
+- 埋点 `indicator.error`：`E_PARAM_OUT_OF_RANGE`、`DIVIDE_BY_ZERO`。
 - 不采集标的名称等可识别信息。
 
 ---
@@ -2695,7 +2695,7 @@ Confirmation：翻转根、未激活侧、首值位三处可独立判定。
 - ATR 未就绪：对应通道/止损全部 NaN，不提前用短窗口近似。
 - 翻转：仅当收盘穿越前值；盘中最低价触及不翻转；翻转当根保留旧侧值并冻结，次根起生效。
 - 未激活侧：输出 NaN，禁止用 0 或复制另一侧。
-- 参数：`k>0`、`N∈[2,200]`；越界 `E_PARAM_RANGE`。
+- 参数：`k>0`、`N∈[2,200]`；越界 `E_PARAM_OUT_OF_RANGE`。
 - 数据不足：T14 不足 22 根 NaN；T13 不足 15 根 NaN。
 
 #### 7. UI 与状态
@@ -2708,7 +2708,7 @@ Confirmation：翻转根、未激活侧、首值位三处可独立判定。
 - **AC-03.05-12**｜Given 同上；When 计算 T12；Then 中轨为 `SMA20`（与 T10 的 EMA 中轨必须不同），上下轨在同一根起算。`[数据层]`
 - **AC-03.05-13**｜Given 一段先涨后跌的 40 根数据；When 计算 T13；Then 多头段 `stop=max(前值,C−3.5ATR)` 单调不减；当 `C<前值` 时翻空且 `stop=C+3.5ATR`（重置，不是继承多头值）；未激活侧为 NaN；翻转当根冻结旧值。`[数据层]`
 - **AC-03.05-14**｜Given 40 根 K 线；When 计算 T14；Then `UP=HHV(H,22)−3ATR22`、`DN=LLV(L,22)+3ATR22`，第 22 根首值，前 21 根 NaN。`[数据层]`
-- **AC-03.05-15**｜Given `k=0` 或 `N=1`；When 调用四指标；Then 返回 `E_PARAM_RANGE`，且不产生部分结果。`[运行层]`
+- **AC-03.05-15**｜Given `k=0` 或 `N=1`；When 调用四指标；Then 返回 `E_PARAM_OUT_OF_RANGE`，且不产生部分结果。`[运行层]`
 - **AC-03.05-16**｜Given 主图添加 T13；When 浏览 80 根含一次翻转；Then 仅显示激活侧、翻转根有标记、翻转后线不跳变到旧值、NaN 段断开。`[渲染层]`（未做）
 
 #### 9. 依赖与关联
@@ -2721,7 +2721,7 @@ Confirmation：翻转根、未激活侧、首值位三处可独立判定。
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`flip_count`、`elapsed_ms`。
-- 埋点 `indicator.error`：`E_PARAM_RANGE`、`INSUFFICIENT_BARS`。
+- 埋点 `indicator.error`：`E_PARAM_OUT_OF_RANGE`、`E_INSUFFICIENT_DATA`。
 - 不采集交易动作与持仓。
 
 ---
@@ -2796,7 +2796,7 @@ Confirmation：位移后的下标映射、首值位、云带颜色三处可独�
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`bars`、`elapsed_ms`。
-- 埋点 `indicator.error`：`E_PARAM_ORDER`、`INSUFFICIENT_BARS`。
+- 埋点 `indicator.error`：`E_PARAM_ORDER`、`E_INSUFFICIENT_DATA`。
 - 不采集标的与持仓信息。
 
 ---
@@ -2844,7 +2844,7 @@ Confirmation：初始方向、反转重置、AF 上限三处可独立判定。
 - 仅 1 根：SAR 与方向全 NaN，不默认多头。
 - 首根涨跌为 0：按多头处理（`close[1]>=close[0]`），并在口径页注明。
 - 连续同价：不反转，AF 不加速，SAR 不变。
-- AF 参数：`step∈(0,0.2]`、`max∈[step,1]`；越界 `E_PARAM_RANGE`。
+- AF 参数：`step∈(0,0.2]`、`max∈[step,1]`；越界 `E_PARAM_OUT_OF_RANGE`。
 - 反转当根：SAR 取旧 EP，次根起按新方向递推，避免同根重复反转。
 
 #### 7. UI 与状态
@@ -2871,7 +2871,7 @@ Confirmation：初始方向、反转重置、AF 上限三处可独立判定。
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`reversal_count`、`elapsed_ms`。
-- 埋点 `indicator.error`：`E_PARAM_RANGE`、`INSUFFICIENT_BARS`。
+- 埋点 `indicator.error`：`E_PARAM_OUT_OF_RANGE`、`E_INSUFFICIENT_DATA`。
 - 不采集交易动作。
 
 ---
@@ -2921,7 +2921,7 @@ Confirmation：无未来函数、首根 NaN、三条线值三处可独立判定�
 - 停牌：上一根 H=L=C=前收，三线等于前收，合法。
 - 周期切换：日→周时上一根改为上一周，公式不变；不得缓存日线值冒充周线。
 - 不补 R2/R3/S2/S3；若用户需要，登记为后续增量，不在本期。
-- 无参数，不存在 `E_PARAM_RANGE`。
+- 无参数，不存在 `E_PARAM_OUT_OF_RANGE`。
 
 #### 7. UI 与状态
 - **已进 UI**：3 条水平线已渲染，通用采样通过；标签与周期说明未单独取证。
@@ -2943,7 +2943,7 @@ Confirmation：无未来函数、首根 NaN、三条线值三处可独立判定�
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`period`、`elapsed_ms`。
-- 埋点 `indicator.error`：`INSUFFICIENT_BARS`。
+- 埋点 `indicator.error`：`E_INSUFFICIENT_DATA`。
 - 不采集标的与持仓。
 
 ---
@@ -2995,7 +2995,7 @@ Confirmation：标准差分母、带宽量纲、零带宽三处可独立判定�
 - 常数序列：`σ=0` → 带宽 0 合法；%B 分母 0 → NaN，记 `DIVIDE_BY_ZERO`，不得输出 0/1；**该分支必须有常数序列单测覆盖，不得以模拟数据未出现零带宽而豁免**（R-07）。
 - `SMA=0`（异常低价数据）：带宽 NaN。
 - 停牌：收盘平，σ 参与窗口，带宽可能收窄，合法。
-- 参数：`N∈[2,200]`、`k>0`；越界 `E_PARAM_RANGE`。
+- 参数：`N∈[2,200]`、`k>0`；越界 `E_PARAM_OUT_OF_RANGE`。
 
 #### 7. UI 与状态
 - **已进 UI**：3 条副图线已渲染并带读数，通用采样通过；零带宽提示未做。
@@ -3018,7 +3018,7 @@ Confirmation：标准差分母、带宽量纲、零带宽三处可独立判定�
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`bars`、`elapsed_ms`。
-- 埋点 `indicator.error`：`DIVIDE_BY_ZERO`、`E_PARAM_RANGE`。
+- 埋点 `indicator.error`：`DIVIDE_BY_ZERO`、`E_PARAM_OUT_OF_RANGE`。
 - 不采集持仓与自选。
 
 ---
@@ -3066,7 +3066,7 @@ Confirmation：峰值口径、GAPO 分母、正负号三处可独立判定。
 - ATR 未就绪：V08 前 14 根 NaN，不用短窗口替代。
 - 无跳空：`O=C₋₁` → GAPO=0，合法。
 - 停牌：`O=C₋₁`，GAPO=0，不误判为跳空。
-- 参数：`N∈[2,200]`；越界 `E_PARAM_RANGE`。
+- 参数：`N∈[2,200]`；越界 `E_PARAM_OUT_OF_RANGE`。
 - 常数序列：V07 的 dd=0 → UI=0；V08 的 ATR=0 → 分母 0，NaN 并记 `DIVIDE_BY_ZERO`。
 
 #### 7. UI 与状态
@@ -3090,7 +3090,7 @@ Confirmation：峰值口径、GAPO 分母、正负号三处可独立判定。
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`bars`、`elapsed_ms`。
-- 埋点 `indicator.error`：`DIVIDE_BY_ZERO`、`E_PARAM_RANGE`。
+- 埋点 `indicator.error`：`DIVIDE_BY_ZERO`、`E_PARAM_OUT_OF_RANGE`。
 - 不采集标的与持仓。
 
 ### S-03.06-01 摆动基础族数值内核（M01 / M02 / M04）
@@ -3139,7 +3139,7 @@ Confirmation：首值位、零区间取值、值域三处可独立判定。
 - 数据不足：低于首值下标 + 1 根时整列 NaN，不补 0、不用首根补种。
 - 零区间：M02 取 50（有值），M04 取 NaN（不可比），两者不同属预期，口径页须写明。
 - 停牌：价格连续，RSI 差值 0，指标照算不跳变。
-- 参数：`period∈[2,200]`、`k/d∈[2,100]`；越界 `E_PARAM_RANGE`。
+- 参数：`period∈[2,200]`、`k/d∈[2,100]`；越界 `E_PARAM_OUT_OF_RANGE`。
 - 性能：2500 根单指标 p95 ≤8ms。
 
 #### 7. UI 与状态
@@ -3164,7 +3164,7 @@ Confirmation：首值位、零区间取值、值域三处可独立判定。
 
 #### 11. 数据与埋点
 - 埋点 `indicator.compute`：`indicator_id`、`params_hash`、`bars`、`elapsed_ms`、`nan_ratio`。
-- 埋点 `indicator.error`：`E_PARAM_RANGE`、`INSUFFICIENT_BARS`。
+- 埋点 `indicator.error`：`E_PARAM_OUT_OF_RANGE`、`E_INSUFFICIENT_DATA`。
 - 不采集标的与持仓。
 
 ---
@@ -3215,7 +3215,7 @@ Confirmation：分母口径、零分母退化、布尔并列三处可独立判�
 - 数据不足：整列 NaN，不补 0。
 - 常数序列：M05 NaN、M21 NaN、M26 全 1（每根都并列最小）。
 - 停牌：`H=L=C=停牌前收盘`，M26 记为「是」（振幅 0 为最小），口径页须提示该语义。
-- 参数：`N∈[2,200]`；越界 `E_PARAM_RANGE`。
+- 参数：`N∈[2,200]`；越界 `E_PARAM_OUT_OF_RANGE`。
 - 性能：2500 根单指标 p95 ≤8ms。
 
 #### 7. UI 与状态
@@ -3239,7 +3239,7 @@ Confirmation：分母口径、零分母退化、布尔并列三处可独立判�
 **2.8 人日**：3 指标公式与首值 1.1、偏差/分母/并列夹具 0.9、黄金对拍 0.4、文档联调 0.4。含回归 0.2。
 
 #### 11. 数据与埋点
-- 埋点 `indicator.compute`、`indicator.error`（`DIVIDE_BY_ZERO`、`E_PARAM_RANGE`）。
+- 埋点 `indicator.compute`、`indicator.error`（`DIVIDE_BY_ZERO`、`E_PARAM_OUT_OF_RANGE`）。
 - 不采集标的与持仓。
 
 ---
@@ -3291,7 +3291,7 @@ Confirmation：首值位、单位、并列与零分母四处可独立判定。
 #### 6. 异常与边界
 - 数据不足：整列 NaN。
 - 停牌：价格连续，M09 / M10 输出 0（合法），M19 极值不变，M20 的 TR 取停牌前收盘。
-- 参数：`N∈[2,200]`；越界 `E_PARAM_RANGE`。
+- 参数：`N∈[2,200]`；越界 `E_PARAM_OUT_OF_RANGE`。
 - 性能：2500 根单指标 p95 ≤8ms（M19 为滚动极值，注意 O(N) 实现）。
 
 #### 7. UI 与状态
@@ -3316,7 +3316,7 @@ Confirmation：首值位、单位、并列与零分母四处可独立判定。
 **3.4 人日**：4 指标公式与首值 1.4、单位/并列/零分母夹具 1.0、滚动极值性能 0.5、文档联调 0.3。含回归 0.2。
 
 #### 11. 数据与埋点
-- 埋点 `indicator.compute`、`indicator.error`（`DIVIDE_BY_ZERO`、`E_PARAM_RANGE`）。
+- 埋点 `indicator.compute`、`indicator.error`（`DIVIDE_BY_ZERO`、`E_PARAM_OUT_OF_RANGE`）。
 - 不采集标的与持仓。
 
 ---
@@ -3361,14 +3361,14 @@ Confirmation：EMA 首值链、双线/柱形态、三色边界三处可独立判
 | M25 Elder Impulse | H/L/C | `hist=2×(DIF−DEA)`；`impulse=EMA13(hist)`；状态 `{+1,0,-1}`（`eps=1e-9×max(abs(C),1)` 归零） | 46 | absolute 1e-4 |
 
 - 单位：M08 百分比（2 位）；M24 倍率（2 位）；M25 状态为三色标记（无数值小数）。
-- 退化：M08 慢线为 0 → NaN、`fast≥slow` → `E_PARAM_RANGE`；M24 常数 `range` → 比值 1 → `Mass=25`；`range=0` → NaN；M25 `hist=0` → 状态 0。
+- 退化：M08 慢线为 0 → NaN、`fast≥slow` → `E_PARAM_OUT_OF_RANGE`；M24 常数 `range` → 比值 1 → `Mass=25`；`range=0` → NaN；M25 `hist=0` → 状态 0。
 
 #### 6. 异常与边界
 - 数据不足：低于首值下标 + 1 根时整列 NaN。
 - 常数序列：M08 双线恒 0（合法，不 NaN）；M24 `H=11,L=9` 时 `Mass=25.0`；`H=L` 时 NaN。
 - 停牌：价格连续，`range=0`，M24 该根参与求和会使比值 NaN → 整段 NaN，口径页须写明「停牌日 Mass 断线」。
 - 零阈值：M25 的 `hist` 与脉冲差分按 `eps_i=1e-9×max(abs(C[i]),1.0)` 判零；线性上涨只剩 `≈1e−15` 残差，不得判成 `−1`。
-- 参数：`fast<slow`、`N∈[2,200]`；越界 `E_PARAM_RANGE`。
+- 参数：`fast<slow`、`N∈[2,200]`；越界 `E_PARAM_OUT_OF_RANGE`。
 - 性能：2500 根单指标 p95 ≤8ms。
 
 #### 7. UI 与状态
@@ -3377,7 +3377,7 @@ Confirmation：EMA 首值链、双线/柱形态、三色边界三处可独立判
 - 未来渲染要求：M08 双线（无柱）、M24 单线、M25 三色标记 **+1 红 / −1 绿 / 0 蓝**（与 Elder 原版相反，口径页须注明）、NaN 段断开。
 
 #### 8. 验收标准
-- **AC-03.06-17**｜Given 60 根数据、参数 12/26/9；When 计算 M08；Then 下标 33 起双线有值，PPO 线自下标 25 起有值；输出**只有双线、无柱**；Given `fast=26,slow=12`，Then 返回 `E_PARAM_RANGE` 且不计算。`[数据层]`
+- **AC-03.06-17**｜Given 60 根数据、参数 12/26/9；When 计算 M08；Then 下标 33 起双线有值，PPO 线自下标 25 起有值；输出**只有双线、无柱**；Given `fast=26,slow=12`，Then 返回 `E_PARAM_OUT_OF_RANGE` 且不计算。`[数据层]`
 - **AC-03.06-18**｜Given 60 根 `H=11,L=9`（`range=2`）；When 计算 M24；Then 下标 0–39 全 NaN，下标 40 起 `Mass=25.0`（误差 ≤1e-9）；Given 60 根 `H=L=C=10`，Then 全 NaN（不得输出 25 或 0）。`[数据层]`
 - **AC-03.06-19**｜Given 60 根**指数上涨** `C[i]=10×1.01^i`（`H=L=C`）；When 计算 M25（`hist=2×(DIF−DEA)` 自下标 33、`impulse=EMA13(hist)` 自下标 45）；Then 下标 45 `hist=0.0590`、`impulse=0.0496` 而 `state` 仍 NaN，下标 46 起 `state=+1`（`hist[46]=0.0604>0` 且 `impulse[46]=0.0512>impulse[45]=0.0496`），46–59 共 14 根全 `+1`；Given 60 根**线性上涨** `C[i]=10+0.5i`，Then `hist` 只剩浮点残差（`abs(hist)≈1.8e−15`），按 `eps=1e-9×max(abs(C[i]),1.0)` 归 0，46–59 全 `0`（裸符号会误判为 `−1`，故不得省略阈值）；Given 上涨转急跌段，Then 出现 `state=−1`；Given `hist>0` 但 `impulse[i]≤impulse[i−1]`，Then `state=0`；状态值只允许 `{−1,0,1}`。`[数据层]`（v0.2 修正：线性上涨的 `hist` 数学上收敛到 0，不能验 `+1`；理由见 `b3-beta-rulings.md` §4.3）
 - **AC-03.06-20**｜Given 同一组 40 根数据；When 分别计算 M06 与 M25；Then `M25.hist[i]=2×(DIF[i]−DEA[i])` 且与 `M06.HIST[i]` 逐根相等（误差 ≤1e-9）；Given 60 根同价，Then M08 双线恒 0、M24 NaN、M25 `state=0`，均不得为 NaN 以外的伪值。`[数据层]`
@@ -3392,7 +3392,7 @@ Confirmation：EMA 首值链、双线/柱形态、三色边界三处可独立判
 **3.4 人日**：3 指标公式与 EMA 首值链 1.5、三色边界与退化夹具 1.0、黄金对拍 0.6、文档联调 0.3。含回归 0.2。
 
 #### 11. 数据与埋点
-- 埋点 `indicator.compute`、`indicator.error`（`E_PARAM_RANGE`、`DIVIDE_BY_ZERO`）。
+- 埋点 `indicator.compute`、`indicator.error`（`E_PARAM_OUT_OF_RANGE`、`DIVIDE_BY_ZERO`）。
 - 不采集标的与持仓。
 
 ---

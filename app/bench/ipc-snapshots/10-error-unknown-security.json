@@ -1,7 +1,7 @@
 {
   "command": "get_bars",
   "error": {
-    "code": "UNKNOWN_SECURITY",
+    "code": "E_UNKNOWN_SECURITY",
     "details": {
       "security": "999999.XX"
     },
