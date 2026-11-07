@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { readDiagExportMode } from "../lib/diagExport";
+import { diagExportFileName, readDiagExportMode } from "../lib/diagExport";
 import { describeError, ipc } from "../lib/ipc";
 import { StarButton } from "./StarButton";
 import type { SecurityDto, WatchItemDto, WatchlistDto } from "../lib/types";
@@ -234,7 +234,8 @@ export function Watchlist({
   /** S-08.02-04 补1：损坏卡除「重建」外还要能导出诊断（无文件系统插件时以剪贴板 + 下载双通道）。 */
   const exportDiagnostics = async () => {
     const mode = readDiagExportMode();
-    const fileName = `aka-diagnostics-${traceId ?? "unknown"}.json`;
+    // dev 注入运行时文件名带支名，便于取证把落盘文件绑定到 C1/C2；release 不带。
+    const fileName = diagExportFileName(traceId ?? "unknown", mode);
     const payload = JSON.stringify(
       {
         at: new Date().toISOString(),
@@ -247,6 +248,8 @@ export function Watchlist({
       2,
     );
     let copied = false;
+    // dev 注入点（渲染层，非真实通道）：ok / no-download 直接置 true，短路 navigator.clipboard；
+    // no-copy / both-fail 直接置 false，同样不调用剪贴板。release 时 mode=null，走下面的真实调用。
     if (mode === "ok" || mode === "no-download") {
       copied = true;
     } else if (mode === "no-copy" || mode === "both-fail") {
@@ -260,6 +263,8 @@ export function Watchlist({
       }
     }
     let downloaded = false;
+    // dev 注入点：no-download / both-fail 直接置 false，短路 anchor.click；
+    // ok / no-copy 走真实下载（anchor.click 真实调用，文件真实落盘）。
     if (mode === "no-download" || mode === "both-fail") {
       downloaded = false;
     } else {
@@ -292,7 +297,9 @@ export function Watchlist({
       <aside className="watchlist" data-wl-root>
         <div className="wl-error-page" data-wl-unrecoverable>
           <b>自选数据不可恢复</b>
-          <span className="wl-error-page__message">{readError}</span>
+          <span className="wl-error-page__message" data-wl-error-message>
+            {readError}
+          </span>
           <span className="wl-error-page__code mono" data-wl-error-code>
             {errorCode || "E_UNKNOWN"}
           </span>

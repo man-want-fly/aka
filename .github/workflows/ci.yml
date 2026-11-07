@@ -93,49 +93,49 @@ jobs:
       - name: 前端构建产物存在性
         run: test -f dist/index.html
 
-      # W-63：导出分支注入是 dev-only，release 产物必须零命中（源码守卫由上面的源码层门禁检查）。
-      - name: 导出注入仅 dev（W-63）
+      # W-63：导出分支注入是 dev-only。
+      # 两件不同的事分开：这里的静态零命中检查跑的是 release（production dist）产物；
+      # 四支运行时证据跑的是 dev 模式产物（meta 记 mode=dev），二者不能互相替代。
+      - name: 导出注入仅 dev（W-63，release 产物）
         run: |
           if grep -R -q -- 'aka.diag.export' dist; then
             echo "::error::release 前端产物含 dev-only 导出注入键 aka.diag.export（W-63）"
             grep -R -n -- 'aka.diag.export' dist | head -n 5
             exit 1
           fi
-          echo "导出注入仅 dev：生产产物 0 命中"
+          echo "导出注入仅 dev：release 产物 0 命中（运行时四支证据另见 dev 包）"
 
-      # W-49 / W-58 源码层断言：产物 strings 为 0 只证当前实现过得了，证不了下次摘掉 cfg
-      # 会被拦住。这里同时确认：release 的 invoke_handler 不含写命令、debug 仍注册（调试能力
-      # 被误删也要拦）、diag_faults/diag_write/diag_write_named/write_diag 均被
-      # cfg(debug_assertions) 覆盖。两层分工：产物层拦「符号进二进制」，源码层拦「入口被注册/漏 cfg」。
-      # 符号表在 scripts/verify-diag-gate.mjs 内，与下面 symbol 列表保持同一份。
-      - name: 诊断入口源码层门禁（W-49 / W-58）
+      # W-64 源码层门禁：清单全部从源码派生（命令全集 / 行为判定的诊断命令 /
+      # 字面量逐位置 cfg 覆盖 / 写盘物质不变量），不再维护手写名字表。
+      - name: 诊断入口源码层门禁（W-49 / W-58 / W-64）
         run: node scripts/verify-diag-gate.mjs
 
-      # W-49：release 二进制不得残留 QA 注入入口，把 W-47 的本地验收变成常设门禁。
-      # 写法要点：grep -c 在 0 命中时自身 exit 1，必须先取计数再判 -ne 0；
-      # 每个符号独立断言，失败不提前退出，避免一条掩盖其余。
-      # 不能用「非标识符边界」匹配：macOS 二进制里相邻字面量会被合并成
-      # webview_positiondiag_write_nameddataset_manifest，边界匹配会漏检（假绿）；
-      # 改用子串出现次数，并扣掉更长符号的命中（AKA_DIAG 扣 AKA_DIAG_TARGET/AKA_DIAG_INF，
-      # diag_write 扣 diag_write_named）。这样每条断言只归属自己的符号，不会被邻居兜住。
-      # 2026-11 QA 复核后扩围：除四个启动参数外，另拦环境变量与诊断写入口/文件名。
-      - name: release 注入符号门禁（W-49）
+      # W-49：release 二进制不得残留 QA 注入入口。
+      # 符号表来自 `--emit-symbols`（源码派生），ci.yml 不再有第二份手写列表；
+      # 每个符号独立断言，子串扣减也由脚本输出，避免一条掩盖其余。
+      # 计数用 grep -o 而非 -c（0 命中时 grep 自身 exit 1）；
+      # 不用「非标识符边界」匹配：macOS 二进制里相邻字面量会被合并，边界匹配会漏检。
+      - name: release 注入符号门禁（W-49 / W-64）
         run: |
           cargo build --release -p aka-desktop
           BIN=target/release/aka-desktop
           strings "$BIN" > /tmp/aka-release-strings.txt
+          node scripts/verify-diag-gate.mjs --emit-symbols > /tmp/aka-diag-symbols.tsv
+          echo "派生诊断符号（源码 → 产物对账）："
+          cut -f1 /tmp/aka-diag-symbols.tsv
           raw_count() { (grep -a -o -F -- "$1" /tmp/aka-release-strings.txt || true) | wc -l | tr -d ' '; }
           fail=0
-          for symbol in \
-            "AKA-DIAG-CORRUPT" "--corrupt-db" "--readonly-db" "--empty-dataset" \
-            "AKA_DIAG" "AKA_DIAG_TARGET" "AKA_DIAG_INF" \
-            "diag_write_named" "diag_write" "diag_faults" "s2-evidence" "aka/diag"; do
+          while IFS=$'\t' read -r symbol supersets; do
+            [ -n "$symbol" ] || continue
             count=$(raw_count "$symbol")
-            # 扣掉更长符号里的同名子串，避免一条断言兜住另一条（漏项实验要能看出来）。
-            case "$symbol" in
-              "AKA_DIAG") count=$((count - $(raw_count "AKA_DIAG_TARGET") - $(raw_count "AKA_DIAG_INF")));;
-              "diag_write") count=$((count - $(raw_count "diag_write_named")));;
-            esac
+            if [ -n "$supersets" ]; then
+              old_ifs=$IFS
+              IFS=','
+              for longer in $supersets; do
+                count=$((count - $(raw_count "$longer")))
+              done
+              IFS=$old_ifs
+            fi
             echo "注入符号 $symbol：$count（期望 0）"
             if [ "$count" -ne 0 ]; then
               fail=1
@@ -143,5 +143,5 @@ jobs:
               echo "--- $symbol 命中行 ---"
               grep -a -n -F -- "$symbol" /tmp/aka-release-strings.txt | head -n 30
             fi
-          done
+          done < /tmp/aka-diag-symbols.tsv
           exit "$fail"

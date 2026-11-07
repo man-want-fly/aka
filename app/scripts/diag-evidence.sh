@@ -13,6 +13,8 @@ OUT="$APP_DIR/../docs/qa/evidence"
 DB="$HOME/Library/Application Support/aka/state.db"
 SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204}"
 LABEL="$(date +%Y%m%d-%H%M%S)"
+# 本次取证运行的起始时刻（epoch ms）：文件断言只认此时间窗之后落盘的文件，排除历史残档。
+RUN_STARTED_MS="$(python3 -c 'import time; print(int(time.time()*1000))')"
 mkdir -p "$OUT" "$DIAG_DIR"
 FLAGS=""
 EXTRA_ENV=""
@@ -177,10 +179,10 @@ fi
 
 # W-48：页面 trace id 必须能在 telemetry.jsonl 里查到，否则「可查」只是页面装饰。
 if [ "$SUITE" = "watchlist-corrupt" ]; then
-  python3 - "$OUT/$NAME.json" "$TELEMETRY" <<'PY'
+  python3 - "$OUT/$NAME.json" "$TELEMETRY" "$RUN_STARTED_MS" <<'PY'
 import glob, json, os, pathlib, re, sys, time
 
-evidence_path, telemetry_path = sys.argv[1:3]
+evidence_path, telemetry_path, run_started_ms = sys.argv[1], sys.argv[2], int(sys.argv[3])
 data = json.load(open(evidence_path, encoding="utf-8"))
 page_ids = sorted(
     set(re.findall(r"TR-\d{8}-\d{6}-\d{4}", json.dumps(data, ensure_ascii=False)))
@@ -204,40 +206,97 @@ data.setdefault("checks", []).append(
     }
 )
 
-# W-63：anchor.click() 没抛不等于文件落盘，必须 fs.stat 到真实文件且大小 > 0。
-trace = page_ids[0] if page_ids else ""
-downloads = []
-if trace:
-    pattern = os.path.expanduser(f"~/Downloads/aka-diagnostics-{trace}*.json")
-    deadline = time.time() + 5
-    while time.time() < deadline:
-        downloads = sorted(glob.glob(pattern), key=os.path.getmtime)
-        if downloads:
-            break
-        time.sleep(0.5)
-file_checked = False
-detail = f"未找到 ~/Downloads/aka-diagnostics-{trace or '无'}.json"
-if downloads:
-    latest = downloads[-1]
-    size = os.path.getsize(latest)
+# W-63/W-64：落盘断言按支绑定，且只认本次运行时间窗（mtime > runStartedAt），
+# 并解析 JSON 校验 code/message/traceId 与页面一致、文件名里的 traceId 精确匹配。
+ANCHOR = "S-08.02-04·导出四态（渲染层）"
+snapshot = data.get("snapshot") or {}
+trace = str(snapshot.get("trace") or (page_ids[0] if page_ids else ""))
+page_code = str(snapshot.get("code") or "")
+page_message = " ".join(str(snapshot.get("message") or "").split())
+start_ms = int(snapshot.get("runStartedAt") or run_started_ms)
+expected_files = snapshot.get("files") or {}
+
+
+def normalized(value: str) -> str:
+    return " ".join(str(value).split())
+
+
+def collect(expected: str):
+    """本次运行之后落盘的候选文件（精确名或浏览器重名后缀），按 mtime 升序。"""
+    if not expected:
+        return []
+    stem = expected[:-5]
+    found = []
+    for path in glob.glob(os.path.expanduser(f"~/Downloads/{stem}*.json")):
+        base = os.path.basename(path)
+        if not re.fullmatch(re.escape(stem) + r"(?:[- ][0-9]+)?\.json", base):
+            continue
+        # mtime 为秒级分辨率，容差 1s；更早的残档一律不算。
+        if os.path.getmtime(path) * 1000 >= start_ms - 1000:
+            found.append(path)
+    return sorted(found, key=os.path.getmtime)
+
+
+def present(expected: str):
+    files = collect(expected)
+    if not files:
+        return False, f"未找到本次运行（runStartedAt={start_ms}）落盘的 {expected or '（快照缺失）'}"
+    path = files[-1]
+    base = os.path.basename(path)
+    match = re.fullmatch(
+        r"aka-diagnostics-(TR-\d{8}-\d{6}-\d{4})-(?:ok|no-copy|no-download|both-fail)(?:[- ][0-9]+)?\.json",
+        base,
+    )
+    trace_ok = bool(match) and match.group(1) == trace
+    size = os.path.getsize(path)
     try:
-        payload = json.load(open(latest, encoding="utf-8"))
-        same = payload.get("traceId") == trace
+        payload = json.load(open(path, encoding="utf-8"))
     except Exception:
-        same = False
-    file_checked = size > 0 and same
-    detail = f"{latest} size={size}B traceId匹配={same}"
-data.setdefault("checks", []).append(
-    {
-        "id": "WL-23-file",
-        "card": "S-08.02-04",
-        "ac": "AC-08.02-05（补1）",
-        "layer": "data",
-        "passed": file_checked,
-        "blocked": False,
-        "detail": detail,
-    }
-)
+        payload = {}
+    content_ok = (
+        normalized(payload.get("code") or "") == normalized(page_code)
+        and normalized(payload.get("message") or "") == page_message
+        and payload.get("traceId") == trace
+    )
+    return size > 0 and trace_ok and content_ok, (
+        f"{path} size={size}B mtime={time.strftime('%H:%M:%S', time.localtime(os.path.getmtime(path)))} "
+        f"文件名trace匹配={trace_ok} 内容(code/message/traceId)匹配={content_ok}"
+    )
+
+
+def absent(expected: str):
+    files = collect(expected)
+    if files:
+        return False, f"本应无落盘，但本次运行发现 {files}"
+    return True, f"未落盘（{expected or '（快照缺失）'}）"
+
+
+for check_id in ("WL-23-file-C1", "WL-23-file-C2"):
+    passed, detail = present(str(expected_files.get(check_id, "")))
+    data["checks"].append(
+        {
+            "id": check_id,
+            "card": "S-08.02-04",
+            "ac": ANCHOR,
+            "layer": "data",
+            "passed": passed,
+            "blocked": False,
+            "detail": detail,
+        }
+    )
+for check_id in ("WL-23-file-C3", "WL-23-file-C4"):
+    passed, detail = absent(str(expected_files.get(check_id, "")))
+    data["checks"].append(
+        {
+            "id": check_id,
+            "card": "S-08.02-04",
+            "ac": ANCHOR,
+            "layer": "data",
+            "passed": passed,
+            "blocked": False,
+            "detail": detail,
+        }
+    )
 layers = {}
 for check in data["checks"]:
     total, passed = layers.get(check["layer"], (0, 0))
@@ -280,7 +339,8 @@ meta = {
     "dirty": dirty,
     "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" {extra_env} target/debug/aka-desktop {flags}".replace("  ", " ").strip(),
     "fixture": fixture,
-    "environment": "macOS 本机；vite build 产物 + cargo build（debug，含 QA 注入）--features tauri/custom-protocol",
+    "buildMode": "dev",
+    "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
     "formatScan": (
         {
             "command": "npm run verify:format",

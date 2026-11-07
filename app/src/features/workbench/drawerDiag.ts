@@ -97,12 +97,14 @@ const selectedSubs = () => {
 
 const input = () => q<HTMLInputElement>("[data-drawer-search]");
 
+/** 取证动作：元素缺失只返回 false（对应断言各自失败），不让单步异常中止整套件、丢掉证据。 */
 const clickElement = (element: Element | null) => {
-  if (!element) throw new Error("目标元素不存在");
+  if (!element) return false;
   const click = (element as HTMLElement).click;
   // SVG 节点（如副图 × 移除）没有 .click()，需要派发 MouseEvent 才能触发 React 合成事件
   if (typeof click === "function") (element as HTMLElement).click();
   else element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  return true;
 };
 
 /**
@@ -121,10 +123,12 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const implemented = items.length - planned.length;
 
   /**
-   * AC-02.04-02：产品是 200ms 防抖 + 同步过滤。先清空并等分类导航重新出现
-   * （= 搜索已撤销、该分类全量列表已渲染；清空等待不计入时延断言），
-   * 再输入并等预期结果，超时上限 300ms——超时即红，不用固定 sleep 放宽时延。
+   * AC-02.04-02：产品承诺 200ms（200ms 防抖 + 同步过滤），验收上限 250ms（含 CI 调度余量）。
+   * 先清空并等分类导航重新出现（= 搜索已撤销、该分类全量列表已渲染；清空等待不计入时延断言），
+   * 再输入并等预期结果。超时不抛异常中止整套件：记到 R-LAT 单条 failed，证据照常落盘、退出码非零。
    */
+  let searchLatencyMax = 0;
+  let searchLatencyFailure = "";
   const typeQuery = async (text: string, probe: () => boolean) => {
     const field = await waitFor(input);
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
@@ -133,13 +137,23 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
       field.dispatchEvent(new Event("input", { bubbles: true }));
     };
     type("");
-    await waitFor(() => q('[data-drawer-cat][aria-pressed="true"]'), 400, 20).catch(() => {
-      throw new Error("清空搜索后 400ms 内未恢复分类列表");
-    });
-    type(text);
-    await waitFor(() => (probe() ? true : null), 300, 20).catch(() => {
-      throw new Error(`搜索「${text}」300ms 内未出现预期结果（200ms 防抖 + 同步过滤）`);
-    });
+    const cleared = await waitFor(() => q('[data-drawer-cat][aria-pressed="true"]'), 400, 20)
+      .then(() => true)
+      .catch(() => false);
+    if (!cleared) {
+      searchLatencyFailure ||= "清空搜索后 400ms 内未恢复分类列表";
+      return false;
+    }
+    const started = performance.now();
+    const hit = await waitFor(() => (probe() ? true : null), 250, 20)
+      .then(() => true)
+      .catch(() => false);
+    if (!hit) {
+      searchLatencyFailure ||= `搜索「${text}」超过 250ms 未出现预期结果`;
+      return false;
+    }
+    searchLatencyMax = Math.max(searchLatencyMax, performance.now() - started);
+    return true;
   };
 
   // ---- 数据层 ----
@@ -624,6 +638,18 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     )} / M02 禁用=${blocked} / 副图实例=${subsBeforeNoTarget.join(
       "+",
     )} → ${subsAfterNoTarget.join("+")} / 行点击提示「${noTargetHint}」`,
+  );
+
+  // W-65：搜索时延单条断言。产品承诺 200ms / 验收上限 250ms（含调度余量）；
+  // 任一次搜索超时只把本条记 failed，不中止套件，证据照常落盘（ok=false → 脚本退出码非零）。
+  push(
+    "R-LAT",
+    "AC-02.04-02",
+    "runtime",
+    searchLatencyFailure === "",
+    `产品承诺 200ms、验收上限 250ms（含调度余量）；本次最慢 ${searchLatencyMax.toFixed(
+      0,
+    )}ms${searchLatencyFailure ? `；${searchLatencyFailure}` : ""}`,
   );
 
   const report = {

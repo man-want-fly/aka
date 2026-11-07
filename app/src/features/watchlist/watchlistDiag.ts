@@ -1,4 +1,8 @@
-import { clearDiagExportMode, setDiagExportMode } from "../../lib/diagExport";
+import {
+  clearDiagExportMode,
+  diagExportFileName,
+  setDiagExportMode,
+} from "../../lib/diagExport";
 import { describeError, ipc } from "../../lib/ipc";
 
 /**
@@ -125,13 +129,15 @@ export async function runWatchlistDiagnostics() {
   if (faults && (faults.corruptDb || faults.readOnlyDb || faults.datasetEmpty)) {
     const mode = faults.corruptDb ? "corrupt" : faults.readOnlyDb ? "readonly" : "empty";
     markStage(`fault:${mode}`);
-    if (faults.corruptDb) await runCorruptMode(push);
+    let snapshot: CorruptSnapshot | undefined;
+    if (faults.corruptDb) snapshot = await runCorruptMode(push);
     else if (faults.readOnlyDb) await runReadonlyMode(push);
     else await runEmptyDatasetMode(push);
     const report = buildReport(
       checks,
       mode,
       FAULT_NOTE[mode] ?? "故障注入运行：见 checks。",
+      snapshot,
     );
     await ipc.diagWriteNamed(evidenceName(mode), JSON.stringify(report, null, 2));
     return report;
@@ -667,11 +673,27 @@ function evidenceName(mode: string) {
     : `s0102-watchlist-${mode}-evidence.json`;
 }
 
-function buildReport(checks: Check[], mode: string, note: string) {
+interface CorruptSnapshot {
+  /** 本次取证运行开始时刻（epoch ms），文件断言要求 mtime > 此值，排除历史残档。 */
+  runStartedAt: number;
+  code: string;
+  message: string;
+  trace: string;
+  /** 四支各自的期望文件名；C1/C2 应真实落盘，C3/C4 应无文件。 */
+  files: Record<string, string>;
+}
+
+function buildReport(
+  checks: Check[],
+  mode: string,
+  note: string,
+  snapshot?: CorruptSnapshot,
+) {
   const blockedChecks = checks.filter((check) => check.blocked);
   const tally = (list: Check[]) =>
     `${list.filter((check) => check.passed && !check.blocked).length}/${list.length}`;
   return {
+    ...(snapshot ? { snapshot } : {}),
     ok: checks.every((check) => !check.blocked && check.passed),
     suite: `S-01.02 watchlist (${mode})`,
     finishedAt: new Date().toISOString(),
@@ -717,8 +739,9 @@ async function runEmptyDatasetMode(push: Push) {
 }
 
 /** 补3：state.db 损坏 → 不可恢复页 + trace id + 「重新生成数据」。 */
-async function runCorruptMode(push: Push) {
+async function runCorruptMode(push: Push): Promise<CorruptSnapshot> {
   markStage("fault:corrupt");
+  const runStartedAt = Date.now();
   const page = await waitFor(() => q<HTMLElement>("[data-wl-unrecoverable]"), 12_000).catch(() => null);
   const trace = (q<HTMLElement>("[data-wl-trace-id]")?.textContent ?? "").trim();
   const action = page ? buttonByText("重新生成数据", page) : undefined;
@@ -754,7 +777,10 @@ async function runCorruptMode(push: Push) {
     `错误码「${code}」/ 重建=${Boolean(action)} / 导出诊断=${Boolean(exportAction)} / 重试=${Boolean(retryAction)}`,
   );
 
-  // 补1（W-63）：四支文案各一条独立断言，禁止析取；分支由 dev-only 注入开关强制。
+  // 补1（W-63 / W-66）：四支文案各一条独立断言，禁止析取；分支由 dev-only 注入开关强制。
+  // 只证「四种状态文案各自正确渲染」（卡面锚点 S-08.02-04·导出四态（渲染层）），
+  // 不代表失败路径真实发生。C1/C2 的下载通道是真调用，文件名带支名供脚本按支核验落盘。
+  const anchor = "S-08.02-04·导出四态（渲染层）";
   const statusNode = () => q<HTMLElement>("[data-wl-export-status]");
   const clickExport = async (mode: "ok" | "no-copy" | "no-download" | "both-fail") => {
     setDiagExportMode(mode);
@@ -768,14 +794,15 @@ async function runCorruptMode(push: Push) {
       2_000,
     ).catch(() => "");
   };
-  const fileName = `aka-diagnostics-${trace}.json`;
+  const fileName = (mode: "ok" | "no-copy" | "no-download" | "both-fail") =>
+    diagExportFileName(trace, mode);
   const bothOk = await clickExport("ok");
   push(
     "WL-23C1",
     "render",
     "S-08.02-04",
-    "AC-08.02-05（补1）",
-    Boolean(exportAction) && bothOk === `已复制到剪贴板，并下载 ${fileName}`,
+    anchor,
+    Boolean(exportAction) && bothOk === `已复制到剪贴板，并下载 ${fileName("ok")}`,
     `已复制+已下载支：「${bothOk || "缺失"}」`,
   );
   const noCopy = await clickExport("no-copy");
@@ -783,8 +810,8 @@ async function runCorruptMode(push: Push) {
     "WL-23C2",
     "render",
     "S-08.02-04",
-    "AC-08.02-05（补1）",
-    Boolean(exportAction) && noCopy === `已下载 ${fileName}（剪贴板不可用）`,
+    anchor,
+    Boolean(exportAction) && noCopy === `已下载 ${fileName("no-copy")}（剪贴板不可用）`,
     `仅已下载支：「${noCopy || "缺失"}」`,
   );
   const noDownload = await clickExport("no-download");
@@ -792,8 +819,8 @@ async function runCorruptMode(push: Push) {
     "WL-23C3",
     "render",
     "S-08.02-04",
-    "AC-08.02-05（补1）",
-    Boolean(exportAction) && noDownload === `已复制到剪贴板（下载被拦截）：${fileName}`,
+    anchor,
+    Boolean(exportAction) && noDownload === `已复制到剪贴板（下载被拦截）：${fileName("no-download")}`,
     `仅已复制支：「${noDownload || "缺失"}」`,
   );
   const bothFail = await clickExport("both-fail");
@@ -801,11 +828,26 @@ async function runCorruptMode(push: Push) {
     "WL-23C4",
     "render",
     "S-08.02-04",
-    "AC-08.02-05（补1）",
+    anchor,
     Boolean(exportAction) && bothFail === "导出失败：剪贴板与下载均不可用，请手动复制错误码与追踪号",
     `导出失败支：「${bothFail || "缺失"}」`,
   );
   clearDiagExportMode();
+  const message = (q<HTMLElement>("[data-wl-error-message]")?.textContent ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return {
+    runStartedAt,
+    code: code || "E_UNKNOWN",
+    message,
+    trace,
+    files: {
+      "WL-23-file-C1": fileName("ok"),
+      "WL-23-file-C2": fileName("no-copy"),
+      "WL-23-file-C3": fileName("no-download"),
+      "WL-23-file-C4": fileName("both-fail"),
+    },
+  };
 }
 
 /** 补4（删组）/ 补4（移出）/ 补3（星标）：只读库下的三处写失败。 */
