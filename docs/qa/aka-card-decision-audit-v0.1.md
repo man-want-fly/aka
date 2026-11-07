@@ -1269,6 +1269,51 @@ Gate C：`S-03.04-02` 按 BA `a846473` 的「可签」录入 PASS；`S-06.01-01`
 
 ---
 
+#### 4.7.26 dev A 第二批裁定：两卡签、`S-08.02-04` 记 blocked、台账 v0.20 结论作废（2026-11-07）
+
+**对象**：`8373e3d`（`S-02.04-02`）、`8add7ce`（`S-02.05-02`）、`a13b2f3`+`2638335`（`S-08.02-04`）、`5cc592f`（证据归档）。
+
+**前提核实（不采信自报）**
+1. `ErrorCode` 只有 8 个变体（`UnknownSecurity`…`Internal`），**没有** `E_TIMEOUT`/`E_ENGINE_PANIC`。可重试不是错误码，是 `AppError.retryable` 布尔：`internal()` 置 `true`，磁盘只读映射也置 `true`（`error.rs:104`、`error.rs:127`）。
+2. 行为在：`StateCard.tsx:79` 的 `showPrimary = … && (!retryAction || Boolean(error?.retryable))`；`MarketPage.tsx:516`、`IndicatorDrawer.tsx:202` 都传 `retryAction`。
+3. 正向分支造不出：现有注入 `--readonly-db` 只落在自选行内错误条，不经过带 `retryAction` 的 StateCard；市场/工作台没有超时或可重试错误的注入开关。
+4. 证据分母：`s20502-restart-evidence.json` 8 条 check 全部标 `AC-02.05-04`（与 A 段合并 17 条同标）；`s20401-evidence.json` 20 条中本卡 11 条，另 9 条属 `S-02.04-01`/`S-08.01-02`/`S-03.01-05`。
+5. `main` 工作区脏：`app/src-tauri/src/lib.rs`、`commands.rs` 未提交（内容是 W-49 的 diag handler 收窄）；且 `main` 领先 `origin/main` **11 个 commit**，CI 未在这条 tip 跑过。
+6. Gate A 复跑：`verify:docs` PASS（44/44，failed=0 skipped=0）、`verify:constants` PASS（未登记漂移 0）、`verify:format` PASS（白名单外 0）。
+
+**判 1｜`AC-08.02-05` 记 `blocked`，不是「未实现」，也不记「条件交付」**
+- 不是「未实现」：分支和可重试错误都在，行为本身没缺。
+- 不能记「条件交付」：台账定义是「有部分证据 + **明确未满足的 AC**」；这里是**不可判定**，不是「没做」。按第 10 条，不可判定 ≠ 通过，`blocked` 才是它的身份。
+- 不签、不计入已交付。补一条 debug-only 正向注入（照 `AKA_DIAG_INF` 口径，release 编译掉）即可转 PASS，不需要新产品码。
+- **不加 `E_TIMEOUT`/`E_ENGINE_PANIC`。** 这两个码归 `S-08.02-02`（未开始），现在加就是「词表预留当实现」，刚在 `W-50` 纠正过同类错。
+- 顺带 Gate A 不一致：卡面 L5710「重试按钮｜仅 `E_TIMEOUT`、`E_ENGINE_PANIC` 提供」与实现的「按 `retryable` 布尔」不符。改卡面：**仅 `retryable=true` 提供，上述两码只是其中两类**。否则 `S-08.02-02` 交付时必然再改一次。
+
+**判 2｜串行顺序：main 先定基线，dev B 后合**
+- `a13b2f3`/`2638335` 已在 `main`，`dev2` 不含（`dev2` HEAD `5d8dd5e`，落后 `main` 7 个 commit）。反向合并不成立：dev B 合 `main`。
+- **合并前置**（缺一不许合）：① dev A 把 `lib.rs`/`commands.rs` 的未提交改动提交或丢弃；② push 到 `origin/main`，让 CI 在 tip 跑出 `W-49` 结论——现在领先 11 个 commit，等于 `W-49` 在这批代码上没有证据；③ dev B 先把自己工作区的 `core.rs` 等改动提交成独立 commit，再 merge。
+- 冲突口径：停牌四字段与 `value.indefinite` 以 `main` 为准，dev B 只叠加自己那部分；`app/bench`、`indicators.json` 由 TL 先裁。
+- 重跑责任：**dev B 跑 `W-34`**（合并方负责）；**`W-49` 以 CI run 为准**，dev B 报 run id、TL 核；合回 `main` 后在 `main` tip 上再跑一次，**最终以 `main` tip 为结论**，`dev2` 的绿只作参考。
+
+**判 3｜台账 v0.20：数字留、版本结论作废，BA 出 v0.21**
+- 越权成立：台账由 BA 单一维护（§0.1 第 3 条），dev A 提交 v0.20 违反。
+- 数字经复算自洽（73−19=54；`2.5+3.5+69.4+13+5+13+29.5+12.5+5=153.4`；`207.9−54.5=153.4`），**不因作者作废**。
+- 但**结论作废**：`S-02.04-02` 的「20/20」混入 9 条他卡/他 AC 的 check（`S-02.04-01` 7、`S-08.01-02` 1、`S-03.01-05` 1），本卡实为 **7 AC / 11 check**；`S-02.05-02` 的 17/17 标签全塌到 `AC-02.05-04`，结构上只能算 1/4。行为覆盖成立，但「20/20 / 17/17」不能当「覆盖」写。
+- 处理：v0.20 在 changelog 记「开发代填、未经 BA 复核，不作为依据」；BA 出 **v0.21** 为唯一有效版本，改分母写法与支撑证据；两张卡的状态可保留，前提是分母改正。
+- 制度补第 **15** 条：**开发只报数字与证据，不改台账**；台账 diff 只能由 BA 产生。开发可以在提交说明里给「建议数字」，进台账必须经 BA 重算。
+
+**判 4｜`a13b2f3`+`2638335` 拆两提交：认**
+功能与 release 告警清理分属两个关注点，后者是编译期收尾；证据 meta 绑 `2638335` 也对。不要求合单、不 amend。唯一要求：卡面与 gate-log 引用写两个 SHA，不许只写一个。
+
+**本批签字**
+- `S-02.04-02`：Gate A PASS / Gate B PASS（无新决定）/ Gate C PASS，签 `8373e3d`，scope = 卡 §S-02.04-02 全卡（`AC-02.04-03` 及补1–补3、`AC-02.04-04` 及补1–补2）。证据分母按 11 条 check 记，不写 20/20。
+- `S-02.05-02`：Gate A PASS / Gate B PASS / Gate C PASS，签 `8add7ce`，scope = 卡 §S-02.05-02 全卡（`AC-02.05-04` 及补1–补3）。AC 标签缺陷交 `W-57` 修，属记账不改行为。
+- `S-08.02-04`：**不签**，`blocked`，见判 1。
+- 提醒：`a13b2f3` 在其后改了 `StateCard.tsx`/`format.ts`，`S-02.04-02`/`S-02.05-02` 的签若被 QA 证明受其影响即失效，重跑。
+
+**编号**：新增 `W-55`（dev A 正向注入）、`W-56`（BA 台账 v0.21 + 卡面 L5710）、`W-57`（dev A 证据 AC 标签与分母修正）。
+
+---
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。
