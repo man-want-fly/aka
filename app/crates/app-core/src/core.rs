@@ -18,15 +18,19 @@ use indicator_core::{
 use crate::dto::{
     BarDto, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, IndicatorFavoriteDto,
     IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto, ListSecuritiesRequest, MarketRowDto,
-    MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto, RangeDto,
-    RegistryResponse, SecurityDto, SeriesDto, WatchGroupDto, WatchItemDto, WatchToggleResult,
-    WatchlistDto,
+    MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto,
+    QualityCheckDto, QualityExampleDto, QualityReportDto, RangeDto, RegistryResponse, SecurityDto,
+    SeriesDto, WatchGroupDto, WatchItemDto, WatchToggleResult, WatchlistDto,
 };
 use crate::error::{AppError, ErrorCode};
+use crate::quality::{self, SecurityQualityInput};
 use crate::telemetry::{
     Telemetry, EVENT_CACHE_HIT, EVENT_CACHE_MISS, EVENT_COMPUTE_COUNT, EVENT_COMPUTE_SKIP,
     EVENT_INDICATOR_COMPUTE,
 };
+
+/// 质量扫描完成事件（JSONL 与内存环形队列同源）。
+pub const EVENT_QUALITY_SCAN: &str = "quality.scan";
 
 /// 自选上限（跨分组按标的去重计数）
 pub const WATCHLIST_LIMIT: i64 = 500;
@@ -215,6 +219,8 @@ pub struct AppCore {
     dataset_coverage: Option<(String, String)>,
     calc_cache: Mutex<HashMap<String, Arc<Vec<Vec<f64>>>>>,
     calc_stats: Mutex<CacheStats>,
+    /// S-07.05-01：按 dataset_id 缓存的最近一次质量报告（跨命令复用）。
+    quality_report: Mutex<Option<QualityReportDto>>,
     telemetry: Telemetry,
     /// rusqlite `Connection` 是 `Send` 但不是 `Sync`，因此包一层 Mutex 才能随 `AppCore`
     /// 被 Tauri 的 `State` 共享。
@@ -239,6 +245,7 @@ impl AppCore {
             calc_cache: Mutex::new(HashMap::new()),
             calc_stats: Mutex::new(CacheStats::default()),
             telemetry: Telemetry::in_memory(),
+            quality_report: Mutex::new(None),
             state: None,
         })
     }
@@ -748,6 +755,119 @@ impl AppCore {
     /// provider 侧按需计算并缓存（mock 为 OnceLock），不在启动路径上付全量摘要成本。
     pub fn dataset_manifest(&self) -> Option<data_provider::DatasetManifest> {
         self.provider.dataset_manifest()
+    }
+
+    fn current_dataset_id(&self) -> String {
+        self.dataset_manifest()
+            .map(|manifest| manifest.dataset_id)
+            .unwrap_or_else(|| "unknown".to_string())
+    }
+
+    /// 读取缓存报告；`stale` 由当前 dataset_id 现算，不依赖缓存内的旧标志。
+    pub fn quality_report(&self) -> Option<QualityReportDto> {
+        let current = self.current_dataset_id();
+        let mut guard = self.quality_report.lock().ok()?;
+        guard.as_mut().map(|report| {
+            report.current_dataset_id = current.clone();
+            report.stale = report.based_on_dataset_id != current;
+            report.clone()
+        })
+    }
+
+    /// 全量扫描 6 项质量检查；成功后才覆盖缓存（失败保留上一次报告）。
+    pub async fn quality_scan(&self) -> Result<QualityReportDto, AppError> {
+        let started = std::time::Instant::now();
+        let dataset_id = self.current_dataset_id();
+        let has_adjust_factors = self.provider.capabilities().adjust_factors;
+
+        let mut inputs = Vec::with_capacity(self.securities.len());
+        let mut observed_dates = std::collections::BTreeSet::new();
+        for security in &self.securities {
+            let batch = self.daily_batch(&security.code, data_provider::Adjust::None).await?;
+            for row in &batch.rows {
+                observed_dates.insert(row.date);
+            }
+            inputs.push(SecurityQualityInput {
+                security: security.clone(),
+                bars: batch.rows.clone(),
+                has_adjust_factors,
+            });
+        }
+
+        let fallback: Vec<data_provider::Date> = observed_dates.into_iter().collect();
+        let calendar = match &self.dataset_coverage {
+            Some((start, end)) => {
+                match (
+                    data_provider::Date::parse(start),
+                    data_provider::Date::parse(end),
+                ) {
+                    (Some(from), Some(to)) => self
+                        .provider
+                        .trading_calendar(from, to)
+                        .await
+                        .map_err(AppError::from)?,
+                    _ => fallback,
+                }
+            }
+            None => fallback,
+        };
+
+        let result = quality::scan(&calendar, &inputs);
+        let duration_ms = started.elapsed().as_millis() as u64;
+        let rows: Vec<QualityCheckDto> = result
+            .rows
+            .into_iter()
+            .map(|row| QualityCheckDto {
+                key: row.key,
+                label_zh: row.label_zh,
+                hits: row.hits,
+                base: row.base,
+                ratio_pct: row.ratio_pct,
+                treatment: row.treatment,
+                status: row.status.as_str(),
+                error_code: row.error_code,
+                examples: row
+                    .examples
+                    .into_iter()
+                    .map(|example| QualityExampleDto {
+                        security: example.security,
+                        date: example.date,
+                    })
+                    .collect(),
+            })
+            .collect();
+
+        let total_count = rows.len();
+        let report = QualityReportDto {
+            dataset_id: dataset_id.clone(),
+            based_on_dataset_id: dataset_id.clone(),
+            current_dataset_id: dataset_id,
+            stale: false,
+            scanned_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0),
+            duration_ms,
+            passed_count: result.passed_count,
+            total_count,
+            rows,
+        };
+        *self
+            .quality_report
+            .lock()
+            .map_err(|_| AppError::internal("质量报告锁中毒"))? = Some(report.clone());
+
+        self.telemetry.emit(
+            EVENT_QUALITY_SCAN,
+            vec![
+                ("datasetId", serde_json::json!(report.dataset_id.clone())),
+                ("durationMs", serde_json::json!(report.duration_ms)),
+                ("passedCount", serde_json::json!(report.passed_count)),
+                ("totalCount", serde_json::json!(report.total_count)),
+                ("stale", serde_json::json!(false)),
+            ],
+        );
+        Ok(report)
     }
 
     pub fn indicator_registry(&self, category: Option<&str>) -> RegistryResponse {
@@ -1512,6 +1632,63 @@ mod tests {
     async fn indicator_favorites_requires_state_db() {
         let core = AppCore::new_mock().await.unwrap();
         assert!(core.indicator_favorites().is_err());
+    }
+
+    #[tokio::test]
+    async fn quality_scan_reports_six_checks_and_caches_result() {
+        let core = AppCore::new_mock().await.unwrap();
+        assert!(core.quality_report().is_none(), "未扫描前页面显示尚未检查");
+
+        let report = core.quality_scan().await.unwrap();
+        assert_eq!(report.total_count, 6);
+        assert_eq!(report.rows.len(), 6);
+        assert_eq!(
+            report.dataset_id,
+            core.dataset_manifest().unwrap().dataset_id,
+            "报告必须绑定当前数据集 id"
+        );
+        assert!(!report.stale);
+        assert_eq!(
+            report
+                .rows
+                .iter()
+                .map(|row| row.key)
+                .collect::<Vec<_>>(),
+            vec![
+                "MISSING",
+                "EX_RIGHTS",
+                "SUSPENDED",
+                "ZERO_VOLUME",
+                "PRICE_ANOMALY",
+                "ADJ_COVERAGE"
+            ]
+        );
+        assert!(report.duration_ms < 10_000, "120×520 扫描不应超时");
+        assert_eq!(report.passed_count, 6, "正常 mock 数据集 6/6 通过");
+
+        let cached = core.quality_report().unwrap();
+        assert_eq!(cached.scanned_at, report.scanned_at);
+        assert!(!cached.stale);
+        assert_eq!(cached.current_dataset_id, report.dataset_id);
+    }
+
+    #[tokio::test]
+    async fn quality_scan_suspended_diagnostic_sample_hits_three_checks() {
+        let core = AppCore::new(Box::new(
+            data_provider::mock::MockProvider::new().with_diag_suspended_series(120, 80, 20),
+        ))
+        .await
+        .unwrap();
+        let report = core.quality_scan().await.unwrap();
+        let suspended = report
+            .rows
+            .iter()
+            .find(|row| row.key == "SUSPENDED")
+            .unwrap();
+        // 取证样本默认注入 DIAGSUSP.SZ：30 根中第 30 根停牌
+        assert!(suspended.hits >= 1, "停牌样本必须被识别");
+        assert_eq!(suspended.status, "info");
+        assert!(!suspended.examples.is_empty(), "示例用于跳到单根 K 线");
     }
 
     #[tokio::test]

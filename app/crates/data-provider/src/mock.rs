@@ -159,6 +159,7 @@ impl MockProvider {
                 bars[index].close = anchor;
                 bars[index].volume = 0.0;
                 bars[index].amount = 0.0;
+                bars[index].quality.push(QualityFlag::Suspended);
             }
         }
         self.securities.push(security);

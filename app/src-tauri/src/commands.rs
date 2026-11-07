@@ -4,8 +4,8 @@
 use app_core::{
     AppError, BarsResponse, CalcRequest, CalcResponse, DatasetManifest, GetBarsRequest,
     IndicatorFavoritesResponse, ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto,
-    RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult,
-    WatchlistDto,
+    QualityReportDto, RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary,
+    WatchToggleResult, WatchlistDto,
 };
 use serde_json::Value;
 use tauri::State;
@@ -62,6 +62,19 @@ pub async fn set_indicator_favorite(
     favorited: bool,
 ) -> Result<IndicatorFavoritesResponse, AppError> {
     state.core.set_indicator_favorite(&indicator_id, favorited)
+}
+
+/// S-07.05-01：未扫描过返回 null，由页面展示「尚未检查」。
+#[tauri::command]
+pub async fn quality_report(
+    state: State<'_, AppState>,
+) -> Result<Option<QualityReportDto>, AppError> {
+    Ok(state.core.quality_report())
+}
+
+#[tauri::command]
+pub async fn quality_scan(state: State<'_, AppState>) -> Result<QualityReportDto, AppError> {
+    state.core.quality_scan().await
 }
 
 /// S-02.08-01：页脚 7 段同源；provider 不提供 manifest 时返回 null，前端整条显示 `—`。

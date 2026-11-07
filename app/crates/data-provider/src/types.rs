@@ -129,6 +129,8 @@ pub enum QualityFlag {
     LimitUp,
     LimitDown,
     SplitDay,
+    /// 停牌：该交易日有记录但不可交易；量类指标应为 NaN。
+    Suspended,
 }
 
 impl QualityFlag {
@@ -138,6 +140,7 @@ impl QualityFlag {
             QualityFlag::LimitUp => "limitUp",
             QualityFlag::LimitDown => "limitDown",
             QualityFlag::SplitDay => "splitDay",
+            QualityFlag::Suspended => "SUSPENDED",
         }
     }
 }

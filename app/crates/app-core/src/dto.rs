@@ -216,6 +216,45 @@ pub struct IndicatorFavoritesResponse {
     pub favorites: Vec<IndicatorFavoriteDto>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityExampleDto {
+    pub security: String,
+    pub date: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityCheckDto {
+    /// `MISSING` / `EX_RIGHTS` / `SUSPENDED` / `ZERO_VOLUME` / `PRICE_ANOMALY` / `ADJ_COVERAGE`
+    pub key: &'static str,
+    pub label_zh: &'static str,
+    pub hits: i64,
+    pub base: i64,
+    pub ratio_pct: f64,
+    pub treatment: &'static str,
+    /// `pass` / `info` / `warning` / `failed`
+    pub status: &'static str,
+    pub error_code: Option<&'static str>,
+    pub examples: Vec<QualityExampleDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityReportDto {
+    pub dataset_id: String,
+    /// 报告所属数据集 id；与 `current_dataset_id` 不一致即「已过期」
+    pub based_on_dataset_id: String,
+    pub current_dataset_id: String,
+    pub stale: bool,
+    /// epoch 秒
+    pub scanned_at: i64,
+    pub duration_ms: u64,
+    pub passed_count: usize,
+    pub total_count: usize,
+    pub rows: Vec<QualityCheckDto>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceRequest {
