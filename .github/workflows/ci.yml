@@ -56,10 +56,18 @@ jobs:
 
       # W-34 / TD-BENCH-01：夹具或注册表变了却忘记同提交重生成快照，这里会红。
       # 可复现性由 W-33 保证：快照内墙钟字段（computedMs / generatedAt）已归零。
+      # 失败时必须能直接看出差在哪：先 --stat，再点名首个差异文件，最后仍以 --exit-code 收尾。
       - name: bench 快照可复现门禁（W-34 / TD-BENCH-01）
         working-directory: .
         run: |
           cargo run -p indicator-golden --manifest-path app/Cargo.toml --bin aka-aggregate-export
+          if git diff --quiet app/bench/aggregates app/bench/ipc-snapshots; then
+            echo "快照可复现：export 产物与仓库基线一致"
+            exit 0
+          fi
+          echo "::error::bench 快照漂移：夹具/注册表变了必须同提交重生成"
+          git diff --stat app/bench/aggregates app/bench/ipc-snapshots
+          echo "首个差异文件：$(git diff --name-only app/bench/aggregates app/bench/ipc-snapshots | head -n 1)"
           git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots
 
       - name: npm ci
