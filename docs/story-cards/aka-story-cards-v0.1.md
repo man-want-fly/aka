@@ -2212,7 +2212,7 @@ Confirmation：口径覆盖 = `{implementedP0}/{implementedP0}`（分子分母�
 **验收标准**
 - **AC-03.03-04**｜Given 注册表 `implementedP0`（已实现 ∩ P0，派生值当前 44）与内容库；When 运行 `verify:docs`；Then 输出 `valid = true`、`covered = {implementedP0}/{implementedP0}`、`missing = []`，且每页四段字数均 ≥80；页脚计数与报告同源，不得硬编码 84 或 44。`[数据层]` + `[运行层]`
 - **AC-03.03-04（补1）**｜Given 人为删除 MACD 内容；When 运行校验；Then 退出码非 0，报告包含 `MACD` 与原因「缺页」及文件路径，构建被阻断。`[运行层]`
-- **AC-03.03-03（补5）**｜Given 105 条指标（已实现 ∩ P0 = 44，`planned` = 61 含 P0 40 / P1 21）；When 运行 `npm run verify:docs`；Then 恰好 44 条已实现 P0 各有口径页、61 条 `planned` 均无页；缺页（含 44 少一页）或多页（`planned` 出现口径页）均 exit 1。`[数据层]` + `[运行层]`
+- **AC-03.03-03（补5）**｜Given 105 条指标（已实现 ∩ P0 = 44，`planned` = 61 含 P0 40 / P1 21；夹具输入，非当前注册表状态）；When 运行 `npm run verify:docs`；Then 恰好 44 条已实现 P0 各有口径页、61 条 `planned` 均无页；缺页（含 44 少一页）或多页（`planned` 出现口径页）均 exit 1。`[数据层]` + `[运行层]`
 - **AC-03.03-04（补2）**｜Given 人为把 T03 的 `completion_note` 清空；When 运行校验；Then 报告含 `T03` 与「补全口径声明缺失」。`[运行层]`
 - **AC-03.03-04（补3）**｜Given 某页正文写入「建议买入」；When 运行校验；Then 报告含该 id 与「禁用词：建议买入」。`[运行层]`
 - **AC-03.03-04（补4）**｜Given 内容库版本 v0.1、注册表版本 v0.2；When 运行校验；Then `valid = false`，原因「版本不一致」。`[运行层]`
