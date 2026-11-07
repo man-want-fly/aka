@@ -1,8 +1,8 @@
 {
   "suite": "E-01 market",
-  "startedAt": "2026-11-07T20:44:35.938Z",
-  "finishedAt": "2026-11-07T20:44:38.767Z",
-  "ok": false,
+  "startedAt": "2026-11-07T21:12:01.766Z",
+  "finishedAt": "2026-11-07T21:12:04.477Z",
+  "ok": true,
   "checks": [
     {
       "id": "D-01",
@@ -57,8 +57,8 @@
       "card": "S-01.01-01",
       "ac": "AC-01.01-01（补1）",
       "layer": "render",
-      "passed": false,
-      "detail": "符号异常=1 停牌异常=0 002126.SZ=0.00%"
+      "passed": true,
+      "detail": "三态异常=0 停牌异常=0 "
     },
     {
       "id": "R-04",
@@ -154,7 +154,7 @@
       "ac": "AC-01.01-04（补1）",
       "layer": "render",
       "passed": true,
-      "detail": "连点间隔=40.0/45.0ms 目标=399001.SZ→000001.SH→399006.SZ 展示=399006.SZ hashchange=#/workbench/399006.SZ 报价头元素=1 空闪帧=0"
+      "detail": "连点间隔=38.0/36.0ms 目标=399001.SZ→000001.SH→399006.SZ 展示=399006.SZ hashchange=#/workbench/399006.SZ 报价头元素=1 空闪帧=0"
     }
   ],
   "context": {
