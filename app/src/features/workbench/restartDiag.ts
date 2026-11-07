@@ -101,6 +101,8 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
       const seed = securities[0];
       if (!seed) throw new Error("没有可加入自选的样本");
       await ipc.toggleWatch(seed.code);
+      // 自选面板只监听 aka:watchlist-refresh；直接走 ipc 写入后必须广播，否则等不到行
+      window.dispatchEvent(new Event("aka:watchlist-refresh"));
     }
     markStage("wait watchlist item");
     await waitFor(() => (qa("[data-wl-item]").length > 0 ? true : null), 8_000);
