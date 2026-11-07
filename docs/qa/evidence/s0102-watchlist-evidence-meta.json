@@ -1,10 +1,17 @@
 {
-  "evidence": "s0102-watchlist-evidence.json",
-  "commit": "33c265d",
-  "workingTree": "clean（未跟踪项仅 .workbuddy/ 与 __pycache__ 等临时目录，不入库）",
-  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=watchlist@<epoch> npm run tauri dev（前置脚本直插 state.db 至 497 条合成标的，取证后按备份还原）",
-  "finishedAt": "2026-11-07T00:04:16.290Z",
-  "result": "ok=true，19/19 通过（数据层 6 / 渲染层 13，0 blocked）",
-  "diffVsPrevious": "仅 finishedAt 不同（上一批 2026-11-06T23:42:03.397Z）；19 项 check 的 id / passed / layer / blocked / detail 逐项一致，含 WL-11（数据不足）与 WL-13/14（不在数据集）的判据断言。",
-  "context": "本批用于覆盖「listSecurities 去 120 截断、改为不传 limit 取全量代码表」与「0 根/读取失败归数据不足」两处改动后的回归取证。"
+  "suite": "S-01.02 watchlist",
+  "label": "20261107-174321",
+  "runAt": "2026-11-07T17:43:35+08:00",
+  "commit": "aff1bbc6d6e18f35cf2c3103d15adffe9d52a79e",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"watchlist@20261107-174321\" target/release/aka-desktop",
+  "fixture": "state.db 直插 497 条 SEED0000.SZ~SEED0496.SZ（group_name=NULL，其中 SEED0000.SZ 不在数据集）；连同套件早前入集的 TINY 行共 498，取证后 sqlite3 .backup 还原，产品代码未改动",
+  "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",
+  "result": {
+    "ok": true,
+    "layers": {
+      "data": "7/7",
+      "render": "14/14"
+    },
+    "blocked": []
+  }
 }

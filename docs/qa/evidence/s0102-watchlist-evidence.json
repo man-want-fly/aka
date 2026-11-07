@@ -1,13 +1,13 @@
 {
   "ok": true,
   "suite": "S-01.02 watchlist",
-  "finishedAt": "2026-11-07T00:04:16.290Z",
+  "finishedAt": "2026-11-07T09:43:33.929Z",
   "layers": {
-    "data": 6,
-    "render": 13
+    "data": "7/7",
+    "render": "14/14"
   },
   "blocked": [],
-  "note": "500 上限/不在数据集行的样本由前置脚本直插 state.db 构造，取证后用备份还原；写失败为真实路径（重命名到已有分组被后端拒绝）。",
+  "note": "前置脚本直插 498 条 SEED 合成标的（含不在数据集的 SEED0000.SZ），取证后用备份还原；WL-15 只验前端撞名校验（内联提示 + 保存 disabled + 组数不变 + 无写入），移出失败的错误条注入归 AC-01.02-04（补4），本套件不覆盖。",
   "checks": [
     {
       "id": "WL-01",
@@ -22,7 +22,7 @@
       "ac": "S-01.02-03",
       "layer": "render",
       "passed": true,
-      "detail": "某组空态「本组还没有标的从行情页加星，或切回「全部」查看已有自选去行情页加星换组」",
+      "detail": "某组空态「这个分组还没有标的从行情页加星，或切回「全部」查看已有自选去行情页加星切回全部」",
       "blocked": false
     },
     {
@@ -62,7 +62,15 @@
       "ac": "S-01.02-02",
       "layer": "render",
       "passed": true,
-      "detail": "二次确认文案「删除分组「诊断组A」？组内标的将回到「（未分组）」确认删除取消」",
+      "detail": "二次确认文案「删除分组「诊断组A」？该组 1 只标的将回到「未分组」，不会从自选删除确认删除取消」",
+      "blocked": false
+    },
+    {
+      "id": "WL-08b",
+      "ac": "S-01.02-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "二次删除同一组返回 成功（幂等）",
       "blocked": false
     },
     {
@@ -83,10 +91,18 @@
     },
     {
       "id": "WL-10",
-      "ac": "S-01.02-02",
+      "ac": "S-01.02-03",
       "layer": "data",
       "passed": true,
       "detail": "499→499，500→500，501 拒「自选上限 500 只，请先移出后再添加」reason=WATCHLIST_LIMIT",
+      "blocked": false
+    },
+    {
+      "id": "WL-10r",
+      "ac": "S-01.02-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "星标 before=0 after=0，提示「自选上限 500 只，请先移出后再添加」，total=500",
       "blocked": false
     },
     {
@@ -123,10 +139,10 @@
     },
     {
       "id": "WL-15",
-      "ac": "S-01.02-03",
+      "ac": "S-01.02-02",
       "layer": "render",
       "passed": true,
-      "detail": "错误条「未保存：分组已存在：诊断空组重试」，重试按钮=true，原组仍在=true，目标组未被覆盖=true，重试后仍报错=true",
+      "detail": "内联提示「已有同名分组」，保存 disabled=true，自定义组 2→2，组名集合不变=true，无错误条=true",
       "blocked": false
     },
     {
@@ -158,7 +174,7 @@
       "ac": "S-01.02-03",
       "layer": "render",
       "passed": true,
-      "detail": "全部空态「自选还是空的在行情页点星标，把标的加进来去行情页」",
+      "detail": "全部空态「自选还是空的在行情页点星标，把标的加进来去行情页导入 CSV（本期未开放）」，CSV 按钮 disabled=true",
       "blocked": false
     }
   ]

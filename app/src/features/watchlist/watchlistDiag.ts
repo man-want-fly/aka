@@ -277,22 +277,21 @@ export async function runWatchlistDiagnostics() {
     `删除后选中「${q<HTMLButtonElement>("[data-wl-group][aria-pressed='true']")?.textContent?.trim() ?? "?"}」`,
   );
 
-  // ---- [数据层] 500 上限：499 放行 / 500 落库 / 501 拒 + 统一文案 ----
+  // ---- [数据层 + 渲染层] 500 上限：499 放行 / 500 落库 / 501 拒 + 文案 + 星标仍空心 ----
   markStage("limit 500");
   const seedCount = (await ipc.watchlist()).items.filter((item) => item.security.startsWith("SEED")).length;
   if (seedCount === 0) {
-    block(
-      "WL-10",
-      "data",
-      "S-01.02-02",
-      "缺 498 条合成标的 fixture（前置脚本未直插 state.db）；上限分支由 data-store 单测 add_watch_with_limit 与 app-core watchlist_cap_is_500_distinct_securities 覆盖",
-    );
+    block("WL-10", "data", "S-01.02-03", "缺 498 条合成标的 fixture（前置脚本未直插 state.db）");
+    block("WL-10r", "render", "S-01.02-03", "同上，无 500 上限样本可验提示与星标空心");
   } else {
     const current = await ipc.watchlist();
     const codes = (await ipc.listSecurities()).map((security) => security.code);
     const fresh = codes.filter((code) => !current.items.some((item) => item.security === code));
     let detail = `前置 ${seedCount} 条合成标的，total=${current.total}`;
     let passed = false;
+    let renderPassed = false;
+    let renderDetail = "未触达 500 上限，未验渲染";
+    let renderAnchor = "";
     const added: string[] = [];
     try {
       let total = current.total;
@@ -305,6 +304,7 @@ export async function runWatchlistDiagnostics() {
       }
       if (total !== 498 || fresh.length < 3) {
         detail = `补足后 total=${total}（需 498），剩余可加真实标的 ${fresh.length}（需 3）`;
+        renderDetail = "补足失败，未验渲染";
       } else {
         const [a, b, c] = fresh;
         await ipc.toggleWatch(a);
@@ -328,6 +328,30 @@ export async function runWatchlistDiagnostics() {
           rejected === "自选上限 500 只，请先移出后再添加" &&
           reason === "WATCHLIST_LIMIT";
         detail = `499→${at499}，500→${at500}，501 ${rejected ? `拒「${rejected}」reason=${reason}` : "被接受（错）"}`;
+        if (at499 === 499 && at500 === 500) {
+          // 渲染层：在行情页点第 501 只的星标，必须出上限提示且星标仍空心（AC-01.02-03）。
+          renderAnchor = c;
+          window.location.hash = "#/market";
+          const star = await waitFor(() => q<HTMLButtonElement>(`[data-star="${c}"]`), 8_000).catch(() => null);
+          const beforeStar = star?.getAttribute("data-watched");
+          star?.click();
+          const toast = await waitFor(
+            () => {
+              const element = q(".market-toast");
+              return element?.textContent?.includes("自选上限 500 只") ? element : null;
+            },
+            5_000,
+          ).catch(() => null);
+          await sleep(200);
+          const starAfter = q(`[data-star="${c}"]`)?.getAttribute("data-watched");
+          const totalAfter = (await ipc.watchlist()).total;
+          renderPassed =
+            Boolean(star) && beforeStar === "0" && Boolean(toast) && starAfter === "0" && totalAfter === 500;
+          renderDetail = `星标 before=${beforeStar ?? "缺"} after=${starAfter ?? "缺"}，提示「${(toast?.textContent ?? "").trim()}」，total=${totalAfter}`;
+          window.location.hash = `#/workbench/${a}`;
+          await waitFor(() => q("[data-wl-root]"), 8_000).catch(() => null);
+          await sleep(500);
+        }
       }
     } finally {
       for (const code of added) {
@@ -338,7 +362,12 @@ export async function runWatchlistDiagnostics() {
         }
       }
     }
-    push("WL-10", "data", "S-01.02-02", passed, detail);
+    push("WL-10", "data", "S-01.02-03", passed, detail);
+    if (renderAnchor) {
+      push("WL-10r", "render", "S-01.02-03", renderPassed, renderDetail);
+    } else {
+      block("WL-10r", "render", "S-01.02-03", renderDetail);
+    }
   }
 
   // ---- [渲染层] 数据不足行（在数据集但 K 线 < 20） ----
@@ -406,8 +435,8 @@ export async function runWatchlistDiagnostics() {
     );
   }
 
-  // ---- [渲染层] 写失败：重命名为已有分组 → 顶部错误条 + 「未保存」+「重试」 ----
-  markStage("write failure");
+  // ---- [渲染层] 撞名重命名：内联提示 + 保存 disabled + 组数不变 + 无写入（AC-01.02-02 补2） ----
+  markStage("duplicate rename");
   if (!groupTab(GROUP_A)) await ensureGroup(GROUP_A);
   groupTab(GROUP_A)?.click();
   await sleep(200);
@@ -415,34 +444,29 @@ export async function runWatchlistDiagnostics() {
   const renameInput = await waitFor(() => q<HTMLInputElement>("[aria-label='重命名分组']"), 4_000).catch(
     () => null,
   );
-  let failureDetail = "找不到重命名输入框";
-  let failurePassed = false;
-  let retryFailed = false;
+  let dupPassed = false;
+  let dupDetail = "找不到重命名输入框";
   if (renameInput) {
+    const before = await ipc.watchlist();
+    const beforeGroups = before.groups.map((group) => group.name).sort().join("|");
     setValue(renameInput, GROUP_EMPTY);
-    await sleep(120);
-    buttonByText("保存", renameInput.closest("form") ?? document)?.click();
-    const bar = await waitFor(() => q<HTMLElement>("[data-wl-write-error]"), 4_000).catch(() => null);
-    const barText = (bar?.textContent ?? "").replace(/\s+/g, " ").trim();
-    const retry = q<HTMLButtonElement>("[data-wl-retry]");
-    const groupsAfter = await ipc.watchlist();
-    const groupAKept = groupsAfter.groups.some((group) => group.name === GROUP_A);
-    const emptyKept = groupsAfter.groups.some((group) => group.name === GROUP_EMPTY);
-    retry?.click();
-    await sleep(600);
-    retryFailed = Boolean(q<HTMLElement>("[data-wl-write-error]"));
-    failurePassed =
-      barText.includes("未保存") &&
-      barText.includes("分组已存在") &&
-      Boolean(retry) &&
-      groupAKept &&
-      emptyKept &&
-      retryFailed;
-    failureDetail = `错误条「${barText}」，重试按钮=${Boolean(retry)}，原组仍在=${groupAKept}，目标组未被覆盖=${emptyKept}，重试后仍报错=${retryFailed}`;
+    await sleep(150);
+    const inline = (q<HTMLElement>("[data-wl-rename-error]")?.textContent ?? "").trim();
+    const save = buttonByText("保存", renameInput.closest("form") ?? document);
+    const disabled = save?.disabled === true;
+    save?.click();
+    await sleep(300);
+    const after = await ipc.watchlist();
+    const afterGroups = after.groups.map((group) => group.name).sort().join("|");
+    const noBar = !q("[data-wl-write-error]");
+    const customBefore = before.groups.filter((group) => !group.isBuiltin).length;
+    const customAfter = after.groups.filter((group) => !group.isBuiltin).length;
+    dupPassed = inline.includes("已有同名分组") && disabled && beforeGroups === afterGroups && noBar;
+    dupDetail = `内联提示「${inline}」，保存 disabled=${disabled}，自定义组 ${customBefore}→${customAfter}，组名集合不变=${beforeGroups === afterGroups}，无错误条=${noBar}`;
     buttonByText("取消")?.click();
     await sleep(200);
   }
-  push("WL-15", "render", "S-01.02-03", failurePassed, failureDetail);
+  push("WL-15", "render", "S-01.02-02", dupPassed, dupDetail);
 
   // ---- [渲染层] 搜索无结果 ----
   markStage("search empty");
@@ -564,17 +588,19 @@ export async function runWatchlistDiagnostics() {
   refresh();
 
   const blockedChecks = checks.filter((check) => check.blocked);
+  const tally = (list: Check[]) =>
+    `${list.filter((check) => check.passed && !check.blocked).length}/${list.length}`;
   const report = {
-    ok: checks.filter((check) => !check.blocked).every((check) => check.passed),
+    ok: checks.every((check) => !check.blocked && check.passed),
     suite: "S-01.02 watchlist",
     finishedAt: new Date().toISOString(),
     layers: {
-      data: checks.filter((check) => check.layer === "data" && !check.blocked).length,
-      render: checks.filter((check) => check.layer === "render" && !check.blocked).length,
+      data: tally(checks.filter((check) => check.layer === "data")),
+      render: tally(checks.filter((check) => check.layer === "render")),
     },
     blocked: blockedChecks.map((check) => `${check.id}: ${check.detail}`),
     note:
-      "500 上限/不在数据集行的样本由前置脚本直插 state.db 构造，取证后用备份还原；写失败为真实路径（重命名到已有分组被后端拒绝）。",
+      "前置脚本直插 498 条 SEED 合成标的（含不在数据集的 SEED0000.SZ），取证后用备份还原；WL-15 只验前端撞名校验（内联提示 + 保存 disabled + 组数不变 + 无写入），移出失败的错误条注入归 AC-01.02-04（补4），本套件不覆盖。",
     checks,
   };
   await ipc.diagWriteNamed("s0102-watchlist-evidence.json", JSON.stringify(report, null, 2));
