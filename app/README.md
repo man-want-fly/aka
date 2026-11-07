@@ -246,6 +246,7 @@ T02 `period.default` 保持 20（未按旧卡片改回 12）。`manifest/indicat
 - 前端只有 `src/lib/ipc.ts` 调用 `invoke`；组件不拼命令字符串。
 - `from` / `to` 是 **ISO 日期区间**（含端点，按交易日吸附），不是序列下标；服务端回显实际命中区间。
 - 本地状态库路径：`~/Library/Application Support/aka/state.db`；运行埋点：`~/Library/Application Support/aka/logs/telemetry.jsonl`；性能基线路径：`app/bench/baselines/macos-<arch>.json`；黄金夹具：`app/crates/indicator-golden/fixtures/`；sim 数据集：`app/data/sim/seed-<n>/`。
+- bench 快照（`app/bench/aggregates/`、`app/bench/ipc-snapshots/`）内的墙钟字段 `computedMs` / `generatedAt` **恒为 0**（W-33 归一），因此快照可逐字节复现；夹具或注册表变更必须同提交重生成，由 CI 快照门禁（W-34 / W-39）校验。
 - 数据集目录隔离：sim 生成器只写 `data/sim/`，路径含 `real` 一律拒绝；real 目录只接受真实数据源。
 
 ## 工具链与环境说明
