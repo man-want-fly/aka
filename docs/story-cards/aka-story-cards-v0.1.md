@@ -779,6 +779,9 @@ Confirmation：周线根数 = 数据集内完整周数（末周可未走完）�
 - **月线 12 根不足**：MA12 等可算，MA24 返回 `NaN`。
 - **切换过频（1 秒 5 次）**：只保留最后一次请求，前序取消（防抖 100ms）。
 
+**已知限制（待填）**
+- **周/月线除权标记**：待 dev B 补 `600519.SH` `2024-04-29` 所在周/月的 `EX_RIGHTS` 断言后再定。若绿 → 写「标记只到周/月层，不能定位到该周/月内的具体交易日」；若红 → 由 dev B 改聚合逻辑（日级除权事件随聚合保留）。**本段暂不写结论，也不加 AC。**
+
 **UI 与状态**
 - 分段控件：`日线 | 周线 | 月线`，与复权控件**永远并排**（design-spec §06）。
 - 加载：图表区骨架（保留坐标轴刻度占位），不整页白。
@@ -1947,7 +1950,7 @@ Confirmation：加入后切到工作台能看到该指标；无标的时按钮�
 | 优先级 | P0（Must） |
 | PRD 验收 | AC-03.02-01、AC-03.02-02、AC-03.02-03 |
 
-**3C**｜Card：指标可收藏，首次安装预置 8 个默认收藏（MA、EMA、MACD、KDJ、RSI、BOLL、VOL、OBV），收藏区在目录页与工作台抽屉都能一键取用，取消收藏即回列表。
+**3C**｜Card：指标可收藏，首次安装预置 8 个默认收藏（`T01` SMA、`T02` EMA、`T09` BOLL、`M06` MACD、`M01` RSI、`M02` KDJ、`V01` ATR、`M05` CCI，8 项均为注册表 `status=normal`），收藏区在目录页与工作台抽屉都能一键取用，取消收藏即回列表。
 Conversation：默认 8 个能否一键清空——不能，只能逐个取消（避免误删整组）；收藏是否影响顺序——收藏区按「用户添加时间倒序」，默认 8 个按预置顺序。
 Confirmation：首次安装收藏数为 8 且 id 与 PRD 指定一致；收藏状态跨重启保持；收藏数无上限但显示计数。
 
@@ -1970,7 +1973,7 @@ Confirmation：首次安装收藏数为 8 且 id 与 PRD 指定一致；收藏�
 5. 收藏项右键/「⋯」→「查看口径」跳 S-03.03-01。
 
 **字段与口径**
-- 默认 8 个：`MA(20)`、`EMA(12)`、`MACD(12,26,9)`、`KDJ(9,3,3)`、`RSI(14)`、`BOLL(20,2)`、`VOL`、`OBV`（id 以注册表为准）。
+- 默认 8 个（顺序固定；id 为注册表真 id，8 项 `status` 均 `normal`，参数取注册表默认值）：`T01` SMA(20)、`T02` EMA(20)、`T09` BOLL(20,2)、`M06` MACD(12,26,9)、`M01` RSI(14)、`M02` KDJ(9,3,3)、`V01` ATR(14)、`M05` CCI(20)。旧稿的 `VOL`（注册表无此 id）、`OBV`（`planned`）、`RVOL`（`planned`）一律不用。
 - 收藏表：`indicator_id`、`added_at`、`sort_order`；`is_default` 标记仅用于首装识别，用户取消后不再自动恢复。
 - 收藏数：无硬上限，但 >30 时提示「收藏过多，建议精简」（不阻断）。
 
@@ -1988,7 +1991,7 @@ Confirmation：首次安装收藏数为 8 且 id 与 PRD 指定一致；收藏�
 - 状态：空（未收藏任何）/ 默认 8 / 用户自定义 / 含 P1 / 含已下线 / 写入失败。
 
 **验收标准**
-- **AC-03.02-01**｜Given 首次安装（`favorites` 表空且无初始化标记）；When 打开指标目录；Then 收藏区显示 **8 个** chip，id 分别为 MA、EMA、MACD、KDJ、RSI、BOLL、VOL、OBV，计数显示 `收藏 8`。`[渲染层]` + `[数据层]`
+- **AC-03.02-01**｜Given 首次安装（`favorites` 表空且无初始化标记）；When 打开指标目录；Then 收藏区显示 **8 个** chip，id 依次为 `T01`、`T02`、`T09`、`M06`、`M01`、`M02`、`V01`、`M05`（chip 名显示各自 abbr），计数显示 `收藏 8`。`[渲染层]` + `[数据层]`
 - **AC-03.02-02**｜Given 收藏区有 8 个；When 点某指标（如 DMI）的「☆」；Then 收藏数变 9、chip 出现在收藏区、该行星标为实心，重启后仍为 9。`[渲染层]` + `[数据层]`
 - **AC-03.02-03**｜Given DMI 已被收藏；When 再次点「★」取消收藏；Then 收藏数变 8、chip 消失、行星标变空心，重启后仍为 8。`[渲染层]` + `[数据层]`
 - **AC-03.02-03（补1）**｜Given 用户已取消全部 8 个默认收藏；When 重启应用；Then 收藏区为空态，**不自动补回**默认 8 个。`[渲染层]` + `[数据层]`
@@ -5063,6 +5066,19 @@ Confirmation：6 行齐全；刷新后有耗时与时间戳；版本变化后旧
 | 扫描耗时 | ms；6 项可并行 |
 | 失败保留 | 检查失败时保留上次报告并标「上次结果 · 已过期」，不显示 0 |
 
+**质量标记词表（与 S-07.05-02 共用）**
+
+| 类别 | 标记 | 产出方 | 层级 |
+|---|---|---|---|
+| 已产出 | `EX_RIGHTS` | 除权事件检查（`adj_factor` 相邻日变化） | 单根 |
+| 已产出 | `SUSPENDED` | 停牌日检查 | 单根 |
+| 已产出 | `ZERO_VOLUME` | 零成交量检查 | 单根 |
+| 已产出 | `PRICE_ANOMALY` | 价格异常检查 | 单根 |
+| 预留 | `MISSING` | 当前无产出方；缺失交易日是区间层结论，落在报告行 / 字段级「缺失」+ `E_PROVENANCE_MISSING` | 区间 / 报告 |
+| 预留 | `APPROXIMATED` | 当前无产出方；涨跌停价推导标记（D-18） | 涨跌停列 / 报告 |
+
+预留两项**不写 AC 断言**，也不得当成单根 K 线标记或实现缺口。
+
 **异常与边界**
 - **全部停牌**（极端样本）：停牌日为信息项，零成交量为 0；不误判为数据缺失。
 - **除权日价格跳变**：标 `EX_RIGHTS` 并在行情表/图表用复权价展示，不报「价格异常」。
@@ -5126,7 +5142,7 @@ Confirmation：6 字段齐全；质量标记与 S-07.05-01 报告一致；从报
 
 **主流程**
 1. 在工作台点击某根 K 线（或十字光标停留 + 快捷键）→ 打开溯源浮层。
-2. 浮层字段：日期、provider（`mock`）、batch_id、ingested_at、dataset_id、adj_mode（不复权/前复权/后复权）、quality_flags（`EX_RIGHTS`/`SUSPENDED`/`APPROXIMATED`/`ZERO_VOLUME`/`MISSING`/无）。
+2. 浮层字段：日期、provider（`mock`）、batch_id、ingested_at、dataset_id、adj_mode（不复权/前复权/后复权）、quality_flags（已产出 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`/无；`APPROXIMATED`/`MISSING` 为预留词表，当前无产出方）。
 3. 质量标记以标签展示，点击任一标签跳 P9 对应检查项。
 4. 数据缺失 → 对应字段显示「缺失」，并给 `E_PROVENANCE_MISSING` 错误码；不显示空白或 `null`。
 5. 从 P9 质量报告点「查看示例」→ 直接定位到某根 K 线并打开同一浮层。
@@ -5141,12 +5157,13 @@ Confirmation：6 字段齐全；质量标记与 S-07.05-01 报告一致；从报
 | ingested_at | `YYYY-MM-DD HH:mm:ss` |
 | dataset_id | 与 manifest 一致 |
 | adj_mode | 该根展示所用复权模式（跟随视图设置） |
-| quality_flags | 可多值；无标记显示「无」 |
+| quality_flags | **已产出（单根）**：`EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`，可多值，无标记显示「无」。**预留（当前无产出方，不写断言）**：`MISSING` 是区间层结论（落在质量报告行、字段级缺失 + `E_PROVENANCE_MISSING`），`APPROXIMATED` 属涨跌停推导（D-18），二者都不是单根 K 线标记 |
 | 缺失 | 任一字段为空 → 显示「缺失」+ `E_PROVENANCE_MISSING` |
 
 **异常与边界**
 - **该根为停牌日**：显示 `SUSPENDED`，OHLC 说明「= 停牌前收盘」，量显示 `0.0手`。
 - **该根为除权日**：显示 `EX_RIGHTS` + 「已按 adj_factor 复权」，并给复权前后价对照（2 位）。
+- **预留标记不得当缺陷**：`APPROXIMATED`/`MISSING` 当前无产出方，浮层不出现属预期；`MISSING` 在质量报告行与字段级「缺失」上体现，`APPROXIMATED` 只在涨跌停推导列使用。
 - **复权模式切换后查看同一根**：`adj_mode` 随当前视图变化，数值随之变化，标记不变。
 - **字段缺失**（旧数据无 batch_id）：显示「缺失」并可「导出诊断」，不阻塞浏览。
 - **数据集已重建**：溯源显示新 `dataset_id`，旧标记不再出现。
@@ -5154,11 +5171,11 @@ Confirmation：6 字段齐全；质量标记与 S-07.05-01 报告一致；从报
 
 **UI 与状态**
 - 浮层：设计稿 P2 右下角信息卡；宽 300px，字段 2 列。
-- 质量标记：pill，`EX_RIGHTS` 用中性蓝、`SUSPENDED` 灰、`APPROXIMATED` 黄、`MISSING`/`PRICE_ANOMALY` 红。
+- 质量标记：pill，`EX_RIGHTS` 用中性蓝、`SUSPENDED` 灰、`PRICE_ANOMALY`/`ZERO_VOLUME` 红；`APPROXIMATED` 黄与 `MISSING` 红仅用于 S-07.05-01 报告与涨跌停列，单根浮层不出现。
 - 状态：正常 / 缺失字段 / 停牌 / 除权 / 标的失效。
 
 **验收标准**
-- **AC-07.05-02**｜Given 工作台；When 点击任一 K 线；Then 浮层展示 provider、batch_id、ingested_at、dataset_id、adj_mode、quality_flags 六类信息，缺失字段显示「缺失」。`[渲染层]`
+- **AC-07.05-02**｜Given 工作台；When 点击任一 K 线；Then 浮层展示 provider、batch_id、ingested_at、dataset_id、adj_mode、quality_flags 六类信息，缺失字段显示「缺失」；`quality_flags` 只含 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY` 或「无」，不要求出现 `MISSING`/`APPROXIMATED`。`[渲染层]`
 - **AC-07.05-02（补1）**｜Given 某根为除权日；When 查看溯源；Then `quality_flags` 含 `EX_RIGHTS`，并显示复权前后价（2 位）。`[渲染层]` + `[数据层]`
 - **AC-07.05-02（补2）**｜Given 某根为停牌日；When 查看溯源；Then 含 `SUSPENDED`，成交量显示 `0.0手`，OHLC 说明为停牌前收盘。`[渲染层]`
 - **AC-07.05-02（补3）**｜Given P9 质量报告「停牌日」行；When 点击「查看示例」；Then 跳转到对应标的与日期并打开同一溯源浮层。`[渲染层]`
