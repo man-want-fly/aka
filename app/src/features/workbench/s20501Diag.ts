@@ -118,7 +118,7 @@ export async function runS20501Diagnostics(options: {
     "AC-02.05-01",
     "data",
     maPeriodInt?.min === 2 &&
-      maPeriodInt.max === 200 &&
+      maPeriodInt.max === 500 &&
       bollMultFloat?.min === 0.5 &&
       bollMultFloat.max === 5.0 &&
       bollMultFloat.step === 0.1 &&
@@ -137,7 +137,7 @@ export async function runS20501Diagnostics(options: {
     "AC-02.05-01",
     "render",
     lowInput?.getAttribute("aria-invalid") === "true" &&
-      invalidText("maPeriod").includes("2–200") &&
+      invalidText("maPeriod").includes("2–500") &&
       invalidBadge() &&
       maPath() === baselineMa,
     `周期=1 aria-invalid=${lowInput?.getAttribute("aria-invalid")} 文案=${invalidText(
@@ -151,7 +151,7 @@ export async function runS20501Diagnostics(options: {
     "R-02",
     "AC-02.05-01",
     "render",
-    invalidText("maPeriod").includes("2–200") && invalidBadge() && maPath() === baselineMa,
+    invalidText("maPeriod").includes("2–500") && invalidBadge() && maPath() === baselineMa,
     `周期=999 文案=${invalidText("maPeriod")} 角标=${invalidBadge()}`,
   );
 
@@ -160,14 +160,24 @@ export async function runS20501Diagnostics(options: {
   await sleep(180);
   setNumber("#macd-slow", 26);
   await sleep(200);
+  const fastInput = q<HTMLInputElement>("#macd-fast");
+  const slowInput = q<HTMLInputElement>("#macd-slow");
   push(
     "R-03",
     "AC-02.05-01",
     "render",
-    invalidText("fastSlow").includes("快线需小于慢线") &&
+    invalidText("fastSlow").includes("快线周期需小于慢线周期") &&
+      fastInput?.getAttribute("aria-invalid") === "true" &&
+      slowInput?.getAttribute("aria-invalid") === "true" &&
+      fastInput?.className.includes("invalid") === true &&
+      slowInput?.className.includes("invalid") === true &&
       invalidBadge() &&
       !bodyHas("MACD(30"),
-    `文案=${invalidText("fastSlow")} 角标=${invalidBadge()} 未重算=${!bodyHas("MACD(30")}`,
+    `文案=${invalidText("fastSlow")} 快线红框=${fastInput?.getAttribute(
+      "aria-invalid",
+    )} 慢线红框=${slowInput?.getAttribute("aria-invalid")} 角标=${invalidBadge()} 未重算=${!bodyHas(
+      "MACD(30",
+    )}`,
   );
 
   setNumber("#macd-fast", 12);
@@ -198,7 +208,7 @@ export async function runS20501Diagnostics(options: {
     `连续键入 5/6/7 → 标题只出现 7=${rapid === true}，未出现 5/6=${!bodyHas("MACD(12,26,5)") && !bodyHas("MACD(12,26,6)")}`,
   );
 
-  setNumber("#ma-period", 200);
+  setNumber("#ma-period", 500);
   await sleep(160);
   clickStep("maPeriod", "plus");
   await sleep(120);
@@ -214,8 +224,8 @@ export async function runS20501Diagnostics(options: {
     "R-06",
     "AC-02.05-01 补3",
     "render",
-    atMax === 200 && atMin === 2 && readNumber("#ma-period") === 3,
-    `200 再 + = ${atMax} · 2 再 − = ${atMin} · 2 再 + = ${readNumber("#ma-period")}`,
+    atMax === 500 && atMin === 2 && readNumber("#ma-period") === 3,
+    `500 再 + = ${atMax} · 2 再 − = ${atMin} · 2 再 + = ${readNumber("#ma-period")}`,
   );
 
   const bollBefore = [bollUpper(), bollLower()].join("|");

@@ -1926,6 +1926,7 @@ export function WorkbenchPage({
             )}
           </main>
 
+          {/* E_PARAM_ORDER 不能被吞：错误码必须传下去，由 ParamPanel 落到快线/慢线红框 + 顺序提示 */}
           <ParamPanel
             registry={registry}
             params={params}
@@ -1934,7 +1935,14 @@ export function WorkbenchPage({
             onRestore={handleRestoreDefaults}
             isDefault={sameParams(params, defaultParams)}
             busy={loading}
-            error={error?.code === "E_PARAM_OUT_OF_RANGE" || error?.code === "E_INVALID_ARGUMENT" ? error.message : null}
+            error={
+              error?.code === "E_PARAM_OUT_OF_RANGE" ||
+              error?.code === "E_INVALID_ARGUMENT" ||
+              error?.code === "E_PARAM_ORDER"
+                ? error.message
+                : null
+            }
+            errorCode={error?.code ?? null}
             computedMs={calc?.computedMs ?? null}
             cacheHit={calc?.cacheHit ?? null}
           />

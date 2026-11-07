@@ -572,6 +572,8 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
               </div>
 
               {rows.map((row) => (
+                // data-code 承载的是完整证券代码（row.security，如 000001.SH），不是 6 位代码；
+                // 属性名沿用历史，diag 侧也按完整证券代码读取（不阻塞的 data-security 更名另议）。
                 <div
                   key={row.security}
                   className={`market-row ${selected === row.security ? "selected" : ""}`}

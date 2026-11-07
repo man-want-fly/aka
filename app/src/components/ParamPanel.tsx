@@ -12,6 +12,8 @@ interface Props {
   isDefault: boolean;
   busy: boolean;
   error: string | null;
+  /** 错误码：E_PARAM_ORDER 走字段级红框 + 顺序提示（PRD L1328），不能只吞成一句顶部文案 */
+  errorCode: string | null;
   computedMs: number | null;
   cacheHit: boolean | null;
 }
@@ -67,10 +69,23 @@ interface NumRowProps {
   max: number;
   step: number;
   digits?: number;
+  /** 跨字段顺序错误（E_PARAM_ORDER）：只借这个字段亮红框，文案统一由卡片给 */
+  forcedInvalid?: boolean;
   onCommit: (value: number) => void;
 }
 
-function NumRow({ id, inputId, label, value, min, max, step, digits = 0, onCommit }: NumRowProps) {
+function NumRow({
+  id,
+  inputId,
+  label,
+  value,
+  min,
+  max,
+  step,
+  digits = 0,
+  forcedInvalid = false,
+  onCommit,
+}: NumRowProps) {
   const [text, setText] = useState(() => formatValue(value, digits));
 
   useEffect(() => {
@@ -79,7 +94,8 @@ function NumRow({ id, inputId, label, value, min, max, step, digits = 0, onCommi
 
   const badText = text.trim() === "" || !Number.isFinite(Number(text));
   const outOfRange = !badText && (Number(text) < min || Number(text) > max);
-  const invalid = badText || outOfRange || !Number.isFinite(value);
+  const localInvalid = badText || outOfRange || !Number.isFinite(value);
+  const invalid = localInvalid || forcedInvalid;
 
   const commit = (raw: string, blur: boolean) => {
     if (blur && digits > 0) {
@@ -141,7 +157,7 @@ function NumRow({ id, inputId, label, value, min, max, step, digits = 0, onCommi
       >
         +
       </button>
-      {invalid && (
+      {localInvalid && (
         <div className="param-invalid" data-param-invalid={id}>
           {badText
             ? `请输入数字：${label}`
@@ -161,6 +177,7 @@ export function ParamPanel({
   isDefault,
   busy,
   error,
+  errorCode,
   computedMs,
   cacheHit,
 }: Props) {
@@ -186,6 +203,9 @@ export function ParamPanel({
       : ["sma", "ema", "wma"];
 
   const update = (patch: Partial<WorkbenchParams>) => onChange({ ...params, ...patch });
+  // 顺序错误有两个来源：本地交叉校验（fast >= slow）与引擎 E_PARAM_ORDER；
+  // 两者都按 PRD「字段红框 + 顺序提示」呈现，避免引擎错误被吞成一句不可定位的文案。
+  const macdOrderInvalid = params.fast >= params.slow || errorCode === "E_PARAM_ORDER";
 
   return (
     <aside className="side">
@@ -247,6 +267,7 @@ export function ParamPanel({
           min={fastBounds.min}
           max={fastBounds.max}
           step={1}
+          forcedInvalid={macdOrderInvalid}
           onCommit={(value) => update({ fast: value })}
         />
         <NumRow
@@ -257,6 +278,7 @@ export function ParamPanel({
           min={slowBounds.min}
           max={slowBounds.max}
           step={1}
+          forcedInvalid={macdOrderInvalid}
           onCommit={(value) => update({ slow: value })}
         />
         <NumRow
@@ -269,9 +291,9 @@ export function ParamPanel({
           step={1}
           onCommit={(value) => update({ signal: value })}
         />
-        {params.fast >= params.slow && (
+        {macdOrderInvalid && (
           <div className="param-invalid" data-param-invalid="fastSlow">
-            参数无效：快线需小于慢线
+            快线周期需小于慢线周期
           </div>
         )}
         <div className="param-hint">输出 DIF / DEA / HIST；HIST = 2 × (DIF − DEA)。</div>
