@@ -1,0 +1,29 @@
+card_id,ledger_status,gate_a,gate_b,gate_c,blocker,owner,workorder,note
+S-01.01-01,已交付,FAIL,FAIL,PASS,技术决策未定,TL,W-22/W-25,已交付不返工；W-22 已改（前收盘=同一复权序列前一根；.BJ 只进全部）；W-25 页头 2024-04-30 已注「示例，非断言输入」；待 Gate B/C 复核
+S-02.04-01,已交付,FAIL,PASS,PASS,技术决策未定,TL,W-06,已交付不返工；W-06 已改（beta 只看 status、completeness 用户不可见）；待 Gate B/C 复核
+S-02.01-01,Blocked,FAIL,PASS,PASS,技术决策未定,TL,W-08/W-23,报价头复权与 ST 已改；W-23 补件已落（补2/补3/补4，含容差与非近似反例）；仍待 Gate B/C 签字
+S-02.05-01,Blocked,FAIL,PASS,PASS,AC 质量问题,BA,W-20,周期 2–500 已统一（输入 1/999 标红不夹取）；待 Gate B/C 签字后放开
+S-02.08-01,Blocked,FAIL,PASS,PASS,AC 质量问题,BA,W-21,row_count 62,400 / 2023-01-02~2024-12-27 已改；待 Gate B/C 签字后放开
+S-03.01-01,Blocked,FAIL,PASS,PASS,AC 质量问题,BA,W-07,徽标计数已改（beta 2、口径待定 15、可添加 44=42+2）；待 Gate B/C 签字后放开
+S-03.03-01,Blocked,FAIL,FAIL,PASS,技术决策未定,TL,W-01,EMA 种子与 T19 禁令已落卡（含补2/补3）；待 Gate B/C 签字后放开
+S-03.04-02,Blocked,FAIL,FAIL,PASS,技术决策未定,TL,W-04,已改（T03/T21 转正、T19 保持 beta 并写转正条件、T21 R²=1.0 约定）；待 Gate B/C 签字后放开
+S-03.05-02,Blocked,FAIL,PASS,PASS,AC 质量问题,BA,W-02,TR 夹具与补1 中间量已改；待 Gate B/C 签字后放开
+S-03.05-05,Blocked,FAIL,PASS,PASS,AC 质量问题,BA,W-05,T16 beta 徽标/默认排除 AC 已补；**T16 仍缺「转正条件」条文，工单未覆盖，待新增工单**；待 Gate B/C 签字后放开
+S-06.01-01,Blocked,FAIL,FAIL,PASS,技术决策未定,TL,W-12,验收范围改 enabled=true 页面；system 降级提示与性能协议已补；待 Gate B/C 签字后放开
+S-07.02-01,Blocked,FAIL,PASS,PASS,技术决策未定,TL,W-14,12 页→enabled=true 页面已改；待 Gate B/C 签字后放开
+S-01.01-02,已交付,N/A,,,待 Gate B/C 签字,BA,W-22,4 可见分区 + .BJ 只进全部 + 页头追加「北交所 x 只（仅全部可见）」已改
+S-01.02-02,未开始,N/A,,,待 Gate B/C 签字,BA,W-22,删组文案改「回到未分组，不会从自选删除」；索引 CSV 备注已同步
+S-01.02-03,未开始,N/A,,,待 Gate B/C 签字,BA,W-19,空态文案统一为「这个分组还没有标的」（4 处 + AC 补5）
+S-03.04-01,条件交付,N/A,,,待 Gate B/C 签字,BA,W-04,已改（T03 补全口径已转正、周期 2–500、T03 边界说明）
+S-04.01-01,未开始,N/A,,,待 Gate B/C 签字,BA,W-10/W-25,前置改 8×32=256 成分映射，缺失判不合格；指数不进广度已写明；W-25 页头 2024-04-30 标「示例」保留，非断言
+S-04.02-01,未开始,N/A,,,待 Gate B/C 签字,BA,W-08,广度分母改 112、指数不进桶、涨跌停 4 卡→3 卡、ST 六处删除/标 V1
+S-04.02-02,未开始,N/A,,,待 Gate B/C 签字,BA,W-09,标题/优先级/卡首状态注改为 V1 延后待确认；生成器不写 sector_members
+S-05.01-01,未开始,N/A,,,待 Gate B/C 签字,BA,W-11,pinyin 预计算 + SEARCH_PINYIN_MISSING；AC 改 300750.SZ + V-07 性能协议
+S-06.03-01,未开始,N/A,,,待 Gate B/C 签字,BA,W-13,关于页改 44 / 105 + 副行「P0 目标 84」
+S-07.03-01,未开始,N/A,,,待 Gate B/C 签字,BA,W-15,row_count 62,400、覆盖区间 2023-01-02~2024-12-27
+S-07.05-02,未开始,N/A,,,待 Gate B/C 签字,BA,W-16,BarRow 增 batch_id/ingested_at 缺失处理与 MISSING_BATCH_META
+S-08.01-01,未开始,N/A,,,待 Gate B/C 签字,BA,W-17,删 AC-08.01-05 与补1，通用规范移交 S-08.01-03
+S-08.01-02,未开始,N/A,,,待 Gate B/C 签字,BA,W-18,指标搜索覆盖全量 105（61 置灰/44 可添加），T17 灰显
+S-02.02-01,已交付,N/A,,,文档口径,W-25,AC-02.02-01 起止改 coverage_end 派生、起始日改 2023-01-02；2024-04-30 标「示例，非断言」；停牌/除权夹具日期已注，除权需 fixture 显式注入
+S-02.03-01,渲染层已具备,N/A,,,文档口径,W-25,十字光标 tooltip 的 2024-04-30 标「示例日期，非断言输入」；未新增 AC
+S-03.03-03,Blocked-AC,N/A,,,脚本不存在,BA,W-03,补件已落：新 AC 改 `AC-03.03-03（补5）`、`84/84` 定位改 Confirmation；**verify:docs 脚本仍未落地，卡面补齐不等于门禁存在，不放开**
