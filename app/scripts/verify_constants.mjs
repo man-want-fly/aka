@@ -184,6 +184,30 @@ check("T21 specStatus", items.find((x) => x.id === "T21")?.specStatus, "manualCo
 // 与上面「规划中且口径待定」的 13 是两个口径（后者只统计 status=planned 的 61 条），不互相替代。
 check("全域名口径待定（含已实现）", items.filter((x) => x.specStatus !== "manualComplete").length, 15);
 
+// ---------- 3b. 模块数派生（W-37）：唯一权威在架构文档 §2 总览表 ----------
+const MODULE_DOC = "docs/architecture/aka-story-cards-by-tech-module-v0.1.md";
+const MODULE_ROW = /^\|\s*[^|\n]*\|\s*`([ABC][0-9]+)`/gm;
+const MODULE_ROW_LINE = /^\|\s*[^|\n]*\|\s*`[ABC][0-9]+`/;
+const countModuleCodes = (text) => {
+  const section = text.split(/^## 2\./m)[1]?.split(/^## 3\./m)[0] ?? "";
+  return [...section.matchAll(MODULE_ROW)].map((match) => match[1]);
+};
+const moduleDocPath = path.join(ROOT, MODULE_DOC);
+if (!fs.existsSync(moduleDocPath)) {
+  failures.push(`模块数: 未找到 ${MODULE_DOC}（§2 是模块编号唯一权威）`);
+} else {
+  const moduleDocText = fs.readFileSync(moduleDocPath, "utf8");
+  const moduleCodes = countModuleCodes(moduleDocText);
+  check(`模块数｜脚本自动｜${MODULE_DOC} §2`, moduleCodes.length, 19);
+  // 反向用例：临时删掉一行模块，派生结果必须不再是 19，否则该行是手写死值而非派生
+  const mutatedLines = moduleDocText.split("\n");
+  const firstModuleRow = mutatedLines.findIndex((line) => MODULE_ROW_LINE.test(line));
+  const mutated = mutatedLines.filter((_, index) => index !== firstModuleRow).join("\n");
+  const mutatedCount = countModuleCodes(mutated).length;
+  if (firstModuleRow < 0 || mutatedCount === 19) failures.push("模块数反例: 删一行后仍为 19，派生校验失效");
+  else passes.push(`模块数反例（删一行后 ${mutatedCount} ≠ 19）: 校验有效`);
+}
+
 // ---------- 4. 文档漂移扫描 ----------
 /**
  * patternId 是稳定标识；baseline 只登记「已知且已开单」的漂移。
