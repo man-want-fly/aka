@@ -87,8 +87,8 @@ pub fn run() {
                 #[cfg(not(debug_assertions))]
                 {
                     // TEMP-W49-RED: 仅用于红路径取证，验证后必须还原，不合入。
-                    if diag_flag(&args, "--corrupt-db") {
-                        eprintln!("TEMP-W49-RED --corrupt-db");
+                    if diag_flag(&args, "--empty-dataset") {
+                        eprintln!("TEMP-W49-HOLE --empty-dataset");
                     }
                     DiagFaults::default()
                 }
