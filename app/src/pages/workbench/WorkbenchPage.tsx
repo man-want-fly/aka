@@ -1919,7 +1919,7 @@ export function WorkbenchPage({
                     </>
                   ) : (
                     <>
-                      暂无数据
+                      行情未加载
                       <br />
                       请通过 <code>npm run tauri dev</code> 启动桌面骨架
                     </>

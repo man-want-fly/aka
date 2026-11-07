@@ -260,7 +260,7 @@ export function DatasourcePage({ onNavigate }: Props) {
                 className="ds-copy"
                 data-sha-copy="1"
                 disabled={!version}
-                title={version ? "复制完整 sha256" : "暂无数据版本"}
+                title={version ? "复制完整 sha256" : "暂无版本"}
                 onClick={() => void copySha()}
               >
                 {shaCopied ? "已复制" : "复制"}
