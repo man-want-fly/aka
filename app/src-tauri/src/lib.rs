@@ -24,14 +24,12 @@ fn telemetry_path(app: &tauri::App) -> Option<std::path::PathBuf> {
         .map(|home| home.join("Library/Application Support/aka/logs/telemetry.jsonl"))
 }
 
-/// QA 注入只认 `AKA_DIAG=1`；正常启动即使带同名参数也全部忽略。
-/// 发布构建（`cfg!(debug_assertions)=false`）里整段编译掉，release 二进制不含注入入口。
-#[cfg(debug_assertions)]
+// TEMP-W49-RED: 临时去掉 cfg，让 release 分支也能引用 diag_flag，验证后还原。
 fn diag_enabled() -> bool {
     std::env::var("AKA_DIAG").ok().as_deref() == Some("1")
 }
 
-#[cfg(debug_assertions)]
+// TEMP-W49-RED
 fn diag_flag(args: &[String], name: &str) -> bool {
     diag_enabled() && args.iter().any(|arg| arg == name)
 }
@@ -89,7 +87,9 @@ pub fn run() {
                 #[cfg(not(debug_assertions))]
                 {
                     // TEMP-W49-RED: 仅用于红路径取证，验证后必须还原，不合入。
-                    let _ = args.iter().any(|arg| arg == "--corrupt-db");
+                    if diag_flag(&args, "--corrupt-db") {
+                        eprintln!("TEMP-W49-RED --corrupt-db");
+                    }
                     DiagFaults::default()
                 }
             };
