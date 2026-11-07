@@ -1,0 +1,81 @@
+{
+  "workorder": "W-28",
+  "ruleSet": "v3",
+  "exitCode": 1,
+  "runAt": "2026-11-07T03:45:38.545Z",
+  "report": {
+    "version": "v0.1",
+    "total": 105,
+    "implemented": 44,
+    "coverage": 44,
+    "covered": 13,
+    "missing": [
+      "T02",
+      "T04",
+      "T05",
+      "T08",
+      "T10",
+      "T11",
+      "T12",
+      "T13",
+      "T14",
+      "T16",
+      "T20",
+      "T21",
+      "T22",
+      "T23",
+      "M04",
+      "M05",
+      "M08",
+      "M09",
+      "M10",
+      "M19",
+      "M21",
+      "M25",
+      "M26",
+      "V02",
+      "V03",
+      "V04",
+      "V05",
+      "V07",
+      "V09",
+      "V10",
+      "E13"
+    ],
+    "extra": [],
+    "planned_with_content": [],
+    "out_of_scope": [],
+    "failed": [
+      "M20:V3-02(outputs)",
+      "M20:formula(Vortex/period/viPlus/viMinus)",
+      "M24:V3-02(outputs)",
+      "T09:V3-02(outputs)"
+    ],
+    "skipped": [],
+    "skipped_count": 0,
+    "generatedAt": "2026-11-07T03:45:38.545Z"
+  },
+  "classification": [
+    {
+      "entry": "M20:V3-01",
+      "kind": "内容缺口",
+      "why": "formula 段用 VI+/VI− 记法，未出现任何结构化锚点（abbr=Vortex / params=period / outputs=viPlus,viMinus），公式段可读但无法与 manifest 对齐"
+    },
+    {
+      "entry": "M20:V3-02(outputs)",
+      "kind": "内容缺口",
+      "why": "outputs key viPlus/viMinus 未出现在 formula 段"
+    },
+    {
+      "entry": "M24:V3-02(outputs)",
+      "kind": "内容缺口",
+      "why": "outputs key massIndex 未出现，正文用 Mass 记法；params key ema/sum 已出现"
+    },
+    {
+      "entry": "T09:V3-02(outputs)",
+      "kind": "内容缺口",
+      "why": "outputs key upper/middle/lower 未出现，正文用上轨/中轨/下轨；params period/mult 已出现"
+    }
+  ],
+  "note": "skipped=0，无需 SKIP 归类；V3-04 实际 13/13 通过（内容页已含「调大」「调小」），与工单预估 9/13 不同，原因在内容已更新而非判据变化"
+}
