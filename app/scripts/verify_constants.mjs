@@ -207,7 +207,7 @@ const PATTERNS = [
   { id: "obv-assumed", re: /OBV（假设未实现）/g, files: [CARDS], workorder: "W-18", desc: "OBV 已实现，不能作为未实现样例" },
   { id: "badge-completeness", re: /beta[^\n]{0,20}徽标只由[^\n]{0,20}completeness=beta/g, files: [CARDS], workorder: "W-06", desc: "beta 徽标只看 status" },
   { id: "st-mvp", re: /ST\s*涨停|is_st/g, files: [CARDS], workorder: "W-08", desc: "ST 不进 MVP" },
-  { id: "sector-12", re: /12\s*个行业板块|sector_members/g, files: [CARDS], workorder: "W-09", desc: "12 行业降级 V1" },
+  { id: "sector-12", re: /MVP[^\n]{0,10}(?:启用|保留|纳入|包含)[^\n]{0,10}12\s*个\s*行业板块/g, files: [CARDS], workorder: "W-09/W-31", desc: "MVP 只留指数；12 行业仅降级 V1" },
   { id: "m22-three-badges", re: /三徽标|三个徽标/g, files: [CARDS], workorder: "W-06/W-07", desc: "M22 只应有规划中+口径待定" },
 ];
 
@@ -218,27 +218,15 @@ const DOC_FILES = [
 ];
 
 /**
- * 显式白名单（W-09 / sector-12）：逐条列出「pattern + 文件 + 行号 + 该行必须含有的原文片段 + 放行理由」。
+ * 显式白名单：逐条列出「pattern + 文件 + 行号 + 该行必须含有的原文片段 + 放行理由」。
  * 匹配条件是 file + mustInclude 原文片段（≥20 字），不使用「行里含 V1 就跳过」这类规则豁免——
  * 那样任何文档随手加个 V1 就免疫了。line 仅作人工核对参考：卡片正被多方并发编辑，行号会整体平移；
  * 原文片段一旦被改写，条目立即失效并报 STALE 失败，迫使放行者重新逐条确认。
+ *
+ * W-31：sector-12 的两条豁免已删除——口径定死后正确表述只有一种，
+ * 保留白名单等于给「改回 MVP 启用 12 行业」留后门；正则已收窄到只拦错误主张。
  */
-const DRIFT_ALLOWLIST = [
-  {
-    pattern: "sector-12",
-    file: CARDS,
-    line: 3621,
-    mustInclude: "12 个行业板块降级至 V1，MVP 只保留指数",
-    reason: "产品裁定原文：12 行业板块降级 V1、MVP 不排期；此处是在陈述降级，不是主张 MVP 含 12 行业",
-  },
-  {
-    pattern: "sector-12",
-    file: CARDS,
-    line: 4686,
-    mustInclude: "**不写 `sector_members`**（12 行业板块降级 V1）",
-    reason: "生成器禁令原文：明确不写 sector_members，属正确口径",
-  },
-];
+const DRIFT_ALLOWLIST = [];
 
 function loadBaseline() {
   if (!fs.existsSync(BASELINE_PATH)) return [];
