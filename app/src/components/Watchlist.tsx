@@ -39,6 +39,8 @@ export function Watchlist({
   /** state.db 坏库：展示不可恢复页（trace id + 「重新生成数据」/「导出诊断」） */
   const [traceId, setTraceId] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string>("");
+  /** 导出诊断后的可见反馈：成功/半成功/失败都要有文案，否则用户无从判断拿没拿到。 */
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string>(ALL);
@@ -230,6 +232,7 @@ export function Watchlist({
 
   /** S-08.02-04 补1：损坏卡除「重建」外还要能导出诊断（无文件系统插件时以剪贴板 + 下载双通道）。 */
   const exportDiagnostics = async () => {
+    const fileName = `aka-diagnostics-${traceId ?? "unknown"}.json`;
     const payload = JSON.stringify(
       {
         at: new Date().toISOString(),
@@ -241,18 +244,37 @@ export function Watchlist({
       null,
       2,
     );
-    try {
-      await navigator.clipboard?.writeText(payload);
-    } catch {
-      /* 剪贴板不可用时仍走下载通道 */
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(payload);
+        copied = true;
+      } catch {
+        copied = false;
+      }
     }
-    const blob = new Blob([payload], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `aka-diagnostics-${traceId ?? "unknown"}.json`;
-    anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    let downloaded = false;
+    try {
+      const blob = new Blob([payload], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = fileName;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1_000);
+      downloaded = true;
+    } catch {
+      downloaded = false;
+    }
+    setExportStatus(
+      copied && downloaded
+        ? `已复制到剪贴板，并下载 ${fileName}`
+        : copied
+          ? `已复制到剪贴板（下载被拦截）：${fileName}`
+          : downloaded
+            ? `已下载 ${fileName}（剪贴板不可用）`
+            : "导出失败：剪贴板与下载均不可用，请手动复制错误码与追踪号",
+    );
   };
 
   if (traceId) {
@@ -275,6 +297,11 @@ export function Watchlist({
               导出诊断
             </button>
           </div>
+          {exportStatus && (
+            <span className="wl-error-page__hint" data-wl-export-status role="status">
+              {exportStatus}
+            </span>
+          )}
         </div>
       </aside>
     );

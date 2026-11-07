@@ -471,6 +471,13 @@ select {
 
 .wl-error-page__actions { display: flex; gap: 8px; }
 
+/* QA 返工：导出诊断的成功/半成功/失败都必须有可见文案，否则「拿到没有」不可判定 */
+.wl-error-page__hint {
+  font-size: 11px;
+  color: var(--faint);
+  user-select: text;
+}
+
 .wl-error-page button {
   padding: 3px 10px;
   border: 1px solid var(--line2);

@@ -752,6 +752,29 @@ async function runCorruptMode(push: Push) {
       !retryAction,
     `错误码「${code}」/ 重建=${Boolean(action)} / 导出诊断=${Boolean(exportAction)} / 重试=${Boolean(retryAction)}`,
   );
+
+  // 补1（QA 返工）：导出诊断的成功/半成功/失败都要有可见文案，否则「拿到没有」不可判定。
+  const statusNode = () => q<HTMLElement>("[data-wl-export-status]");
+  const statusBefore = (statusNode()?.textContent ?? "").trim();
+  exportAction?.click();
+  const statusText = await waitFor(
+    () => {
+      const text = (statusNode()?.textContent ?? "").trim();
+      return text && text !== statusBefore ? text : null;
+    },
+    2_000,
+  ).catch(() => "");
+  push(
+    "WL-23C",
+    "render",
+    "S-08.02-04",
+    "AC-08.02-05（补1）",
+    Boolean(exportAction) &&
+      (statusText.includes("已复制") ||
+        statusText.includes("已下载") ||
+        statusText.includes("导出失败")),
+    `点击「导出诊断」→ 状态文案「${statusText || "缺失"}」`,
+  );
 }
 
 /** 补4（删组）/ 补4（移出）/ 补3（星标）：只读库下的三处写失败。 */
