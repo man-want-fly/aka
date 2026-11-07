@@ -4,7 +4,7 @@
  *
  * 用法：
  *   node scripts/verify_indicator_docs.mjs              # 校验内容库
- *   node scripts/verify_indicator_docs.mjs --self-test  # 脚本自身四用例
+ *   node scripts/verify_indicator_docs.mjs --self-test  # 脚本自身五用例
  *
  * 退出码：
  *   0 = 覆盖、四段、版本、公式锚点全部通过
@@ -13,9 +13,9 @@
  *
  * 覆盖口径（2026-11-07 TL 裁定，原「P0 全覆盖（含 planned P0）」口径作废）：
  *   内容页覆盖集合 = 已实现 ∩ P0；planned 无论 P0/P1 一律不得有页；
- *   摘要分母由该集合派生，不写死 84。
+ *   coverage / implemented / planned_with_content / out_of_scope 全部由
+ *   app/manifest/indicators.json 派生，脚本内不出现任何写死的条数。
  *   理由：给未实现的指标写口径页，等于在文档里立一个不存在的东西。
- *   当前该集合 = 44 条（manifest 105 / 已实现 44 / P0 84 / planned 61）。
  */
 
 import fs from "node:fs";
@@ -205,7 +205,7 @@ function main() {
   process.exit(ok ? 0 : 1);
 }
 
-// ---------- 脚本自测（判据 8 之外的自身验收，四用例） ----------
+// ---------- 脚本自测（判据 8 之外的自身验收，五用例） ----------
 function writeFixturePages(dir, items, opts = {}) {
   fs.mkdirSync(dir, { recursive: true });
   const filler = "口径说明用于占位，确保段落长度达标。".repeat(6);
@@ -273,6 +273,23 @@ function runSelfTest() {
     `用例4 全绿 → exit 0 且 covered=coverage=${coverage.length}`,
     r4.status === 0 && report4.covered === report4.coverage && report4.coverage === coverage.length,
     `exit=${r4.status} covered=${report4.covered}/${report4.coverage}`,
+  );
+
+  // 判据 v2：planned（含 planned P0）有页即越界，必须 exit 1
+  const plannedP0 = items.find((item) => item.status === "planned" && item.priority === "P0");
+  if (!plannedP0) throw new Error("manifest 中找不到 planned 的 P0 指标，无法构造越界用例");
+  const plannedDir = path.join(root, "planned");
+  writeFixturePages(plannedDir, coverage);
+  writeFixturePages(plannedDir, [plannedP0]);
+  const report5Dir = path.join(root, "report5");
+  const r5 = run(plannedDir, report5Dir);
+  const report5 = JSON.parse(fs.readFileSync(path.join(report5Dir, "content-coverage-report.json"), "utf8"));
+  record(
+    "用例5 给 planned 的 P0 写页 → exit 1",
+    r5.status === 1 &&
+      report5.planned_with_content.includes(plannedP0.id) &&
+      report5.out_of_scope.length === 0,
+    `exit=${r5.status} planned_with_content=${report5.planned_with_content.length}(${plannedP0.id})`,
   );
 
   console.log("指标口径页门禁自测");

@@ -380,15 +380,17 @@
 
 ### TD-S3-02 · 口径页门禁在 CI 临时降为非阻断（预期失败）
 
-- **当前缺口**：`app/scripts/verify_indicator_docs.mjs` 已按 TL 判据落地并自测通过（4/4），
+- **当前缺口**：`app/scripts/verify_indicator_docs.mjs` 已按 TL 判据 v2 落地并自测通过（5/5），
   但内容库 `app/content/indicators/` 由 **S-03.03-03** 交付，尚未存在；脚本按判据 1 返回 **exit 2**。
   CI 步骤「指标口径页门禁（W-03）」因此暂设 `continue-on-error: true`，并在输出打印
   `EXPECTED RED until S-03.03-03`。**长期常红的门禁等于没有门禁**，故不串 `prebuild`（本地 `npm run build`
   不受影响），只在 CI 保留独立步骤并显式标注预期失败。
-- **为何可带病运行**：门禁脚本的覆盖集合、四段长度、公式锚点、版本、确定性判据均已生效；
-  `--self-test` 四用例（库缺失 exit 2 / 缺页 exit 1 / 缺段 exit 1 / 全绿 exit 0）已通过，缺的只有内容本身。
+- **为何可带病运行**：门禁脚本的覆盖集合（已实现 ∩ P0）、四段长度、公式锚点、版本、确定性判据、
+  越界判据（多页同样失败）均已生效；`--self-test` 五用例（库缺失 exit 2 / 缺页 exit 1 /
+  缺段 exit 1 / 全绿 exit 0 / planned 的 P0 有页 exit 1）已通过，缺的只有内容本身。
 - **触发条件（满足即翻阻断，不必另行评审）**：`app/content/indicators/` 落地且本地
-  `npm run verify:docs` 退出码为 **0**（摘要显示 `覆盖：44/44（已实现 ∩ P0 = 44）`）。
+  `npm run verify:docs` 退出码为 **0**（摘要显示 `x/coverage`：分母为「已实现 ∩ P0」的派生物，
+  不写死条数）。
 - **翻阻断动作**：删除 `.github/workflows/ci.yml` 该步骤的 `continue-on-error: true` 与
   `EXPECTED RED until S-03.03-03` 打印行；**不**在 `app/package.json` 恢复 `prebuild` 串联
   （本地构建与门禁解耦，门禁只在 CI 阻断）。
