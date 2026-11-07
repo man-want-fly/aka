@@ -656,7 +656,7 @@ type Push = (
 
 const FAULT_NOTE: Record<string, string> = {
   empty: "AKA_DIAG=1 + --empty-dataset：list_securities 返回 0 只；看板 30 条自选灰显 + 顶部「当前数据集为空」+ 动作「重新生成模拟数据」。",
-  corrupt: "AKA_DIAG=1 + --corrupt-db：启动前写入非 SQLite 内容，open_with_fallback 隔离并降级；watchlist 读取抛损坏错误（带 traceId）。",
+  corrupt: "AKA_DIAG=1 + --corrupt-db：真实库复制到临时目录并留 state.db.orig，只在副本写坏；open_with_fallback 隔离并降级，watchlist 读取抛损坏错误（带 traceId）。",
   readonly: "AKA_DIAG=1 + --readonly-db：连接 `PRAGMA query_only=ON`，写操作由 SQLite 返回只读错误；前置脚本直插分组与待移出标的。",
 };
 
@@ -731,7 +731,7 @@ async function runCorruptMode(push: Push) {
     "S-01.02-03",
     "AC-01.02-04（补3）",
     Boolean(page) &&
-      /^TR-[0-9a-z]+-[0-9a-z]+$/i.test(trace) &&
+      /^TR-\d{8}-\d{6}-\d{4}$/.test(trace) &&
       Boolean(action) &&
       !emptySelf &&
       rows === 0,
