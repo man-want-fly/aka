@@ -421,18 +421,21 @@
         {
           "key": "upper",
           "labelZh": "上轨",
+          "aliases": ["上轨"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "middle",
           "labelZh": "中轨",
+          "aliases": ["中轨"],
           "kind": "line",
           "color": "var(--accent)"
         },
         {
           "key": "lower",
           "labelZh": "下轨",
+          "aliases": ["下轨"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -2208,6 +2211,7 @@
           "kind": "int",
           "key": "period",
           "label": "周期",
+          "aliases": ["N", "周期"],
           "min": 2,
           "max": 200,
           "default": 14,
@@ -2218,12 +2222,14 @@
         {
           "key": "viPlus",
           "labelZh": "VI+",
+          "aliases": ["VI+", "VI−"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "viMinus",
           "labelZh": "VI-",
+          "aliases": ["VI−", "VI-"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -2403,6 +2409,7 @@
         {
           "key": "massIndex",
           "labelZh": "Mass",
+          "aliases": ["Mass"],
           "kind": "line",
           "color": "var(--accent)"
         }

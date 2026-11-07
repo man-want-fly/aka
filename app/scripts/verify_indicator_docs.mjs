@@ -4,7 +4,7 @@
  *
  * 用法：
  *   node scripts/verify_indicator_docs.mjs              # 校验内容库
- *   node scripts/verify_indicator_docs.mjs --self-test  # 脚本自身八用例
+ *   node scripts/verify_indicator_docs.mjs --self-test  # 脚本自身九用例（用例 9 含两条断言）
  *
  * 退出码：
  *   0 = 覆盖、四段、版本、判据 v3 全部通过，且 skipped=0（SKIP 不算通过）
@@ -16,11 +16,11 @@
  *   coverage / implemented / planned_with_content / out_of_scope 全部由
  *   app/manifest/indicators.json 派生，脚本内不出现任何写死的条数。
  *
- * 判据 v3（W-28，六条）：
- *   V3-01 锚点只取结构化字段 abbr（/、|、空格拆词）+ params[].key + outputs[].key，
- *         禁止从 formulaSummary 正则刮符号；三者全空 → SKIP 并点名。
- *   V3-02 每个 params[].key 必须与其 default 在同一分句出现（分句边界 = 。；！？与换行，
- *         逗号不作边界）；outputs[].key 至少一个出现在 formula 段。
+ * 判据 v3（W-28 / W-30，六条）：
+ *   V3-01 锚点只取结构化字段 abbr/abbrAliases（/、|、空格拆词）+ params(key∪aliases) +
+ *         outputs(key∪aliases)，禁止从 formulaSummary 正则刮符号；三者全空 → SKIP 并点名。
+ *   V3-02 每个 params 的 key∪aliases 必须与其 default 在同一分句出现（分句边界 =
+ *         。；！？与换行，逗号不作边界）；任一 output 的 key∪aliases 出现在 formula 段。
  *   V3-03 长度按有效字符计（剔除 Unicode 标点 P 类与空白 Z 类），80 字门槛。
  *   V3-04 params 段结构：调大/调小各至少一次且所在分句有效字数 ≥10，每个 params key 段内出现。
  *   V3-05 空话词命中即 FAIL；无来源数字命中即 FAIL；词表单一源 app/manifest/doc-lint-words.json。
@@ -58,9 +58,41 @@ const splitClauses = (s) =>
 const containsToken = (haystack, needle) =>
   String(haystack ?? "").toLowerCase().includes(String(needle ?? "").toLowerCase());
 
+const CJK = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+const isWordChar = (ch) => ch !== undefined && /[a-z0-9]/.test(ch);
+
+/** 别名归一化：NFKC → casefold（toLowerCase）→ 三种减号统一为 "-" */
+function normalizeTerm(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\u2212\u2013\u2014]/g, "-");
+}
+
+/**
+ * 别名匹配：拉丁按词边界、中文按子串。
+ * 词边界是钉死用例「单字母 N 不得命中 NaN」的实现，不要退回 containsToken。
+ */
+function matchesAnchor(haystack, term) {
+  const needle = normalizeTerm(term).trim();
+  if (!needle) return false;
+  const text = normalizeTerm(haystack);
+  if (CJK.test(needle)) return text.replace(/\s+/g, "").includes(needle.replace(/\s+/g, ""));
+  let from = 0;
+  while (from < text.length) {
+    const index = text.indexOf(needle, from);
+    if (index < 0) return false;
+    const before = index > 0 ? text[index - 1] : "";
+    const after = text[index + needle.length];
+    if (!isWordChar(before) && !isWordChar(after)) return true;
+    from = index + 1;
+  }
+  return false;
+}
+
 const RULES = [
-  ["V3-01", "脚本自动", "content formula 段 + manifest abbr/params/outputs", "三者全空 → SKIP 并点名"],
-  ["V3-02", "脚本自动", "content formula/params 段 + manifest params/outputs", "无 SKIP；key 缺失或不同现 → FAIL"],
+  ["V3-01", "脚本自动", "content formula 段 + manifest abbr/abbrAliases/params/outputs（key∪aliases）", "三者全空 → SKIP 并点名"],
+  ["V3-02", "脚本自动", "content formula/params 段 + manifest params/outputs（key∪aliases）", "无 SKIP；key 缺失或不同现 → FAIL"],
   ["V3-03", "脚本自动", "definition/formula/params/usage/completion_note", "无 SKIP（纯字符处理）"],
   ["V3-04", "脚本自动", "content params 段 + manifest params[].key", "无 SKIP；条款缺失 → FAIL"],
   ["V3-05", "脚本自动", "四段 + completion_note，词表 app/manifest/doc-lint-words.json", "词表缺失 → exit 2"],
@@ -99,19 +131,42 @@ function coverageSet(items) {
   return items.filter((item) => item.status !== "planned" && item.priority === "P0");
 }
 
-/** V3-01：锚点只取结构化字段，禁止从 formulaSummary 刮符号 */
+/** V3-01：锚点只取结构化字段（含 W-30 别名），禁止从 formulaSummary 刮符号 */
 function structuredAnchors(item) {
-  const abbrTokens = String(item.abbr ?? "")
+  const anchors = [];
+  const push = (term, source) => {
+    if (typeof term === "string" && term.trim()) anchors.push({ term, source });
+  };
+  for (const token of String(item.abbr ?? "")
     .split(/[\/|\s]+/)
-    .map((token) => token.trim())
-    .filter(Boolean);
-  const paramKeys = (item.params ?? [])
-    .map((param) => param?.key)
-    .filter((key) => typeof key === "string" && key.trim());
-  const outputKeys = (item.outputs ?? [])
-    .map((output) => output?.key)
-    .filter((key) => typeof key === "string" && key.trim());
-  return { abbrTokens, paramKeys, outputKeys };
+    .map((entry) => entry.trim())
+    .filter(Boolean)) {
+    push(token, "abbr");
+  }
+  for (const alias of item.abbrAliases ?? []) push(alias, `abbrAlias:${alias}`);
+  for (const param of item.params ?? []) {
+    const key = param?.key;
+    if (typeof key !== "string" || !key.trim()) continue;
+    push(key, `param.${key}.key`);
+    for (const alias of param.aliases ?? []) push(alias, `param.${key}.alias:${alias}`);
+  }
+  for (const output of item.outputs ?? []) {
+    const key = output?.key;
+    if (typeof key !== "string" || !key.trim()) continue;
+    push(key, `output.${key}.key`);
+    for (const alias of output.aliases ?? []) push(alias, `output.${key}.alias:${alias}`);
+  }
+  return anchors;
+}
+
+/** params/outputs 的 key ∪ aliases；aliases 缺失按空数组处理（W-30 第 10 条） */
+function termsOf(entry) {
+  const list = [];
+  if (typeof entry?.key === "string" && entry.key.trim()) list.push(entry.key);
+  for (const alias of entry?.aliases ?? []) {
+    if (typeof alias === "string" && alias.trim()) list.push(alias);
+  }
+  return list;
 }
 
 const isScalar = (value) =>
@@ -134,24 +189,31 @@ function listContentFiles(dir) {
     .sort();
 }
 
-/** 单页 v3 判据（V3-01～V3-05），返回 { failed, skipped } */
+/** 单页 v3 判据（V3-01～V3-05），返回 { failed, skipped, anchorHits } */
 function checkPageV3(item, page, words) {
   const failed = [];
   const skipped = [];
   const id = item.id;
-  const { abbrTokens, paramKeys, outputKeys } = structuredAnchors(item);
+  const anchors = structuredAnchors(item);
+  const paramKeys = (item.params ?? [])
+    .map((param) => param?.key)
+    .filter((key) => typeof key === "string" && key.trim());
   const formulaText = typeof page.formula === "string" ? page.formula : "";
   const paramsText = typeof page.params === "string" ? page.params : "";
 
-  // V3-01 锚点只取结构化字段；三者全空 → SKIP 并点名，不得静默 PASS
-  const anchors = [...abbrTokens, ...paramKeys, ...outputKeys];
-  if (anchors.length === 0) {
+  // V3-01 锚点含别名；三者全空 → SKIP 并点名，不得静默 PASS
+  const anchorHits = anchors.map((anchor) => ({
+    term: anchor.term,
+    source: anchor.source,
+    hit: matchesAnchor(formulaText, anchor.term),
+  }));
+  if (anchorHits.length === 0) {
     skipped.push(`${id}:V3-01`);
-  } else if (!anchors.some((token) => containsToken(formulaText, token))) {
-    failed.push(`${id}:formula(${anchors.join("/")})`);
+  } else if (!anchorHits.some((entry) => entry.hit)) {
+    failed.push(`${id}:formula(${anchors.map((anchor) => anchor.term).join("/")})`);
   }
 
-  // V3-02 params key 与 default 同分句；outputs key 至少一个出现在 formula 段
+  // V3-02 params 的 key∪aliases 与 default 同分句；任一 output 的 key∪aliases 出现在 formula 段
   const paramClauses = [...splitClauses(paramsText), ...splitClauses(formulaText)];
   for (const param of item.params ?? []) {
     const key = param?.key;
@@ -160,12 +222,16 @@ function checkPageV3(item, page, words) {
       failed.push(`${id}:V3-02(manifest:${key})`);
       continue;
     }
+    const terms = termsOf(param);
     const sameClause = paramClauses.some(
-      (clause) => containsToken(clause, key) && clauseHasDefault(clause, param.default),
+      (clause) =>
+        terms.some((term) => matchesAnchor(clause, term)) &&
+        clauseHasDefault(clause, param.default),
     );
     if (!sameClause) failed.push(`${id}:V3-02(${key})`);
   }
-  if (outputKeys.length > 0 && !outputKeys.some((key) => containsToken(formulaText, key))) {
+  const outputTerms = (item.outputs ?? []).flatMap((output) => termsOf(output));
+  if (outputTerms.length > 0 && !outputTerms.some((term) => matchesAnchor(formulaText, term))) {
     failed.push(`${id}:V3-02(outputs)`);
   }
 
@@ -204,7 +270,7 @@ function checkPageV3(item, page, words) {
     }
   }
 
-  return { failed, skipped };
+  return { failed, skipped, anchorHits };
 }
 
 function buildReport({ items, coverage, constants, files, words, parseErrors }) {
@@ -240,6 +306,7 @@ function buildReport({ items, coverage, constants, files, words, parseErrors }) 
     .sort();
   const failed = [...parseErrors];
   const skipped = [];
+  const anchorHits = {};
 
   for (const item of coverage) {
     const page = pages.get(item.id);
@@ -255,6 +322,7 @@ function buildReport({ items, coverage, constants, files, words, parseErrors }) 
     const result = checkPageV3(item, page, words);
     failed.push(...result.failed);
     skipped.push(...result.skipped);
+    anchorHits[item.id] = result.anchorHits;
   }
 
   return {
@@ -270,6 +338,7 @@ function buildReport({ items, coverage, constants, files, words, parseErrors }) 
     failed: failed.sort(),
     skipped: skipped.sort(),
     skipped_count: skipped.length,
+    anchor_hits: anchorHits,
   };
 }
 
@@ -332,6 +401,19 @@ function main() {
   if (report.out_of_scope.length) console.log(`  越界内容页：${report.out_of_scope.join(", ")}`);
   if (report.skipped.length) console.log(`  SKIP（不给 PASS，需归类）：${report.skipped.join(", ")}`);
   if (report.failed.length) console.log(`  不合格：${report.failed.join(", ")}`);
+  // W-30：逐个锚点打印命中来源（是 key 命中还是哪个别名命中），便于区分内容变化与别名变化
+  const anchorIds = Object.keys(report.anchor_hits ?? {});
+  if (anchorIds.length) {
+    console.log("锚点命中来源（V3-01）：");
+    for (const id of anchorIds) {
+      const hits = report.anchor_hits[id];
+      console.log(
+        `  ${id}: ${hits
+          .map((entry) => `${entry.source}=${entry.hit ? "命中" : "未命中"}[${entry.term}]`)
+          .join(" ")}`,
+      );
+    }
+  }
   console.log(`报告：${path.relative(APP, REPORT_PATH)}`);
 
   const ok =
@@ -345,10 +427,15 @@ function main() {
   process.exit(ok ? 0 : 1);
 }
 
-// ---------- 脚本自测（八用例） ----------
+// ---------- 脚本自测（九用例，用例 9 含两条断言） ----------
 function buildFixturePage(item) {
-  const { abbrTokens, paramKeys, outputKeys } = structuredAnchors(item);
-  const anchor = outputKeys[0] ?? abbrTokens[0] ?? paramKeys[0] ?? item.id;
+  const anchors = structuredAnchors(item);
+  const paramKeys = (item.params ?? [])
+    .map((param) => param?.key)
+    .filter((key) => typeof key === "string" && key.trim());
+  const outputTerms = (item.outputs ?? []).flatMap((output) => termsOf(output));
+  const formulaTerms = [outputTerms[0], paramKeys[0], anchors[0]?.term].filter(Boolean);
+  const anchor = formulaTerms.length ? formulaTerms.join("、") : item.id;
   const filler = "口径说明用于占位，确保段落长度达标。".repeat(6);
   const paramLines = paramKeys.map((key) => {
     const param = (item.params ?? []).find((entry) => entry.key === key);
@@ -509,6 +596,62 @@ function runSelfTest() {
     "用例8 空话词命中 → FAIL",
     r8.status === 1 && report8.failed.some((entry) => entry.startsWith(`${coverage[0].id}:V3-05`)),
     `exit=${r8.status} failed=${report8.failed.filter((entry) => entry.includes("V3-05")).join(",")}`,
+  );
+
+  // 用例9（W-30）：别名命中 → PASS；单字母别名 N 不误命中 NaN（两条断言）
+  const aliasTargetId = "M20";
+  const aliasTarget = items.find((item) => item.id === aliasTargetId);
+  if (!aliasTarget) throw new Error("manifest 中找不到 M20，无法构造别名用例");
+  const aliasWord = ((aliasTarget.outputs ?? []).find((output) => (output.aliases ?? []).length)
+    ?.aliases ?? [])[0];
+  if (!aliasWord) throw new Error("manifest 的 M20 未登记 output 别名，W-30 用例无法成立");
+  const filler = "口径说明用于占位，确保段落长度达标。".repeat(6);
+  const aliasDir = path.join(root, "alias");
+  writeFixturePages(aliasDir, coverage, {
+    mutate: (item, page) => {
+      if (item.id !== aliasTargetId) return;
+      page.formula = `公式：${aliasWord} 与另一条曲线由同一窗口的波幅比值得到，窗口长度取 14，不做额外平滑。${filler}`;
+    },
+  });
+  const aliasReportDir = path.join(root, "report9a");
+  const rAlias = run(aliasDir, aliasReportDir);
+  const aliasReport = readReport(aliasReportDir);
+  const aliasPass =
+    rAlias.status === 0 &&
+    !aliasReport.failed.some((entry) => entry.startsWith(`${aliasTargetId}:`));
+
+  // 同一条目改成「只有单字母别名 N」，页面公式里只出现 NaN → 词边界必须判未命中
+  const nanManifest = JSON.parse(JSON.stringify(manifest));
+  const nanItem = nanManifest.indicators.find((item) => item.id === aliasTargetId);
+  nanItem.abbr = "";
+  nanItem.abbrAliases = [];
+  nanItem.params = [
+    { kind: "int", key: "zzz", label: "窗口", min: 2, max: 200, default: 1, step: 1, aliases: ["N"] },
+  ];
+  nanItem.outputs = [];
+  const nanManifestPath = path.join(root, "manifest-nan.json");
+  fs.writeFileSync(nanManifestPath, JSON.stringify(nanManifest, null, 2));
+  const nanDir = path.join(root, "nan");
+  const nanFormula = `公式：窗口比值为 0 时输出 NaN，不给 0 也不给 1；序列不足时同样留空，不做补零处理。${filler}`;
+  writeFixturePages(nanDir, coverage, {
+    mutate: (item, page) => {
+      if (item.id !== aliasTargetId) return;
+      page.formula = nanFormula;
+      page.params = `zzz 默认取 1，是窗口长度。参数调大时窗口更长、曲线更平滑；调小时窗口更短、曲线更灵敏。${"口径说明用于占位，确保段落长度达标。".repeat(3)}`;
+    },
+  });
+  const nanReportDir = path.join(root, "report9b");
+  const nanRun = run(nanDir, nanReportDir, { AKA_MANIFEST_PATH: nanManifestPath });
+  const nanReport = readReport(nanReportDir);
+  const nanFail =
+    nanRun.status === 1 &&
+    nanReport.failed.some((entry) => entry.startsWith(`${aliasTargetId}:formula`)) &&
+    nanFormula.includes("NaN") &&
+    !matchesAnchor(nanFormula, "N");
+  record(
+    "用例9 别名命中 → PASS；单字母 N 不误命中 NaN",
+    aliasPass && nanFail,
+    `别名 exit=${rAlias.status} 词=${aliasWord}；NaN 仅出现于 NaN（exit=${nanRun.status}，N 命中=${matchesAnchor(nanFormula, "N")}）`,
   );
 
   console.log("指标口径页门禁自测");
