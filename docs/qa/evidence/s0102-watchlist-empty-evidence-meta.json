@@ -1,0 +1,20 @@
+{
+  "suite": "S-01.02 watchlist (empty)",
+  "label": "20261107-190615",
+  "runAt": "2026-11-07T19:06:22+08:00",
+  "base": "cde6badc399f66896bda88f9a14af0d7b9af0660",
+  "dirty": true,
+  "patch": "sha256:56fbbf2b16fb9a16a0bfc844369b1c54096fed75bee8b28b9097ca38d5a1194d",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"watchlist-empty@20261107-190615\" target/release/aka-desktop --empty-dataset",
+  "fixture": "state.db 直插 30 条 EMPTY000.SZ~EMPTY029.SZ（group_name=NULL）；启动带 --empty-dataset 让 list_securities 返回 0 只；取证后 .backup 还原",
+  "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "layers": {
+      "data": "0/0",
+      "render": "1/1"
+    },
+    "blocked": []
+  }
+}

@@ -218,6 +218,28 @@ impl AppCore {
             .map(|db| db.lock().unwrap_or_else(|err| err.into_inner()))
     }
 
+    /// 重新生成数据：把降级后的内存库换成一份全新可写的 state.db。
+    pub fn replace_state_db(&self, db: StateDb) {
+        if let Some(slot) = self.state.as_ref() {
+            let mut guard = slot.lock().unwrap_or_else(|err| err.into_inner());
+            *guard = db;
+        }
+    }
+
+    /// 删除损坏的 state.db（含 WAL 旁文件）并重建，成功后替换内存句柄。
+    pub fn rebuild_state_db(&self, path: &std::path::Path) -> Result<(), AppError> {
+        for suffix in ["", "-wal", "-shm"] {
+            let file = format!("{}{suffix}", path.display());
+            let _ = std::fs::remove_file(file);
+        }
+        let db = StateDb::open_with_fallback(path);
+        if db.degraded() {
+            return Err(AppError::internal("重新生成数据失败：state.db 仍无法写入"));
+        }
+        self.replace_state_db(db);
+        Ok(())
+    }
+
     pub fn setting(&self, key: &str) -> Result<Option<String>, AppError> {
         self.state_db()
             .ok_or_else(|| AppError::internal("state.db 未初始化"))?
@@ -355,6 +377,12 @@ impl AppCore {
         let db = self
             .state_db()
             .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+        // 坏库已无法修复：让页面拿到 trace id 并展示「重新生成数据」，不要静默当成空自选。
+        if let Some(reason) = db.degraded_reason() {
+            if reason.starts_with("state.db 已损坏") {
+                return Err(AppError::storage_corrupt(reason.to_string()));
+            }
+        }
         let items = db.watchlist().map_err(AppError::from)?;
         let groups = db.watch_groups().map_err(AppError::from)?;
         let mut counts: HashMap<String, i64> = HashMap::new();

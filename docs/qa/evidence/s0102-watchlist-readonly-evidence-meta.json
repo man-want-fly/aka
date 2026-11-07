@@ -1,0 +1,20 @@
+{
+  "suite": "S-01.02 watchlist (readonly)",
+  "label": "20261107-190630",
+  "runAt": "2026-11-07T19:06:40+08:00",
+  "base": "cde6badc399f66896bda88f9a14af0d7b9af0660",
+  "dirty": true,
+  "patch": "sha256:56fbbf2b16fb9a16a0bfc844369b1c54096fed75bee8b28b9097ca38d5a1194d",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"watchlist-readonly@20261107-190630\" target/release/aka-desktop --readonly-db",
+  "fixture": "启动带 --readonly-db（PRAGMA query_only=ON）；直插分组「诊断只读组」6 只标的 + 「诊断只读移出」1 条；取证后 .backup 还原",
+  "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "layers": {
+      "data": "1/1",
+      "render": "2/2"
+    },
+    "blocked": []
+  }
+}

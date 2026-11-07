@@ -142,7 +142,7 @@ impl StateDb {
         let conn = Connection::open(path).map_err(|err| DbError::Open(err.to_string()))?;
         let check: String = conn
             .query_row("PRAGMA quick_check", [], |row| row.get(0))
-            .map_err(|err| DbError::Open(err.to_string()))?;
+            .map_err(|err| DbError::Corrupt(err.to_string()))?;
         if check != "ok" {
             return Err(DbError::Corrupt(check));
         }
@@ -245,6 +245,16 @@ impl StateDb {
 
     pub fn degraded_reason(&self) -> Option<&str> {
         self.degraded_reason.as_deref()
+    }
+
+    /// QA 注入（`--readonly-db`）：让连接进入 SQLite 只读模式。
+    /// 后续写操作由 SQLite 自己返回 `attempt to write a readonly database`，
+    /// 走产品真实的只读错误映射，而不是另造一条假错误。
+    #[doc(hidden)]
+    pub fn enable_query_only_for_diag(&self) -> Result<(), DbError> {
+        self.conn
+            .execute_batch("PRAGMA query_only=ON;")
+            .map_err(|err| DbError::Write(err.to_string()))
     }
 
     pub fn schema_version(&self) -> i64 {

@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "suite": "S-01.02 watchlist (readonly)",
+  "finishedAt": "2026-11-07T11:06:38.347Z",
+  "layers": {
+    "data": "1/1",
+    "render": "2/2"
+  },
+  "blocked": [],
+  "note": "AKA_DIAG=1 + --readonly-db：连接 `PRAGMA query_only=ON`，写操作由 SQLite 返回只读错误；前置脚本直插分组与待移出标的。",
+  "checks": [
+    {
+      "id": "WL-21",
+      "card": "S-01.02-02",
+      "ac": "AC-01.02-02（补4）",
+      "layer": "data",
+      "passed": true,
+      "detail": "错误条「自选未保存：磁盘只读」，组仍在=true（6 只），组内标的=6，tab=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-24",
+      "card": "S-01.02-03",
+      "ac": "AC-01.02-04（补4）",
+      "layer": "render",
+      "passed": true,
+      "detail": "错误条「移出失败，请重试」，行仍在=true，落库仍在=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-20",
+      "card": "S-01.02-01",
+      "ac": "AC-01.02-01（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "星标 399001.SZ before=0 after=0，提示「自选未保存：磁盘只读」",
+      "blocked": false
+    }
+  ]
+}

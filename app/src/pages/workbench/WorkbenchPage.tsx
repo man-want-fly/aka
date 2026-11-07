@@ -169,6 +169,8 @@ export function WorkbenchPage({
   onNavigate,
 }: Props) {
   const [securities, setSecurities] = useState<SecurityDto[]>([]);
+  /** 区分「代码表加载中」与真实的 0 只数据集 */
+  const [datasetReady, setDatasetReady] = useState(false);
   const [registry, setRegistry] = useState<RegistryResponse | null>(null);
   const [manifest, setManifest] = useState<ManifestResponse | null>(null);
   // S-02.08-01：页脚 7 段唯一来源；不提供 manifest 时整段显示 —
@@ -572,6 +574,7 @@ export function WorkbenchPage({
         setSecurities(items);
         setRegistry(meta);
         setManifest(catalog);
+        setDatasetReady(true);
       })
       .catch((err) => {
         if (!alive) return;
@@ -1377,8 +1380,10 @@ export function WorkbenchPage({
   }, [manifest, registry, securities, defaultParams]);
 
   // S-01.02-01/02/03 自选取证：AKA_DIAG_TARGET=watchlist@<token> 时在页面就绪后自跑一次
+  // 不按 securities.length 早退：`--empty-dataset` 时数据集本就是 0 只，套件要覆盖该空态。
   useEffect(() => {
-    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (!isTauriRuntime() || !manifest || !registry) return;
+    if (securities.length === 0 && !datasetReady) return;
     if (watchlistStarted.current) return;
     watchlistStarted.current = true;
     // 不用 alive 门闩：StrictMode/HMR 重跑不应把已启动的取证静默掐断
@@ -1618,6 +1623,17 @@ export function WorkbenchPage({
             activeCode={activeCode}
             onSelect={setActiveCode}
             onGoMarket={() => onNavigate("market")}
+            datasetReady={datasetReady}
+            onRegenerate={async () => {
+              try {
+                const items = await ipc.datasetRegenerate();
+                setSecurities(items);
+                setDatasetReady(true);
+                window.dispatchEvent(new Event("aka:watchlist-refresh"));
+              } catch (err) {
+                setError(describeError(err));
+              }
+            }}
           />
 
           <main className="main">

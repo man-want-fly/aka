@@ -1,0 +1,20 @@
+{
+  "suite": "S-01.02 watchlist (corrupt)",
+  "label": "20261107-190623",
+  "runAt": "2026-11-07T19:06:29+08:00",
+  "base": "cde6badc399f66896bda88f9a14af0d7b9af0660",
+  "dirty": true,
+  "patch": "sha256:56fbbf2b16fb9a16a0bfc844369b1c54096fed75bee8b28b9097ca38d5a1194d",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"watchlist-corrupt@20261107-190623\" target/release/aka-desktop --corrupt-db",
+  "fixture": "启动带 --corrupt-db：打开前把 state.db 写成非 SQLite 内容，走真实隔离降级；取证后 .backup 还原",
+  "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "layers": {
+      "data": "0/0",
+      "render": "1/1"
+    },
+    "blocked": []
+  }
+}

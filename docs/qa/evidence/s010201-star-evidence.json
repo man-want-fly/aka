@@ -1,0 +1,73 @@
+{
+  "suite": "S-01.02-01 star",
+  "startedAt": "2026-11-07T11:06:44.809Z",
+  "finishedAt": "2026-11-07T11:06:46.312Z",
+  "ok": true,
+  "code": "399001.SZ",
+  "name": "深证成指",
+  "checks": [
+    {
+      "id": "market-aria-empty",
+      "ac": "AC-01.02-01 / UI 无障碍",
+      "layer": "render",
+      "passed": true,
+      "detail": "aria-label=加入自选：399001.SZ 深证成指"
+    },
+    {
+      "id": "market-star-add",
+      "ac": "AC-01.02-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "点击后 data-watched=1，星标填充（399001.SZ 深证成指）"
+    },
+    {
+      "id": "market-star-db",
+      "ac": "AC-01.02-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "watchlist_items 命中 1 条，groupName=null，total=1"
+    },
+    {
+      "id": "market-star-no-toast",
+      "ac": "AC-01.02-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "点击后无 toast"
+    },
+    {
+      "id": "market-star-idempotent",
+      "ac": "AC-01.02-01（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "连点 5 次后 data-watched=1，toast=false"
+    },
+    {
+      "id": "market-star-idempotent-db",
+      "ac": "AC-01.02-01（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "连点 5 次后库内 1 条"
+    },
+    {
+      "id": "quote-aria-filled",
+      "ac": "AC-01.02-01 / UI 无障碍",
+      "layer": "render",
+      "passed": true,
+      "detail": "aria-label=移出自选：399001.SZ 深证成指"
+    },
+    {
+      "id": "quote-star-remove",
+      "ac": "AC-01.02-01（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "报价头取消后星标回到空心，且无「自选未保存」错误条"
+    },
+    {
+      "id": "quote-star-remove-db",
+      "ac": "AC-01.02-01（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "移出后库内该标的 0 条，total=0"
+    }
+  ]
+}

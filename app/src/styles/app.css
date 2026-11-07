@@ -415,6 +415,62 @@ select {
   border-color: var(--danger, var(--warn));
 }
 
+/* S-01.02-03 补2：数据集为空时的顶部提示与「重新生成模拟数据」 */
+.wl-dataset-empty {
+  margin: 0 10px 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line2);
+  border-radius: var(--r2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wl-dataset-empty button {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--line2);
+  border-radius: var(--r2);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+  flex: none;
+}
+
+/* S-01.02-03 补3：state.db 坏库不可恢复页（trace id + 「重新生成数据」） */
+.wl-error-page {
+  margin: 12px 10px;
+  padding: 16px 12px;
+  border: 1px solid var(--danger, var(--warn));
+  border-radius: var(--r2);
+  background: color-mix(in srgb, var(--danger, var(--warn)) 8%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.wl-error-page__trace {
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: var(--faint);
+  user-select: text;
+}
+
+.wl-error-page button {
+  padding: 3px 10px;
+  border: 1px solid var(--line2);
+  border-radius: var(--r2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
 .wl-error button {
   margin-left: auto;
   padding: 2px 8px;

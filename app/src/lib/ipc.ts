@@ -6,6 +6,7 @@ import type {
   CalcResponse,
   DatasetManifestDto,
   DiagBuildInfo,
+  DiagFaultsDto,
   GetBarsRequest,
   ManifestResponse,
   MarketSnapshotDto,
@@ -77,6 +78,9 @@ export const ipc = {
   /** 取证落地页：`s2` = 启动直接进工作台，跑 release 性能线。 */
   diagTarget: (): Promise<string> => invoke<string>("diag_target"),
 
+  /** QA 故障注入开关：`--empty-dataset` / `--corrupt-db` / `--readonly-db` */
+  diagFaults: (): Promise<DiagFaultsDto> => invoke<DiagFaultsDto>("diag_faults"),
+
   diagBuildInfo: (): Promise<DiagBuildInfo> => invoke<DiagBuildInfo>("diag_build_info"),
 
   diagWrite: (payload: string): Promise<string> =>
@@ -104,6 +108,13 @@ export const ipc = {
 
   deleteWatchGroup: (name: string): Promise<void> =>
     invoke<void>("watch_group_delete", { name }),
+
+  /** S-01.02-03 补2：空态页动作「重新生成模拟数据」 */
+  datasetRegenerate: (): Promise<SecurityDto[]> =>
+    invoke<SecurityDto[]>("dataset_regenerate", { req: {} }),
+
+  /** S-01.02-03 补3：损坏库错误页动作「重新生成数据」 */
+  storageRebuild: (): Promise<void> => invoke<void>("storage_rebuild"),
 
   viewStateGet: (scope: string): Promise<unknown | null> =>
     invoke<unknown | null>("view_state_get", { scope }),

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 取证并归档：当次 evidence JSON + meta 一起落到 docs/qa/evidence/（W-41 第 2 项）。
-# 用法：scripts/diag-evidence.sh watchlist|s0602
+# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star
 # 前置：app/ 根目录执行 npm run build 与 cargo build --release -p aka-desktop --features tauri/custom-protocol
 set -euo pipefail
 
@@ -8,9 +8,10 @@ APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DIAG_DIR="$HOME/Library/Application Support/aka/diag"
 OUT="$APP_DIR/../docs/qa/evidence"
 DB="$HOME/Library/Application Support/aka/state.db"
-SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|s0602}"
+SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star}"
 LABEL="$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT" "$DIAG_DIR"
+FLAGS=""
 
 pkill -f "target/release/aka-desktop" 2>/dev/null || true
 sleep 1
@@ -25,6 +26,72 @@ restore_db() {
 }
 
 case "$SUITE" in
+  watchlist-empty)
+    TARGET="watchlist-empty@$LABEL"
+    JSON="$DIAG_DIR/s0102-watchlist-empty-evidence.json"
+    NAME="s0102-watchlist-empty-evidence"
+    FLAGS="--empty-dataset"
+    FIXTURE="state.db 直插 30 条 EMPTY000.SZ~EMPTY029.SZ（group_name=NULL）；启动带 --empty-dataset 让 list_securities 返回 0 只；取证后 .backup 还原"
+    BAK="/tmp/aka-state-watchlist-empty-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    python3 - "$DB" <<'PY'
+import sqlite3, sys
+conn = sqlite3.connect(sys.argv[1])
+conn.execute("DELETE FROM watchlist_items")
+rows = [(f"EMPTY{i:03d}.SZ", None, i, 1700000000 + i) for i in range(30)]
+conn.executemany(
+    "INSERT OR REPLACE INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?,?,?,?)",
+    rows,
+)
+conn.commit()
+print(f"fixture 已注入 {len(rows)} 条 EMPTY 标的")
+PY
+    ;;
+  watchlist-corrupt)
+    TARGET="watchlist-corrupt@$LABEL"
+    JSON="$DIAG_DIR/s0102-watchlist-corrupt-evidence.json"
+    NAME="s0102-watchlist-corrupt-evidence"
+    FLAGS="--corrupt-db"
+    FIXTURE="启动带 --corrupt-db：打开前把 state.db 写成非 SQLite 内容，走真实隔离降级；取证后 .backup 还原"
+    BAK="/tmp/aka-state-watchlist-corrupt-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    ;;
+  watchlist-readonly)
+    TARGET="watchlist-readonly@$LABEL"
+    JSON="$DIAG_DIR/s0102-watchlist-readonly-evidence.json"
+    NAME="s0102-watchlist-readonly-evidence"
+    FLAGS="--readonly-db"
+    FIXTURE="启动带 --readonly-db（PRAGMA query_only=ON）；直插分组「诊断只读组」6 只标的 + 「诊断只读移出」1 条；取证后 .backup 还原"
+    BAK="/tmp/aka-state-watchlist-readonly-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    python3 - "$DB" <<'PY'
+import sqlite3, sys
+conn = sqlite3.connect(sys.argv[1])
+conn.execute("PRAGMA foreign_keys=ON")
+conn.execute("DELETE FROM watchlist_items")
+conn.execute("DELETE FROM watchlist_groups WHERE is_builtin = 0")
+conn.execute(
+    "INSERT OR REPLACE INTO watchlist_groups(name, sort_order, is_builtin, created_at) VALUES (?,?,?,?)",
+    ("诊断只读组", 0, 0, 0),
+)
+rows = [(f"RDO{i:03d}.SZ", "诊断只读组", i, 1700000000 + i) for i in range(6)]
+rows.append(("诊断只读移出", None, 0, 1700000000))
+conn.executemany(
+    "INSERT OR REPLACE INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?,?,?,?)",
+    rows,
+)
+conn.commit()
+print(f"fixture 已注入 {len(rows)} 条只读标的（组内 6 + 待移出 1）")
+PY
+    ;;
+  star)
+    TARGET="s010201"
+    JSON="$DIAG_DIR/s010201-star-evidence.json"
+    NAME="s010201-star-evidence"
+    FIXTURE="默认 state.db；行情页星标套件自行加入/移出并清理；取证后 .backup 还原"
+    BAK="/tmp/aka-state-star-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    ;;
   watchlist)
     TARGET="watchlist@$LABEL"
     JSON="$DIAG_DIR/s0102-watchlist-evidence.json"
@@ -76,7 +143,7 @@ esac
 before=0
 if [ -f "$JSON" ]; then before=$(stat -f %m "$JSON"); fi
 
-AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" "$APP_DIR/target/release/aka-desktop" &
+AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" "$APP_DIR/target/release/aka-desktop" $FLAGS &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true; sleep 1; restore_db' EXIT
 
@@ -108,9 +175,9 @@ if [ "$SUITE" = "s0602" ]; then
   cat "$SCAN_FILE"
 fi
 
-python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" <<'PY'
+python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" <<'PY'
 import json, subprocess, sys, datetime, hashlib
-evidence_path, meta_path, label, target, fixture, scan_file, scan_rc = sys.argv[1:8]
+evidence_path, meta_path, label, target, fixture, scan_file, scan_rc, flags = sys.argv[1:9]
 d = json.load(open(evidence_path))
 root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 base = subprocess.check_output(["git", "-C", root, "rev-parse", "HEAD"], text=True).strip()
@@ -127,7 +194,7 @@ meta = {
     "base": base,
     "dirty": dirty,
     "patch": patch,
-    "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" target/release/aka-desktop",
+    "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" target/release/aka-desktop {flags}".strip(),
     "fixture": fixture,
     "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",
     "formatScan": (

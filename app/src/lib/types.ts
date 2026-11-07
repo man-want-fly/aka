@@ -301,6 +301,13 @@ export interface DiagBuildInfo {
   targetTriple: string;
 }
 
+/** QA 故障注入开关（仅 `AKA_DIAG=1` 启动时可信） */
+export interface DiagFaultsDto {
+  datasetEmpty: boolean;
+  corruptDb: boolean;
+  readOnlyDb: boolean;
+}
+
 export interface MarketRowDto {
   security: string;
   code: string;

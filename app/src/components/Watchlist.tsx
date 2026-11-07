@@ -8,6 +8,10 @@ interface Props {
   activeCode: string;
   onSelect: (code: string) => void;
   onGoMarket: () => void;
+  /** 数据集已加载完成（用于区分「加载中」与真实的 0 只） */
+  datasetReady: boolean;
+  /** S-01.02-03 补2：空态页动作「重新生成模拟数据」 */
+  onRegenerate: () => void | Promise<void>;
 }
 
 type WriteAction = () => Promise<unknown>;
@@ -15,14 +19,26 @@ type WriteAction = () => Promise<unknown>;
 const ALL = "全部";
 const UNGROUPED = "未分组";
 const LIMIT_MESSAGE = "自选上限 500 只，请先移出后再添加";
+/** 卡面 S-01.02-03 补4 逐字文案 */
+const REMOVE_FAILED = "移出失败，请重试";
 
 /**
  * S-01.02-01/02/03：自选（星标、分组、上限、六层空态、写失败错误条）。
  * 口径：单一归属，groupName=null 为未分组；「全部」「未分组」为只读派生视图。
  */
-export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Props) {
+export function Watchlist({
+  securities,
+  activeCode,
+  onSelect,
+  onGoMarket,
+  datasetReady,
+  onRegenerate,
+}: Props) {
   const [watchlist, setWatchlist] = useState<WatchlistDto | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
+  /** state.db 坏库：展示不可恢复页（trace id + 「重新生成数据」） */
+  const [traceId, setTraceId] = useState<string | null>(null);
+  const [rebuilding, setRebuilding] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string>(ALL);
   const [query, setQuery] = useState("");
@@ -32,6 +48,8 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
   const [barCounts, setBarCounts] = useState<Record<string, number | null>>({});
   const [failedSecurity, setFailedSecurity] = useState<string | null>(null);
   const lastAction = useRef<WriteAction | null>(null);
+  /** 与 lastAction 配对：重试时沿用同一条失败文案 */
+  const lastFailureText = useRef<string | null>(null);
   const loadToken = useRef(0);
   const barCountsRef = useRef<Record<string, number | null>>({});
 
@@ -40,10 +58,14 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
       const data = await ipc.watchlist();
       setWatchlist(data);
       setReadError(null);
+      setTraceId(null);
       if (data.groups.some((group) => group.name === activeGroup)) return;
       setActiveGroup(ALL);
     } catch (err) {
-      setReadError(describeError(err).message);
+      const failure = describeError(err);
+      const details = failure.details as { traceId?: unknown } | undefined;
+      setReadError(failure.message);
+      setTraceId(typeof details?.traceId === "string" ? details.traceId : null);
     }
   };
 
@@ -87,8 +109,9 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
     [securities],
   );
 
-  const runWrite = async (action: WriteAction) => {
+  const runWrite = async (action: WriteAction, failureText: string | null = null) => {
     lastAction.current = action;
+    lastFailureText.current = failureText;
     try {
       await action();
       setWriteError(null);
@@ -97,7 +120,7 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
       return true;
     } catch (err) {
       const message = describeError(err).message || LIMIT_MESSAGE;
-      setWriteError(`自选未保存：${message}`);
+      setWriteError(failureText ?? `自选未保存：${message}`);
       return false;
     }
   };
@@ -105,7 +128,7 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
   const removeItem = (item: WatchItemDto) => {
     void runWrite(async () => {
       await ipc.toggleWatch(item.security);
-    }).then((ok) => {
+    }, REMOVE_FAILED).then((ok) => {
       if (!ok) setFailedSecurity(item.security);
     });
   };
@@ -188,6 +211,36 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
   const emptyForAll = total === 0 && activeGroup === ALL && query.trim() === "";
   const emptyForGroup = query.trim() === "" && activeGroup !== ALL && activeGroupCount === 0;
   const emptyForSearch = query.trim() !== "" && visible.length === 0;
+  const datasetEmpty = datasetReady && securities.length === 0;
+
+  const rebuild = async () => {
+    setRebuilding(true);
+    try {
+      await ipc.storageRebuild();
+      await reload();
+    } catch (err) {
+      setReadError(describeError(err).message);
+    } finally {
+      setRebuilding(false);
+    }
+  };
+
+  if (traceId) {
+    return (
+      <aside className="watchlist" data-wl-root>
+        <div className="wl-error-page" data-wl-unrecoverable>
+          <b>自选数据不可恢复</b>
+          <span className="wl-error-page__message">{readError}</span>
+          <span className="wl-error-page__trace" data-wl-trace-id>
+            {traceId}
+          </span>
+          <button type="button" data-wl-rebuild disabled={rebuilding} onClick={() => void rebuild()}>
+            重新生成数据
+          </button>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="watchlist" data-wl-root>
@@ -215,10 +268,19 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
             data-wl-retry
             onClick={() => {
               const action = lastAction.current;
-              if (action) void runWrite(action);
+              if (action) void runWrite(action, lastFailureText.current);
             }}
           >
             重试
+          </button>
+        </div>
+      )}
+
+      {datasetEmpty && (
+        <div className="wl-dataset-empty" data-wl-dataset-empty>
+          <span>当前数据集为空</span>
+          <button type="button" data-wl-regenerate onClick={() => void onRegenerate()}>
+            重新生成模拟数据
           </button>
         </div>
       )}

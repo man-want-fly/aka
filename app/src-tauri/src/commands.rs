@@ -16,6 +16,10 @@ pub async fn list_securities(
     state: State<'_, AppState>,
     req: ListSecuritiesRequest,
 ) -> Result<Vec<SecurityDto>, AppError> {
+    // QA 注入（`--empty-dataset`）：模拟数据源返回 0 只，自选页展示「当前数据集为空」。
+    if state.faults().dataset_empty {
+        return Ok(Vec::new());
+    }
     Ok(state.core.list_securities(&req))
 }
 
@@ -105,6 +109,35 @@ pub async fn watch_group_rename(
 #[tauri::command]
 pub async fn watch_group_delete(state: State<'_, AppState>, name: String) -> Result<(), AppError> {
     state.core.delete_watch_group(&name)
+}
+
+/// S-01.02-03 补2：空态页动作「重新生成模拟数据」。
+#[tauri::command]
+pub async fn dataset_regenerate(
+    state: State<'_, AppState>,
+    req: ListSecuritiesRequest,
+) -> Result<Vec<SecurityDto>, AppError> {
+    state.set_dataset_empty(false);
+    Ok(state.core.list_securities(&req))
+}
+
+/// S-01.02-03 补3：损坏库错误页动作「重新生成数据」——原地重建 state.db。
+#[tauri::command]
+pub async fn storage_rebuild(state: State<'_, AppState>) -> Result<(), AppError> {
+    let path = state
+        .db_path
+        .clone()
+        .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+    state.core.rebuild_state_db(&path)
+}
+
+/// QA 取证入口：当前故障注入开关（仅 `AKA_DIAG=1` 时可信）。
+#[tauri::command]
+pub async fn diag_faults(state: State<'_, AppState>) -> Result<crate::state::DiagFaults, AppError> {
+    if std::env::var("AKA_DIAG").ok().as_deref() != Some("1") {
+        return Ok(crate::state::DiagFaults::default());
+    }
+    Ok(state.faults())
 }
 
 #[tauri::command]

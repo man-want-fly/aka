@@ -1295,6 +1295,11 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   3. 移出失败（`S-01.02-03` 补4）：移出写入失败 → 文案「移出失败，请重试」，行保留、计数不变。
 - **验收**：`WL-22/23/24` 由 `blocked` 改 `failed` 后转绿；文案与卡面逐字一致（第 11 条，不许用别名补）；`verify:docs` 仍 `failed=0 / skipped=0`。
 - **禁止**：把这三项继续挂 `blocked` 或者退化成「环境问题」；也不许只加文案不加可断言的状态入口。
+- **回执（dev，2026-11-07，随代码同提交；`base=cde6bad`、`dirty=true`、`patch=见四份 meta`）**：
+  1. 空态（补2）：`Watchlist` 顶部新增 `[data-wl-dataset-empty]`，文案逐字「当前数据集为空」+ 按钮「重新生成模拟数据」；点击调 `dataset_regenerate` 并刷新代码表，横幅消失。
+  2. 损坏库（补3）：`AppCore::watchlist` 识别 `degraded_reason` 前缀「state.db 已损坏」→ `AppError::storage_corrupt`（`details.traceId`）；`Watchlist` 渲染 `[data-wl-unrecoverable]` 不可恢复页，展示 `[data-wl-trace-id]` 与按钮「重新生成数据」（卡面字面；工单里的「重建自选表」是旧称，按第 11 条以卡面为准）。按钮走 `storage_rebuild` 原地重建 `state.db`。
+  3. 移出失败（补4）：`removeItem` 单独使用逐字文案「移出失败，请重试」；行保留、计数不变，重试沿用同一动作；其它写操作仍是「自选未保存：…」。
+  4. 证据：`s0102-watchlist-empty-evidence.json`（WL-22，`ok=true`，`render 1/1`）、`s0102-watchlist-corrupt-evidence.json`（WL-23，trace id `TR-…`）、`s0102-watchlist-readonly-evidence.json`（WL-24 + WL-21 + WL-20，`ok=true`）；三份 meta 同批入库。
 
 ### W-46｜dev：故障注入通道 + 星标证据入库（开发）
 
@@ -1305,6 +1310,11 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   3. `runStarDiagnostics` 的产出随批入库到 `docs/qa/evidence/s010201-star-evidence.json` + meta；meta 写代码 commit（或 `base + dirty + patch`）。
   4. 只读错误映射：SQLite/IO 的只读报错 → 「磁盘只读」（现只出现在 diag 说明里，产品会抛原始英文报错）。否则 `WL-20` 即使注入成功，也会因文案不符而红。
 - **验收**：`WL-20/21` 的 `blocked=0`；`s010201-star-evidence.json` 在 `git ls-files` 里；`S-01.02-01` 的 12 项（星标 9 + `WL-10r` + `WL-14` + `WL-20`）能一次复算。
+- **回执（dev，2026-11-07，随代码同提交）**：
+  1. `--readonly-db`：连接开 `PRAGMA query_only=ON`（SQLite 自己返回 `attempt to write a readonly database`）。比「拷临时目录 + 去写权限」更确定：WAL/迁移不受影响，错误仍走真实 SQLite 路径。`--corrupt-db`：启动前写入非 SQLite 内容，`open_with_fallback` 隔离 + 降级，`quick_check` 失败按 `DbError::Corrupt` 归类。另加 `--empty-dataset`（`list_securities` 返回 0 只）供补2 取证。三个开关只在 `AKA_DIAG=1` 时生效。
+  2. 只读映射：`impl From<DbError> for AppError` 把含 `readonly`/`read-only` 的原始报错统一映射为「磁盘只读」；行情 toast 因此为「自选未保存：磁盘只读」，自选错误条为「自选未保存：磁盘只读」。
+  3. 取证：`diag-evidence.sh` 增 `watchlist-empty|watchlist-corrupt|watchlist-readonly|star` 四个套件；`watchlistDiag` 按 `diag_faults` 分流，正常态 21 项（`data 7/7`、`render 14/14`、`ok=true`、`blocked=0`），故障态三份独立报告全绿。
+  4. `s010201-star-evidence.json` + meta 已入库（9 项全绿）。
 
 ---
 

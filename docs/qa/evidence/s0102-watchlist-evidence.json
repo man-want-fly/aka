@@ -1,19 +1,13 @@
 {
-  "ok": false,
-  "suite": "S-01.02 watchlist",
-  "finishedAt": "2026-11-07T10:22:31.139Z",
+  "ok": true,
+  "suite": "S-01.02 watchlist (normal)",
+  "finishedAt": "2026-11-07T11:06:12.538Z",
   "layers": {
-    "data": "7/8",
-    "render": "14/18"
+    "data": "7/7",
+    "render": "14/14"
   },
-  "blocked": [
-    "WL-20: 只读注入需在运行中改 state.db 磁盘权限；取证脚本无该通道，未运行（星标回空心 + 「自选未保存：磁盘只读」未验）",
-    "WL-21: 删组写失败需运行中只读磁盘；取证脚本无该通道，未运行（组/6 只在原位 + 错误条未验）",
-    "WL-22: 数据集为内存 mock，无法置空；未运行（30 行 + 「当前数据集为空」+ 「重新生成模拟数据」未验）",
-    "WL-23: state.db 损坏需独立启动注入；本套件单次启动内无该通道，未运行（错误页 + trace id 未验）",
-    "WL-24: 移出写失败需运行中只读磁盘；取证脚本无该通道，未运行（「移出失败，请重试」+ 行仍在未验）"
-  ],
-  "note": "前置脚本直插 498 条 SEED 合成标的（含不在数据集的 SEED0000.SZ），取证后用备份还原；WL-15 只验前端撞名校验（内联提示 + 保存 disabled + 组数不变 + 无写入）。WL-20..WL-24 为三张卡补2/补3/补4 的真实 IO 故障项：无注入通道，按第 10 条记 blocked，不计 PASS。",
+  "blocked": [],
+  "note": "前置脚本直插 498 条 SEED 合成标的（含不在数据集的 SEED0000.SZ），取证后用备份还原；WL-15 只验前端撞名校验（内联提示 + 保存 disabled + 组数不变 + 无写入）。WL-20..WL-24 由三个注入套件分别取证（empty/corrupt/readonly），不在本报告计分。",
   "checks": [
     {
       "id": "WL-01",
@@ -203,51 +197,6 @@
       "passed": true,
       "detail": "全部空态「自选还是空的在行情页点星标，把标的加进来去行情页导入 CSV（本期未开放）」，CSV 按钮 disabled=true",
       "blocked": false
-    },
-    {
-      "id": "WL-20",
-      "card": "S-01.02-01",
-      "ac": "AC-01.02-01（补3）",
-      "layer": "render",
-      "passed": false,
-      "detail": "只读注入需在运行中改 state.db 磁盘权限；取证脚本无该通道，未运行（星标回空心 + 「自选未保存：磁盘只读」未验）",
-      "blocked": true
-    },
-    {
-      "id": "WL-21",
-      "card": "S-01.02-02",
-      "ac": "AC-01.02-02（补4）",
-      "layer": "data",
-      "passed": false,
-      "detail": "删组写失败需运行中只读磁盘；取证脚本无该通道，未运行（组/6 只在原位 + 错误条未验）",
-      "blocked": true
-    },
-    {
-      "id": "WL-22",
-      "card": "S-01.02-03",
-      "ac": "AC-01.02-04（补2）",
-      "layer": "render",
-      "passed": false,
-      "detail": "数据集为内存 mock，无法置空；未运行（30 行 + 「当前数据集为空」+ 「重新生成模拟数据」未验）",
-      "blocked": true
-    },
-    {
-      "id": "WL-23",
-      "card": "S-01.02-03",
-      "ac": "AC-01.02-04（补3）",
-      "layer": "render",
-      "passed": false,
-      "detail": "state.db 损坏需独立启动注入；本套件单次启动内无该通道，未运行（错误页 + trace id 未验）",
-      "blocked": true
-    },
-    {
-      "id": "WL-24",
-      "card": "S-01.02-03",
-      "ac": "AC-01.02-04（补4）",
-      "layer": "render",
-      "passed": false,
-      "detail": "移出写失败需运行中只读磁盘；取证脚本无该通道，未运行（「移出失败，请重试」+ 行仍在未验）",
-      "blocked": true
     }
   ]
 }

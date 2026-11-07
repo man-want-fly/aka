@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "suite": "S-01.02 watchlist (empty)",
+  "finishedAt": "2026-11-07T11:06:20.931Z",
+  "layers": {
+    "data": "0/0",
+    "render": "1/1"
+  },
+  "blocked": [],
+  "note": "AKA_DIAG=1 + --empty-dataset：list_securities 返回 0 只；看板 30 条自选灰显 + 顶部「当前数据集为空」+ 动作「重新生成模拟数据」。",
+  "checks": [
+    {
+      "id": "WL-22",
+      "card": "S-01.02-03",
+      "ac": "AC-01.02-04（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "横幅「当前数据集为空重新生成模拟数据」，行数=30，全部灰显=true，动作「重新生成模拟数据」=true，动作后横幅消失=true",
+      "blocked": false
+    }
+  ]
+}

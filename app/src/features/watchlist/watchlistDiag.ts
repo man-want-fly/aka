@@ -118,6 +118,24 @@ export async function runWatchlistDiagnostics() {
   await waitFor(() => q("[data-wl-root]"), 10_000);
   await sleep(1_500);
 
+  // 故障注入运行：`--empty-dataset` / `--corrupt-db` / `--readonly-db` 各走独立套件，
+  // 证据落独立文件，不与正常态混在一张报告里。
+  const faults = await ipc.diagFaults().catch(() => null);
+  if (faults && (faults.corruptDb || faults.readOnlyDb || faults.datasetEmpty)) {
+    const mode = faults.corruptDb ? "corrupt" : faults.readOnlyDb ? "readonly" : "empty";
+    markStage(`fault:${mode}`);
+    if (faults.corruptDb) await runCorruptMode(push);
+    else if (faults.readOnlyDb) await runReadonlyMode(push);
+    else await runEmptyDatasetMode(push);
+    const report = buildReport(
+      checks,
+      mode,
+      FAULT_NOTE[mode] ?? "故障注入运行：见 checks。",
+    );
+    await ipc.diagWriteNamed(evidenceName(mode), JSON.stringify(report, null, 2));
+    return report;
+  }
+
   // ---- [数据层] 基线：内置「全部」为只读派生 ----
   markStage("baseline");
   const before = await ipc.watchlist();
@@ -604,42 +622,8 @@ export async function runWatchlistDiagnostics() {
     block("WL-18", "render", "S-01.02-03", "AC-01.02-04", `清空异常：${errorMessage(err)}`);
   }
 
-  // ---- [补项] 真实 IO 故障未提供注入通道，按第 10 条记 blocked，不写成 PASS ----
-  block(
-    "WL-20",
-    "render",
-    "S-01.02-01",
-    "AC-01.02-01（补3）",
-    "只读注入需在运行中改 state.db 磁盘权限；取证脚本无该通道，未运行（星标回空心 + 「自选未保存：磁盘只读」未验）",
-  );
-  block(
-    "WL-21",
-    "data",
-    "S-01.02-02",
-    "AC-01.02-02（补4）",
-    "删组写失败需运行中只读磁盘；取证脚本无该通道，未运行（组/6 只在原位 + 错误条未验）",
-  );
-  block(
-    "WL-22",
-    "render",
-    "S-01.02-03",
-    "AC-01.02-04（补2）",
-    "数据集为内存 mock，无法置空；未运行（30 行 + 「当前数据集为空」+ 「重新生成模拟数据」未验）",
-  );
-  block(
-    "WL-23",
-    "render",
-    "S-01.02-03",
-    "AC-01.02-04（补3）",
-    "state.db 损坏需独立启动注入；本套件单次启动内无该通道，未运行（错误页 + trace id 未验）",
-  );
-  block(
-    "WL-24",
-    "render",
-    "S-01.02-03",
-    "AC-01.02-04（补4）",
-    "移出写失败需运行中只读磁盘；取证脚本无该通道，未运行（「移出失败，请重试」+ 行仍在未验）",
-  );
+  // ---- [补项] 真实 IO 故障改走注入套件：WL-20..24 见
+  // `s0102-watchlist-empty|corrupt|readonly-evidence.json`，本报告不再写 blocked。 ----
 
   markStage("cleanup");
   for (const group of (await ipc.watchlist()).groups.filter((item) => !item.isBuiltin)) {
@@ -651,22 +635,195 @@ export async function runWatchlistDiagnostics() {
   }
   refresh();
 
+  const report = buildReport(
+    checks,
+    "normal",
+    "前置脚本直插 498 条 SEED 合成标的（含不在数据集的 SEED0000.SZ），取证后用备份还原；WL-15 只验前端撞名校验（内联提示 + 保存 disabled + 组数不变 + 无写入）。WL-20..WL-24 由三个注入套件分别取证（empty/corrupt/readonly），不在本报告计分。",
+  );
+  await ipc.diagWriteNamed(evidenceName("normal"), JSON.stringify(report, null, 2));
+  return report;
+}
+
+type Push = (
+  id: string,
+  layer: Check["layer"],
+  card: string,
+  ac: string,
+  passed: boolean,
+  detail: string,
+  blocked?: boolean,
+) => void;
+
+const FAULT_NOTE: Record<string, string> = {
+  empty: "AKA_DIAG=1 + --empty-dataset：list_securities 返回 0 只；看板 30 条自选灰显 + 顶部「当前数据集为空」+ 动作「重新生成模拟数据」。",
+  corrupt: "AKA_DIAG=1 + --corrupt-db：启动前写入非 SQLite 内容，open_with_fallback 隔离并降级；watchlist 读取抛损坏错误（带 traceId）。",
+  readonly: "AKA_DIAG=1 + --readonly-db：连接 `PRAGMA query_only=ON`，写操作由 SQLite 返回只读错误；前置脚本直插分组与待移出标的。",
+};
+
+function evidenceName(mode: string) {
+  return mode === "normal"
+    ? "s0102-watchlist-evidence.json"
+    : `s0102-watchlist-${mode}-evidence.json`;
+}
+
+function buildReport(checks: Check[], mode: string, note: string) {
   const blockedChecks = checks.filter((check) => check.blocked);
   const tally = (list: Check[]) =>
     `${list.filter((check) => check.passed && !check.blocked).length}/${list.length}`;
-  const report = {
+  return {
     ok: checks.every((check) => !check.blocked && check.passed),
-    suite: "S-01.02 watchlist",
+    suite: `S-01.02 watchlist (${mode})`,
     finishedAt: new Date().toISOString(),
     layers: {
       data: tally(checks.filter((check) => check.layer === "data")),
       render: tally(checks.filter((check) => check.layer === "render")),
     },
     blocked: blockedChecks.map((check) => `${check.id}: ${check.detail}`),
-    note:
-      "前置脚本直插 498 条 SEED 合成标的（含不在数据集的 SEED0000.SZ），取证后用备份还原；WL-15 只验前端撞名校验（内联提示 + 保存 disabled + 组数不变 + 无写入）。WL-20..WL-24 为三张卡补2/补3/补4 的真实 IO 故障项：无注入通道，按第 10 条记 blocked，不计 PASS。",
+    note,
     checks,
   };
-  await ipc.diagWriteNamed("s0102-watchlist-evidence.json", JSON.stringify(report, null, 2));
-  return report;
+}
+
+/** 补2：数据集为空，自选仍 30 条 → 全灰显 + 顶部提示 + 重新生成模拟数据。 */
+async function runEmptyDatasetMode(push: Push) {
+  markStage("fault:empty-dataset");
+  const banner = await waitFor(() => q<HTMLElement>("[data-wl-dataset-empty]"), 12_000).catch(() => null);
+  const regenerate = banner ? buttonByText("重新生成模拟数据", banner) : undefined;
+  const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-wl-item]"));
+  const allMissing =
+    rows.length === 30 &&
+    rows.every(
+      (row) => row.dataset.wlState === "missing" && row.classList.contains("wl-row--muted"),
+    );
+  const bannerText = (banner?.textContent ?? "").replace(/\s+/g, " ").trim();
+  regenerate?.click();
+  const dismissed = await waitFor(
+    () => (q("[data-wl-dataset-empty]") ? null : true),
+    8_000,
+  ).catch(() => false);
+  push(
+    "WL-22",
+    "render",
+    "S-01.02-03",
+    "AC-01.02-04（补2）",
+    Boolean(banner) &&
+      bannerText.includes("当前数据集为空") &&
+      Boolean(regenerate) &&
+      allMissing &&
+      Boolean(dismissed),
+    `横幅「${bannerText}」，行数=${rows.length}，全部灰显=${allMissing}，动作「重新生成模拟数据」=${Boolean(regenerate)}，动作后横幅消失=${Boolean(dismissed)}`,
+  );
+}
+
+/** 补3：state.db 损坏 → 不可恢复页 + trace id + 「重新生成数据」。 */
+async function runCorruptMode(push: Push) {
+  markStage("fault:corrupt");
+  const page = await waitFor(() => q<HTMLElement>("[data-wl-unrecoverable]"), 12_000).catch(() => null);
+  const trace = (q<HTMLElement>("[data-wl-trace-id]")?.textContent ?? "").trim();
+  const action = page ? buttonByText("重新生成数据", page) : undefined;
+  const emptySelf = Boolean(
+    q("[data-wl-empty='all']") || q("[data-wl-empty='group']") || q("[data-wl-empty='search']"),
+  );
+  const rows = document.querySelectorAll("[data-wl-item]").length;
+  push(
+    "WL-23",
+    "render",
+    "S-01.02-03",
+    "AC-01.02-04（补3）",
+    Boolean(page) &&
+      /^TR-[0-9a-z]+-[0-9a-z]+$/i.test(trace) &&
+      Boolean(action) &&
+      !emptySelf &&
+      rows === 0,
+    `不可恢复页=${Boolean(page)}，trace id「${trace}」，动作「重新生成数据」=${Boolean(action)}，未显示空自选=${!emptySelf && rows === 0}`,
+  );
+}
+
+/** 补4（删组）/ 补4（移出）/ 补3（星标）：只读库下的三处写失败。 */
+async function runReadonlyMode(push: Push) {
+  markStage("fault:readonly");
+  const group = "诊断只读组";
+  const removable = "诊断只读移出";
+
+  // WL-21：删组写失败 → 组与 6 只标的原位 + 错误条
+  groupTab(group)?.click();
+  await sleep(300);
+  const before = await ipc.watchlist();
+  const groupCount = before.groups.find((item) => item.name === group)?.count ?? 0;
+  buttonByText("删除分组")?.click();
+  const confirm = await waitFor(() => q<HTMLElement>("[data-wl-confirm]"), 4_000).catch(() => null);
+  buttonByText("确认删除", confirm ?? document)?.click();
+  const bar = await waitFor(() => q<HTMLElement>("[data-wl-write-error]"), 4_000).catch(() => null);
+  await sleep(300);
+  const after = await ipc.watchlist();
+  const stillGroup = after.groups.some((item) => item.name === group);
+  const stillItems = after.items.filter((item) => item.groupName === group).length;
+  const barText = (bar?.querySelector("span")?.textContent ?? "").replace(/\s+/g, " ").trim();
+  push(
+    "WL-21",
+    "data",
+    "S-01.02-02",
+    "AC-01.02-02（补4）",
+    Boolean(bar) && stillGroup && stillItems === 6 && groupCount === 6 && Boolean(groupTab(group)),
+    `错误条「${barText}」，组仍在=${stillGroup}（${groupCount} 只），组内标的=${stillItems}，tab=${Boolean(groupTab(group))}`,
+  );
+
+  // WL-24：移出写失败 → 「移出失败，请重试」 + 行仍在
+  groupTab("全部")?.click();
+  await sleep(200);
+  const removeButton = await waitFor(
+    () => q<HTMLButtonElement>(`[data-wl-remove="${removable}"]`),
+    6_000,
+  ).catch(() => null);
+  removeButton?.click();
+  const removeBar = await waitFor(
+    () => {
+      const element = q<HTMLElement>("[data-wl-write-error]");
+      return element?.textContent?.includes("移出失败，请重试") ? element : null;
+    },
+    5_000,
+  ).catch(() => null);
+  await sleep(300);
+  const rowStill = Boolean(q(`[data-wl-item="${removable}"]`));
+  const inDb = (await ipc.watchlist()).items.some((item) => item.security === removable);
+  const removeBarText = (removeBar?.querySelector("span")?.textContent ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  push(
+    "WL-24",
+    "render",
+    "S-01.02-03",
+    "AC-01.02-04（补4）",
+    Boolean(removeButton) && Boolean(removeBar) && rowStill && inDb,
+    `错误条「${removeBarText}」，行仍在=${rowStill}，落库仍在=${inDb}`,
+  );
+
+  // WL-20：行情页星标写失败 → 200ms 回空心 + 「自选未保存：磁盘只读」
+  window.location.hash = "#/market";
+  await waitFor(() => q("[data-market-root]"), 10_000).catch(() => null);
+  await waitFor(() => q("[data-market-row]"), 10_000).catch(() => null);
+  await sleep(800);
+  const star = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-market-row] [data-star][data-watched='0']"),
+  ).find((item) => !item.disabled);
+  const code = star?.getAttribute("data-star") ?? "";
+  const beforeStar = star?.getAttribute("data-watched");
+  star?.click();
+  const toast = await waitFor(
+    () => {
+      const element = q<HTMLElement>(".market-toast");
+      return element?.textContent?.includes("自选未保存：磁盘只读") ? element : null;
+    },
+    6_000,
+  ).catch(() => null);
+  await sleep(250);
+  const afterStar = code ? q(`[data-star="${code}"]`)?.getAttribute("data-watched") : null;
+  push(
+    "WL-20",
+    "render",
+    "S-01.02-01",
+    "AC-01.02-01（补3）",
+    Boolean(star) && beforeStar === "0" && Boolean(toast) && afterStar === "0",
+    `星标 ${code || "缺"} before=${beforeStar ?? "缺"} after=${afterStar ?? "缺"}，提示「${(toast?.textContent ?? "").trim()}」`,
+  );
 }
