@@ -22,7 +22,8 @@ const ROOT = path.resolve(APP, "..");
 
 const CONSTANTS_PATH = path.join(APP, "manifest", "constants.json");
 const MANIFEST_PATH = path.join(APP, "manifest", "indicators.json");
-const MOCK_PATH = path.join(APP, "crates", "data-provider", "src", "mock.rs");
+const MOCK_PATH =
+  process.env.AKA_MOCK_PATH || path.join(APP, "crates", "data-provider", "src", "mock.rs");
 const BASELINE_PATH = path.join(ROOT, "docs", "qa", "constants-baseline-v0.1.json");
 
 const argv = new Set(process.argv.slice(2));
@@ -106,6 +107,68 @@ if (firstDate) {
 } else {
   failures.push("mock 起始日: 未能在 mock.rs 中解析 MOCK_FIRST_DATE");
 }
+
+// ---------- 2b. 派生计数（W-29）：六分类来自 manifest，分区来自 mock.rs ----------
+const CATEGORY_ORDER = ["trend", "momentum", "volatility", "volume", "stat", "breadth"];
+const CATEGORY_EXPECTED = {
+  trend: 24,
+  momentum: 26,
+  volatility: 10,
+  volume: 15,
+  stat: 14,
+  breadth: 16,
+};
+const categoryCounts = countBy(items, "category");
+check(
+  "六分类计数｜脚本自动｜indicators.json 的 category",
+  CATEGORY_ORDER.map((key) => `${key}:${categoryCounts[key] ?? 0}`).join(" "),
+  CATEGORY_ORDER.map((key) => `${key}:${CATEGORY_EXPECTED[key]}`).join(" "),
+);
+
+/**
+ * 分区计数：按「指数按交易所归主板」的口径现算（不按 Board 枚举）。
+ * .SH 且 688/689 开头 → 科，其余 .SH（含上证指数）→ 沪；
+ * .SZ 且 300 开头 → 创，其余 .SZ（含深证成指/创业板指）→ 深。
+ */
+const mockBlock = (marker) => {
+  const start = mockSrc.indexOf(marker);
+  if (start < 0) return null;
+  const end = mockSrc.indexOf("];", start);
+  return end < 0 ? null : mockSrc.slice(start, end);
+};
+const knownBlock = mockBlock("let known:");
+const groupsBlock = mockBlock("let groups:");
+const knownCodes = [...(knownBlock ?? "").matchAll(/\("(\d{6}\.(?:SH|SZ))"\s*,/g)].map((m) => m[1]);
+const indexCodes = [
+  ...mockSrc.matchAll(/make_security\("(\d{6}\.(?:SH|SZ))",\s*"[^"]+",\s*Board::Index/g),
+].map((m) => m[1]);
+const groupEntries = [...(groupsBlock ?? "").matchAll(/\("(\d{3})",\s*(\d+),\s*Board::/g)].map(
+  (m) => ({ prefix: m[1], count: Number(m[2]) }),
+);
+if (knownCodes.length === 0 || indexCodes.length === 0 || groupEntries.length === 0) {
+  console.error(
+    "mock_partition_unparsable: mock.rs 的 known / groups / 指数注册（拒绝空转）",
+  );
+  process.exit(2);
+}
+const classifyByExchange = (code) => {
+  const [num, market] = code.split(".");
+  if (market === "SH") return num.startsWith("688") || num.startsWith("689") ? "star" : "sh";
+  return num.startsWith("300") ? "chinext" : "sz";
+};
+const partition = { sh: 0, sz: 0, chinext: 0, star: 0 };
+for (const code of [...knownCodes, ...indexCodes]) {
+  partition[classifyByExchange(code)] += 1;
+}
+for (const { prefix, count } of groupEntries) {
+  const code = `${prefix}.${prefix === "601" || prefix === "688" ? "SH" : "SZ"}`;
+  partition[classifyByExchange(code)] += count;
+}
+check(
+  "分区计数（指数按交易所归主板）｜脚本自动｜mock.rs known/groups/指数注册",
+  `沪 ${partition.sh} / 深 ${partition.sz} / 创 ${partition.chinext} / 科 ${partition.star}`,
+  "沪 48 / 深 46 / 创 17 / 科 9",
+);
 
 // ---------- 3. 裁定结果（W-24 正向断言，防止被悄悄改回去） ----------
 const betaSet = items
