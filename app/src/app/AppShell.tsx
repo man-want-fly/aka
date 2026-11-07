@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type RouteKey = "workbench" | "market" | "catalog";
+export type RouteKey = "workbench" | "market" | "catalog" | "settings";
 
 interface Props {
   children: ReactNode;
@@ -33,7 +33,8 @@ const NAV: Array<{ key: string; label: string; enabled: boolean; route?: RouteKe
   {
     key: "settings",
     label: "设置",
-    enabled: false,
+    enabled: true,
+    route: "settings",
     icon: "M10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM10 2v2m0 12v2M2 10h2m12 0h2",
   },
 ];

@@ -31,6 +31,16 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+/* S-06.02-01：列表密度两档；默认紧凑 28px，舒适 34px。 */
+:root,
+:root[data-density="compact"] {
+  --row-h: 28px;
+}
+
+:root[data-density="comfy"] {
+  --row-h: 34px;
+}
+
 .app {
   display: grid;
   grid-template-columns: 58px minmax(0, 1fr);
@@ -477,6 +487,8 @@ select {
 .wl-row {
   display: flex;
   align-items: stretch;
+  height: var(--row-h);
+  overflow: hidden;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
 }
 
@@ -490,8 +502,11 @@ select {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 8px;
-  padding: 7px 4px 7px 12px;
+  gap: 0 8px;
+  align-content: center;
+  font-size: 11.5px;
+  line-height: 1.2;
+  padding: 2px 4px 2px 12px;
   background: transparent;
   border: 0;
   text-align: left;
@@ -1254,7 +1269,7 @@ select {
 .market-row {
   display: flex;
   align-items: center;
-  height: 34px;
+  height: var(--row-h);
   border-bottom: 1px solid var(--line);
   border-left: 2px solid transparent;
   cursor: pointer;
@@ -1834,4 +1849,89 @@ mark {
 .tag--accent {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+:root[data-density="comfy"] .wl-row-main {
+  gap: 3px 8px;
+  padding: 7px 4px 7px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* ---------------- P8 设置（S-06.02-01） ---------------- */
+.settings {
+  padding: 24px 28px;
+  overflow: auto;
+}
+
+.settings-head h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.settings-sub {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  color: var(--warn);
+}
+
+.settings-section {
+  margin-bottom: 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.settings-section h2 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.settings-row b {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.settings-hint {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.settings-formats {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.settings-formats li {
+  display: grid;
+  grid-template-columns: 72px 190px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.settings-formats b {
+  font-size: 12.5px;
 }

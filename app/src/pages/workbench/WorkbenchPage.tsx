@@ -87,7 +87,7 @@ interface Props {
   onThemeMode: (mode: ThemeMode) => void;
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
-  onNavigate: (key: "workbench" | "market" | "catalog") => void;
+  onNavigate: (key: "workbench" | "market" | "catalog" | "settings") => void;
 }
 
 /**

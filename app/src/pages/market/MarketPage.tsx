@@ -11,6 +11,12 @@ import {
   signClass,
 } from "../../lib/format";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
+import {
+  ROW_HEIGHT,
+  currentDensity,
+  saveDisplaySettings,
+  type Density,
+} from "../../lib/settings";
 import { runMarketDiagnostics } from "../../features/market/diag";
 import type {
   AppError,
@@ -156,7 +162,7 @@ const SCROLL_KEY = "aka.market.scroll";
 const SELECTED_KEY = "aka.market.selected";
 
 interface Props {
-  onNavigate: (key: "workbench" | "catalog" | "market") => void;
+  onNavigate: (key: "workbench" | "catalog" | "market" | "settings") => void;
   onOpenSecurity: (security: string) => void;
 }
 
@@ -171,6 +177,7 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
   const [slow, setSlow] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [columnPanel, setColumnPanel] = useState(false);
+  const [density, setDensity] = useState<Density>(currentDensity);
   const [narrow, setNarrow] = useState(false);
   const [diagStatus, setDiagStatus] = useState<string | null>(null);
   const diagStarted = useRef(false);
@@ -240,6 +247,25 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
     };
     apply();
   }, [snapshot, loading, view.board, view.sortKey, view.sortDir]);
+
+  // S-06.02-01：密度切换由根节点 attribute 驱动 CSS，列表滚动位置保持不变。
+  useEffect(() => {
+    const onDensity = (event: Event) => setDensity((event as CustomEvent<Density>).detail);
+    window.addEventListener("aka:density", onDensity);
+    return () => window.removeEventListener("aka:density", onDensity);
+  }, []);
+
+  // 切换密度时按「顶部可见行」补偿 scrollTop，避免行高变化后列表跳动。
+  const switchDensity = (next: Density) => {
+    const table = document.querySelector<HTMLElement>("[data-market-table]");
+    const anchor = table ? Math.floor(table.scrollTop / ROW_HEIGHT[density]) : 0;
+    void saveDisplaySettings({ density: next }).catch((err) =>
+      setToast(`设置未保存：${describeError(err).message}`),
+    );
+    window.requestAnimationFrame(() => {
+      if (table) table.scrollTop = anchor * ROW_HEIGHT[next];
+    });
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -391,6 +417,24 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
                   {board.label} <b>{boardCounts[board.key]}</b>
                 </button>
               ))}
+            </div>
+            <div className="seg" role="group" aria-label="列表密度">
+              <button
+                type="button"
+                className={density === "compact" ? "selected" : ""}
+                data-market-density="compact"
+                onClick={() => switchDensity("compact")}
+              >
+                紧凑
+              </button>
+              <button
+                type="button"
+                className={density === "comfy" ? "selected" : ""}
+                data-market-density="comfy"
+                onClick={() => switchDensity("comfy")}
+              >
+                舒适
+              </button>
             </div>
             <button
               type="button"
@@ -568,7 +612,7 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
                       data-cell="volumeRatio"
                       data-value={row.volumeRatio ?? ""}
                     >
-                      {row.volumeRatio == null ? "—" : row.volumeRatio.toFixed(2)}
+                      {row.volumeRatio == null ? "—" : formatPrice(row.volumeRatio)}
                     </span>
                   )}
                   {visible.has("amplitudePct") && (

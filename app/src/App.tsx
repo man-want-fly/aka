@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { MarketPage } from "./pages/market/MarketPage";
 import { CatalogPage } from "./pages/catalog/CatalogPage";
 import { WorkbenchPage } from "./pages/workbench/WorkbenchPage";
+import { SettingsPage } from "./pages/settings/SettingsPage";
 import { ipc, isTauriRuntime } from "./lib/ipc";
+import { loadDisplaySettings } from "./lib/settings";
 import {
   applyTheme,
   loadColorMode,
@@ -12,7 +14,7 @@ import {
   type ThemeMode,
 } from "./lib/theme";
 
-type Route = "workbench" | "market" | "catalog";
+type Route = "workbench" | "market" | "catalog" | "settings";
 
 interface Location {
   route: Route;
@@ -24,6 +26,7 @@ interface Location {
 const routeFromHash = (): Location => {
   const hash = window.location.hash;
   if (hash.startsWith("#/catalog")) return { route: "catalog", code: null };
+  if (hash.startsWith("#/settings")) return { route: "settings", code: null };
   const match = hash.match(/^#\/workbench(?:\/([^/?#]+))?/);
   if (match) {
     return {
@@ -49,6 +52,11 @@ export default function App() {
     query.addEventListener("change", onChange);
     return () => query.removeEventListener("change", onChange);
   }, [themeMode, colorMode]);
+
+  // S-06.02-01：启动即恢复密度（默认紧凑）；读取失败不影响首屏。
+  useEffect(() => {
+    void loadDisplaySettings().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const onHash = () => setLocation(routeFromHash());
@@ -135,6 +143,16 @@ export default function App() {
           setLocation({ route: "workbench", code: null });
           return;
         }
+        // S-06.02-01 密度与格式取证：直接进设置页，占住其它套件的 once 位。
+        if (target === "s0602") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          if (window.location.hash.startsWith("#/settings")) return;
+          window.location.hash = "#/settings";
+          setLocation({ route: "settings", code: null });
+          return;
+        }
         if (target === "market") {
           sessionStorage.removeItem("aka.s2.diag.once");
           if (window.location.hash.startsWith("#/market")) return;
@@ -173,6 +191,10 @@ export default function App() {
 
   if (location.route === "catalog") {
     return <CatalogPage onNavigate={navigate} />;
+  }
+
+  if (location.route === "settings") {
+    return <SettingsPage onNavigate={navigate} />;
   }
 
   if (location.route === "market") {
