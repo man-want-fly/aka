@@ -184,9 +184,9 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
         : "";
   const nameBlocked = trimmedName === "" || duplicateName;
 
-  const emptyForAll = total === 0 && query.trim() === "";
-  const emptyForGroup =
-    !emptyForAll && query.trim() === "" && activeGroup !== ALL && activeGroupCount === 0;
+  // 「全部」空态只在只读总数视图出现；具体分组为空时优先给组空态（即使总数为 0）。
+  const emptyForAll = total === 0 && activeGroup === ALL && query.trim() === "";
+  const emptyForGroup = query.trim() === "" && activeGroup !== ALL && activeGroupCount === 0;
   const emptyForSearch = query.trim() !== "" && visible.length === 0;
 
   return (
@@ -424,18 +424,21 @@ export function Watchlist({ securities, activeCode, onSelect, onGoMarket }: Prop
             <button type="button" onClick={onGoMarket}>
               去行情页
             </button>
+            <button type="button" disabled title="本期未开放" data-wl-csv-import>
+              导入 CSV（本期未开放）
+            </button>
           </div>
         )}
 
         {emptyForGroup && (
           <div className="wl-empty" data-wl-empty="group">
-            <b>本组还没有标的</b>
+            <b>这个分组还没有标的</b>
             <span>从行情页加星，或切回「全部」查看已有自选</span>
             <button type="button" onClick={onGoMarket}>
               去行情页加星
             </button>
             <button type="button" onClick={() => setActiveGroup(ALL)}>
-              换组
+              切回全部
             </button>
           </div>
         )}

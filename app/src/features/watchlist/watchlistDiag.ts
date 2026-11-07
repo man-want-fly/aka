@@ -153,9 +153,9 @@ export async function runWatchlistDiagnostics() {
     "WL-02",
     "render",
     "S-01.02-03",
-    emptyGroupText.includes("本组还没有标的") &&
+    emptyGroupText.includes("这个分组还没有标的") &&
       emptyGroupText.includes("去行情页加星") &&
-      emptyGroupText.includes("换组"),
+      emptyGroupText.includes("切回全部"),
     `某组空态「${emptyGroupText.replace(/\s+/g, " ").trim()}」`,
   );
 
@@ -534,12 +534,17 @@ export async function runWatchlistDiagnostics() {
     if (emptied.total === 0) {
       const allEmpty = await waitFor(() => q<HTMLElement>("[data-wl-empty='all']"), 4_000).catch(() => null);
       const text = (allEmpty?.textContent ?? "").replace(/\s+/g, " ").trim();
+      const csv = allEmpty?.querySelector<HTMLButtonElement>("[data-wl-csv-import]");
       push(
         "WL-18",
         "render",
         "S-01.02-03",
-        text.includes("自选还是空的") && text.includes("去行情页"),
-        `全部空态「${text}」`,
+        text.includes("自选还是空的") &&
+          text.includes("去行情页") &&
+          text.includes("导入 CSV（本期未开放）") &&
+          Boolean(csv) &&
+          csv!.disabled,
+        `全部空态「${text}」，CSV 按钮 disabled=${csv?.disabled}`,
       );
     } else {
       block("WL-18", "render", "S-01.02-03", `清空失败：total=${emptied.total}，全部空态未取证`);
