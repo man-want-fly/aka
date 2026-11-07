@@ -1335,6 +1335,10 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 - **依据**：报告 4.7.19 三。`trace_id()` 每次现生成、不可复算，且只放进 `details.traceId` 给页面显示，不进 telemetry / stderr / 库——用户报号也查不到。
 - **改动**：生成时把同一 id 写入 `telemetry.jsonl`（含 `code`/`message`）；格式改可读版 `TR-YYYYMMDD-HHMMSS-0001`（保留唯一性）；`watchlist-corrupt` 套件加一条断言「页面 trace id ∈ 日志」。
 - **验收**：`corrupt` 套件由 1 项变 2 项且全绿；页面 id 能在 `telemetry.jsonl` 里 grep 到。
+- **回执（dev，2026-11-07，随代码同提交）**：
+  1. `trace_id()` 改为 `TR-YYYYMMDD-HHMMSS-0001`（Asia/Shanghai，进程内序号从 0001 递增），仍保证同进程唯一。
+  2. `AppCore::watchlist` 生成损坏错误时同步 `telemetry.emit("storage.corrupt", { traceId, code, message })`，落 `~/Library/Application Support/aka/logs/telemetry.jsonl`；页面 id 与日志同一字符串。
+  3. `watchlist-corrupt` 套件新增 `WL-23-log`（页面 id ∈ `telemetry.jsonl`），由 1 项变 2 项（证据随取证批次入库）。
 
 ---
 

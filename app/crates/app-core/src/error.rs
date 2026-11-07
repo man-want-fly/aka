@@ -6,14 +6,40 @@ use serde_json::{json, Value};
 
 use data_provider::ProviderError;
 
-/// 页面上要展示的追踪号：同一进程内单调，便于按号检索日志。
+/// 页面上要展示的追踪号：可读的本地时间 + 进程内序号，同一 id 同时写 telemetry。
 pub fn trace_id() -> String {
-    static SEQ: AtomicU64 = AtomicU64::new(0);
-    let nanos = SystemTime::now()
+    static SEQ: AtomicU64 = AtomicU64::new(1);
+    let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos())
-        .unwrap_or(0);
-    format!("TR-{nanos:x}-{:04x}", SEQ.fetch_add(1, Ordering::Relaxed))
+        .unwrap_or_default();
+    // 产品面向 A 股（Asia/Shanghai，无夏令时），日志时间和用户报号按同一时区。
+    let (date, time) = local_stamp(now.as_secs() as i64 + 8 * 3600);
+    format!("TR-{date}-{time}-{:04}", SEQ.fetch_add(1, Ordering::Relaxed))
+}
+
+/// `YYYYMMDD` + `HHMMSS`（epoch 秒已按 +08:00 偏移）。
+fn local_stamp(secs: i64) -> (String, String) {
+    let days = secs.div_euclid(86_400);
+    let rem = secs.rem_euclid(86_400);
+    let (year, month, day) = civil_from_days(days);
+    (
+        format!("{year:04}{month:02}{day:02}"),
+        format!("{:02}{:02}{:02}", rem / 3_600, (rem / 60) % 60, rem % 60),
+    )
+}
+
+/// Howard Hinnant `civil_from_days`：epoch 天 → (年, 月, 日)。
+fn civil_from_days(days: i64) -> (i64, u32, u32) {
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let year = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    (if month <= 2 { year + 1 } else { year }, month, day)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -83,6 +109,11 @@ impl AppError {
         let id = trace_id();
         Self::new(ErrorCode::Internal, message)
             .with_details(json!({ "traceId": id }))
+    }
+
+    /// 页面可见的追踪号；没有 trace id 的错误返回 None。
+    pub fn trace_id(&self) -> Option<&str> {
+        self.details.as_ref()?.get("traceId")?.as_str()
     }
 }
 

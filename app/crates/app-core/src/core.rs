@@ -380,7 +380,19 @@ impl AppCore {
         // 坏库已无法修复：让页面拿到 trace id 并展示「重新生成数据」，不要静默当成空自选。
         if let Some(reason) = db.degraded_reason() {
             if reason.starts_with("state.db 已损坏") {
-                return Err(AppError::storage_corrupt(reason.to_string()));
+                let err = AppError::storage_corrupt(reason.to_string());
+                // 页面 id 必须能查：生成即写 telemetry，用户报号可按 id grep 到同一条。
+                if let Some(id) = err.trace_id() {
+                    self.telemetry.emit(
+                        "storage.corrupt",
+                        vec![
+                            ("traceId", serde_json::Value::from(id)),
+                            ("code", serde_json::to_value(err.code).unwrap_or_default()),
+                            ("message", serde_json::Value::from(err.message.clone())),
+                        ],
+                    );
+                }
+                return Err(err);
             }
         }
         let items = db.watchlist().map_err(AppError::from)?;
