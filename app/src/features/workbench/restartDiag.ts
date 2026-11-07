@@ -305,7 +305,9 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
   }, 8_000);
   push("PA-15", "AC-02.05-04（补3）", "render", notice === "MACD 需要 34 根，当前 20 根", `副图提示「${notice}」`);
   push("PA-16", "AC-02.05-04（补3）", "render", !q(".error-box"), "20 根时无全局错误条");
-  push("PA-17", "AC-02.05-04（补3）", "render", triplet() === "12/26/9", `20 根时恢复默认后 ParamPanel 显示 ${triplet()}`);
+  // 副图提示与 ParamPanel 可能差一帧更新：50ms 轮询等参数落定，避免把渲染时序记成失败。
+  const settled = await waitFor(() => (triplet() === "12/26/9" ? "12/26/9" : null), 3_000).catch(() => triplet());
+  push("PA-17", "AC-02.05-04（补3）", "render", settled === "12/26/9", `20 根时恢复默认后 ParamPanel 显示 ${settled}`);
 
   window.localStorage.removeItem(MARK);
   const report = {

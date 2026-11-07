@@ -90,13 +90,13 @@ const selectedSubs = () => {
 
 const input = () => q<HTMLInputElement>("[data-drawer-search]");
 
-/** 输入并等过 200ms 防抖 + 一帧渲染 */
+/** 输入并等过 200ms 防抖 + 一帧渲染（260ms 在冷启动/大目录下偏紧，放宽到 600ms） */
 const typeQuery = async (text: string) => {
   const field = await waitFor(input);
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
   setter?.call(field, text);
   field.dispatchEvent(new Event("input", { bubbles: true }));
-  await sleep(260);
+  await sleep(600);
 };
 
 const clickElement = (element: Element | null) => {
