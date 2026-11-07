@@ -7,6 +7,7 @@
     "dev": "vite --port 1420",
     "build": "tsc --noEmit && vite build",
     "verify:constants": "node scripts/verify_constants.mjs --docs",
+    "verify:evidence": "node scripts/verify_evidence.mjs",
     "verify:format": "node scripts/verify-number-format.mjs",
     "verify:docs": "node scripts/verify_indicator_docs.mjs",
     "verify:index-pd": "node scripts/verify_index_estimate_pd.mjs",

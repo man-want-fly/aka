@@ -2367,6 +2367,34 @@ mod tests {
         );
     }
 
+    /// W-67：生产装配（provider BarRow → Candle）必须给批次元数据落值；
+    /// `build_bar_provenance` 的透传只是最后一环，不能替代装配层的断言。
+    #[tokio::test]
+    async fn production_assembly_sets_batch_meta_on_candles() {
+        let core = AppCore::new_mock().await.unwrap();
+        for timeframe in [Timeframe::Day, Timeframe::Week] {
+            let series = core
+                .series_for("600519.SH", timeframe, Adjust::Qfq)
+                .await
+                .unwrap();
+            assert!(!series.candles.is_empty(), "{timeframe:?} 序列为空");
+            for candle in &series.candles {
+                assert_eq!(
+                    candle.batch_id.as_deref(),
+                    Some("b-20260101-01"),
+                    "{timeframe:?} {} 的 batch_id 未在装配时落值",
+                    candle.date
+                );
+                assert_eq!(
+                    candle.ingested_at,
+                    Some(1_767_225_600),
+                    "{timeframe:?} {} 的 ingested_at 未在装配时落值",
+                    candle.date
+                );
+            }
+        }
+    }
+
     /// S-07.05-02 补4：清空 batch_id/ingested_at 时必须回 `E_PROVENANCE_MISSING`，不是空白。
     #[test]
     fn missing_batch_meta_yields_provenance_error_code() {

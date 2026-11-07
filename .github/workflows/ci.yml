@@ -76,6 +76,9 @@ jobs:
       - name: 常量单一源门禁（G1，不一致即红）
         run: npm run verify:constants
 
+      - name: 证据归属门禁（W-60 / W-67，幻影卡即红）
+        run: npm run verify:evidence
+
       # 内容库 app/content/indicators/ 由 S-03.03-03 交付；未交付前本步骤预期 red（exit 2）。
       # 交付触发条件与翻阻断要求见 docs/qa/aka-tech-debt-s0-v0.1.md 的 TD-S3-02。
       - name: 指标口径页门禁（W-03）——预期失败，不阻断

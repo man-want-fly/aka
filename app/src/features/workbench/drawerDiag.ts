@@ -1,3 +1,4 @@
+import constants from "../../../manifest/constants.json";
 import { ipc } from "../../lib/ipc";
 import type { Category, ManifestResponse } from "../../lib/types";
 
@@ -14,7 +15,7 @@ interface Check {
 const cardOf = (ac: string) => {
   if (ac.startsWith("AC-02.04-01") || ac.startsWith("AC-02.04-02")) return "S-02.04-01";
   if (ac.startsWith("AC-02.04-03") || ac.startsWith("AC-02.04-04")) return "S-02.04-02";
-  if (ac.startsWith("AC-03.01-05")) return "S-03.01-05";
+  if (ac.startsWith("AC-03.01-05")) return "S-03.01-04";
   return "未归属";
 };
 
@@ -196,14 +197,15 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const normalCount = items.filter((item) => item.status === "normal").length;
   const betaCount = items.filter((item) => item.status === "beta").length;
   const statusTotal = planned.length + normalCount + betaCount;
+  const expectedBeta = constants.catalog.rulings.afterT03T21Promotion.beta;
   push(
     "D-02",
     "AC-02.04-03（补3）",
     "data",
-    statusTotal === manifest.catalogTotal && betaCount === 2 && missingMeta.length === 0,
-    `规划中 ${planned.length} / normal ${normalCount} / beta ${betaCount} / 加总 ${statusTotal}=目录总量 ${manifest.catalogTotal} / 缺四字段 ${
+    statusTotal === manifest.catalogTotal && betaCount === expectedBeta && missingMeta.length === 0,
+    `规划中 ${planned.length} / normal ${normalCount} / beta ${betaCount}（constants=${expectedBeta}）/ 加总 ${statusTotal}=目录总量 ${manifest.catalogTotal} / 缺四字段 ${
       missingMeta.map((item) => item.id).join(",") || "无"
-    }（分布数值不在此抄第二份，由 verify:constants 对照 constants.json 核）`,
+    }`,
   );
 
   // ---- 渲染层 ----
@@ -243,7 +245,8 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     "R-02",
     "AC-02.04-03（补3）",
     "render",
-    plannedInDom.length === planned.length &&
+    plannedInDom.length > 0 &&
+      plannedInDom.length === planned.length &&
       plannedInDom.every((row) => row.hasAbbr && (row.panel === "主" || row.panel === "副")),
     `置灰条目 ${plannedInDom.length} / 数据层规划中 ${planned.length} / 缺缩写 ${plannedInDom.filter((row) => !row.hasAbbr).length} / 面板异常 ${plannedInDom.filter((row) => row.panel !== "主" && row.panel !== "副").length}`,
   );

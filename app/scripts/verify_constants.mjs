@@ -177,7 +177,7 @@ const betaSet = items
   .sort()
   .join(",");
 check("beta 集合恰为", betaSet, "T16,T19");
-check("normal 条数", status.normal ?? 0, 43);
+check("normal 条数", status.normal ?? 0, constants.catalog.rulings.afterT03T21Promotion.normal);
 check("T03 specStatus", items.find((x) => x.id === "T03")?.specStatus, "manualComplete");
 check("T21 specStatus", items.find((x) => x.id === "T21")?.specStatus, "manualComplete");
 // 「全域名口径待定」= 全部 105 条里 specStatus !== manualComplete 的条数；
