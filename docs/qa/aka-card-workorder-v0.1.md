@@ -1121,13 +1121,38 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 - **验收**：① 干净 HEAD 上 CI 该步 **exit 0**；② 故意改一个 DTO 字段名不重生成 → 该步 **exit 1**（反向用例，需在 PR 里贴一次日志）；③ 该步失败时的日志必须直接给出 `git diff --stat` 与首个差异文件，不许只报「快照不一致」。
 - **边界**：只比 `aggregates` 与 `ipc-snapshots` 两目录；`baselines`/`reports` 见 W-33 边界。
 
+### W-35｜卡集 Epic / Feature / 优先级计数改对（BA；口径见报告 4.7.10）
+
+- **依据**：`aka-story-cards-v0.1.md` 的 Feature 数自 `d4a5c33` 起就写错，错法是**把 §1 表的续行数当成 Feature 数**（实际 27/30/31，写作 19/22/23，恒少 8）。PRD 基线 = 8 Epic / 27 Feature；卡集落地 = **9 Epic / 31 Feature**，差额是 `F-03.04`/`F-03.05`/`F-03.06`/`F-09.01` 四个补卡 Feature，PRD 未变。另 `P0 72 / P1 1` 也已过期（`S-04.02-02` 正文与索引 CSV 均为 `V1`）。
+- **改动（四处，一次改到位；不动 AC、不动人日）**：
+
+  | # | 位置 | 原文 | 改为 |
+  |---|---|---|---|
+  | 1 | L103 §1 合计行 | `\| **合计** \| **23 Feature** \| **73 张** \| **P0 72 / P1 1** \| **207.9** \|` | `\| **合计** \| **31 Feature** \| **73 张** \| **P0 71 / P1 1 / V1 1** \| **207.9** \|` |
+  | 2 | L10 表头「卡片数量」 | `73 张（P0 72 / P1 1），分 9 个 Epic、23 个 Feature` | `73 张（P0 71 / P1 1 / V1 1），分 9 个 Epic、31 个 Feature` |
+  | 3 | L61 §0.4 | `（23 Feature 明细 + 9 个 Epic 概算 + 总合计）` | `（31 Feature 明细 + 9 个 Epic 概算 + 总合计）` |
+  | 4 | §1 表 `F-04.02` 行 | 优先级列 `P0 / P0` | `P0 / V1`（与 `:3639` 正文及索引 CSV 一致） |
+- **口径写死（禁止再手数续行）**：Feature 数 = §1 表中 `F-\d{2}\.\d{2}` 的**去重个数**，且必须等于索引 CSV 第 4 列去重个数；Epic 数同理取第 2 列。
+- **验收（两条命令都要过）**：
+
+  ```bash
+  # ① 卡表去重 Feature 数 = 31，且与 CSV 一致
+  python3 -c "import re,csv;t=open('docs/story-cards/aka-story-cards-v0.1.md',encoding='utf-8').read();s=t.index('## 1. 卡片总览');e=t.index('\n# 第一部分');f=set(re.findall(r'F-\d{2}\.\d{2}',t[s:e]));r=list(csv.DictReader(open('docs/story-cards/aka-story-index-v0.1.csv',encoding='utf-8')));print(len(f),len({x['feature_id'] for x in r}),len({x['epic_id'] for x in r}))"
+  # 期望输出：31 31 9
+  # ② 三处文字与一处优先级已改
+  grep -c "31 Feature" docs/story-cards/aka-story-cards-v0.1.md   # 期望 2（L61 与 L103）
+  grep -q "分 9 个 Epic、31 个 Feature" docs/story-cards/aka-story-cards-v0.1.md
+  grep -q "P0 71 / P1 1 / V1 1" docs/story-cards/aka-story-cards-v0.1.md
+  ```
+- **边界**：只改上述四处；`207.9`、各 Epic 小计、任何 AC 与卡正文一律不动。若发现 `31` 与实际不符，停下来报 TL，不许自行改口径凑数（制度第 13 条）。
+
 ---
 
 ## 3. 执行顺序与验收
 
 1. **已完成（BA，2026-11-07）**：W-01、W-02、W-04～W-22。baseline 14 条 → **0 条**（`sector-12` 两条由 W-31 清零）。
-2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）。改完各跑一次 `npm run verify:constants`。
+2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）、**W-35**（卡集 `31 Feature / 9 Epic / P0 71+V1 1` 四处改对）。改完各跑一次 `npm run verify:constants`。
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34）须由 TL 按验收判据复核后才能签。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35）须由 TL 按验收判据复核后才能签。
