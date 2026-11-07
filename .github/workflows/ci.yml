@@ -104,27 +104,34 @@ jobs:
       # W-49：release 二进制不得残留 QA 注入入口，把 W-47 的本地验收变成常设门禁。
       # 写法要点：grep -c 在 0 命中时自身 exit 1，必须先取计数再判 -ne 0；
       # 每个符号独立断言，失败不提前退出，避免一条掩盖其余。
-      # 匹配用非标识符边界：否则 AKA_DIAG 会兜住 AKA_DIAG_TARGET、diag_write 会兜住
-      # diag_write_named，断言看似 11 条、实际少几条独立生效（W-58 漏项实验的依据）。
+      # 不能用「非标识符边界」匹配：macOS 二进制里相邻字面量会被合并成
+      # webview_positiondiag_write_nameddataset_manifest，边界匹配会漏检（假绿）；
+      # 改用子串出现次数，并扣掉更长符号的命中（AKA_DIAG 扣 AKA_DIAG_TARGET/AKA_DIAG_INF，
+      # diag_write 扣 diag_write_named）。这样每条断言只归属自己的符号，不会被邻居兜住。
       # 2026-11 QA 复核后扩围：除四个启动参数外，另拦环境变量与诊断写入口/文件名。
       - name: release 注入符号门禁（W-49）
         run: |
           cargo build --release -p aka-desktop
           BIN=target/release/aka-desktop
           strings "$BIN" > /tmp/aka-release-strings.txt
+          raw_count() { (grep -a -o -F -- "$1" /tmp/aka-release-strings.txt || true) | wc -l | tr -d ' '; }
           fail=0
           for symbol in \
             "AKA-DIAG-CORRUPT" "--corrupt-db" "--readonly-db" "--empty-dataset" \
             "AKA_DIAG" "AKA_DIAG_TARGET" "AKA_DIAG_INF" \
             "diag_write_named" "diag_write" "diag_faults" "s2-evidence"; do
-            pattern="(^|[^A-Za-z0-9_])${symbol}([^A-Za-z0-9_]|\$)"
-            count=$(grep -E -c -- "$pattern" /tmp/aka-release-strings.txt || true)
+            count=$(raw_count "$symbol")
+            # 扣掉更长符号里的同名子串，避免一条断言兜住另一条（漏项实验要能看出来）。
+            case "$symbol" in
+              "AKA_DIAG") count=$((count - $(raw_count "AKA_DIAG_TARGET") - $(raw_count "AKA_DIAG_INF")));;
+              "diag_write") count=$((count - $(raw_count "diag_write_named")));;
+            esac
             echo "注入符号 $symbol：$count（期望 0）"
             if [ "$count" -ne 0 ]; then
               fail=1
               echo "::error::release 二进制含注入符号 $symbol（$count 处）"
-              echo "--- $symbol 命中行 + 前后 5 条上下文 ---"
-              grep -E -n -B 5 -A 5 -- "$pattern" /tmp/aka-release-strings.txt | head -n 30
+              echo "--- $symbol 命中行 ---"
+              grep -a -n -F -- "$symbol" /tmp/aka-release-strings.txt | head -n 30
             fi
           done
           exit "$fail"
