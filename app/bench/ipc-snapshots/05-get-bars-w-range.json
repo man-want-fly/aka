@@ -13,9 +13,11 @@
       {
         "adjFactor": 1.0,
         "amount": 30862830279.38,
+        "batchId": "b-20260101-01",
         "close": 134.84,
         "date": "2023-06-02",
         "high": 135.71,
+        "ingestedAt": 1767225600,
         "low": 131.43,
         "open": 132.0,
         "quality": [
@@ -28,9 +30,11 @@
       {
         "adjFactor": 1.0,
         "amount": 18727501138.16,
+        "batchId": "b-20260101-01",
         "close": 128.68,
         "date": "2023-06-09",
         "high": 135.12,
+        "ingestedAt": 1767225600,
         "low": 128.63,
         "open": 134.51,
         "quality": [
@@ -43,9 +47,11 @@
       {
         "adjFactor": 1.0,
         "amount": 25286611240.39,
+        "batchId": "b-20260101-01",
         "close": 123.14,
         "date": "2023-06-16",
         "high": 129.09,
+        "ingestedAt": 1767225600,
         "low": 118.18,
         "open": 128.27,
         "quality": [
@@ -58,9 +64,11 @@
       {
         "adjFactor": 1.0,
         "amount": 25374781116.35,
+        "batchId": "b-20260101-01",
         "close": 127.17,
         "date": "2023-06-23",
         "high": 127.65,
+        "ingestedAt": 1767225600,
         "low": 123.36,
         "open": 123.48,
         "quality": [
@@ -73,9 +81,11 @@
       {
         "adjFactor": 1.0,
         "amount": 13854728240.970001,
+        "batchId": "b-20260101-01",
         "close": 125.86,
         "date": "2023-06-30",
         "high": 131.63,
+        "ingestedAt": 1767225600,
         "low": 125.07,
         "open": 127.66,
         "quality": [
@@ -88,9 +98,11 @@
       {
         "adjFactor": 1.0,
         "amount": 28297131748.539997,
+        "batchId": "b-20260101-01",
         "close": 126.77,
         "date": "2023-07-07",
         "high": 129.69,
+        "ingestedAt": 1767225600,
         "low": 125.17,
         "open": 125.8,
         "quality": [
@@ -103,9 +115,11 @@
       {
         "adjFactor": 1.0,
         "amount": 25013089392.19,
+        "batchId": "b-20260101-01",
         "close": 130.19,
         "date": "2023-07-14",
         "high": 132.63,
+        "ingestedAt": 1767225600,
         "low": 126.4,
         "open": 126.79,
         "quality": [
@@ -118,9 +132,11 @@
       {
         "adjFactor": 1.0,
         "amount": 19785095627.64,
+        "batchId": "b-20260101-01",
         "close": 124.68,
         "date": "2023-07-21",
         "high": 129.22,
+        "ingestedAt": 1767225600,
         "low": 122.44,
         "open": 128.84,
         "quality": [
@@ -133,9 +149,11 @@
       {
         "adjFactor": 1.0,
         "amount": 24653345354.11,
+        "batchId": "b-20260101-01",
         "close": 124.91,
         "date": "2023-07-28",
         "high": 125.73,
+        "ingestedAt": 1767225600,
         "low": 121.24,
         "open": 123.97,
         "quality": [
@@ -148,9 +166,11 @@
       {
         "adjFactor": 1.0,
         "amount": 31813108807.350002,
+        "batchId": "b-20260101-01",
         "close": 121.65,
         "date": "2023-08-04",
         "high": 126.28,
+        "ingestedAt": 1767225600,
         "low": 120.08,
         "open": 124.49,
         "quality": [
@@ -163,9 +183,11 @@
       {
         "adjFactor": 1.0,
         "amount": 20713037297.309998,
+        "batchId": "b-20260101-01",
         "close": 115.91,
         "date": "2023-08-11",
         "high": 123.36,
+        "ingestedAt": 1767225600,
         "low": 115.8,
         "open": 121.72,
         "quality": [
@@ -178,9 +200,11 @@
       {
         "adjFactor": 1.0,
         "amount": 16016599504.77,
+        "batchId": "b-20260101-01",
         "close": 118.27,
         "date": "2023-08-18",
         "high": 119.88,
+        "ingestedAt": 1767225600,
         "low": 115.38,
         "open": 115.98,
         "quality": [
@@ -193,9 +217,11 @@
       {
         "adjFactor": 1.0,
         "amount": 21670615875.5,
+        "batchId": "b-20260101-01",
         "close": 113.83,
         "date": "2023-08-25",
         "high": 120.32,
+        "ingestedAt": 1767225600,
         "low": 113.29,
         "open": 117.62,
         "quality": [
@@ -208,9 +234,11 @@
       {
         "adjFactor": 1.0,
         "amount": 16618871866.369999,
+        "batchId": "b-20260101-01",
         "close": 107.61,
         "date": "2023-09-01",
         "high": 114.72,
+        "ingestedAt": 1767225600,
         "low": 107.29,
         "open": 114.31,
         "quality": [
@@ -223,9 +251,11 @@
       {
         "adjFactor": 1.0,
         "amount": 19147603413.91,
+        "batchId": "b-20260101-01",
         "close": 114.76,
         "date": "2023-09-08",
         "high": 115.13,
+        "ingestedAt": 1767225600,
         "low": 107.83,
         "open": 107.84,
         "quality": [
@@ -238,9 +268,11 @@
       {
         "adjFactor": 1.0,
         "amount": 19595246307.42,
+        "batchId": "b-20260101-01",
         "close": 112.63,
         "date": "2023-09-15",
         "high": 116.56,
+        "ingestedAt": 1767225600,
         "low": 112.05,
         "open": 115.36,
         "quality": [
@@ -253,9 +285,11 @@
       {
         "adjFactor": 1.0,
         "amount": 14693824103.84,
+        "batchId": "b-20260101-01",
         "close": 110.69,
         "date": "2023-09-22",
         "high": 113.22,
+        "ingestedAt": 1767225600,
         "low": 109.15,
         "open": 112.69,
         "quality": [
@@ -268,9 +302,11 @@
       {
         "adjFactor": 1.0,
         "amount": 20852737771.28,
+        "batchId": "b-20260101-01",
         "close": 104.74,
         "date": "2023-09-29",
         "high": 111.03,
+        "ingestedAt": 1767225600,
         "low": 104.38,
         "open": 110.52,
         "quality": [
@@ -283,9 +319,11 @@
       {
         "adjFactor": 1.0,
         "amount": 19242995466.84,
+        "batchId": "b-20260101-01",
         "close": 104.43,
         "date": "2023-10-06",
         "high": 105.4,
+        "ingestedAt": 1767225600,
         "low": 99.61,
         "open": 104.59,
         "quality": [
@@ -298,9 +336,11 @@
       {
         "adjFactor": 1.0,
         "amount": 22379931033.74,
+        "batchId": "b-20260101-01",
         "close": 101.64,
         "date": "2023-10-13",
         "high": 110.21,
+        "ingestedAt": 1767225600,
         "low": 100.87,
         "open": 104.92,
         "quality": [
@@ -313,9 +353,11 @@
       {
         "adjFactor": 1.0,
         "amount": 18119278038.65,
+        "batchId": "b-20260101-01",
         "close": 99.96,
         "date": "2023-10-20",
         "high": 105.43,
+        "ingestedAt": 1767225600,
         "low": 99.19,
         "open": 101.75,
         "quality": [
@@ -328,9 +370,11 @@
       {
         "adjFactor": 1.0,
         "amount": 21150505311.94,
+        "batchId": "b-20260101-01",
         "close": 100.68,
         "date": "2023-10-27",
         "high": 102.51,
+        "ingestedAt": 1767225600,
         "low": 99.93,
         "open": 100.19,
         "quality": [
@@ -343,9 +387,11 @@
       {
         "adjFactor": 1.0,
         "amount": 17125848614.64,
+        "batchId": "b-20260101-01",
         "close": 106.1,
         "date": "2023-11-03",
         "high": 106.64,
+        "ingestedAt": 1767225600,
         "low": 100.1,
         "open": 100.72,
         "quality": [
@@ -358,9 +404,11 @@
       {
         "adjFactor": 1.0,
         "amount": 18672444524.239998,
+        "batchId": "b-20260101-01",
         "close": 88.44,
         "date": "2023-11-10",
         "high": 107.0,
+        "ingestedAt": 1767225600,
         "low": 83.21,
         "open": 106.22,
         "quality": [
@@ -374,9 +422,11 @@
       {
         "adjFactor": 1.0,
         "amount": 14699839039.050001,
+        "batchId": "b-20260101-01",
         "close": 85.53,
         "date": "2023-11-17",
         "high": 89.31,
+        "ingestedAt": 1767225600,
         "low": 85.06,
         "open": 87.94,
         "quality": [
@@ -389,9 +439,11 @@
       {
         "adjFactor": 1.0,
         "amount": 16465582510.480001,
+        "batchId": "b-20260101-01",
         "close": 83.54,
         "date": "2023-11-24",
         "high": 86.23,
+        "ingestedAt": 1767225600,
         "low": 80.43,
         "open": 85.88,
         "quality": [
@@ -404,9 +456,11 @@
       {
         "adjFactor": 1.0,
         "amount": 14123406918.57,
+        "batchId": "b-20260101-01",
         "close": 83.65,
         "date": "2023-12-01",
         "high": 84.72,
+        "ingestedAt": 1767225600,
         "low": 82.79,
         "open": 83.24,
         "quality": [
@@ -419,9 +473,11 @@
       {
         "adjFactor": 1.0,
         "amount": 14490172714.839998,
+        "batchId": "b-20260101-01",
         "close": 81.59,
         "date": "2023-12-08",
         "high": 84.42,
+        "ingestedAt": 1767225600,
         "low": 80.69,
         "open": 83.63,
         "quality": [
@@ -434,9 +490,11 @@
       {
         "adjFactor": 1.0,
         "amount": 15016554105.949999,
+        "batchId": "b-20260101-01",
         "close": 89.14,
         "date": "2023-12-15",
         "high": 89.54,
+        "ingestedAt": 1767225600,
         "low": 80.83,
         "open": 81.45,
         "quality": [
@@ -449,9 +507,11 @@
       {
         "adjFactor": 1.0,
         "amount": 14597657824.170002,
+        "batchId": "b-20260101-01",
         "close": 91.53,
         "date": "2023-12-22",
         "high": 92.1,
+        "ingestedAt": 1767225600,
         "low": 87.89,
         "open": 88.42,
         "quality": [
@@ -464,9 +524,11 @@
       {
         "adjFactor": 1.0,
         "amount": 15848135842.84,
+        "batchId": "b-20260101-01",
         "close": 86.81,
         "date": "2023-12-29",
         "high": 93.87,
+        "ingestedAt": 1767225600,
         "low": 86.42,
         "open": 91.84,
         "quality": [

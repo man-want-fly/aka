@@ -59,6 +59,8 @@ pub fn aggregate_bars(rows: &[BarRow], period: AggregatePeriod) -> Vec<BarRow> {
                 amount: row.amount,
                 adj_factor: row.adj_factor,
                 quality: row.quality.clone(),
+                batch_id: row.batch_id.clone(),
+                ingested_at: row.ingested_at,
             });
             continue;
         }
@@ -71,6 +73,9 @@ pub fn aggregate_bars(rows: &[BarRow], period: AggregatePeriod) -> Vec<BarRow> {
         bar.volume += row.volume;
         bar.amount += row.amount;
         bar.adj_factor = row.adj_factor;
+        // 聚合 K 线的溯源取「最后成交日」所在批次（收盘价来源）。
+        bar.batch_id = row.batch_id.clone();
+        bar.ingested_at = row.ingested_at;
         for flag in &row.quality {
             if !bar.quality.contains(flag) {
                 bar.quality.push(*flag);
@@ -97,6 +102,8 @@ mod tests {
             amount: volume * close,
             adj_factor: 1.0,
             quality: Vec::new(),
+            batch_id: None,
+            ingested_at: None,
         }
     }
 
@@ -137,6 +144,8 @@ mod tests {
                 amount: 36.0,
                 adj_factor: 1.0,
                 quality: vec![QualityFlag::SplitDay],
+                batch_id: None,
+                ingested_at: None,
             },
         ];
         let monthly = aggregate_bars(&rows, AggregatePeriod::Month);

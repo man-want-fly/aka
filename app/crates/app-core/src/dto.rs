@@ -67,6 +67,9 @@ pub struct BarDto {
     /// 行级溯源
     pub source: String,
     pub quality: Vec<String>,
+    /// S-07.05-02：生成批次与入库时间；缺失时前端显示「缺失」并给出 E_PROVENANCE_MISSING
+    pub batch_id: Option<String>,
+    pub ingested_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]

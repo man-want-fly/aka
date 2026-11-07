@@ -75,7 +75,7 @@ fn ratio(hits: i64, base: i64) -> f64 {
     }
 }
 
-fn board_limit_pct(board: Board) -> Option<f64> {
+pub(crate) fn board_limit_pct(board: Board) -> Option<f64> {
     match board {
         Board::ShMain | Board::SzMain => Some(10.0),
         Board::ChiNext | Board::Star => Some(20.0),
@@ -369,6 +369,8 @@ mod tests {
             amount: close * volume,
             adj_factor,
             quality: Vec::new(),
+            batch_id: None,
+            ingested_at: None,
         }
     }
 

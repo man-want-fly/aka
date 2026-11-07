@@ -131,6 +131,16 @@ pub enum QualityFlag {
     SplitDay,
     /// 停牌：该交易日有记录但不可交易；量类指标应为 NaN。
     Suspended,
+    /// 除权日：相邻日复权因子变化，价格跳变不算异常。
+    ExRights,
+    /// 量类数据被近似（无逐笔/分时数据时的标记）。
+    Approximated,
+    /// 有记录但成交量为 0（非停牌）。
+    ZeroVolume,
+    /// 交易日缺失（由扫描器在区间层给出，不写回 BarRow）。
+    Missing,
+    /// 价格异常（close ≤ 0 或涨跌幅超板块上限 + 1%）。
+    PriceAnomaly,
 }
 
 impl QualityFlag {
@@ -141,6 +151,11 @@ impl QualityFlag {
             QualityFlag::LimitDown => "limitDown",
             QualityFlag::SplitDay => "splitDay",
             QualityFlag::Suspended => "SUSPENDED",
+            QualityFlag::ExRights => "EX_RIGHTS",
+            QualityFlag::Approximated => "APPROXIMATED",
+            QualityFlag::ZeroVolume => "ZERO_VOLUME",
+            QualityFlag::Missing => "MISSING",
+            QualityFlag::PriceAnomaly => "PRICE_ANOMALY",
         }
     }
 }
@@ -159,6 +174,10 @@ pub struct BarRow {
     /// 1.0 = 不复权原始价；复权时按 provider 口径给出
     pub adj_factor: f64,
     pub quality: Vec<QualityFlag>,
+    /// 生成批次（如 `b-20260101-01`）；无溯源数据时为 None。
+    pub batch_id: Option<String>,
+    /// 入库时间（epoch 秒）；无溯源数据时为 None。
+    pub ingested_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

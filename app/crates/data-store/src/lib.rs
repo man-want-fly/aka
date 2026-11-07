@@ -24,6 +24,10 @@ pub struct Candle {
     pub quality: Vec<String>,
     /// 行级溯源：mock / tushare / ...
     pub source: String,
+    /// 生成批次；无溯源数据时为 None
+    pub batch_id: Option<String>,
+    /// 入库时间（epoch 秒）；无溯源数据时为 None
+    pub ingested_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

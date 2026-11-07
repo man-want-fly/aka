@@ -5,7 +5,7 @@ use std::time::Instant;
 use data_provider::mock::MockProvider;
 use data_provider::{
     aggregate_bars, Adjust, AggregatePeriod, BarBatch, BarRequest, DataProvider, Date,
-    Security, Timeframe,
+    QualityFlag, Security, Timeframe,
 };
 use data_store::state_db::{AddWatchOutcome, StateDb};
 use data_store::{CacheStats, Candle, CandleSeries, CandleStore, SeriesKey};
@@ -60,6 +60,12 @@ fn validate_group_name(name: &str) -> Result<&str, AppError> {
 fn group_duplicate(name: &str) -> AppError {
     AppError::invalid_argument(format!("分组已存在：{name}"))
         .with_details(serde_json::json!({ "reason": "GROUP_DUPLICATE", "name": name }))
+}
+
+fn push_flag(flags: &mut Vec<String>, flag: &str) {
+    if !flags.iter().any(|current| current == flag) {
+        flags.push(flag.to_string());
+    }
 }
 
 /// 首装默认收藏（PRD 默认组合）：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / RVOL。
@@ -914,6 +920,8 @@ impl AppCore {
                 adj_factor: candle.adj_factor,
                 source: candle.source.clone(),
                 quality: candle.quality.clone(),
+                batch_id: candle.batch_id.clone(),
+                ingested_at: candle.ingested_at,
             })
             .collect();
 
@@ -1128,18 +1136,54 @@ impl AppCore {
         let provider = batch.provider.as_str().to_string();
         let candles = rows
             .iter()
-            .map(|row| Candle {
-                ts: row.date.epoch_secs(),
-                date: row.date.iso(),
-                open: row.open,
-                high: row.high,
-                low: row.low,
-                close: row.close,
-                volume: row.volume,
-                amount: row.amount,
-                adj_factor: row.adj_factor,
-                quality: row.quality.iter().map(|q| q.as_str().to_string()).collect(),
-                source: provider.clone(),
+            .enumerate()
+            .map(|(index, row)| {
+                let mut quality: Vec<String> =
+                    row.quality.iter().map(|q| q.as_str().to_string()).collect();
+                let suspended = row
+                    .quality
+                    .iter()
+                    .any(|flag| matches!(flag, data_provider::QualityFlag::Suspended));
+
+                // 逐根派生标记，与质量报告同一套口径（S-07.05-01/S-07.05-02）。
+                if !suspended && row.volume == 0.0 {
+                    push_flag(&mut quality, QualityFlag::ZeroVolume.as_str());
+                }
+                if index > 0 {
+                    let prev = &rows[index - 1];
+                    let ex_rights = (prev.adj_factor - row.adj_factor).abs() > f64::EPSILON;
+                    if ex_rights {
+                        push_flag(&mut quality, QualityFlag::ExRights.as_str());
+                    }
+                    if !suspended && !ex_rights && prev.close > 0.0 {
+                        let abnormal = row.close <= 0.0
+                            || quality::board_limit_pct(found.board).map_or(false, |cap| {
+                                let pct = (row.close / prev.close - 1.0).abs() * 100.0;
+                                pct > cap + quality::PRICE_LIMIT_TOLERANCE_PCT
+                            });
+                        if abnormal {
+                            push_flag(&mut quality, QualityFlag::PriceAnomaly.as_str());
+                        }
+                    }
+                } else if row.close <= 0.0 {
+                    push_flag(&mut quality, QualityFlag::PriceAnomaly.as_str());
+                }
+
+                Candle {
+                    ts: row.date.epoch_secs(),
+                    date: row.date.iso(),
+                    open: row.open,
+                    high: row.high,
+                    low: row.low,
+                    close: row.close,
+                    volume: row.volume,
+                    amount: row.amount,
+                    adj_factor: row.adj_factor,
+                    quality,
+                    source: provider.clone(),
+                    batch_id: row.batch_id.clone(),
+                    ingested_at: row.ingested_at,
+                }
             })
             .collect::<Vec<_>>();
 
@@ -1536,6 +1580,8 @@ mod tests {
                 adj_factor: 1.0,
                 quality: vec![],
                 source: "mock".to_string(),
+                batch_id: None,
+                ingested_at: None,
             });
             day = day.next_weekday();
         }
@@ -2006,6 +2052,73 @@ mod tests {
         assert_eq!(monthly.bars.last().unwrap().date, daily.bars.last().unwrap().date);
     }
 
+    /// S-07.05-02：单根必须先有溯源字段（provider/batch/ingested_at），再谈浮层展示。
+    #[tokio::test]
+    async fn daily_bars_carry_provenance_and_derived_quality_flags() {
+        let core = AppCore::new_mock().await.unwrap();
+        let daily = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+
+        // mock 溯源用固定批次与固定入库秒，不能取墙钟时间，否则 bench 快照不可复现。
+        for bar in &daily.bars {
+            assert_eq!(bar.source, "mock");
+            assert_eq!(bar.batch_id.as_deref(), Some("b-20260101-01"));
+            assert_eq!(bar.ingested_at, Some(1_767_225_600));
+        }
+
+        // 600519.SH 夹具在 2024-04-29 注入 2:1 拆分：该根必须标 EX_RIGHTS 且不误判价格异常。
+        let split = daily
+            .bars
+            .iter()
+            .find(|bar| bar.date == "2024-04-29")
+            .expect("600519.SH 夹具应含 2024-04-29 除权日");
+        assert!(
+            split.quality.iter().any(|flag| flag == "EX_RIGHTS"),
+            "除权日必须标记 EX_RIGHTS"
+        );
+        assert!(
+            !split.quality.iter().any(|flag| flag == "PRICE_ANOMALY"),
+            "除权日跳变不应判为价格异常"
+        );
+
+        // 周线聚合的溯源取最后成交日批次，字段不能丢。
+        let weekly = core.get_bars(&bars_req("W", None, None)).await.unwrap();
+        assert!(weekly
+            .bars
+            .iter()
+            .all(|bar| bar.batch_id.as_deref() == Some("b-20260101-01")));
+    }
+
+    /// S-07.05-02 补2：停牌根只标 SUSPENDED，不重复标 ZERO_VOLUME。
+    #[tokio::test]
+    async fn suspended_bars_are_not_flagged_as_zero_volume() {
+        let core = AppCore::new(Box::new(
+            data_provider::mock::MockProvider::new().with_diag_suspended_series(120, 80, 20),
+        ))
+        .await
+        .unwrap();
+        let req = GetBarsRequest {
+            security: "DIAGSUSP.SZ".into(),
+            timeframe: "D".into(),
+            adj: "none".into(),
+            from: None,
+            to: None,
+        };
+        let bars = core.get_bars(&req).await.unwrap();
+        let suspended: Vec<&BarDto> = bars
+            .bars
+            .iter()
+            .filter(|bar| bar.quality.iter().any(|flag| flag == "SUSPENDED"))
+            .collect();
+        assert_eq!(suspended.len(), 20, "注入 20 根停牌");
+        for bar in suspended {
+            assert_eq!(bar.volume, 0.0);
+            assert!(
+                !bar.quality.iter().any(|flag| flag == "ZERO_VOLUME"),
+                "停牌已单独标记，不应再叠 ZERO_VOLUME"
+            );
+        }
+    }
+
     /// QA-S0-022 / 028 / 029：同请求去重、缓存命中、冷耗时都有结构化事件。
     #[tokio::test]
     async fn calc_telemetry_records_dedup_cache_and_cold_ms() {
@@ -2156,6 +2269,8 @@ mod tests {
                     adj_factor: 1.0,
                     quality: vec![],
                     source: "bench".to_string(),
+                    batch_id: None,
+                    ingested_at: None,
                 });
                 day = day.next_weekday();
             }
