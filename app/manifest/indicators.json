@@ -1240,18 +1240,21 @@
         {
           "key": "pivot",
           "labelZh": "P",
+          "aliases": ["P"],
           "kind": "line",
           "color": "var(--accent)"
         },
         {
           "key": "r1",
           "labelZh": "R1",
+          "aliases": ["R1"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "s1",
           "labelZh": "S1",
+          "aliases": ["S1"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -2780,6 +2783,7 @@
         {
           "key": "width",
           "labelZh": "带宽",
+          "aliases": ["带宽"],
           "kind": "line",
           "color": "#94a3b8"
         }
@@ -2835,6 +2839,7 @@
         {
           "key": "percentB",
           "labelZh": "%B",
+          "aliases": ["%B"],
           "kind": "line",
           "color": "#34d399"
         }
@@ -2919,6 +2924,7 @@
         {
           "key": "ulcer",
           "labelZh": "Ulcer",
+          "aliases": ["溃疡指数"],
           "kind": "line",
           "color": "#f472b6"
         }
@@ -3006,6 +3012,7 @@
         {
           "key": "amplitude",
           "labelZh": "振幅",
+          "aliases": ["振幅"],
           "kind": "line",
           "color": "#60a5fa"
         }
@@ -3044,6 +3051,7 @@
         {
           "key": "tr",
           "labelZh": "TR",
+          "aliases": ["TR"],
           "kind": "line",
           "color": "#94a3b8"
         }
@@ -4142,18 +4150,21 @@
         {
           "key": "bias6",
           "labelZh": "BIAS(6)",
+          "aliases": ["BIAS(6)"],
           "kind": "line",
           "color": "var(--accent)"
         },
         {
           "key": "bias12",
           "labelZh": "BIAS(12)",
+          "aliases": ["BIAS(12)"],
           "kind": "line",
           "color": "var(--warn)"
         },
         {
           "key": "bias24",
           "labelZh": "BIAS(24)",
+          "aliases": ["BIAS(24)"],
           "kind": "line",
           "color": "#94a3b8"
         }
