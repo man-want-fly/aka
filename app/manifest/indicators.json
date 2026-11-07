@@ -1043,7 +1043,7 @@
       "outputs": [
         {
           "key": "forecast",
-          "labelZh": "LinReg 预测",
+          "labelZh": "线性回归预测",
           "aliases": ["Forecast"],
           "kind": "line",
           "color": "#60a5fa"

@@ -222,7 +222,7 @@
             "color": "#60a5fa",
             "key": "forecast",
             "kind": "line",
-            "labelZh": "LinReg 预测"
+            "labelZh": "线性回归预测"
           }
         ],
         "params": [
