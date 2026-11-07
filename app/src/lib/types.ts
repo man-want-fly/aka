@@ -212,6 +212,84 @@ export interface DatasetManifestDto {
   generatedAt: number;
 }
 
+/** S-07.01-01：P9 单项能力探测结果 */
+export interface DatasourceCapabilityDto {
+  key: string;
+  labelZh: string;
+  required: boolean;
+  available: boolean;
+  /** 可选能力缺失时的降级说明 */
+  note: string | null;
+}
+
+export interface DatasourceOpsDto {
+  dataDirReadable: boolean;
+  /** Mock 内存数据源无磁盘目录时为 null，界面显示 `—` */
+  diskFreeGb: number | null;
+  note: string | null;
+}
+
+/** S-07.01-01：数据版本 6 字段（只读） */
+export interface DatasetVersionDto {
+  datasetId: string;
+  datasetIdShort: string;
+  /** epoch 秒，界面按本地时区格式化 */
+  generatedAt: number;
+  rowCount: number;
+  coverageStart: string;
+  coverageEnd: string;
+  sha256: string;
+  sha256Short: string;
+}
+
+export type DatasourceState = "ready" | "partial" | "unavailable" | "missing" | "probe_failed";
+
+export interface DatasourceStatusDto {
+  state: DatasourceState;
+  requiredOk: number;
+  requiredTotal: number;
+  optionalOk: number;
+  optionalTotal: number;
+  capabilities: DatasourceCapabilityDto[];
+  ops: DatasourceOpsDto;
+  version: DatasetVersionDto | null;
+  tushareEnabled: number;
+  tushareTotal: number;
+  checkedAt: number;
+  errorCode: string | null;
+}
+
+/** S-07.05-01：质量检查报告 */
+export interface QualityExampleDto {
+  security: string;
+  date: string;
+}
+
+export interface QualityCheckDto {
+  key: string;
+  labelZh: string;
+  hits: number;
+  base: number;
+  ratioPct: number;
+  treatment: string;
+  status: "pass" | "info" | "warning" | "failed";
+  errorCode: string | null;
+  examples: QualityExampleDto[];
+}
+
+export interface QualityReportDto {
+  datasetId: string;
+  basedOnDatasetId: string;
+  currentDatasetId: string;
+  stale: boolean;
+  /** epoch 秒 */
+  scannedAt: number;
+  durationMs: number;
+  passedCount: number;
+  totalCount: number;
+  rows: QualityCheckDto[];
+}
+
 export interface GetBarsRequest {
   security: string;
   timeframe: "D" | "W" | "M";

@@ -17,6 +17,7 @@ use indicator_core::{
 
 use crate::dto::{
     BarDto, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
+    DatasetVersionDto, DatasourceCapabilityDto, DatasourceOpsDto, DatasourceStatusDto,
     GetBarsRequest, IndicatorFavoriteDto, IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto,
     ListSecuritiesRequest, MarketRowDto,
     MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto,
@@ -34,6 +35,8 @@ use crate::telemetry::{
 
 /// 质量扫描完成事件（JSONL 与内存环形队列同源）。
 pub const EVENT_QUALITY_SCAN: &str = "quality.scan";
+/// S-07.01-01：数据源探测事件（各能力状态）。
+pub const EVENT_DATASOURCE_PROBE: &str = "datasource.probe";
 
 /// 自选上限（跨分组按标的去重计数）
 pub const WATCHLIST_LIMIT: i64 = 500;
@@ -868,6 +871,202 @@ impl AppCore {
         self.dataset_manifest()
             .map(|manifest| manifest.dataset_id)
             .unwrap_or_else(|| "unknown".to_string())
+    }
+
+    /// S-07.01-01：P9 首卡探测。状态只由「实际探测结果 + manifest」决定，
+    /// 不信任 `capabilities()` 自报——必需能力必须真的调用一次成功才算可用。
+    pub async fn datasource_status(&self) -> DatasourceStatusDto {
+        let caps = self.provider.capabilities();
+        let mut errors = 0usize;
+        let first = self.securities.first().map(|sec| sec.code.clone());
+
+        let securities_ok = caps.securities && !self.securities.is_empty();
+
+        let daily_ok = match first.as_deref() {
+            Some(code) if caps.daily_bars => {
+                match self.daily_batch(code, Adjust::None).await {
+                    Ok(batch) => !batch.rows.is_empty(),
+                    Err(_) => {
+                        errors += 1;
+                        false
+                    }
+                }
+            }
+            _ => false,
+        };
+
+        let adjust_ok = match first.as_deref() {
+            Some(code) if caps.adjust_factors => {
+                match self.provider.adjust_factors(code).await {
+                    Ok(batch) => !batch.factors.is_empty(),
+                    Err(_) => {
+                        errors += 1;
+                        false
+                    }
+                }
+            }
+            _ => false,
+        };
+
+        let calendar_ok = match self.dataset_coverage.as_ref() {
+            Some((start, end)) if caps.trading_calendar => {
+                match (
+                    data_provider::Date::parse(start),
+                    data_provider::Date::parse(end),
+                ) {
+                    (Some(from), Some(to)) => {
+                        match self.provider.trading_calendar(from, to).await {
+                            Ok(days) => !days.is_empty(),
+                            Err(_) => {
+                                errors += 1;
+                                false
+                            }
+                        }
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        };
+
+        let capabilities = vec![
+            DatasourceCapabilityDto {
+                key: "daily_bars",
+                label_zh: "日线行情",
+                required: true,
+                available: daily_ok,
+                note: None,
+            },
+            DatasourceCapabilityDto {
+                key: "adjust_factors",
+                label_zh: "复权因子",
+                required: true,
+                available: adjust_ok,
+                note: None,
+            },
+            DatasourceCapabilityDto {
+                key: "securities",
+                label_zh: "证券主数据",
+                required: true,
+                available: securities_ok,
+                note: None,
+            },
+            DatasourceCapabilityDto {
+                key: "trading_calendar",
+                label_zh: "交易日历",
+                required: true,
+                available: calendar_ok,
+                note: None,
+            },
+            DatasourceCapabilityDto {
+                key: "industry",
+                label_zh: "行业映射",
+                required: false,
+                available: caps.industry,
+                note: Some("无行业映射：板块区按内置样本分组"),
+            },
+            DatasourceCapabilityDto {
+                key: "index_members",
+                label_zh: "指数成分",
+                required: false,
+                available: caps.index_members,
+                note: Some("无指数成分：指数页仅展示内置样本"),
+            },
+            DatasourceCapabilityDto {
+                key: "limit_flags",
+                label_zh: "ST 标记",
+                required: false,
+                available: caps.limit_flags,
+                note: Some("无 ST 标记：涨跌停按普通规则推导"),
+            },
+            DatasourceCapabilityDto {
+                key: "suspended_flags",
+                label_zh: "停牌标记",
+                required: false,
+                // 数据契约里没有停牌标记字段，如实标不可用，不按零成交量猜测。
+                available: false,
+                note: Some("无停牌标记：零成交量不区分停牌"),
+            },
+        ];
+        let required_ok = capabilities
+            .iter()
+            .filter(|cap| cap.required && cap.available)
+            .count();
+        let required_total = capabilities.iter().filter(|cap| cap.required).count();
+        let optional_ok = capabilities
+            .iter()
+            .filter(|cap| !cap.required && cap.available)
+            .count();
+        let optional_total = capabilities.iter().filter(|cap| !cap.required).count();
+
+        let manifest = self.dataset_manifest();
+        let version = manifest.as_ref().map(|manifest| DatasetVersionDto {
+            dataset_id: manifest.dataset_id.clone(),
+            dataset_id_short: manifest.dataset_id.chars().take(24).collect(),
+            generated_at: manifest.generated_at,
+            row_count: manifest.row_count,
+            coverage_start: manifest.coverage_start.clone(),
+            coverage_end: manifest.coverage_end.clone(),
+            sha256: manifest.sha256.clone(),
+            sha256_short: manifest.sha256.chars().take(12).collect(),
+        });
+
+        let (state, error_code): (&'static str, Option<&'static str>) = match &version {
+            None => ("missing", Some("E_DATASET_MISSING")),
+            Some(_) if required_ok < required_total => {
+                if errors >= 3 {
+                    ("probe_failed", Some("E_PROBE_FAILED"))
+                } else {
+                    ("unavailable", Some("E_REQUIRED_CAPABILITY_MISSING"))
+                }
+            }
+            Some(_) if optional_ok < optional_total => ("partial", None),
+            Some(_) => ("ready", None),
+        };
+
+        let ops = DatasourceOpsDto {
+            // Mock 为内存数据源，没有数据目录；用「manifest 可读」作为可读性等价事实。
+            data_dir_readable: version.is_some(),
+            // 没有磁盘目录就不编造 GB 数值，界面按 `—` 显示。
+            disk_free_gb: None,
+            note: Some("Mock 内存数据源无数据目录：数据由 manifest 描述，磁盘可用空间不适用"),
+        };
+
+        let status = DatasourceStatusDto {
+            state,
+            required_ok,
+            required_total,
+            optional_ok,
+            optional_total,
+            capabilities,
+            ops,
+            version,
+            // tushare 本卡只做静态摘要，启用数恒为 0（交互归 S-07.01-02）。
+            tushare_enabled: 0,
+            tushare_total: 4,
+            checked_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0),
+            error_code,
+        };
+
+        self.telemetry.emit(
+            EVENT_DATASOURCE_PROBE,
+            vec![
+                ("state", serde_json::json!(status.state)),
+                ("requiredOk", serde_json::json!(status.required_ok)),
+                ("requiredTotal", serde_json::json!(status.required_total)),
+                ("optionalOk", serde_json::json!(status.optional_ok)),
+                ("optionalTotal", serde_json::json!(status.optional_total)),
+                ("datasetId", serde_json::json!(status
+                    .version
+                    .as_ref()
+                    .map(|v| v.dataset_id.clone())
+                    .unwrap_or_default())),
+            ],
+        );
+        status
     }
 
     /// 读取缓存报告；`stale` 由当前 dataset_id 现算，不依赖缓存内的旧标志。
@@ -1910,6 +2109,169 @@ mod tests {
         assert!(suspended.hits >= 1, "停牌样本必须被识别");
         assert_eq!(suspended.status, "info");
         assert!(!suspended.examples.is_empty(), "示例用于跳到单根 K 线");
+    }
+
+    /// S-07.01-01（补1）专用：交易日照常「可查询」但返回空表，等价于日历表被删。
+    struct CalendarGoneProvider(data_provider::mock::MockProvider);
+
+    #[async_trait::async_trait]
+    impl data_provider::DataProvider for CalendarGoneProvider {
+        fn id(&self) -> data_provider::ProviderId {
+            self.0.id()
+        }
+
+        fn capabilities(&self) -> data_provider::Capabilities {
+            self.0.capabilities()
+        }
+
+        async fn securities(
+            &self,
+            as_of: data_provider::Date,
+        ) -> Result<data_provider::SecurityMaster, data_provider::ProviderError> {
+            self.0.securities(as_of).await
+        }
+
+        async fn trading_calendar(
+            &self,
+            _from: data_provider::Date,
+            _to: data_provider::Date,
+        ) -> Result<Vec<data_provider::Date>, data_provider::ProviderError> {
+            Ok(Vec::new())
+        }
+
+        async fn daily_bars(
+            &self,
+            req: data_provider::BarRequest,
+        ) -> Result<data_provider::BarBatch, data_provider::ProviderError> {
+            self.0.daily_bars(req).await
+        }
+
+        async fn adjust_factors(
+            &self,
+            security: &str,
+        ) -> Result<data_provider::FactorBatch, data_provider::ProviderError> {
+            self.0.adjust_factors(security).await
+        }
+
+        async fn index_members(
+            &self,
+            index: &str,
+            as_of: data_provider::Date,
+        ) -> Result<Vec<String>, data_provider::NotSupported> {
+            self.0.index_members(index, as_of).await
+        }
+
+        async fn industry(
+            &self,
+            as_of: data_provider::Date,
+        ) -> Result<Vec<(String, String)>, data_provider::NotSupported> {
+            self.0.industry(as_of).await
+        }
+
+        async fn limit_flags(
+            &self,
+            req: data_provider::BarRequest,
+        ) -> Result<Vec<data_provider::BarRow>, data_provider::NotSupported> {
+            self.0.limit_flags(req).await
+        }
+
+        async fn minute_bars(
+            &self,
+            req: data_provider::BarRequest,
+        ) -> Result<data_provider::BarBatch, data_provider::NotSupported> {
+            self.0.minute_bars(req).await
+        }
+
+        fn rate_policy(&self) -> data_provider::RatePolicy {
+            self.0.rate_policy()
+        }
+
+        async fn health(&self) -> data_provider::Health {
+            self.0.health().await
+        }
+
+        fn dataset_coverage(&self) -> Option<(data_provider::Date, data_provider::Date)> {
+            self.0.dataset_coverage()
+        }
+
+        fn dataset_manifest(&self) -> Option<data_provider::DatasetManifest> {
+            self.0.dataset_manifest()
+        }
+    }
+
+    #[tokio::test]
+    async fn datasource_status_reports_required_green_optional_truthful_and_version_six() {
+        let core = AppCore::new_mock().await.unwrap();
+        let status = core.datasource_status().await;
+
+        assert_eq!((status.required_ok, status.required_total), (4, 4));
+        assert_eq!((status.optional_ok, status.optional_total), (0, 4));
+        // mock 四项可选全缺 → 黄色「部分可用」，不是红「不可用」。
+        assert_eq!(status.state, "partial");
+        assert_eq!(status.error_code, None);
+
+        let keys: Vec<&str> = status.capabilities.iter().map(|cap| cap.key).collect();
+        assert_eq!(
+            keys,
+            vec![
+                "daily_bars",
+                "adjust_factors",
+                "securities",
+                "trading_calendar",
+                "industry",
+                "index_members",
+                "limit_flags",
+                "suspended_flags",
+            ]
+        );
+        let st = status
+            .capabilities
+            .iter()
+            .find(|cap| cap.key == "limit_flags")
+            .unwrap();
+        assert!(!st.available);
+        assert_eq!(st.note, Some("无 ST 标记：涨跌停按普通规则推导"));
+
+        // 数据版本 6 字段齐全（generated_at 交给界面按本地时区格式化）。
+        let version = status.version.as_ref().unwrap();
+        assert_eq!(version.row_count, 120 * 520);
+        assert_eq!(version.sha256.len(), 64);
+        assert_eq!(version.sha256_short.len(), 12);
+        assert_eq!(version.coverage_start.len(), 10);
+        assert_eq!(version.coverage_end.len(), 10);
+        assert!(version.generated_at > 0);
+        assert!(version.dataset_id.starts_with("sim-"));
+
+        assert_eq!((status.tushare_enabled, status.tushare_total), (0, 4));
+        assert!(status.ops.data_dir_readable);
+        // Mock 无磁盘目录：不编造 GB 数值。
+        assert_eq!(status.ops.disk_free_gb, None);
+
+        let events = core.telemetry().summary(10);
+        assert!(
+            events.recent.iter().any(|event| event.name == EVENT_DATASOURCE_PROBE),
+            "探测必须落 datasource.probe 事件"
+        );
+    }
+
+    #[tokio::test]
+    async fn datasource_status_calendar_table_gone_is_unavailable() {
+        let core = AppCore::new(Box::new(CalendarGoneProvider(
+            data_provider::mock::MockProvider::new(),
+        )))
+        .await
+        .unwrap();
+        let status = core.datasource_status().await;
+
+        assert_eq!((status.required_ok, status.required_total), (3, 4));
+        assert_eq!(status.state, "unavailable");
+        assert_eq!(status.error_code, Some("E_REQUIRED_CAPABILITY_MISSING"));
+        let calendar = status
+            .capabilities
+            .iter()
+            .find(|cap| cap.key == "trading_calendar")
+            .unwrap();
+        assert!(!calendar.available, "日历查询为空时必须判不可用");
     }
 
     #[tokio::test]

@@ -165,7 +165,7 @@ const SCROLL_KEY = "aka.market.scroll";
 const SELECTED_KEY = "aka.market.selected";
 
 interface Props {
-  onNavigate: (key: "workbench" | "catalog" | "market" | "settings") => void;
+  onNavigate: (key: "workbench" | "catalog" | "market" | "settings" | "datasource") => void;
   onOpenSecurity: (security: string) => void;
 }
 

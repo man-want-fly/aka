@@ -6,7 +6,7 @@ import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { AppError, Category, ManifestIndicatorDto, ManifestResponse } from "../../lib/types";
 
 interface Props {
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings") => void;
+  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
 }
 
 const CATEGORIES: Array<{ key: Category; label: string }> = [

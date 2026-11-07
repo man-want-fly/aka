@@ -13,7 +13,7 @@ import {
   type DisplaySettings,
 } from "../../lib/settings";
 interface Props {
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings") => void;
+  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
 }
 
 const DENSITY_OPTIONS: Array<{ key: Density; label: string }> = [

@@ -2054,3 +2054,288 @@ mark {
   color: var(--warn);
   font-size: 11.5px;
 }
+
+/* ---------------- P9 数据源状态（S-07.01-01） ---------------- */
+.datasource {
+  padding: 24px 28px;
+  overflow: auto;
+}
+
+.ds-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.ds-head h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.ds-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ds-refresh,
+.ds-detail,
+.ds-copy,
+.ds-missing button,
+.ds-error button {
+  background: transparent;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  color: var(--text2);
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ds-refresh:disabled,
+.ds-copy:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ds-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.ds-error button {
+  margin-left: auto;
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.ds-card {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.ds-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ds-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ds-card-title h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.ds-badge {
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ds-badge--ok {
+  color: var(--down);
+  border-color: var(--down);
+}
+
+.ds-badge--warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.ds-badge--bad {
+  color: var(--up);
+  border-color: var(--up);
+}
+
+.ds-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.ds-summary-sep {
+  color: var(--faint);
+}
+
+.ds-detail {
+  margin-left: 6px;
+}
+
+.ds-missing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line2);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  margin-bottom: 14px;
+}
+
+.ds-cap {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface2);
+}
+
+.ds-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--faint);
+}
+
+.ds-dot--ok {
+  background: var(--down);
+}
+
+.ds-dot--warn {
+  background: var(--warn);
+}
+
+.ds-dot--bad {
+  background: var(--up);
+}
+
+.ds-cap-body {
+  min-width: 0;
+}
+
+.ds-cap-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.ds-cap-state {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.ds-cap-state--ok {
+  color: var(--down);
+}
+
+.ds-cap-state--warn {
+  color: var(--warn);
+}
+
+.ds-cap-state--bad {
+  color: var(--up);
+}
+
+.ds-cap-tag {
+  padding: 0 5px;
+  border: 1px solid var(--line2);
+  border-radius: 3px;
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.ds-cap-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.ds-ops {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.ds-op {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ds-op span {
+  color: var(--muted);
+}
+
+.ds-op-note {
+  flex-basis: 100%;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.ds-version {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.ds-version-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 12px;
+}
+
+.ds-version-row > span {
+  color: var(--muted);
+}
+
+.ds-version-row > b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.ds-loading {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ds-card--tushare .ds-card-head {
+  margin-bottom: 8px;
+}

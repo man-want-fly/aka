@@ -88,7 +88,7 @@ interface Props {
   onThemeMode: (mode: ThemeMode) => void;
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings") => void;
+  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
 }
 
 /**
@@ -477,6 +477,8 @@ export function WorkbenchPage({
   const activeCodeRef = useRef(activeCode);
   activeCodeRef.current = activeCode;
   const [diagStatus, setDiagStatus] = useState<string | null>(null);
+  /** S-07.01-01（补1）：必需能力缺口文案；非空时工作台入口出现「查看数据源状态」。 */
+  const [datasourceIssue, setDatasourceIssue] = useState<string | null>(null);
 
   const drainSamples = useCallback(() => {
     const items = diagSamples.current;
@@ -1488,9 +1490,37 @@ export function WorkbenchPage({
     writeSessionParams(defaultParams);
   };
 
+  // S-07.01-01（补1）：必需能力有缺口时，工作台入口出现「查看数据源状态」。
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let alive = true;
+    void ipc
+      .datasourceStatus()
+      .then((status) => {
+        if (!alive) return;
+        setDatasourceIssue(
+          status.requiredOk < status.requiredTotal
+            ? `${status.requiredOk}/${status.requiredTotal} 必需能力可用`
+            : null,
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <AppShell active="workbench" onNavigate={onNavigate}>
       <div className="workbench">
+        {datasourceIssue && (
+          <div className="watch-error-bar" data-wb-datasource-entry="1" role="alert">
+            <span>数据源必需能力不可用（{datasourceIssue}）</span>
+            <button type="button" onClick={() => onNavigate("datasource")}>
+              查看数据源状态
+            </button>
+          </div>
+        )}
         {watchError && (
           <div className="watch-error-bar" data-wb-watch-error role="alert">
             <span>{watchError}</span>

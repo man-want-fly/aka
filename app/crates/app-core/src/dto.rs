@@ -294,6 +294,66 @@ pub struct QualityReportDto {
     pub rows: Vec<QualityCheckDto>,
 }
 
+/// S-07.01-01：单项能力探测结果（4 必需 + 4 可选）。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasourceCapabilityDto {
+    /// `daily_bars` / `adjust_factors` / `securities` / `trading_calendar` /
+    /// `industry` / `index_members` / `limit_flags` / `suspended_flags`
+    pub key: &'static str,
+    pub label_zh: &'static str,
+    pub required: bool,
+    pub available: bool,
+    /// 可选能力缺失时的降级说明；可用时为 None。
+    pub note: Option<&'static str>,
+}
+
+/// S-07.01-01：运维两项。Mock 为内存数据源，没有磁盘目录，`disk_free_gb` 保持 None。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasourceOpsDto {
+    pub data_dir_readable: bool,
+    pub disk_free_gb: Option<f64>,
+    pub note: Option<&'static str>,
+}
+
+/// S-07.01-01：数据版本 6 字段，全部只读。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasetVersionDto {
+    pub dataset_id: String,
+    /// 截断展示用短码；完整值仍在 `dataset_id`。
+    pub dataset_id_short: String,
+    /// epoch 秒；界面按本地时区格式化为 `YYYY-MM-DD HH:mm`。
+    pub generated_at: i64,
+    pub row_count: u64,
+    pub coverage_start: String,
+    pub coverage_end: String,
+    pub sha256: String,
+    /// 完整 64 位 sha256 的前 12 位，供界面展示与复制。
+    pub sha256_short: String,
+}
+
+/// S-07.01-01：P9 首卡数据源状态。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasourceStatusDto {
+    /// `ready` / `partial` / `unavailable` / `missing` / `probe_failed`
+    pub state: &'static str,
+    pub required_ok: usize,
+    pub required_total: usize,
+    pub optional_ok: usize,
+    pub optional_total: usize,
+    pub capabilities: Vec<DatasourceCapabilityDto>,
+    pub ops: DatasourceOpsDto,
+    pub version: Option<DatasetVersionDto>,
+    pub tushare_enabled: usize,
+    pub tushare_total: usize,
+    /// epoch 秒
+    pub checked_at: i64,
+    pub error_code: Option<&'static str>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceRequest {
