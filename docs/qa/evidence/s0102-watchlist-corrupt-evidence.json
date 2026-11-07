@@ -1,13 +1,13 @@
 {
   "ok": true,
   "suite": "S-01.02 watchlist (corrupt)",
-  "finishedAt": "2026-11-07T11:06:28.034Z",
+  "finishedAt": "2026-11-07T11:31:18.340Z",
   "layers": {
-    "data": "0/0",
-    "render": "1/1"
+    "render": "1/1",
+    "data": "1/1"
   },
   "blocked": [],
-  "note": "AKA_DIAG=1 + --corrupt-db：启动前写入非 SQLite 内容，open_with_fallback 隔离并降级；watchlist 读取抛损坏错误（带 traceId）。",
+  "note": "AKA_DIAG=1 + --corrupt-db：真实库复制到临时目录并留 state.db.orig，只在副本写坏；open_with_fallback 隔离并降级，watchlist 读取抛损坏错误（带 traceId）。",
   "checks": [
     {
       "id": "WL-23",
@@ -15,8 +15,17 @@
       "ac": "AC-01.02-04（补3）",
       "layer": "render",
       "passed": true,
-      "detail": "不可恢复页=true，trace id「TR-18e5be97f58f3140-0001」，动作「重新生成数据」=true，未显示空自选=true",
+      "detail": "不可恢复页=true，trace id「TR-20261107-193116-0002」，动作「重新生成数据」=true，未显示空自选=true",
       "blocked": false
+    },
+    {
+      "id": "WL-23-log",
+      "card": "S-01.02-03",
+      "ac": "AC-01.02-04（补3）",
+      "layer": "data",
+      "passed": true,
+      "blocked": false,
+      "detail": "页面 trace id TR-20261107-193116-0002 ∈ telemetry.jsonl"
     }
   ]
 }
