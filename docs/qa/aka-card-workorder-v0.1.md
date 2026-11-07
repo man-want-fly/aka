@@ -483,7 +483,7 @@ hover 两个徽标……`规划中`/`口径待定` 两徽标同时存在
 应改为：
 
 ```
-口径覆盖 = `{coverage}/{coverage}`，其中 `coverage = 已实现 ∩ P0`（约 44/44），数值由 `app/manifest/indicators.json` 派生，不写字面量、不写死 84。
+口径覆盖 = `{coverage}/{coverage}`，其中 `coverage = 已实现 ∩ P0`（当前 44/44），数值由 `app/manifest/indicators.json` 派生，不写字面量、不写死 84。
 ```
 
 **定位 2**：前置条件里的 `validate:content`（L2157）。
