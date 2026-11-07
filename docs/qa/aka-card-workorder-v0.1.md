@@ -1468,11 +1468,11 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 **背景**：QA R8 反证成立——release 里四个开关名确为 0，但 `diag_write`(2)、`diag_write_named`(1)、`diag_faults`(1)、`s2-evidence`(1)、`AKA_DIAG`(2) 仍在。`diag_write`/`diag_write_named` 无 `#[cfg]`、无运行时门，且在 `generate_handler!` 里无条件注册；`write_diag` 会把调用方给的 payload 写到 `~/Library/Application Support/aka/diag/<name>`。`W-47`/`W-49` 签字作废（§4.7.27）。
 
 1. `diag_write` / `diag_write_named` / `write_diag` 进 `#[cfg(debug_assertions)]`；`lib.rs` 的 handler 注册按 debug/release 分开，release 列表里没有这三条。
-2. CI 断言集合扩为：`AKA-DIAG-CORRUPT`、`--corrupt-db`、`--readonly-db`、`--empty-dataset`、`diag_write`、`diag_write_named`、`s2-evidence`、`aka/diag`，逐个计数 = 0。
+2. CI 断言集合为：`AKA-DIAG-CORRUPT`、`--corrupt-db`、`--readonly-db`、`--empty-dataset`、`AKA_DIAG`、`AKA_DIAG_TARGET`、`AKA_DIAG_INF`、`diag_write`、`diag_write_named`、`diag_faults`、`s2-evidence`（`6598804` 已扩到 11 个），另补 `aka/diag` 路径串；逐个计数 = 0。
 3. 补源码级断言：release profile 下命令表不含上述入口（编译期测试或 `cargo check` 后 grep），因为 `strings` 只证产物。
 4. **红路径**：任选一条入口移出 `#[cfg]`，该步必须 `failure`；**漏项**：单删一条断言，其余不许兜底。
 5. **验收**：绿/红/漏项三份 run id；`S-01.02-01` 等卡行为回归不变；证据归档后 TL 重签 `W-58`，`W-47`/`W-49` 只记「作废」不复活。
-6. **注意**：主树工作区已有未提交的同类修复，**未提交不算交付**，按本条重做并补齐断言。
+6. **注意**：`6598804` 已提交并推送（收窄 + 断言扩到 11 个符号），但 CI run `42385574040` 落笔时仍 `in_progress`，不是绿；红路径、漏项、源码级断言三项仍缺，按本条补齐后才算完。
 
 ### W-59（dev A）`verify:docs` 转 required
 
