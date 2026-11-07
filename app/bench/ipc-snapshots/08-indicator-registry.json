@@ -4,7 +4,8 @@
     "category": null
   },
   "response": {
-    "implementedCount": 11,
+    "catalogTotal": 105,
+    "implementedCount": 44,
     "indicators": [
       {
         "category": "trend",
@@ -99,7 +100,7 @@
         },
         "nameEn": "Weighted Moving Average",
         "nameZh": "加权移动平均线",
-        "notes": "权重 1..N，最新一根权重最大；前 N-1 根为 NaN。B1 标记「完整▲」，边界说明仍待补，暂标 beta。",
+        "notes": "权重 1..N，最新一根权重最大；前 N-1 根为 NaN，窗口含 NaN 时该根为 NaN，N=1 退化为收盘价。标准算法，边界说明已补齐，转正。",
         "outputs": [
           {
             "color": "#8b5cf6",
@@ -119,7 +120,7 @@
             "step": 1
           }
         ],
-        "specStatus": "partial",
+        "specStatus": "manualComplete",
         "unit": "元",
         "warmup": 19
       },
@@ -202,7 +203,7 @@
         "warmup": 89
       },
       {
-        "category": "stat",
+        "category": "trend",
         "engineVersion": 1,
         "id": "T19",
         "implemented": true,
@@ -216,7 +217,7 @@
         },
         "nameEn": "Linear Regression Forecast",
         "nameZh": "线性回归预测",
-        "notes": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测；该终点口径为自定，暂标 beta。",
+        "notes": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测；该终点口径为自定，保持 beta。转正条件：需取得至少一家商业软件逐点对照。",
         "outputs": [
           {
             "color": "#60a5fa",
@@ -241,7 +242,7 @@
         "warmup": 19
       },
       {
-        "category": "stat",
+        "category": "trend",
         "engineVersion": 1,
         "id": "T20",
         "implemented": true,
@@ -280,7 +281,7 @@
         "warmup": 19
       },
       {
-        "category": "stat",
+        "category": "trend",
         "engineVersion": 1,
         "id": "T21",
         "implemented": true,
@@ -294,7 +295,7 @@
         },
         "nameEn": "Linear Regression R-Squared",
         "nameZh": "线性回归 R²",
-        "notes": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]；Syy=0（常数序列）定义为 1.0；该退化口径为自定，暂标 beta。",
+        "notes": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]；Syy=0（常数序列）明示约定为 R²=1.0。数学定义明确，转正。",
         "outputs": [
           {
             "color": "#34d399",
@@ -314,12 +315,12 @@
             "step": 1
           }
         ],
-        "specStatus": "partial",
+        "specStatus": "manualComplete",
         "unit": "无量纲",
         "warmup": 19
       },
       {
-        "category": "stat",
+        "category": "trend",
         "engineVersion": 1,
         "id": "T22",
         "implemented": true,
@@ -358,7 +359,7 @@
         "warmup": 19
       },
       {
-        "category": "momentum",
+        "category": "stat",
         "engineVersion": 1,
         "id": "E13",
         "implemented": true,
@@ -441,7 +442,7 @@
         },
         "nameEn": "MACD",
         "nameZh": "指数平滑异同移动平均线",
-        "notes": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)；旧 id «macd» 保留 alias 一版。",
+        "notes": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)（A 股主流，Q-04 确认沿用 B1）；旧 id «macd» 保留 alias 一版。",
         "outputs": [
           {
             "color": "var(--accent)",
@@ -491,11 +492,1611 @@
             "step": 1
           }
         ],
-        "specStatus": "partial",
+        "specStatus": "manualComplete",
         "unit": "元",
         "warmup": 33
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T08",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Envelopes",
+        "nameZh": "均线包络",
+        "notes": "中轨=SMA(close,N)；上/下轨=中轨×(1±pct%)；首根有效值 N-1。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "upper",
+            "kind": "line",
+            "labelZh": "上轨"
+          },
+          {
+            "color": "var(--accent)",
+            "key": "middle",
+            "kind": "line",
+            "labelZh": "中轨"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "lower",
+            "kind": "line",
+            "labelZh": "下轨"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 2.5,
+            "key": "pct",
+            "kind": "float",
+            "label": "带宽 %",
+            "max": 20.0,
+            "min": 0.1,
+            "step": 0.1,
+            "unit": "%"
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 19
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T09",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Bollinger Bands",
+        "nameZh": "布林带",
+        "notes": "中轨=SMA(close,N)；σ 为样本标准差（ddof=1）；上/下轨=中轨±kσ。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "upper",
+            "kind": "line",
+            "labelZh": "上轨"
+          },
+          {
+            "color": "var(--accent)",
+            "key": "middle",
+            "kind": "line",
+            "labelZh": "中轨"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "lower",
+            "kind": "line",
+            "labelZh": "下轨"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 2.0,
+            "key": "mult",
+            "kind": "float",
+            "label": "标准差倍数",
+            "max": 10.0,
+            "min": 0.1,
+            "step": 0.1,
+            "unit": null
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 19
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T10",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Keltner Channel",
+        "nameZh": "肯特纳通道",
+        "notes": "中轨=EMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "upper",
+            "kind": "line",
+            "labelZh": "上轨"
+          },
+          {
+            "color": "var(--accent)",
+            "key": "middle",
+            "kind": "line",
+            "labelZh": "中轨"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "lower",
+            "kind": "line",
+            "labelZh": "下轨"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 2.0,
+            "key": "mult",
+            "kind": "float",
+            "label": "ATR 倍数",
+            "max": 10.0,
+            "min": 0.1,
+            "step": 0.1,
+            "unit": null
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 20
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T11",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": false,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Donchian Channel",
+        "nameZh": "唐奇安通道",
+        "notes": "上轨=近 N 根最高价；下轨=近 N 根最低价；首根有效值 N-1。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "upper",
+            "kind": "line",
+            "labelZh": "上轨"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "lower",
+            "kind": "line",
+            "labelZh": "下轨"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 19
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T12",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "ATR Bands",
+        "nameZh": "ATR 通道",
+        "notes": "中轨=SMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "upper",
+            "kind": "line",
+            "labelZh": "上轨"
+          },
+          {
+            "color": "var(--accent)",
+            "key": "middle",
+            "kind": "line",
+            "labelZh": "中轨"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "lower",
+            "kind": "line",
+            "labelZh": "下轨"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 2.0,
+            "key": "mult",
+            "kind": "float",
+            "label": "ATR 倍数",
+            "max": 10.0,
+            "min": 0.1,
+            "step": 0.1,
+            "unit": null
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 20
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T13",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "ATR Trailing Stop",
+        "nameZh": "ATR 移动止损",
+        "notes": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空；翻空当根冻结旧值，空头止损重置为 C+k×ATR。未激活一侧 NaN。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "long",
+            "kind": "line",
+            "labelZh": "多头止损"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "short",
+            "kind": "line",
+            "labelZh": "空头止损"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "ATR 周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 3.5,
+            "key": "mult",
+            "kind": "float",
+            "label": "ATR 倍数",
+            "max": 10.0,
+            "min": 0.1,
+            "step": 0.1,
+            "unit": null
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 14
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T14",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Chandelier Exit",
+        "nameZh": "吊灯止损",
+        "notes": "多头=HHV(high,N)-k×ATR(N)；空头=LLV(low,N)+k×ATR(N)；首个有效值 N。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "long",
+            "kind": "line",
+            "labelZh": "多头止损"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "short",
+            "kind": "line",
+            "labelZh": "空头止损"
+          }
+        ],
+        "params": [
+          {
+            "default": 22,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 3.0,
+            "key": "mult",
+            "kind": "float",
+            "label": "ATR 倍数",
+            "max": 10.0,
+            "min": 0.1,
+            "step": 0.1,
+            "unit": null
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 22
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T15",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Ichimoku Kinko Hyo",
+        "nameZh": "一目均衡表",
+        "notes": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2；先行带不延伸；迟行线末尾 D 根留白。",
+        "outputs": [
+          {
+            "color": "#60a5fa",
+            "key": "tenkan",
+            "kind": "line",
+            "labelZh": "转换线"
+          },
+          {
+            "color": "#f472b6",
+            "key": "kijun",
+            "kind": "line",
+            "labelZh": "基准线"
+          },
+          {
+            "color": "var(--rise)",
+            "key": "senkouA",
+            "kind": "line",
+            "labelZh": "先行带 A"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "senkouB",
+            "kind": "line",
+            "labelZh": "先行带 B"
+          },
+          {
+            "color": "#94a3b8",
+            "key": "chikou",
+            "kind": "line",
+            "labelZh": "迟行线"
+          }
+        ],
+        "params": [
+          {
+            "default": 9,
+            "key": "tenkan",
+            "kind": "int",
+            "label": "转换线周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 26,
+            "key": "kijun",
+            "kind": "int",
+            "label": "基准线周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 52,
+            "key": "senkou",
+            "kind": "int",
+            "label": "先行带周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 26,
+            "key": "displacement",
+            "kind": "int",
+            "label": "位移",
+            "max": 200,
+            "min": 0,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 77
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T16",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Parabolic SAR",
+        "nameZh": "抛物线转向",
+        "notes": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家不一致，A 股无公开公式可逐点核对；本实现取 Wilder 推荐值，取得商业软件对照后再定。",
+        "outputs": [
+          {
+            "color": "#f59e0b",
+            "key": "psar",
+            "kind": "dot",
+            "labelZh": "PSAR"
+          }
+        ],
+        "params": [
+          {
+            "default": 0.02,
+            "key": "step",
+            "kind": "float",
+            "label": "初始 AF",
+            "max": 0.2,
+            "min": 0.001,
+            "step": 0.001,
+            "unit": null
+          },
+          {
+            "default": 0.02,
+            "key": "increment",
+            "kind": "float",
+            "label": "AF 步长",
+            "max": 0.2,
+            "min": 0.001,
+            "step": 0.001,
+            "unit": null
+          },
+          {
+            "default": 0.2,
+            "key": "max",
+            "kind": "float",
+            "label": "AF 上限",
+            "max": 1.0,
+            "min": 0.01,
+            "step": 0.01,
+            "unit": null
+          }
+        ],
+        "specStatus": "partial",
+        "unit": "元",
+        "warmup": 1
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T23",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Pivot Points",
+        "nameZh": "轴心点",
+        "notes": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根；日/周/月由图表周期决定，不设参数；只输出 P/R1/S1。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "pivot",
+            "kind": "line",
+            "labelZh": "P"
+          },
+          {
+            "color": "var(--rise)",
+            "key": "r1",
+            "kind": "line",
+            "labelZh": "R1"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "s1",
+            "kind": "line",
+            "labelZh": "S1"
+          }
+        ],
+        "params": [],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 1
+      },
+      {
+        "category": "trend",
+        "engineVersion": 1,
+        "id": "T24",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": false,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "HHV/LLV",
+        "nameZh": "最高最低",
+        "notes": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出；首根有效值 N-1。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "hhv",
+            "kind": "line",
+            "labelZh": "HHV"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "llv",
+            "kind": "line",
+            "labelZh": "LLV"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 19
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V01",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Average True Range",
+        "nameZh": "真实波幅均值",
+        "notes": "TR 首根 NaN；ATR 为 TR 的 Wilder 平滑，种子取前 N 个 TR 的均值；首个有效值 N。",
+        "outputs": [
+          {
+            "color": "#f59e0b",
+            "key": "atr",
+            "kind": "line",
+            "labelZh": "ATR"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 14
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V02",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "ATR Percentage",
+        "nameZh": "归一化 ATR",
+        "notes": "ATRP=ATR/收盘，无量纲比值（非百分数）；收盘为 0 时 NaN。",
+        "outputs": [
+          {
+            "color": "#22d3ee",
+            "key": "atrp",
+            "kind": "line",
+            "labelZh": "ATRP"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "无量纲",
+        "warmup": 14
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V03",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Standard Deviation",
+        "nameZh": "标准差",
+        "notes": "样本标准差（ddof=1）；分母 N-1；首根有效值 N-1。",
+        "outputs": [
+          {
+            "color": "#a78bfa",
+            "key": "std",
+            "kind": "line",
+            "labelZh": "StdDev"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 19
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V04",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Bollinger Band Width",
+        "nameZh": "布林带宽",
+        "notes": "带宽=(上轨-下轨)/中轨=2kσ/SMA；中轨为 0 时 NaN。",
+        "outputs": [
+          {
+            "color": "#94a3b8",
+            "key": "width",
+            "kind": "line",
+            "labelZh": "带宽"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 2.0,
+            "key": "mult",
+            "kind": "float",
+            "label": "标准差倍数",
+            "max": 10.0,
+            "min": 0.1,
+            "step": 0.1,
+            "unit": null
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "无量纲",
+        "warmup": 19
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V05",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Bollinger %B",
+        "nameZh": "布林 %B",
+        "notes": "%B=(C-下轨)/(上轨-下轨)；零带宽输出 NaN。",
+        "outputs": [
+          {
+            "color": "#34d399",
+            "key": "percentB",
+            "kind": "line",
+            "labelZh": "%B"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 2.0,
+            "key": "mult",
+            "kind": "float",
+            "label": "标准差倍数",
+            "max": 10.0,
+            "min": 0.1,
+            "step": 0.1,
+            "unit": null
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "无量纲",
+        "warmup": 19
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V07",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Ulcer Index",
+        "nameZh": "溃疡指数",
+        "notes": "回撤=(C-窗口峰值)/窗口峰值×100；UI=sqrt(mean(回撤²))；峰值为 0 时 NaN。",
+        "outputs": [
+          {
+            "color": "#f472b6",
+            "key": "ulcer",
+            "kind": "line",
+            "labelZh": "Ulcer"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 13
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V08",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": true,
+          "volume": false
+        },
+        "nameEn": "GAPO",
+        "nameZh": "GAPO 跳空",
+        "notes": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向；ATR 未就绪或 ATR=0 时 NaN；首值第 15 根。",
+        "outputs": [
+          {
+            "color": "#f59e0b",
+            "key": "gapo",
+            "kind": "line",
+            "labelZh": "GAPO"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "ATR 周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 14
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V09",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": false,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "High − Low",
+        "nameZh": "振幅",
+        "notes": "单根 H-L（元），首根即有效。",
+        "outputs": [
+          {
+            "color": "#60a5fa",
+            "key": "amplitude",
+            "kind": "line",
+            "labelZh": "振幅"
+          }
+        ],
+        "params": [],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 0
+      },
+      {
+        "category": "volatility",
+        "engineVersion": 1,
+        "id": "V10",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "True Range",
+        "nameZh": "真实波幅",
+        "notes": "TR=max(H-L, |H-PC|, |L-PC|)；首根 NaN。",
+        "outputs": [
+          {
+            "color": "#94a3b8",
+            "key": "tr",
+            "kind": "line",
+            "labelZh": "TR"
+          }
+        ],
+        "params": [],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 1
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M01",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Relative Strength Index",
+        "nameZh": "相对强弱指数",
+        "notes": "Wilder 平滑涨幅/跌幅，RSI=100-100/(1+RS)；avg_loss=0→100，avg_gain=0→0；首根有效值 14（0-based）。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "rsi",
+            "kind": "line",
+            "labelZh": "RSI"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 14
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M02",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Stochastic KDJ",
+        "nameZh": "随机指标 KDJ",
+        "notes": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100；K/D 以 50/50 为种子按 (N-1)/N 权重递推，J=3K-2D；首根有效值 8（0-based）。零区间 RSV=50、种子 K=D=50、无额外预热、首值下标 8；Q-01 已裁定。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "k",
+            "kind": "line",
+            "labelZh": "K"
+          },
+          {
+            "color": "var(--warn)",
+            "key": "d",
+            "kind": "line",
+            "labelZh": "D"
+          },
+          {
+            "color": "#8b5cf6",
+            "key": "j",
+            "kind": "line",
+            "labelZh": "J"
+          }
+        ],
+        "params": [
+          {
+            "default": 9,
+            "key": "period",
+            "kind": "int",
+            "label": "RSV 周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 3,
+            "key": "k",
+            "kind": "int",
+            "label": "K 平滑",
+            "max": 20,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 3,
+            "key": "d",
+            "kind": "int",
+            "label": "D 平滑",
+            "max": 20,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 8
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M04",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Williams %R",
+        "nameZh": "威廉指标",
+        "notes": "%R=(HHV(H,N)-C)/(HHV(H,N)-LLV(L,N))×-100，值域 [-100,0]；高低差为 0 时 NaN；首根有效值 13。",
+        "outputs": [
+          {
+            "color": "var(--fall)",
+            "key": "wr",
+            "kind": "line",
+            "labelZh": "%R"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 13
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M05",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Commodity Channel Index",
+        "nameZh": "顺势指标",
+        "notes": "TP=(H+L+C)/3；CCI=(TP-SMA(TP,N))/(0.015×平均绝对偏差)；偏差为 0 时 NaN；首根有效值 19。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "cci",
+            "kind": "line",
+            "labelZh": "CCI"
+          }
+        ],
+        "params": [
+          {
+            "default": 20,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "指数",
+        "warmup": 19
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M08",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Percentage Price Oscillator",
+        "nameZh": "百分比价格振荡器",
+        "notes": "PPO=(EMA(fast)-EMA(slow))/EMA(slow)×100；signal=PPO 的 EMA(signal)；fast<slow；首根有效值 slow+signal-2=33。本口径只出双线，不出柱。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "ppo",
+            "kind": "line",
+            "labelZh": "PPO"
+          },
+          {
+            "color": "var(--warn)",
+            "key": "signal",
+            "kind": "line",
+            "labelZh": "信号线"
+          }
+        ],
+        "params": [
+          {
+            "default": 12,
+            "key": "fast",
+            "kind": "int",
+            "label": "快线",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 26,
+            "key": "slow",
+            "kind": "int",
+            "label": "慢线",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 9,
+            "key": "signal",
+            "kind": "int",
+            "label": "信号",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 33
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M09",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Rate of Change",
+        "nameZh": "变动率",
+        "notes": "ROC=(C-C[-N])/C[-N]×100；前值为 0 时 NaN；首根有效值 12。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "roc",
+            "kind": "line",
+            "labelZh": "ROC"
+          }
+        ],
+        "params": [
+          {
+            "default": 12,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 12
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M10",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Momentum",
+        "nameZh": "动量",
+        "notes": "MOM=C-C[-N]，差额单位元；首根有效值 10。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "mom",
+            "kind": "line",
+            "labelZh": "MOM"
+          }
+        ],
+        "params": [
+          {
+            "default": 10,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "元",
+        "warmup": 10
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M19",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Aroon",
+        "nameZh": "阿隆指标",
+        "notes": "Up=100×(N-距最高价根数)/N，Down 同理取最低价；窗口 N 根，并列极值取最近一次；首根有效值 24。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "aroonUp",
+            "kind": "line",
+            "labelZh": "Aroon Up"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "aroonDown",
+            "kind": "line",
+            "labelZh": "Aroon Down"
+          }
+        ],
+        "params": [
+          {
+            "default": 25,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 24
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M20",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Vortex Indicator",
+        "nameZh": "涡旋指标",
+        "notes": "VI+=Σ|H_i-L_{i-1}|/ΣTR，VI-=Σ|L_i-H_{i-1}|/ΣTR，窗口 N；ΣTR=0 时 NaN；首根有效值 14。",
+        "outputs": [
+          {
+            "color": "var(--rise)",
+            "key": "viPlus",
+            "kind": "line",
+            "labelZh": "VI+"
+          },
+          {
+            "color": "var(--fall)",
+            "key": "viMinus",
+            "kind": "line",
+            "labelZh": "VI-"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "比值",
+        "warmup": 14
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M21",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Chande Momentum Oscillator",
+        "nameZh": "钱德动量摆动指标",
+        "notes": "CMO=100×(Σ涨幅-Σ跌幅)/(Σ涨幅+Σ跌幅)，窗口 N；分母为 0 时 NaN；首根有效值 14。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "cmo",
+            "kind": "line",
+            "labelZh": "CMO"
+          }
+        ],
+        "params": [
+          {
+            "default": 14,
+            "key": "period",
+            "kind": "int",
+            "label": "周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "%",
+        "warmup": 14
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M24",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Mass Index",
+        "nameZh": "质量指数",
+        "notes": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根；首值下标 40；warmup 40（CSV/PRD 原 30 为笔误）；Q-02 已裁定。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "massIndex",
+            "kind": "line",
+            "labelZh": "Mass"
+          }
+        ],
+        "params": [
+          {
+            "default": 9,
+            "key": "ema",
+            "kind": "int",
+            "label": "EMA 周期",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 25,
+            "key": "sum",
+            "kind": "int",
+            "label": "求和窗口",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "比值",
+        "warmup": 40
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M25",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "Elder Impulse System",
+        "nameZh": "埃尔德脉冲",
+        "notes": "eps_i=1e-9×max(abs(C[i]),1.0)（按当根收盘价，非全局常数）；柱=2×(DIF-DEA)（复用 M06 口径）；脉冲=EMA13(柱)；状态 {+1,0,-1}：① abs(hist[i])≤eps_i→0；② abs(impulse[i]-impulse[i-1])≤eps_i→0；③ 其余 hist 为正且脉冲上行→+1、hist 为负且脉冲下行→-1、方向冲突→0；渲染色 +1 红/−1 绿/0 蓝（与 Elder 原版相反）；首值 46；Q-03（BA ba0cbb8）最终口径。",
+        "outputs": [
+          {
+            "color": "var(--accent)",
+            "key": "impulse",
+            "kind": "line",
+            "labelZh": "脉冲线"
+          },
+          {
+            "color": "#94a3b8",
+            "key": "state",
+            "kind": "dot",
+            "labelZh": "三色状态"
+          }
+        ],
+        "params": [
+          {
+            "default": 12,
+            "key": "fast",
+            "kind": "int",
+            "label": "快线",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 26,
+            "key": "slow",
+            "kind": "int",
+            "label": "慢线",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 9,
+            "key": "signal",
+            "kind": "int",
+            "label": "信号",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          },
+          {
+            "default": 13,
+            "key": "ema",
+            "kind": "int",
+            "label": "脉冲 EMA",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "无量纲",
+        "warmup": 46
+      },
+      {
+        "category": "momentum",
+        "engineVersion": 1,
+        "id": "M26",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": true,
+          "low": true,
+          "open": false,
+          "volume": false
+        },
+        "nameEn": "NR7",
+        "nameZh": "NR7 窄幅",
+        "notes": "range=H-L；当根为近 7 根最小振幅→1，否则 0；首根有效值 6。",
+        "outputs": [
+          {
+            "color": "var(--warn)",
+            "key": "nr7",
+            "kind": "dot",
+            "labelZh": "NR7"
+          }
+        ],
+        "params": [
+          {
+            "default": 7,
+            "key": "period",
+            "kind": "int",
+            "label": "窗口",
+            "max": 200,
+            "min": 2,
+            "step": 1
+          }
+        ],
+        "specStatus": "manualComplete",
+        "unit": "0/1",
+        "warmup": 6
       }
-    ],
-    "catalogTotal": 105
+    ]
   }
 }
