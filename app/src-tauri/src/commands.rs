@@ -269,6 +269,7 @@ pub async fn telemetry_note(
 
 /// 命名诊断落盘：不同批次（S2 / E-01 / E-02）证据分开存档，避免互相覆盖。
 /// 仅 debug 构建注册与编译（W-49）：release 不可写诊断文件。
+#[cfg(debug_assertions)]
 #[tauri::command]
 pub async fn diag_write_named(
     app: tauri::AppHandle,
@@ -285,6 +286,7 @@ pub async fn diag_write_named(
     write_diag(&app, &safe, &payload)
 }
 
+#[cfg(debug_assertions)]
 fn write_diag(app: &tauri::AppHandle, name: &str, payload: &str) -> Result<String, String> {
     use tauri::Manager;
     let dir = app
