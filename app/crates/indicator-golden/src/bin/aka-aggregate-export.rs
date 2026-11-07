@@ -42,6 +42,12 @@ fn csv(resp: &app_core::BarsResponse) -> String {
     out
 }
 
+/// W-33：快照禁止出现墙钟值（`provenance.generatedAt` 与 `computedMs` 都不可复现）。
+/// 字段保留（仍是真实报文形状），值统一归零。
+fn normalize_bars(response: &mut app_core::BarsResponse) {
+    response.provenance.generated_at = 0;
+}
+
 fn bars_request_json(
     security: &str,
     timeframe: &str,
@@ -137,10 +143,11 @@ async fn main() -> io::Result<()> {
 
     for (index, timeframe) in ["D", "W", "M"].iter().enumerate() {
         let request = bars_req(code, timeframe, None, None);
-        let response = core
+        let mut response = core
             .get_bars(&request)
             .await
             .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{err:?}")))?;
+        normalize_bars(&mut response);
         snapshots_out.push((
             format!("0{}-get-bars-{}", index + 1, timeframe.to_lowercase()),
             json!({
@@ -153,10 +160,11 @@ async fn main() -> io::Result<()> {
 
     for (index, timeframe) in ["D", "W"].iter().enumerate() {
         let request = bars_req(code, timeframe, Some("2023-06-01"), Some("2023-12-29"));
-        let response = core
+        let mut response = core
             .get_bars(&request)
             .await
             .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{err:?}")))?;
+        normalize_bars(&mut response);
         snapshots_out.push((
             format!("0{}-get-bars-{}-range", index + 4, timeframe.to_lowercase()),
             json!({
@@ -194,10 +202,12 @@ async fn main() -> io::Result<()> {
             },
         ],
     };
-    let calc_response = core
+    let mut calc_response = core
         .calc_indicators(&calc)
         .await
         .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{err:?}")))?;
+    // W-33：墙钟耗时不可复现；字段保留（快照仍是真实报文形状），值统一归一为 0
+    calc_response.computed_ms = 0.0;
     snapshots_out.push((
         "06-calc-t01-m06".into(),
         json!({
@@ -234,10 +244,11 @@ async fn main() -> io::Result<()> {
             )]),
         }],
     };
-    let alias_response = core
+    let mut alias_response = core
         .calc_indicators(&alias)
         .await
         .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{err:?}")))?;
+    alias_response.computed_ms = 0.0;
     snapshots_out.push((
         "07-calc-alias-ma".into(),
         json!({

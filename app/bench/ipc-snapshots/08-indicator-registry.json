@@ -608,8 +608,8 @@
             "key": "mult",
             "kind": "float",
             "label": "标准差倍数",
-            "max": 10.0,
-            "min": 0.1,
+            "max": 5.0,
+            "min": 0.5,
             "step": 0.1,
             "unit": null
           }
@@ -1287,8 +1287,8 @@
             "key": "mult",
             "kind": "float",
             "label": "标准差倍数",
-            "max": 10.0,
-            "min": 0.1,
+            "max": 5.0,
+            "min": 0.5,
             "step": 0.1,
             "unit": null
           }
@@ -1336,8 +1336,8 @@
             "key": "mult",
             "kind": "float",
             "label": "标准差倍数",
-            "max": 10.0,
-            "min": 0.1,
+            "max": 5.0,
+            "min": 0.5,
             "step": 0.1,
             "unit": null
           }

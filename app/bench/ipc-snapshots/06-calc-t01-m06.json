@@ -29,7 +29,7 @@
   "response": {
     "barCount": 520,
     "cacheHit": false,
-    "computedMs": 0.05,
+    "computedMs": 0.0,
     "datasetGeneration": 1,
     "datasetId": "sim-default",
     "engineVersion": "aka-engine-0.1.0",
