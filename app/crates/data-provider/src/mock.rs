@@ -21,6 +21,12 @@ pub const MOCK_SECURITY_COUNT: usize = 120;
 pub const MOCK_BARS_PER_SECURITY: usize = 520;
 pub const MOCK_FIRST_DATE: Date = Date::new(2023, 1, 2);
 
+/// 单根 K 线溯源（S-07.05-02）：mock 为离线固定内容，批次与入库时间写死，
+/// 保证 bench 快照可复现；真实/sim 数据集由 manifest 派生。
+pub const MOCK_BATCH_ID: &str = "b-20260101-01";
+/// 2026-01-01T00:00:00Z
+pub const MOCK_INGESTED_AT: i64 = 1_767_225_600;
+
 struct Rng(u64);
 
 impl Rng {
@@ -159,6 +165,7 @@ impl MockProvider {
                 bars[index].close = anchor;
                 bars[index].volume = 0.0;
                 bars[index].amount = 0.0;
+                bars[index].quality.push(QualityFlag::Suspended);
             }
         }
         self.securities.push(security);
@@ -634,6 +641,8 @@ fn generate_bars(security: &Security, calendar: &[Date]) -> Vec<BarRow> {
             amount: round2(amount),
             adj_factor: 1.0,
             quality,
+            batch_id: Some(MOCK_BATCH_ID.to_string()),
+            ingested_at: Some(MOCK_INGESTED_AT),
         };
 
         // 2:1 拆分：拆分前价格按历史实际翻倍、成交量减半；复权时再还原。

@@ -177,11 +177,11 @@ const betaSet = items
   .sort()
   .join(",");
 check("beta 集合恰为", betaSet, "T16,T19");
-check("normal 条数", status.normal ?? 0, 42);
+check("normal 条数", status.normal ?? 0, 43);
 check("T03 specStatus", items.find((x) => x.id === "T03")?.specStatus, "manualComplete");
 check("T21 specStatus", items.find((x) => x.id === "T21")?.specStatus, "manualComplete");
 // 「全域名口径待定」= 全部 105 条里 specStatus !== manualComplete 的条数；
-// 与上面「规划中且口径待定」的 13 是两个口径（后者只统计 status=planned 的 61 条），不互相替代。
+// 与上面「规划中且口径待定」的 13 是两个口径（后者只统计 status=planned 的 60 条），不互相替代。
 check("全域名口径待定（含已实现）", items.filter((x) => x.specStatus !== "manualComplete").length, 15);
 
 // ---------- 3b. 模块数派生（W-37）：唯一权威在架构文档 §2 总览表 ----------

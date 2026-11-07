@@ -67,6 +67,45 @@ pub struct BarDto {
     /// 行级溯源
     pub source: String,
     pub quality: Vec<String>,
+    /// S-07.05-02：生成批次与入库时间；缺失时前端显示「缺失」并给出 E_PROVENANCE_MISSING
+    pub batch_id: Option<String>,
+    pub ingested_at: Option<i64>,
+}
+
+/// S-07.05-02：单根 K 线溯源浮层的六类字段 + 复权前后价。
+/// `missing_fields` / `error_code` 由内核判定，前端只照常渲染「缺失」，不再自行猜测。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BarProvenanceDto {
+    pub security: String,
+    pub date: String,
+    pub provider: String,
+    pub batch_id: Option<String>,
+    pub ingested_at: Option<i64>,
+    pub dataset_id: String,
+    pub adj_mode: String,
+    pub quality_flags: Vec<String>,
+    /// 复权前收盘（原始价）
+    pub raw_close: f64,
+    /// 当前视图复权口径下的收盘
+    pub close: f64,
+    pub adj_factor: f64,
+    /// 缺失字段名（camelCase）；空 = 六类字段齐全
+    pub missing_fields: Vec<String>,
+    /// 有缺失时为 `E_PROVENANCE_MISSING`
+    pub error_code: Option<&'static str>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BarProvenanceRequest {
+    pub security: String,
+    /// 交易日 `YYYY-MM-DD`
+    pub date: String,
+    #[serde(default = "default_timeframe")]
+    pub timeframe: String,
+    #[serde(default = "default_adj")]
+    pub adj: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -191,6 +230,68 @@ pub struct RegistryResponse {
     pub catalog_total: usize,
     pub implemented_count: usize,
     pub indicators: Vec<IndicatorMetaDto>,
+}
+
+/// 收藏 chip：注册表已移除时 `status = "offline"`，UI 显示「已下线」且不可加入图表。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndicatorFavoriteDto {
+    pub indicator_id: String,
+    pub abbr: String,
+    pub name_zh: String,
+    /// `normal` | `beta` | `planned` | `offline`
+    pub status: &'static str,
+    pub panel: &'static str,
+    /// 参数摘要，如 `20` / `12 / 26 / 9`
+    pub param_summary: String,
+    pub is_default: bool,
+    pub added_at: i64,
+    pub sort_order: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndicatorFavoritesResponse {
+    pub favorites: Vec<IndicatorFavoriteDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityExampleDto {
+    pub security: String,
+    pub date: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityCheckDto {
+    /// `MISSING` / `EX_RIGHTS` / `SUSPENDED` / `ZERO_VOLUME` / `PRICE_ANOMALY` / `ADJ_COVERAGE`
+    pub key: &'static str,
+    pub label_zh: &'static str,
+    pub hits: i64,
+    pub base: i64,
+    pub ratio_pct: f64,
+    pub treatment: &'static str,
+    /// `pass` / `info` / `warning` / `failed`
+    pub status: &'static str,
+    pub error_code: Option<&'static str>,
+    pub examples: Vec<QualityExampleDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityReportDto {
+    pub dataset_id: String,
+    /// 报告所属数据集 id；与 `current_dataset_id` 不一致即「已过期」
+    pub based_on_dataset_id: String,
+    pub current_dataset_id: String,
+    pub stale: bool,
+    /// epoch 秒
+    pub scanned_at: i64,
+    pub duration_ms: u64,
+    pub passed_count: usize,
+    pub total_count: usize,
+    pub rows: Vec<QualityCheckDto>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

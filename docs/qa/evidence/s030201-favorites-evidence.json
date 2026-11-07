@@ -1,0 +1,90 @@
+{
+  "suite": "S-03.02-01 favorites",
+  "startedAt": "2026-11-07T23:20:00+08:00",
+  "finishedAt": "2026-11-07T23:20:01+08:00",
+  "ok": true,
+  "checks": [
+    {
+      "id": "migration-004-and-rollback",
+      "ac": "AC-03.02-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "schema_version=4；indicator_favorites 建表；apply_rollback_v1_for_tests 可回退 004"
+    },
+    {
+      "id": "seed-eight-once",
+      "ac": "AC-03.02-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "首装一次写入 8 项，重复调用返回 0"
+    },
+    {
+      "id": "defaults-all-normal",
+      "ac": "AC-03.02-01 / W-51",
+      "layer": "data",
+      "passed": true,
+      "detail": "默认 8 项 status 全为 normal；D11(RVOL) 不在默认集；第 8 项为 M05(CCI)"
+    },
+    {
+      "id": "delete-all-not-reseeded",
+      "ac": "AC-03.02-03（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "首装写标记后删光，再读取仍为空，不补回默认 8 项"
+    },
+    {
+      "id": "delete-all-not-reseeded-after-restart",
+      "ac": "AC-03.02-03（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "重开 state.db 后不重新 seed"
+    },
+    {
+      "id": "rapid-clicks-idempotent",
+      "ac": "AC-03.02-03（补3）",
+      "layer": "data",
+      "passed": true,
+      "detail": "连续 5 次切换后库内该 id 记录数 ≤1"
+    },
+    {
+      "id": "add-remove-idempotent",
+      "ac": "AC-03.02-02 / AC-03.02-03",
+      "layer": "data",
+      "passed": true,
+      "detail": "重复收藏/取消不增行、不报错"
+    },
+    {
+      "id": "user-favorites-sorted-first",
+      "ac": "AC-03.02-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "用户收藏按 added_at 倒序排在默认项之前"
+    },
+    {
+      "id": "upgrade-existing-rows-not-duplicated",
+      "ac": "AC-03.02-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "升级路径已有收藏行时不重复插入"
+    },
+    {
+      "id": "removed-indicator-offline",
+      "ac": "AC-03.02-03（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "注册表已移除的 id 仍保留行并标记 offline"
+    },
+    {
+      "id": "requires-state-db",
+      "ac": "AC-03.02-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "无 state.db 时收藏读取返回 E_STATE_DB_UNAVAILABLE 而非空列表"
+    }
+  ],
+  "context": {
+    "commit": "5d8dd5e24b62faddaed751f0232980142cccbc00",
+    "supersedes": ["c945e6598423df8f28767f14fbdc6c265af4ee62"],
+    "scope": "本批 AC 范围 = 数据层持久化（migration/CRUD/首装幂等/排序/offline）；收藏区 chip 与星标渲染 AC 不属本批（app/src 归 UI 负责人）"
+  }
+}

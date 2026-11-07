@@ -1,0 +1,89 @@
+{
+  "suite": "S-07.05-01 quality-scan",
+  "startedAt": "2026-11-07T23:20:10+08:00",
+  "finishedAt": "2026-11-07T23:20:11+08:00",
+  "ok": true,
+  "checks": [
+    {
+      "id": "six-checks-order",
+      "ac": "AC-07.05-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "MISSING / EX_RIGHTS / SUSPENDED / ZERO_VOLUME / PRICE_ANOMALY / ADJ_COVERAGE 固定顺序齐全"
+    },
+    {
+      "id": "three-suspended-days",
+      "ac": "AC-07.05-01（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "停牌命中 3、零成交量为 0、缺失交易日不含停牌 3 天"
+    },
+    {
+      "id": "ex-rights-not-price-anomaly",
+      "ac": "AC-07.05-01（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "adj_factor 跳变记除权事件，价格异常为 0"
+    },
+    {
+      "id": "zero-volume-warning",
+      "ac": "AC-07.05-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "非停牌零成交量记 warning，不并入停牌"
+    },
+    {
+      "id": "negative-close-not-rewritten",
+      "ac": "AC-07.05-01（补3）",
+      "layer": "data",
+      "passed": true,
+      "detail": "close=-1 命中价格异常 1，入参原值不被改写"
+    },
+    {
+      "id": "price-limit-by-board",
+      "ac": "AC-07.05-01（补3）",
+      "layer": "data",
+      "passed": true,
+      "detail": "主板 10%、创业板/科创板 20%、指数不限；容差 +1%"
+    },
+    {
+      "id": "adjust-table-missing-failed",
+      "ac": "AC-07.05-03（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "复权因子整表缺失 → 该行 failed + E_ADJ_FACTOR_MISSING，不显示 0"
+    },
+    {
+      "id": "index-no-price-limit",
+      "ac": "AC-07.05-01（补3）",
+      "layer": "data",
+      "passed": true,
+      "detail": "指数无涨跌停上限，但仍检查停牌"
+    },
+    {
+      "id": "missing-days-only-inside-listing",
+      "ac": "AC-07.05-01（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "缺失交易日只在 [首根, 末根] ∩ 日历内计数"
+    },
+    {
+      "id": "scan-caches-and-stales",
+      "ac": "AC-07.05-01 / AC-07.05-03",
+      "layer": "data",
+      "passed": true,
+      "detail": "扫描成功才覆盖缓存；dataset_id 变化后 stale=true"
+    },
+    {
+      "id": "suspended-sample-drills-to-examples",
+      "ac": "AC-07.05-03（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "诊断样本停牌行返回 3 项命中，examples 带 security/date 供 P9 定位"
+    }
+  ],
+  "context": {
+    "commit": "e55476070aa3aa0370f73cbacf747b65d702c574",
+    "scope": "本批 AC 范围 = 6 项检查引擎、板块上限、复权表缺失、报告缓存/过期与示例定位数据；P9 报告页渲染 AC 不属本批（app/src 归 UI 负责人）"
+  }
+}

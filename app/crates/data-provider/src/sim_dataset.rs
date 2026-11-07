@@ -162,6 +162,8 @@ mod tests {
                 amount: 12_567.89,
                 adj_factor: 1.0,
                 quality: vec![QualityFlag::Simulated],
+                batch_id: None,
+                ingested_at: None,
             },
             BarRow {
                 date: Date::new(2024, 1, 2),
@@ -173,6 +175,8 @@ mod tests {
                 amount: 10_000.0,
                 adj_factor: 1.0,
                 quality: vec![QualityFlag::Simulated],
+                batch_id: None,
+                ingested_at: None,
             },
         ]
     }

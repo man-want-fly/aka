@@ -5,28 +5,35 @@ use std::time::Instant;
 use data_provider::mock::MockProvider;
 use data_provider::{
     aggregate_bars, Adjust, AggregatePeriod, BarBatch, BarRequest, DataProvider, Date,
-    Security, Timeframe,
+    QualityFlag, Security, Timeframe,
 };
 use data_store::state_db::{AddWatchOutcome, StateDb};
 use data_store::{CacheStats, Candle, CandleSeries, CandleStore, SeriesKey};
+use indicator_core::manifest as registry;
 use indicator_core::{
     all, implemented_count, lookup, merge_defaults, validate, CalcError, Category, Indicator,
-    OhlcvView, ParamError, Params, ENGINE_VERSION, PLANNED_INDICATOR_COUNT,
+    ManifestParam, OhlcvView, ParamError, Params, ENGINE_VERSION, PLANNED_INDICATOR_COUNT,
 };
 
 use crate::dto::{
-    BarDto, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, IndicatorMetaDto, InputsDto,
-    ListSecuritiesRequest, MarketRowDto, MarketSnapshotDto, OutputSeriesDto, OutputSpecDto,
-    PositionDto, ProvenanceDto, RangeDto, RegistryResponse, SecurityDto, SeriesDto, WatchGroupDto,
-    WatchItemDto, WatchToggleResult, WatchlistDto,
+    BarDto, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
+    GetBarsRequest, IndicatorFavoriteDto, IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto,
+    ListSecuritiesRequest, MarketRowDto,
+    MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto,
+    QualityCheckDto, QualityExampleDto, QualityReportDto, RangeDto, RegistryResponse, SecurityDto,
+    SeriesDto, WatchGroupDto, WatchItemDto, WatchToggleResult, WatchlistDto,
 };
 use serde_json::Value;
 
 use crate::error::{AppError, ErrorCode};
+use crate::quality::{self, SecurityQualityInput};
 use crate::telemetry::{
     Telemetry, EVENT_CACHE_HIT, EVENT_CACHE_MISS, EVENT_COMPUTE_COUNT, EVENT_COMPUTE_SKIP,
     EVENT_INDEFINITE, EVENT_INDICATOR_COMPUTE,
 };
+
+/// 质量扫描完成事件（JSONL 与内存环形队列同源）。
+pub const EVENT_QUALITY_SCAN: &str = "quality.scan";
 
 /// 自选上限（跨分组按标的去重计数）
 pub const WATCHLIST_LIMIT: i64 = 500;
@@ -56,6 +63,107 @@ fn validate_group_name(name: &str) -> Result<&str, AppError> {
 fn group_duplicate(name: &str) -> AppError {
     AppError::invalid_argument(format!("分组已存在：{name}"))
         .with_details(serde_json::json!({ "reason": "GROUP_DUPLICATE", "name": name }))
+}
+
+/// S-07.05-02：单根溯源字段缺失时的错误码；前端据此显示「缺失」而不是空白/null。
+pub const E_PROVENANCE_MISSING: &str = "E_PROVENANCE_MISSING";
+
+/// 由一根 K 线组装溯源 DTO；缺失判定在核内完成，渲染层只负责展示。
+fn build_bar_provenance(
+    security: &str,
+    candle: &Candle,
+    dataset_id: &str,
+    adj_mode: &str,
+    raw_close: f64,
+) -> BarProvenanceDto {
+    let mut missing_fields = Vec::new();
+    if candle.source.trim().is_empty() {
+        missing_fields.push("provider".to_string());
+    }
+    match candle.batch_id.as_deref() {
+        Some(batch) if !batch.trim().is_empty() => {}
+        _ => missing_fields.push("batchId".to_string()),
+    }
+    if candle.ingested_at.is_none() {
+        missing_fields.push("ingestedAt".to_string());
+    }
+    if dataset_id.trim().is_empty() {
+        missing_fields.push("datasetId".to_string());
+    }
+    if adj_mode.trim().is_empty() {
+        missing_fields.push("adjMode".to_string());
+    }
+
+    BarProvenanceDto {
+        security: security.to_string(),
+        date: candle.date.clone(),
+        provider: candle.source.clone(),
+        batch_id: candle.batch_id.clone(),
+        ingested_at: candle.ingested_at,
+        dataset_id: dataset_id.to_string(),
+        adj_mode: adj_mode.to_string(),
+        quality_flags: candle.quality.clone(),
+        raw_close,
+        close: candle.close,
+        adj_factor: candle.adj_factor,
+        error_code: if missing_fields.is_empty() {
+            None
+        } else {
+            Some(E_PROVENANCE_MISSING)
+        },
+        missing_fields,
+    }
+}
+
+fn push_flag(flags: &mut Vec<String>, flag: &str) {
+    if !flags.iter().any(|current| current == flag) {
+        flags.push(flag.to_string());
+    }
+}
+
+/// 首装默认收藏：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / CCI。
+/// W-51：默认 8 项必须全部 `status=normal`。注册表内量能类 D01~D15 全为 `planned`，
+/// 因此本批不含量能项；量能项须先由单独立项把指标升为 `normal`，不能靠默认集硬塞。
+pub const DEFAULT_INDICATOR_FAVORITES: [&str; 8] =
+    ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "M05"];
+
+fn favorite_status(status: &str) -> &'static str {
+    match status {
+        "planned" => "planned",
+        "beta" => "beta",
+        "normal" => "normal",
+        _ => "beta",
+    }
+}
+
+fn format_param_number(value: f64) -> String {
+    let mut text = format!("{value:.4}");
+    while text.contains('.') && text.ends_with('0') {
+        text.pop();
+    }
+    if text.ends_with('.') {
+        text.pop();
+    }
+    text
+}
+
+fn param_summary(params: &[ManifestParam]) -> String {
+    params
+        .iter()
+        .map(|param| match param {
+            ManifestParam::Int { default, .. } => default.to_string(),
+            ManifestParam::Float { default, .. } => format_param_number(*default),
+            ManifestParam::Enum { default, .. } => default.clone(),
+            ManifestParam::Bool { default, .. } => {
+                if *default {
+                    "ON".to_string()
+                } else {
+                    "OFF".to_string()
+                }
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" / ")
 }
 
 fn board_label(sec: &Security) -> &'static str {
@@ -183,6 +291,8 @@ pub struct AppCore {
     dataset_coverage: Option<(String, String)>,
     calc_cache: Mutex<HashMap<String, Arc<Vec<Vec<f64>>>>>,
     calc_stats: Mutex<CacheStats>,
+    /// S-07.05-01：按 dataset_id 缓存的最近一次质量报告（跨命令复用）。
+    quality_report: Mutex<Option<QualityReportDto>>,
     telemetry: Telemetry,
     /// rusqlite `Connection` 是 `Send` 但不是 `Sync`，因此包一层 Mutex 才能随 `AppCore`
     /// 被 Tauri 的 `State` 共享。
@@ -249,6 +359,7 @@ impl AppCore {
             calc_cache: Mutex::new(HashMap::new()),
             calc_stats: Mutex::new(CacheStats::default()),
             telemetry: Telemetry::in_memory(),
+            quality_report: Mutex::new(None),
             state: None,
         })
     }
@@ -410,6 +521,79 @@ impl AppCore {
             generated_at,
             rows,
         })
+    }
+
+    // ---------- 指标收藏（S-03.02-01） ----------
+
+    /// 读取收藏；首次调用时按「无初始化标记且表为空」写入默认 8 个。
+    pub fn indicator_favorites(&self) -> Result<IndicatorFavoritesResponse, AppError> {
+        let rows = {
+            let db = self
+                .state_db()
+                .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+            db.ensure_default_indicator_favorites(&DEFAULT_INDICATOR_FAVORITES)
+                .map_err(AppError::from)?;
+            db.indicator_favorites().map_err(AppError::from)?
+        };
+
+        let favorites = rows
+            .into_iter()
+            .map(|row| {
+                let meta = registry::entry(&row.indicator_id);
+                let (abbr, name_zh, status, panel, summary) = match meta {
+                    Some(meta) => (
+                        meta.abbr.clone(),
+                        meta.name_zh.clone(),
+                        favorite_status(&meta.status),
+                        meta.panel.as_str(),
+                        param_summary(&meta.params),
+                    ),
+                    // 注册表已移除：保留行、显示已下线，不静默删收藏。
+                    None => (
+                        row.indicator_id.clone(),
+                        row.indicator_id.clone(),
+                        "offline",
+                        "",
+                        String::new(),
+                    ),
+                };
+                IndicatorFavoriteDto {
+                    indicator_id: row.indicator_id,
+                    abbr,
+                    name_zh,
+                    status,
+                    panel,
+                    param_summary: summary,
+                    is_default: row.is_default,
+                    added_at: row.added_at,
+                    sort_order: row.sort_order,
+                }
+            })
+            .collect();
+        Ok(IndicatorFavoritesResponse { favorites })
+    }
+
+    /// 收藏/取消收藏均可重复调用：重复收藏不新增行，重复取消不报错。
+    pub fn set_indicator_favorite(
+        &self,
+        indicator_id: &str,
+        favorited: bool,
+    ) -> Result<IndicatorFavoritesResponse, AppError> {
+        let id = indicator_id.trim();
+        if id.is_empty() {
+            return Err(AppError::invalid_argument("indicatorId 不能为空"));
+        }
+        {
+            let db = self
+                .state_db()
+                .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+            if favorited {
+                db.add_indicator_favorite(id).map_err(AppError::from)?;
+            } else {
+                db.remove_indicator_favorite(id).map_err(AppError::from)?;
+            }
+        }
+        self.indicator_favorites()
     }
 
     // ---------- 自选 ----------
@@ -675,6 +859,119 @@ impl AppCore {
         self.provider.dataset_manifest()
     }
 
+    fn current_dataset_id(&self) -> String {
+        self.dataset_manifest()
+            .map(|manifest| manifest.dataset_id)
+            .unwrap_or_else(|| "unknown".to_string())
+    }
+
+    /// 读取缓存报告；`stale` 由当前 dataset_id 现算，不依赖缓存内的旧标志。
+    pub fn quality_report(&self) -> Option<QualityReportDto> {
+        let current = self.current_dataset_id();
+        let mut guard = self.quality_report.lock().ok()?;
+        guard.as_mut().map(|report| {
+            report.current_dataset_id = current.clone();
+            report.stale = report.based_on_dataset_id != current;
+            report.clone()
+        })
+    }
+
+    /// 全量扫描 6 项质量检查；成功后才覆盖缓存（失败保留上一次报告）。
+    pub async fn quality_scan(&self) -> Result<QualityReportDto, AppError> {
+        let started = std::time::Instant::now();
+        let dataset_id = self.current_dataset_id();
+        let has_adjust_factors = self.provider.capabilities().adjust_factors;
+
+        let mut inputs = Vec::with_capacity(self.securities.len());
+        let mut observed_dates = std::collections::BTreeSet::new();
+        for security in &self.securities {
+            let batch = self.daily_batch(&security.code, data_provider::Adjust::None).await?;
+            for row in &batch.rows {
+                observed_dates.insert(row.date);
+            }
+            inputs.push(SecurityQualityInput {
+                security: security.clone(),
+                bars: batch.rows.clone(),
+                has_adjust_factors,
+            });
+        }
+
+        let fallback: Vec<data_provider::Date> = observed_dates.into_iter().collect();
+        let calendar = match &self.dataset_coverage {
+            Some((start, end)) => {
+                match (
+                    data_provider::Date::parse(start),
+                    data_provider::Date::parse(end),
+                ) {
+                    (Some(from), Some(to)) => self
+                        .provider
+                        .trading_calendar(from, to)
+                        .await
+                        .map_err(AppError::from)?,
+                    _ => fallback,
+                }
+            }
+            None => fallback,
+        };
+
+        let result = quality::scan(&calendar, &inputs);
+        let duration_ms = started.elapsed().as_millis() as u64;
+        let rows: Vec<QualityCheckDto> = result
+            .rows
+            .into_iter()
+            .map(|row| QualityCheckDto {
+                key: row.key,
+                label_zh: row.label_zh,
+                hits: row.hits,
+                base: row.base,
+                ratio_pct: row.ratio_pct,
+                treatment: row.treatment,
+                status: row.status.as_str(),
+                error_code: row.error_code,
+                examples: row
+                    .examples
+                    .into_iter()
+                    .map(|example| QualityExampleDto {
+                        security: example.security,
+                        date: example.date,
+                    })
+                    .collect(),
+            })
+            .collect();
+
+        let total_count = rows.len();
+        let report = QualityReportDto {
+            dataset_id: dataset_id.clone(),
+            based_on_dataset_id: dataset_id.clone(),
+            current_dataset_id: dataset_id,
+            stale: false,
+            scanned_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0),
+            duration_ms,
+            passed_count: result.passed_count,
+            total_count,
+            rows,
+        };
+        *self
+            .quality_report
+            .lock()
+            .map_err(|_| AppError::internal("质量报告锁中毒"))? = Some(report.clone());
+
+        self.telemetry.emit(
+            EVENT_QUALITY_SCAN,
+            vec![
+                ("datasetId", serde_json::json!(report.dataset_id.clone())),
+                ("durationMs", serde_json::json!(report.duration_ms)),
+                ("passedCount", serde_json::json!(report.passed_count)),
+                ("totalCount", serde_json::json!(report.total_count)),
+                ("stale", serde_json::json!(false)),
+            ],
+        );
+        Ok(report)
+    }
+
     pub fn indicator_registry(&self, category: Option<&str>) -> RegistryResponse {
         let wanted = category.map(|c| c.to_ascii_lowercase());
         let indicators = all()
@@ -719,6 +1016,8 @@ impl AppCore {
                 adj_factor: candle.adj_factor,
                 source: candle.source.clone(),
                 quality: candle.quality.clone(),
+                batch_id: candle.batch_id.clone(),
+                ingested_at: candle.ingested_at,
             })
             .collect();
 
@@ -739,6 +1038,48 @@ impl AppCore {
                 generated_at: series.generated_at,
             },
         })
+    }
+
+    /// S-07.05-02：点单根 K 线取溯源；`raw_close` 走不复权序列，供除权日做复权前后价对照。
+    pub async fn bar_provenance(
+        &self,
+        req: &BarProvenanceRequest,
+    ) -> Result<BarProvenanceDto, AppError> {
+        let timeframe = parse_timeframe(&req.timeframe)?;
+        let adj = Adjust::parse(&req.adj)
+            .ok_or_else(|| AppError::invalid_argument(format!("未知复权口径：{}", req.adj)))?;
+        let series = self.series_for(&req.security, timeframe, adj).await?;
+        let candle = series
+            .candles
+            .iter()
+            .find(|candle| candle.date == req.date)
+            .ok_or_else(|| {
+                AppError::invalid_argument(format!(
+                    "{} 在 {} 没有 {} 周期的 K 线",
+                    req.security, req.date, req.timeframe
+                ))
+            })?;
+
+        let raw_close = if adj == Adjust::None {
+            candle.close
+        } else {
+            let raw = self.series_for(&req.security, timeframe, Adjust::None).await?;
+            raw.candles
+                .iter()
+                .find(|raw_candle| raw_candle.date == candle.date)
+                .map(|raw_candle| raw_candle.close)
+                .unwrap_or(candle.close)
+        };
+
+        // 卡面要求 dataset_id 与 manifest 一致，不用序列缓存里的批次 id。
+        let dataset_id = self.current_dataset_id();
+        Ok(build_bar_provenance(
+            &series.security,
+            candle,
+            &dataset_id,
+            &series.adj,
+            raw_close,
+        ))
     }
 
     pub async fn calc_indicators(&self, req: &CalcRequest) -> Result<CalcResponse, AppError> {
@@ -958,18 +1299,54 @@ impl AppCore {
         let provider = batch.provider.as_str().to_string();
         let candles = rows
             .iter()
-            .map(|row| Candle {
-                ts: row.date.epoch_secs(),
-                date: row.date.iso(),
-                open: row.open,
-                high: row.high,
-                low: row.low,
-                close: row.close,
-                volume: row.volume,
-                amount: row.amount,
-                adj_factor: row.adj_factor,
-                quality: row.quality.iter().map(|q| q.as_str().to_string()).collect(),
-                source: provider.clone(),
+            .enumerate()
+            .map(|(index, row)| {
+                let mut quality: Vec<String> =
+                    row.quality.iter().map(|q| q.as_str().to_string()).collect();
+                let suspended = row
+                    .quality
+                    .iter()
+                    .any(|flag| matches!(flag, data_provider::QualityFlag::Suspended));
+
+                // 逐根派生标记，与质量报告同一套口径（S-07.05-01/S-07.05-02）。
+                if !suspended && row.volume == 0.0 {
+                    push_flag(&mut quality, QualityFlag::ZeroVolume.as_str());
+                }
+                if index > 0 {
+                    let prev = &rows[index - 1];
+                    let ex_rights = (prev.adj_factor - row.adj_factor).abs() > f64::EPSILON;
+                    if ex_rights {
+                        push_flag(&mut quality, QualityFlag::ExRights.as_str());
+                    }
+                    if !suspended && !ex_rights && prev.close > 0.0 {
+                        let abnormal = row.close <= 0.0
+                            || quality::board_limit_pct(found.board).map_or(false, |cap| {
+                                let pct = (row.close / prev.close - 1.0).abs() * 100.0;
+                                pct > cap + quality::PRICE_LIMIT_TOLERANCE_PCT
+                            });
+                        if abnormal {
+                            push_flag(&mut quality, QualityFlag::PriceAnomaly.as_str());
+                        }
+                    }
+                } else if row.close <= 0.0 {
+                    push_flag(&mut quality, QualityFlag::PriceAnomaly.as_str());
+                }
+
+                Candle {
+                    ts: row.date.epoch_secs(),
+                    date: row.date.iso(),
+                    open: row.open,
+                    high: row.high,
+                    low: row.low,
+                    close: row.close,
+                    volume: row.volume,
+                    amount: row.amount,
+                    adj_factor: row.adj_factor,
+                    quality,
+                    source: provider.clone(),
+                    batch_id: row.batch_id.clone(),
+                    ingested_at: row.ingested_at,
+                }
             })
             .collect::<Vec<_>>();
 
@@ -1366,6 +1743,8 @@ mod tests {
                 adj_factor: 1.0,
                 quality: vec![],
                 source: "mock".to_string(),
+                batch_id: None,
+                ingested_at: None,
             });
             day = day.next_weekday();
         }
@@ -1381,6 +1760,147 @@ mod tests {
             generated_at: 0,
             candles,
         }
+    }
+
+    #[tokio::test]
+    async fn indicator_favorites_seed_eight_and_toggle_is_idempotent() {
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+
+        let seeded = core.indicator_favorites().unwrap();
+        let ids: Vec<&str> = seeded
+            .favorites
+            .iter()
+            .map(|f| f.indicator_id.as_str())
+            .collect();
+        assert_eq!(ids, DEFAULT_INDICATOR_FAVORITES.to_vec());
+        assert!(seeded.favorites.iter().all(|f| f.is_default));
+        assert_eq!(seeded.favorites[0].abbr, "SMA");
+        assert_eq!(seeded.favorites[0].param_summary, "20");
+        assert_eq!(
+            seeded.favorites[3].param_summary, "12 / 26 / 9",
+            "MACD 参数摘要按注册表默认值"
+        );
+        // W-51：默认 8 项必须全部 normal，planned/beta 一律不得进默认集。
+        assert!(
+            seeded.favorites.iter().all(|f| f.status == "normal"),
+            "默认收藏只能是 normal 指标"
+        );
+        assert!(
+            !seeded.favorites.iter().any(|f| f.indicator_id == "D11"),
+            "D11（RVOL）为 planned，不得靠默认集硬塞"
+        );
+
+        // 重复收藏/取消：行数不变、不报错
+        core.set_indicator_favorite("M03", true).unwrap();
+        core.set_indicator_favorite("M03", true).unwrap();
+        let after_add = core.indicator_favorites().unwrap();
+        assert_eq!(after_add.favorites.len(), 9);
+        assert_eq!(after_add.favorites[0].indicator_id, "M03", "新收藏排在最前");
+
+        core.set_indicator_favorite("M03", false).unwrap();
+        core.set_indicator_favorite("M03", false).unwrap();
+        assert_eq!(core.indicator_favorites().unwrap().favorites.len(), 8);
+    }
+
+    #[tokio::test]
+    async fn removed_indicator_stays_favorited_as_offline() {
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        core.indicator_favorites().unwrap();
+        core.set_indicator_favorite("XX99", true).unwrap();
+        let row = core
+            .indicator_favorites()
+            .unwrap()
+            .favorites
+            .into_iter()
+            .find(|f| f.indicator_id == "XX99")
+            .unwrap();
+        assert_eq!(row.status, "offline");
+        assert_eq!(row.name_zh, "XX99");
+    }
+
+    #[tokio::test]
+    async fn deleting_all_favorites_is_not_reseeded() {
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        // 先完成首装（写入初始化标记），再删光
+        assert_eq!(core.indicator_favorites().unwrap().favorites.len(), 8);
+        for id in DEFAULT_INDICATOR_FAVORITES {
+            core.set_indicator_favorite(id, false).unwrap();
+        }
+        assert!(core.indicator_favorites().unwrap().favorites.is_empty());
+        // 再次读取（等价重启后的首次读取）不得补回默认项
+        assert!(core.indicator_favorites().unwrap().favorites.is_empty());
+    }
+
+    #[tokio::test]
+    async fn indicator_favorites_requires_state_db() {
+        let core = AppCore::new_mock().await.unwrap();
+        assert!(core.indicator_favorites().is_err());
+    }
+
+    #[tokio::test]
+    async fn quality_scan_reports_six_checks_and_caches_result() {
+        let core = AppCore::new_mock().await.unwrap();
+        assert!(core.quality_report().is_none(), "未扫描前页面显示尚未检查");
+
+        let report = core.quality_scan().await.unwrap();
+        assert_eq!(report.total_count, 6);
+        assert_eq!(report.rows.len(), 6);
+        assert_eq!(
+            report.dataset_id,
+            core.dataset_manifest().unwrap().dataset_id,
+            "报告必须绑定当前数据集 id"
+        );
+        assert!(!report.stale);
+        assert_eq!(
+            report
+                .rows
+                .iter()
+                .map(|row| row.key)
+                .collect::<Vec<_>>(),
+            vec![
+                "MISSING",
+                "EX_RIGHTS",
+                "SUSPENDED",
+                "ZERO_VOLUME",
+                "PRICE_ANOMALY",
+                "ADJ_COVERAGE"
+            ]
+        );
+        assert!(report.duration_ms < 10_000, "120×520 扫描不应超时");
+        assert_eq!(report.passed_count, 6, "正常 mock 数据集 6/6 通过");
+
+        let cached = core.quality_report().unwrap();
+        assert_eq!(cached.scanned_at, report.scanned_at);
+        assert!(!cached.stale);
+        assert_eq!(cached.current_dataset_id, report.dataset_id);
+    }
+
+    #[tokio::test]
+    async fn quality_scan_suspended_diagnostic_sample_hits_three_checks() {
+        let core = AppCore::new(Box::new(
+            data_provider::mock::MockProvider::new().with_diag_suspended_series(120, 80, 20),
+        ))
+        .await
+        .unwrap();
+        let report = core.quality_scan().await.unwrap();
+        let suspended = report
+            .rows
+            .iter()
+            .find(|row| row.key == "SUSPENDED")
+            .unwrap();
+        // 取证样本默认注入 DIAGSUSP.SZ：30 根中第 30 根停牌
+        assert!(suspended.hits >= 1, "停牌样本必须被识别");
+        assert_eq!(suspended.status, "info");
+        assert!(!suspended.examples.is_empty(), "示例用于跳到单根 K 线");
     }
 
     #[tokio::test]
@@ -1753,6 +2273,153 @@ mod tests {
         assert_eq!(monthly.bars.last().unwrap().date, daily.bars.last().unwrap().date);
     }
 
+    /// S-07.05-02：单根必须先有溯源字段（provider/batch/ingested_at），再谈浮层展示。
+    #[tokio::test]
+    async fn daily_bars_carry_provenance_and_derived_quality_flags() {
+        let core = AppCore::new_mock().await.unwrap();
+        let daily = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+
+        // mock 溯源用固定批次与固定入库秒，不能取墙钟时间，否则 bench 快照不可复现。
+        for bar in &daily.bars {
+            assert_eq!(bar.source, "mock");
+            assert_eq!(bar.batch_id.as_deref(), Some("b-20260101-01"));
+            assert_eq!(bar.ingested_at, Some(1_767_225_600));
+        }
+
+        // 600519.SH 夹具在 2024-04-29 注入 2:1 拆分：该根必须标 EX_RIGHTS 且不误判价格异常。
+        let split = daily
+            .bars
+            .iter()
+            .find(|bar| bar.date == "2024-04-29")
+            .expect("600519.SH 夹具应含 2024-04-29 除权日");
+        assert!(
+            split.quality.iter().any(|flag| flag == "EX_RIGHTS"),
+            "除权日必须标记 EX_RIGHTS"
+        );
+        assert!(
+            !split.quality.iter().any(|flag| flag == "PRICE_ANOMALY"),
+            "除权日跳变不应判为价格异常"
+        );
+
+        // 周线聚合的溯源取最后成交日批次，字段不能丢。
+        let weekly = core.get_bars(&bars_req("W", None, None)).await.unwrap();
+        assert!(weekly
+            .bars
+            .iter()
+            .all(|bar| bar.batch_id.as_deref() == Some("b-20260101-01")));
+
+        // W-53：除权标记在周/月聚合根上同样显形；粒度只到周/月，不能定位到日。
+        let monthly = core.get_bars(&bars_req("M", None, None)).await.unwrap();
+        let split_date = Date::parse("2024-04-29").unwrap();
+        let split_week = data_provider::iso_week(split_date);
+        let week_bar = weekly
+            .bars
+            .iter()
+            .find(|bar| data_provider::iso_week(Date::parse(&bar.date).unwrap()) == split_week)
+            .expect("应存在包含 2024-04-29 的周线根");
+        assert!(
+            week_bar.quality.iter().any(|flag| flag == "EX_RIGHTS"),
+            "包含除权日的周线根必须标 EX_RIGHTS"
+        );
+        let split_month = data_provider::month_key(split_date);
+        let month_bar = monthly
+            .bars
+            .iter()
+            .find(|bar| data_provider::month_key(Date::parse(&bar.date).unwrap()) == split_month)
+            .expect("应存在 2024-04 月线根");
+        assert!(
+            month_bar.quality.iter().any(|flag| flag == "EX_RIGHTS"),
+            "包含除权日的月线根必须标 EX_RIGHTS"
+        );
+    }
+
+    /// S-07.05-02：点单根取六类溯源字段，除权根带 EX_RIGHTS 与复权前后价。
+    #[tokio::test]
+    async fn bar_provenance_returns_six_fields_and_adjacent_prices() {
+        let core = AppCore::new_mock().await.unwrap();
+        let req = |date: &str| BarProvenanceRequest {
+            security: "600519.SH".into(),
+            date: date.into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+        };
+
+        let split = core.bar_provenance(&req("2024-04-29")).await.unwrap();
+        assert_eq!(split.provider, "mock");
+        assert_eq!(split.batch_id.as_deref(), Some("b-20260101-01"));
+        assert_eq!(split.ingested_at, Some(1_767_225_600));
+        assert_eq!(
+            split.dataset_id,
+            core.dataset_manifest().unwrap().dataset_id
+        );
+        assert_eq!(split.adj_mode, "qfq");
+        assert!(split.quality_flags.iter().any(|flag| flag == "EX_RIGHTS"));
+        assert!(split.missing_fields.is_empty());
+        assert!(split.error_code.is_none());
+
+        // 拆分前一根按 qfq 折算，复权前后价必须不同，浮层才有对照可展示。
+        let before = core.bar_provenance(&req("2024-04-26")).await.unwrap();
+        assert!(
+            (before.raw_close - before.close).abs() > 1e-6,
+            "前复权根应给出不同的复权前后价"
+        );
+    }
+
+    /// S-07.05-02 补4：清空 batch_id/ingested_at 时必须回 `E_PROVENANCE_MISSING`，不是空白。
+    #[test]
+    fn missing_batch_meta_yields_provenance_error_code() {
+        let candle = Candle {
+            ts: 0,
+            date: "2024-04-29".into(),
+            open: 10.0,
+            high: 10.0,
+            low: 10.0,
+            close: 10.0,
+            volume: 100.0,
+            amount: 1_000.0,
+            adj_factor: 1.0,
+            quality: vec!["EX_RIGHTS".into()],
+            source: "mock".into(),
+            batch_id: None,
+            ingested_at: None,
+        };
+        let dto = build_bar_provenance("600519.SH", &candle, "ds-test", "qfq", 10.0);
+        assert_eq!(dto.missing_fields, vec!["batchId", "ingestedAt"]);
+        assert_eq!(dto.error_code, Some(E_PROVENANCE_MISSING));
+        assert_eq!(dto.provider, "mock", "其余字段照常返回");
+    }
+
+    /// S-07.05-02 补2：停牌根只标 SUSPENDED，不重复标 ZERO_VOLUME。
+    #[tokio::test]
+    async fn suspended_bars_are_not_flagged_as_zero_volume() {
+        let core = AppCore::new(Box::new(
+            data_provider::mock::MockProvider::new().with_diag_suspended_series(120, 80, 20),
+        ))
+        .await
+        .unwrap();
+        let req = GetBarsRequest {
+            security: "DIAGSUSP.SZ".into(),
+            timeframe: "D".into(),
+            adj: "none".into(),
+            from: None,
+            to: None,
+        };
+        let bars = core.get_bars(&req).await.unwrap();
+        let suspended: Vec<&BarDto> = bars
+            .bars
+            .iter()
+            .filter(|bar| bar.quality.iter().any(|flag| flag == "SUSPENDED"))
+            .collect();
+        assert_eq!(suspended.len(), 20, "注入 20 根停牌");
+        for bar in suspended {
+            assert_eq!(bar.volume, 0.0);
+            assert!(
+                !bar.quality.iter().any(|flag| flag == "ZERO_VOLUME"),
+                "停牌已单独标记，不应再叠 ZERO_VOLUME"
+            );
+        }
+    }
+
     /// QA-S0-022 / 028 / 029：同请求去重、缓存命中、冷耗时都有结构化事件。
     #[tokio::test]
     async fn calc_telemetry_records_dedup_cache_and_cold_ms() {
@@ -1903,6 +2570,8 @@ mod tests {
                     adj_factor: 1.0,
                     quality: vec![],
                     source: "bench".to_string(),
+                    batch_id: None,
+                    ingested_at: None,
                 });
                 day = day.next_weekday();
             }

@@ -5,7 +5,7 @@
   },
   "response": {
     "catalogTotal": 105,
-    "implementedCount": 44,
+    "implementedCount": 45,
     "indicators": [
       {
         "category": "trend",
@@ -2096,6 +2096,35 @@
         "specStatus": "manualComplete",
         "unit": "0/1",
         "warmup": 6
+      },
+      {
+        "category": "volume",
+        "engineVersion": 1,
+        "id": "D01",
+        "implemented": true,
+        "inputs": {
+          "amount": false,
+          "close": true,
+          "high": false,
+          "low": false,
+          "open": false,
+          "volume": true
+        },
+        "nameEn": "OBV",
+        "nameZh": "能量潮",
+        "notes": "默认参数 —；手册 §3.2｜A股主口径：同 ChartSchool｜平盘日沿用前值｜停牌/零量根断线(NaN)，复牌后接续累计",
+        "outputs": [
+          {
+            "color": "var(--muted)",
+            "key": "value",
+            "kind": "line",
+            "labelZh": "OBV"
+          }
+        ],
+        "params": [],
+        "specStatus": "manualComplete",
+        "unit": "—",
+        "warmup": 1
       }
     ]
   }

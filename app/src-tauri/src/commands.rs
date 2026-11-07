@@ -2,9 +2,10 @@
 //! 新增命令必须保持在这个形状，超过 15 行说明业务该下沉到 app-core。
 
 use app_core::{
-    AppError, BarsResponse, CalcRequest, CalcResponse, DatasetManifest, GetBarsRequest,
-    ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto, RegistryRequest,
-    RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
+    AppError, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
+    DatasetManifest, GetBarsRequest, IndicatorFavoritesResponse, ListSecuritiesRequest, Manifest,
+    MarketSnapshotDto, PositionDto, QualityReportDto, RegistryRequest, RegistryResponse,
+    SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
 };
 use serde_json::Value;
 use tauri::State;
@@ -44,6 +45,45 @@ pub async fn indicator_manifest(
     state: State<'_, AppState>,
 ) -> Result<&'static Manifest, AppError> {
     Ok(state.core.indicator_manifest())
+}
+
+/// S-03.02-01：首次读取时写入默认 8 个收藏。
+#[tauri::command]
+pub async fn indicator_favorites(
+    state: State<'_, AppState>,
+) -> Result<IndicatorFavoritesResponse, AppError> {
+    state.core.indicator_favorites()
+}
+
+#[tauri::command]
+pub async fn set_indicator_favorite(
+    state: State<'_, AppState>,
+    indicator_id: String,
+    favorited: bool,
+) -> Result<IndicatorFavoritesResponse, AppError> {
+    state.core.set_indicator_favorite(&indicator_id, favorited)
+}
+
+/// S-07.05-01：未扫描过返回 null，由页面展示「尚未检查」。
+#[tauri::command]
+pub async fn quality_report(
+    state: State<'_, AppState>,
+) -> Result<Option<QualityReportDto>, AppError> {
+    Ok(state.core.quality_report())
+}
+
+#[tauri::command]
+pub async fn quality_scan(state: State<'_, AppState>) -> Result<QualityReportDto, AppError> {
+    state.core.quality_scan().await
+}
+
+/// S-07.05-02：单根 K 线溯源；缺失字段由 `missingFields`/`errorCode` 明确返回。
+#[tauri::command]
+pub async fn bar_provenance(
+    state: State<'_, AppState>,
+    req: BarProvenanceRequest,
+) -> Result<BarProvenanceDto, AppError> {
+    state.core.bar_provenance(&req).await
 }
 
 /// S-02.08-01：页脚 7 段同源；provider 不提供 manifest 时返回 null，前端整条显示 `—`。

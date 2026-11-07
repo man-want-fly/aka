@@ -6,8 +6,8 @@
     "total": 105,
     "p0": 84,
     "p1": 21,
-    "planned": 61,
-    "implemented": 44,
+    "planned": 60,
+    "implemented": 45,
     "completeness": {
       "complete": 78,
       "partial": 19,
@@ -17,7 +17,7 @@
     "completionCount": 6,
     "rulings": {
       "afterT03T21Promotion": {
-        "normal": 42,
+        "normal": 43,
         "beta": 2,
         "pendingSpecAll": 15
       }
