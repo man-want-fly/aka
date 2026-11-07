@@ -1392,6 +1392,35 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   - 小瑕：runner 日志中文/全角符号乱码（`注入符号 ��…`），定位靠上下文行，建议提示改 ASCII。
   - 遗留：corrupt 证据仍是 `7abf3b8` 的，未在 `4af99f4` 复跑；本条签字只覆盖门禁与清理，不覆盖页面行为。
 
+### W-50（BA + dev B，dev2）`S-03.02-01` 默认 8 项口径收口
+
+**背景**：卡面写 `MA/EMA/MACD/KDJ/RSI/BOLL/VOL/OBV`，但 `VOL` 不在注册表、`OBV` 为 `planned`；实现改成 `SMA/EMA/BOLL/MACD/RSI/KDJ/ATR/RVOL`，其中 `RVOL`（D11）**仍是 planned**。两边都不对。
+
+1. **BA 改卡面**：`AC-03.02-01` 的 8 个 id 必须全部在注册表内且 `status=normal`；`ATR`/`PRICE_ANOMALY` 等实现已产出的项该补就补。
+2. **dev B 改实现**：移除 `D11`（planned）；不许用另一个 planned 顶替；默认集逐项校验 `status==normal`，非 normal 直接拒绝写入并在启动期报错。
+3. 若产品确实要量能项：先把量能指标纳入注册表并升 `normal`（另立工单、另计人日），本卡不做。
+4. **验收**：`select count(*) from indicator_favorites = 8` 且 join manifest 后 `status` 全为 `normal`；首装标记仅置 1 次；证据包写明「本批 AC 范围 = `AC-03.02-01`/`AC-03.02-03`（持久化）」，不得只写 `[渲染层] 0/0`。
+
+### W-51（BA + dev B，dev2）`S-07.05-02` 溯源浮层与标记词表
+
+1. **实现**：`app/src` 溯源浮层 6 字段（日期/provider/batch_id/ingested_at/dataset_id/adj_mode/quality_flags）；`batch_id`/`ingested_at` 缺失时显示「缺失」并给 `E_PROVENANCE_MISSING`（当前只在注释里）。
+2. **卡面**：词表拆「已产出：`EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`」与「预留：`APPROXIMATED`/`MISSING`，本卡不写断言」；`PRICE_ANOMALY` 补进卡面。
+3. **不造注入**：不为 `APPROXIMATED`/`MISSING` 凑覆盖；`MISSING` 的落点是质量报告行与字段级缺失，不是可点击的 K 线标记。
+4. **验收**：点击任一根 → 六字段齐全；把 `batch_id`/`ingested_at` 置空 → 「缺失」+ 错误码；从 P9「查看示例」定位同一根；证据包。
+
+### W-52（dev B，dev2）周/月线 `EX_RIGHTS` 断言
+
+1. 对 `600519.SH` 的 `2024-04-29` 所在周/月，断言该根带 `EX_RIGHTS`。
+2. 绿：卡面只写真实粒度限制「周/月线标记到周/月，不能定位到日」；**不写「可能漏检」**。
+3. 红：在 `aggregate_bars` 聚合时比较成员日 `adj_factor`，把 `EX_RIGHTS` 传播到聚合根。
+4. 验收：断言 + 证据包；不得以「已知限制」结案。
+
+### W-53（dev B，dev2）`S-07.05-01` 证据包
+
+1. 6 行检查结果（命中数/占比/处理方式/状态）+ 扫描耗时/时间戳/`dataset_id`。
+2. `AC-07.05-03`：数据集版本变化后旧报告标「过期」，且不冒充最新。
+3. 验收：证据包含 6 行 + 过期前后两组快照；未过期与过期各一条断言。
+
 ---
 
 ## 3. 执行顺序与验收

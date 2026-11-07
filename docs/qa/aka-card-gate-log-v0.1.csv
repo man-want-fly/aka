@@ -21,7 +21,7 @@ S-04.02-02,未开始,N/A,,,,待 Gate B/C 签字,BA,W-09,标题/优先级/卡首�
 S-05.01-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-11,pinyin 预计算 + SEARCH_PINYIN_MISSING；AC 改 300750.SZ + V-07 性能协议,,
 S-06.03-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-13,关于页改 44 / 105 + 副行「P0 目标 84」,,
 S-07.03-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-15,row_count 62400、覆盖区间 2023-01-02~2024-12-27,,
-S-07.05-02,未开始,N/A,,,,待 Gate B/C 签字,BA,W-16,BarRow 增 batch_id/ingested_at 缺失处理与 MISSING_BATCH_META,,
+S-07.05-02,未开始,N/A,,,,待 Gate B/C 签字,BA,W-16,BarRow 增 batch_id/ingested_at 缺失处理与 MISSING_BATCH_META dev2 `49009b4` 分支初版不签（4.7.24）：无证据包，溯源浮层与 E_PROVENANCE_MISSING 未实现；APPROXIMATED/MISSING 仅词表预留。,,
 S-08.01-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-17,删 AC-08.01-05 与补1，通用规范移交 S-08.01-03,,
 S-08.01-02,未开始,N/A,,,,待 Gate B/C 签字,BA,W-18,指标搜索覆盖全量 105（61 置灰/44 可添加），T17 灰显,,
 S-02.02-01,已交付,N/A,,,,文档口径,BA,W-25,AC-02.02-01 起止改 coverage_end 派生、起始日改 2023-01-02；2024-04-30 标「示例，非断言」；停牌/除权夹具日期已注，除权需 fixture 显式注入,,
