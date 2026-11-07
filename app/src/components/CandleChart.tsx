@@ -1505,7 +1505,7 @@ export function CandleChart({
             )}
             {hoveredSplit && (
               <span data-split-readout="1" style={{ color: "var(--accent)" }}>
-                除权日 · {`因子 ${splitFactorOf(hover).toFixed(4)}`}
+                除权日 · {`因子 ${formatPrice(splitFactorOf(hover), 4)}`}
               </span>
             )}
             {view.overlayLines.map((line) => {
@@ -1599,8 +1599,8 @@ export function CandleChart({
             <div data-tooltip-split="1" data-adj-mode={adjMode} style={{ color: "var(--accent)" }}>
               除权日 ·{" "}
               {adjMode === "none"
-                ? `不复权（因子 ${splitFactorOf(hover).toFixed(4)}）`
-                : `前复权已调整（因子 ${splitFactorOf(hover).toFixed(4)}）`}
+                ? `不复权（因子 ${formatPrice(splitFactorOf(hover), 4)}）`
+                : `前复权已调整（因子 ${formatPrice(splitFactorOf(hover), 4)}）`}
             </div>
           )}
           {view.subPanels.flatMap((panel) =>

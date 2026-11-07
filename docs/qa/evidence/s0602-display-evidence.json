@@ -1,0 +1,111 @@
+{
+  "suite": "S-06.02-01 display",
+  "startedAt": "2026-11-07T09:44:56.208Z",
+  "finishedAt": "2026-11-07T09:44:58.029Z",
+  "ok": false,
+  "checks": [
+    {
+      "id": "set-default-compact",
+      "ac": "AC-06.02-01（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "默认密度=compact"
+    },
+    {
+      "id": "format-function",
+      "ac": "AC-06.02-02（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "price=1,684.20 price-negative=−1,234.50 percent-plus=+1.24% percent-minus=−0.86% volume=1,234.0手 amount-yi=1.24亿 amount-wan=3,500.00万"
+    },
+    {
+      "id": "format-rendered",
+      "ac": "AC-06.02-02（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "price=1,684.20 percent=+1.24% / −0.86% volume=1,234.0手 amount=1.24亿 / 3,500.00万"
+    },
+    {
+      "id": "persist-comfy",
+      "ac": "AC-06.02-01（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "view_state(settings.display)={\"density\":\"comfy\"}"
+    },
+    {
+      "id": "row-height-comfy",
+      "ac": "AC-06.02-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "行情行高=34px（期望 34px，样本 128 行）"
+    },
+    {
+      "id": "format-price-1000",
+      "ac": "AC-06.02-02（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "10,311.45"
+    },
+    {
+      "id": "format-pct-sign",
+      "ac": "AC-06.02-02（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "正=+0.77% 负=−0.54%"
+    },
+    {
+      "id": "format-amount-unit",
+      "ac": "AC-06.02-02（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "1,430,547.88亿 / 191,312.16亿 / 182,170.91亿 / 71,754.39亿 / 1,828.29亿"
+    },
+    {
+      "id": "row-height-compact",
+      "ac": "AC-06.02-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "行情行高=28px（期望 28px）"
+    },
+    {
+      "id": "scroll-anchor",
+      "ac": "AC-06.02-01（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "切换前顶部行=49 切换后顶部行=48"
+    },
+    {
+      "id": "watchlist-row-height",
+      "ac": "AC-06.02-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "自选行高=28px（期望 28px）"
+    },
+    {
+      "id": "quote-format",
+      "ac": "AC-06.02-02（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "量=124.0万手 额=1,828.29亿"
+    },
+    {
+      "id": "catalog-format-sample",
+      "ac": "AC-06.02-02（补1）",
+      "layer": "render",
+      "passed": false,
+      "detail": "口径页命中「1,684.20」=false（app/content/indicators 未交付时无示例段）"
+    },
+    {
+      "id": "persist-compact",
+      "ac": "AC-06.02-01（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "view_state={\"density\":\"compact\"}"
+    }
+  ],
+  "context": {
+    "density": "compact",
+    "marketRowHeight": 28,
+    "watchlistRowHeight": 28
+  }
+}

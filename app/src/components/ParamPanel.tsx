@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ParamSpec, RegistryResponse } from "../lib/types";
 import type { WorkbenchParams } from "../features/workbench/model";
-import { formatComputedMs } from "../lib/format";
+import { formatComputedMs, formatFixed } from "../lib/format";
 
 interface Props {
   registry: RegistryResponse | null;
@@ -55,7 +55,7 @@ export function roundHalfUp1(raw: string): number {
 }
 
 function formatValue(value: number, digits: number) {
-  return digits === 0 ? String(value) : value.toFixed(digits);
+  return digits === 0 ? String(value) : formatFixed(value, digits);
 }
 
 interface NumRowProps {
@@ -99,7 +99,7 @@ function NumRow({ id, inputId, label, value, min, max, step, digits = 0, onCommi
 
   const bump = (delta: number) => {
     const next = Math.min(max, Math.max(min, value + delta * step));
-    onCommit(Number(next.toFixed(digits)));
+    onCommit(Number(formatFixed(next, digits)));
   };
 
   return (

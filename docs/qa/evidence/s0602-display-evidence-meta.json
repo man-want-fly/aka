@@ -1,0 +1,23 @@
+{
+  "suite": "S-06.02-01 display",
+  "label": "20261107-174453",
+  "runAt": "2026-11-07T17:44:59+08:00",
+  "commit": "aff1bbc6d6e18f35cf2c3103d15adffe9d52a79e",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s0602\" target/release/aka-desktop",
+  "fixture": "默认 state.db；自选为空时直插 1 条 600519.SH 供自选行高取证；取证后 sqlite3 .backup 还原，产品代码未改动",
+  "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",
+  "formatScan": {
+    "command": "npm run verify:format",
+    "exitCode": 0,
+    "output": [
+      "扫描 src/components：7 个组件，toFixed 命中 8",
+      "白名单：几何 4 / 诊断 0 / 指标读数 4",
+      "白名单外命中 0 处 → PASS"
+    ]
+  },
+  "result": {
+    "ok": false,
+    "layers": {},
+    "blocked": []
+  }
+}

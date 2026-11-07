@@ -229,6 +229,21 @@ export async function runSettingsDiagnostics(): Promise<SettingsDiagReport> {
       `量=${volumeText} 额=${amountText}`,
     );
 
+    // 口径页示例：同一只 600519.SH 的收盘价样例须与行情/报价头同口径（补1 第四处）。
+    window.location.hash = "#/catalog";
+    await sleep(700);
+    const catalogText = (document.body.textContent ?? "").replace(/\s+/g, " ");
+    const catalogSample = catalogText.includes("1,684.20");
+    push(
+      "catalog-format-sample",
+      "AC-06.02-02（补1）",
+      "render",
+      catalogSample,
+      `口径页命中「1,684.20」=${catalogSample}（app/content/indicators 未交付时无示例段）`,
+    );
+    window.location.hash = "#/settings";
+    await sleep(300);
+
     const afterReload = await ipc.viewStateGet(DISPLAY_SCOPE);
     push(
       "persist-compact",

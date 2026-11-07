@@ -25,6 +25,12 @@ export function formatPrice(value: number, digits = 2): string {
   return `${value < 0 ? MINUS : ""}${fixedAbs(value, digits)}`;
 }
 
+/** 定点显示（无千分位）：指标参数等非行情四类数值。 */
+export function formatFixed(value: number, digits = 2): string {
+  if (!Number.isFinite(value)) return DASH;
+  return `${value < 0 ? MINUS : ""}${Math.abs(value).toFixed(digits)}`;
+}
+
 /** 带符号差值（涨跌额等）：正数 `+`、负数 `−`。 */
 export function formatSigned(value: number, digits = 2): string {
   if (!Number.isFinite(value)) return DASH;
