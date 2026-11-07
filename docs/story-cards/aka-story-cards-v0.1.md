@@ -3392,7 +3392,7 @@ Confirmation：EMA 首值链、双线/柱形态、三色边界三处可独立判
 **3.4 人日**：3 指标公式与 EMA 首值链 1.5、三色边界与退化夹具 1.0、黄金对拍 0.6、文档联调 0.3。含回归 0.2。
 
 #### 11. 数据与埋点
-- 埋点 `indicator.compute`、`indicator.error`（`E_PARAM_OUT_OF_RANGE`、`DIVIDE_BY_ZERO`）。
+- 埋点 `indicator.compute`、`indicator.error`（`E_PARAM_ORDER`、`E_PARAM_OUT_OF_RANGE`、`DIVIDE_BY_ZERO`）。
 - 不采集标的与持仓。
 
 ---
