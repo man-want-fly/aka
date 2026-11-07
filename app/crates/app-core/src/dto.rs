@@ -72,6 +72,42 @@ pub struct BarDto {
     pub ingested_at: Option<i64>,
 }
 
+/// S-07.05-02：单根 K 线溯源浮层的六类字段 + 复权前后价。
+/// `missing_fields` / `error_code` 由内核判定，前端只照常渲染「缺失」，不再自行猜测。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BarProvenanceDto {
+    pub security: String,
+    pub date: String,
+    pub provider: String,
+    pub batch_id: Option<String>,
+    pub ingested_at: Option<i64>,
+    pub dataset_id: String,
+    pub adj_mode: String,
+    pub quality_flags: Vec<String>,
+    /// 复权前收盘（原始价）
+    pub raw_close: f64,
+    /// 当前视图复权口径下的收盘
+    pub close: f64,
+    pub adj_factor: f64,
+    /// 缺失字段名（camelCase）；空 = 六类字段齐全
+    pub missing_fields: Vec<String>,
+    /// 有缺失时为 `E_PROVENANCE_MISSING`
+    pub error_code: Option<&'static str>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BarProvenanceRequest {
+    pub security: String,
+    /// 交易日 `YYYY-MM-DD`
+    pub date: String,
+    #[serde(default = "default_timeframe")]
+    pub timeframe: String,
+    #[serde(default = "default_adj")]
+    pub adj: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProvenanceDto {

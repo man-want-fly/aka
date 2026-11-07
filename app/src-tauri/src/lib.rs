@@ -158,6 +158,7 @@ pub fn run() {
             commands::set_indicator_favorite,
             commands::quality_report,
             commands::quality_scan,
+            commands::bar_provenance,
             commands::dataset_manifest,
             commands::calc_indicators,
             commands::telemetry_dump,

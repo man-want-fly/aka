@@ -16,8 +16,9 @@ use indicator_core::{
 };
 
 use crate::dto::{
-    BarDto, BarsResponse, CalcRequest, CalcResponse, GetBarsRequest, IndicatorFavoriteDto,
-    IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto, ListSecuritiesRequest, MarketRowDto,
+    BarDto, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
+    GetBarsRequest, IndicatorFavoriteDto, IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto,
+    ListSecuritiesRequest, MarketRowDto,
     MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto,
     QualityCheckDto, QualityExampleDto, QualityReportDto, RangeDto, RegistryResponse, SecurityDto,
     SeriesDto, WatchGroupDto, WatchItemDto, WatchToggleResult, WatchlistDto,
@@ -60,6 +61,56 @@ fn validate_group_name(name: &str) -> Result<&str, AppError> {
 fn group_duplicate(name: &str) -> AppError {
     AppError::invalid_argument(format!("分组已存在：{name}"))
         .with_details(serde_json::json!({ "reason": "GROUP_DUPLICATE", "name": name }))
+}
+
+/// S-07.05-02：单根溯源字段缺失时的错误码；前端据此显示「缺失」而不是空白/null。
+pub const E_PROVENANCE_MISSING: &str = "E_PROVENANCE_MISSING";
+
+/// 由一根 K 线组装溯源 DTO；缺失判定在核内完成，渲染层只负责展示。
+fn build_bar_provenance(
+    security: &str,
+    candle: &Candle,
+    dataset_id: &str,
+    adj_mode: &str,
+    raw_close: f64,
+) -> BarProvenanceDto {
+    let mut missing_fields = Vec::new();
+    if candle.source.trim().is_empty() {
+        missing_fields.push("provider".to_string());
+    }
+    match candle.batch_id.as_deref() {
+        Some(batch) if !batch.trim().is_empty() => {}
+        _ => missing_fields.push("batchId".to_string()),
+    }
+    if candle.ingested_at.is_none() {
+        missing_fields.push("ingestedAt".to_string());
+    }
+    if dataset_id.trim().is_empty() {
+        missing_fields.push("datasetId".to_string());
+    }
+    if adj_mode.trim().is_empty() {
+        missing_fields.push("adjMode".to_string());
+    }
+
+    BarProvenanceDto {
+        security: security.to_string(),
+        date: candle.date.clone(),
+        provider: candle.source.clone(),
+        batch_id: candle.batch_id.clone(),
+        ingested_at: candle.ingested_at,
+        dataset_id: dataset_id.to_string(),
+        adj_mode: adj_mode.to_string(),
+        quality_flags: candle.quality.clone(),
+        raw_close,
+        close: candle.close,
+        adj_factor: candle.adj_factor,
+        error_code: if missing_fields.is_empty() {
+            None
+        } else {
+            Some(E_PROVENANCE_MISSING)
+        },
+        missing_fields,
+    }
 }
 
 fn push_flag(flags: &mut Vec<String>, flag: &str) {
@@ -942,6 +993,48 @@ impl AppCore {
                 generated_at: series.generated_at,
             },
         })
+    }
+
+    /// S-07.05-02：点单根 K 线取溯源；`raw_close` 走不复权序列，供除权日做复权前后价对照。
+    pub async fn bar_provenance(
+        &self,
+        req: &BarProvenanceRequest,
+    ) -> Result<BarProvenanceDto, AppError> {
+        let timeframe = parse_timeframe(&req.timeframe)?;
+        let adj = Adjust::parse(&req.adj)
+            .ok_or_else(|| AppError::invalid_argument(format!("未知复权口径：{}", req.adj)))?;
+        let series = self.series_for(&req.security, timeframe, adj).await?;
+        let candle = series
+            .candles
+            .iter()
+            .find(|candle| candle.date == req.date)
+            .ok_or_else(|| {
+                AppError::invalid_argument(format!(
+                    "{} 在 {} 没有 {} 周期的 K 线",
+                    req.security, req.date, req.timeframe
+                ))
+            })?;
+
+        let raw_close = if adj == Adjust::None {
+            candle.close
+        } else {
+            let raw = self.series_for(&req.security, timeframe, Adjust::None).await?;
+            raw.candles
+                .iter()
+                .find(|raw_candle| raw_candle.date == candle.date)
+                .map(|raw_candle| raw_candle.close)
+                .unwrap_or(candle.close)
+        };
+
+        // 卡面要求 dataset_id 与 manifest 一致，不用序列缓存里的批次 id。
+        let dataset_id = self.current_dataset_id();
+        Ok(build_bar_provenance(
+            &series.security,
+            candle,
+            &dataset_id,
+            &series.adj,
+            raw_close,
+        ))
     }
 
     pub async fn calc_indicators(&self, req: &CalcRequest) -> Result<CalcResponse, AppError> {
@@ -2089,6 +2182,86 @@ mod tests {
             .bars
             .iter()
             .all(|bar| bar.batch_id.as_deref() == Some("b-20260101-01")));
+
+        // W-53：除权标记在周/月聚合根上同样显形；粒度只到周/月，不能定位到日。
+        let monthly = core.get_bars(&bars_req("M", None, None)).await.unwrap();
+        let split_date = Date::parse("2024-04-29").unwrap();
+        let split_week = data_provider::iso_week(split_date);
+        let week_bar = weekly
+            .bars
+            .iter()
+            .find(|bar| data_provider::iso_week(Date::parse(&bar.date).unwrap()) == split_week)
+            .expect("应存在包含 2024-04-29 的周线根");
+        assert!(
+            week_bar.quality.iter().any(|flag| flag == "EX_RIGHTS"),
+            "包含除权日的周线根必须标 EX_RIGHTS"
+        );
+        let split_month = data_provider::month_key(split_date);
+        let month_bar = monthly
+            .bars
+            .iter()
+            .find(|bar| data_provider::month_key(Date::parse(&bar.date).unwrap()) == split_month)
+            .expect("应存在 2024-04 月线根");
+        assert!(
+            month_bar.quality.iter().any(|flag| flag == "EX_RIGHTS"),
+            "包含除权日的月线根必须标 EX_RIGHTS"
+        );
+    }
+
+    /// S-07.05-02：点单根取六类溯源字段，除权根带 EX_RIGHTS 与复权前后价。
+    #[tokio::test]
+    async fn bar_provenance_returns_six_fields_and_adjacent_prices() {
+        let core = AppCore::new_mock().await.unwrap();
+        let req = |date: &str| BarProvenanceRequest {
+            security: "600519.SH".into(),
+            date: date.into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+        };
+
+        let split = core.bar_provenance(&req("2024-04-29")).await.unwrap();
+        assert_eq!(split.provider, "mock");
+        assert_eq!(split.batch_id.as_deref(), Some("b-20260101-01"));
+        assert_eq!(split.ingested_at, Some(1_767_225_600));
+        assert_eq!(
+            split.dataset_id,
+            core.dataset_manifest().unwrap().dataset_id
+        );
+        assert_eq!(split.adj_mode, "qfq");
+        assert!(split.quality_flags.iter().any(|flag| flag == "EX_RIGHTS"));
+        assert!(split.missing_fields.is_empty());
+        assert!(split.error_code.is_none());
+
+        // 拆分前一根按 qfq 折算，复权前后价必须不同，浮层才有对照可展示。
+        let before = core.bar_provenance(&req("2024-04-26")).await.unwrap();
+        assert!(
+            (before.raw_close - before.close).abs() > 1e-6,
+            "前复权根应给出不同的复权前后价"
+        );
+    }
+
+    /// S-07.05-02 补4：清空 batch_id/ingested_at 时必须回 `E_PROVENANCE_MISSING`，不是空白。
+    #[test]
+    fn missing_batch_meta_yields_provenance_error_code() {
+        let candle = Candle {
+            ts: 0,
+            date: "2024-04-29".into(),
+            open: 10.0,
+            high: 10.0,
+            low: 10.0,
+            close: 10.0,
+            volume: 100.0,
+            amount: 1_000.0,
+            adj_factor: 1.0,
+            quality: vec!["EX_RIGHTS".into()],
+            source: "mock".into(),
+            batch_id: None,
+            ingested_at: None,
+        };
+        let dto = build_bar_provenance("600519.SH", &candle, "ds-test", "qfq", 10.0);
+        assert_eq!(dto.missing_fields, vec!["batchId", "ingestedAt"]);
+        assert_eq!(dto.error_code, Some(E_PROVENANCE_MISSING));
+        assert_eq!(dto.provider, "mock", "其余字段照常返回");
     }
 
     /// S-07.05-02 补2：停牌根只标 SUSPENDED，不重复标 ZERO_VOLUME。
