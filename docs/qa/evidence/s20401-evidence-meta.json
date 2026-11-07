@@ -1,8 +1,8 @@
 {
-  "suite": "S-02.04-01 指标抽屉（搜索/分类/规划中/空态/关闭）",
-  "label": "20261108-015418",
-  "runAt": "2026-11-08T01:54:18+08:00",
-  "commit": "da0d385b686127031c7701b309b3a9abb68ae624",
+  "suite": "",
+  "label": "20261108-022834",
+  "runAt": "2026-11-08T02:28:34+08:00",
+  "commit": "e92a151d8088ac37a7300b19f919bf80c036190f",
   "dirty": false,
   "buildMode": "dev",
   "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"drawer\" target/debug/aka-desktop（NODE_ENV=development vite build 产物）",
@@ -19,7 +19,7 @@
       "runtime": "1/1"
     },
     "blocked": [],
-    "checks": "9/9 属本卡（同文件其余 11 条按 AC 归属拆到 S-02.04-02 / S-03.01-05，不计本卡分母）",
+    "checks": "9/9 属本卡（同文件其余 12 条按 AC 归属拆到 S-02.04-02 / S-03.01-05，不计本卡分母）",
     "otherCards": [
       {
         "card": "S-02.04-02",
@@ -52,6 +52,6 @@
   "latency": {
     "productCommitmentMs": 200,
     "acceptanceCapMs": 250,
-    "measuredMaxMs": "220"
+    "measuredMaxMs": "221"
   }
 }

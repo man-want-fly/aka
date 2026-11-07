@@ -1,19 +1,19 @@
 {
   "snapshot": {
-    "runStartedAt": 1794074187674,
+    "runStartedAt": 1794076056725,
     "code": "INTERNAL",
     "message": "state.db 已损坏：file is not a database",
-    "trace": "TR-20261108-015626-0002",
+    "trace": "TR-20261108-022735-0002",
     "files": {
-      "WL-23-file-C1": "aka-diagnostics-TR-20261108-015626-0002-ok.json",
-      "WL-23-file-C2": "aka-diagnostics-TR-20261108-015626-0002-no-copy.json",
-      "WL-23-file-C3": "aka-diagnostics-TR-20261108-015626-0002-no-download.json",
-      "WL-23-file-C4": "aka-diagnostics-TR-20261108-015626-0002-both-fail.json"
+      "WL-23-file-C1": "aka-diagnostics-TR-20261108-022735-0002-ok.json",
+      "WL-23-file-C2": "aka-diagnostics-TR-20261108-022735-0002-no-copy.json",
+      "WL-23-file-C3": "aka-diagnostics-TR-20261108-022735-0002-no-download.json",
+      "WL-23-file-C4": "aka-diagnostics-TR-20261108-022735-0002-both-fail.json"
     }
   },
   "ok": true,
   "suite": "S-01.02 watchlist (corrupt)",
-  "finishedAt": "2026-11-07T17:56:27.881Z",
+  "finishedAt": "2026-11-07T18:27:36.934Z",
   "layers": {
     "render": "6/6",
     "data": "5/5"
@@ -27,7 +27,7 @@
       "ac": "AC-01.02-04（补3）",
       "layer": "render",
       "passed": true,
-      "detail": "不可恢复页=true，trace id「TR-20261108-015626-0002」，动作「重新生成数据」=true，未显示空自选=true",
+      "detail": "不可恢复页=true，trace id「TR-20261108-022735-0002」，动作「重新生成数据」=true，未显示空自选=true",
       "blocked": false
     },
     {
@@ -45,7 +45,7 @@
       "ac": "S-08.02-04·导出四态（渲染层）",
       "layer": "render",
       "passed": true,
-      "detail": "已复制+已下载支：「已复制到剪贴板，并下载 aka-diagnostics-TR-20261108-015626-0002-ok.json」",
+      "detail": "已复制+已下载支：「已复制到剪贴板，并下载 aka-diagnostics-TR-20261108-022735-0002-ok.json」",
       "blocked": false
     },
     {
@@ -54,7 +54,7 @@
       "ac": "S-08.02-04·导出四态（渲染层）",
       "layer": "render",
       "passed": true,
-      "detail": "仅已下载支：「已下载 aka-diagnostics-TR-20261108-015626-0002-no-copy.json（剪贴板不可用）」",
+      "detail": "仅已下载支：「已下载 aka-diagnostics-TR-20261108-022735-0002-no-copy.json（剪贴板不可用）」",
       "blocked": false
     },
     {
@@ -63,7 +63,7 @@
       "ac": "S-08.02-04·导出四态（渲染层）",
       "layer": "render",
       "passed": true,
-      "detail": "仅已复制支：「已复制到剪贴板（下载被拦截）：aka-diagnostics-TR-20261108-015626-0002-no-download.json」",
+      "detail": "仅已复制支：「已复制到剪贴板（下载被拦截）：aka-diagnostics-TR-20261108-022735-0002-no-download.json」",
       "blocked": false
     },
     {
@@ -82,7 +82,7 @@
       "layer": "data",
       "passed": true,
       "blocked": false,
-      "detail": "页面 trace id TR-20261108-015626-0002 ∈ telemetry.jsonl"
+      "detail": "页面 trace id TR-20261108-022735-0002 ∈ telemetry.jsonl"
     },
     {
       "id": "WL-23-file-C1",
@@ -91,7 +91,7 @@
       "layer": "data",
       "passed": true,
       "blocked": false,
-      "detail": "/Users/sixmillion/Downloads/aka-diagnostics-TR-20261108-015626-0002-ok.json size=193B mtime=01:56:27 文件名trace匹配=True 内容(code/message/traceId)匹配=True"
+      "detail": "/Users/sixmillion/Downloads/aka-diagnostics-TR-20261108-022735-0002-ok.json size=193B mtime=02:27:36 文件名trace匹配=True 内容(code/message/traceId)匹配=True"
     },
     {
       "id": "WL-23-file-C2",
@@ -100,7 +100,7 @@
       "layer": "data",
       "passed": true,
       "blocked": false,
-      "detail": "/Users/sixmillion/Downloads/aka-diagnostics-TR-20261108-015626-0002-no-copy.json size=193B mtime=01:56:27 文件名trace匹配=True 内容(code/message/traceId)匹配=True"
+      "detail": "/Users/sixmillion/Downloads/aka-diagnostics-TR-20261108-022735-0002-no-copy.json size=193B mtime=02:27:36 文件名trace匹配=True 内容(code/message/traceId)匹配=True"
     },
     {
       "id": "WL-23-file-C3",
@@ -109,7 +109,7 @@
       "layer": "data",
       "passed": true,
       "blocked": false,
-      "detail": "未落盘（aka-diagnostics-TR-20261108-015626-0002-no-download.json）"
+      "detail": "未落盘（aka-diagnostics-TR-20261108-022735-0002-no-download.json）"
     },
     {
       "id": "WL-23-file-C4",
@@ -118,7 +118,7 @@
       "layer": "data",
       "passed": true,
       "blocked": false,
-      "detail": "未落盘（aka-diagnostics-TR-20261108-015626-0002-both-fail.json）"
+      "detail": "未落盘（aka-diagnostics-TR-20261108-022735-0002-both-fail.json）"
     }
   ]
 }

@@ -1,11 +1,11 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-07T17:54:18.991Z",
+  "finishedAt": "2026-11-07T18:28:00.130Z",
   "cardUnderTest": "S-02.04-02",
   "context": {
     "manifestCount": 105,
-    "plannedCount": 61,
-    "implementedCount": 44
+    "plannedCount": 60,
+    "implementedCount": 45
   },
   "cards": [
     {
@@ -70,7 +70,7 @@
       "ac": "AC-02.04-03（补3）",
       "layer": "data",
       "passed": true,
-      "detail": "规划中 61 / normal 42 / beta 2 / 缺四字段 无（manifest.catalogTotal=105 为目录规划总量，非 status=planned 的条数）"
+      "detail": "规划中 60 / normal 43 / beta 2 / 加总 105=目录总量 105 / 缺四字段 无（分布数值不在此抄第二份，由 verify:constants 对照 constants.json 核）"
     },
     {
       "id": "R-01",
@@ -86,7 +86,7 @@
       "ac": "AC-02.04-03（补3）",
       "layer": "render",
       "passed": true,
-      "detail": "置灰条目 61 / 缺缩写 0 / 面板异常 0"
+      "detail": "置灰条目 60 / 数据层规划中 60 / 缺缩写 0 / 面板异常 0"
     },
     {
       "id": "R-03",
@@ -198,7 +198,7 @@
       "ac": "AC-02.04-04（补2）",
       "layer": "runtime",
       "passed": true,
-      "detail": "M06 冷算 0.03ms / M02 冷算 0.07ms / M02 点击→曲线 25ms / 冷样本 45 P95 0.12ms"
+      "detail": "M06 冷算 0.04ms / M02 冷算 0.06ms / M02 点击→曲线 26ms / 冷样本 45 P95 0.1ms"
     },
     {
       "id": "R-16",
@@ -222,7 +222,7 @@
       "ac": "AC-02.04-02",
       "layer": "runtime",
       "passed": true,
-      "detail": "产品承诺 200ms、验收上限 250ms（含调度余量）；本次最慢 220ms"
+      "detail": "产品承诺 200ms、验收上限 250ms（含调度余量）；本次最慢 221ms"
     }
   ]
 }
