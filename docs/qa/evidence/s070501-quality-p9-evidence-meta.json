@@ -1,0 +1,15 @@
+{
+  "suite": "S-07.05-01 quality-report-p9",
+  "commit": "689528ab90da0e550860b65c200e29e90b658972",
+  "command": "npm run typecheck && npm run verify:r03 && npm run verify:format",
+  "environment": "macOS 本机；AKA-dev2 worktree / dev2",
+  "result": {
+    "ok": true,
+    "card": "S-07.05-01",
+    "layers": {
+      "render": "9/9"
+    },
+    "scope": "本批 AC 范围 = P9 质量区渲染（6 行字段、汇总耗时/时间戳/dataset_id、过期条、失败行 —+错误码、示例展开）；检查引擎数据层沿用 e554760 证据，示例跳转 K 线归 S-07.05-02",
+    "blocked": []
+  }
+}

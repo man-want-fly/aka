@@ -1,0 +1,84 @@
+{
+  "suite": "S-07.05-01 quality-report-p9",
+  "startedAt": "2026-11-08T07:20:00+08:00",
+  "finishedAt": "2026-11-08T07:26:00+08:00",
+  "ok": true,
+  "checks": [
+    {
+      "id": "p9-six-rows-with-fields",
+      "ac": "AC-07.05-01",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "P9 表格固定 6 行，按后端顺序 MISSING/EX_RIGHTS/SUSPENDED/ZERO_VOLUME/PRICE_ANOMALY/ADJ_COVERAGE；每行渲染检查项、命中数、占比、处理方式、状态"
+    },
+    {
+      "id": "p9-ratio-one-decimal",
+      "ac": "AC-07.05-01",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "占比统一走 formatFixed(ratioPct, 1) + %，1 位小数；命中数走千分位整数"
+    },
+    {
+      "id": "p9-summary-duration-timestamp-dataset",
+      "ac": "AC-07.05-01",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "汇总条显示 `passedCount/totalCount 通过`、耗时 ms、完成时间戳（本地 YYYY-MM-DD HH:mm）、dataset_id（短码 + title 全值）"
+    },
+    {
+      "id": "p9-not-checked-empty-state",
+      "ac": "AC-07.05-01",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "quality_report 返回 null 时显示「尚未检查」与「重新检查」按钮，不渲染空表、不显示 0"
+    },
+    {
+      "id": "p9-status-text-and-dot",
+      "ac": "AC-07.05-01",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "状态用文字（通过/信息/警告/失败）+ 色点双通道；信息项不用红色，除权事件按信息项展示"
+    },
+    {
+      "id": "p9-stale-banner",
+      "ac": "AC-07.05-03",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "report.stale=true 时显示黄底「结果基于旧数据集（basedOnDatasetId），当前为 currentDatasetId」+「重新检查」；未重检前不改写为新结果"
+    },
+    {
+      "id": "p9-failed-row-dash-and-code",
+      "ac": "AC-07.05-03（补1）",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "status=failed 的行命中数与占比渲染为 —，并显示 errorCode（如 E_ADJ_FACTOR_MISSING）；其余 5 行保留各自命中数与占比"
+    },
+    {
+      "id": "p9-scan-failure-keeps-last",
+      "ac": "AC-07.05-03（补1）",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "quality_scan 整体失败时不覆盖前端报告，提示「检查失败：<code> · <message>；以下为上次结果 · 已过期」，并重读缓存带出 stale"
+    },
+    {
+      "id": "p9-examples-expand",
+      "ac": "AC-07.05-01",
+      "card": "S-07.05-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "行尾「查看示例 N」展开 security/date 列表（最多 5 条 + 余量提示）；跳转到单根 K 线属 S-07.05-02，不在本批"
+    }
+  ],
+  "context": {
+    "commit": "689528ab90da0e550860b65c200e29e90b658972",
+    "scope": "dev2 参考证据（§0.1 双线口径）：合并后须按合并 commit 重签。本文件只补 P9 报告页渲染层；6 项检查引擎与缓存/过期数据层已由 e554760 的 s070501-quality-evidence.json 覆盖（数据 11 项）。示例深链 S-07.05-02 不在本批"
+  }
+}
