@@ -1,0 +1,45 @@
+{
+  "suite": "E-01 market",
+  "label": "20261108-044431",
+  "runAt": "2026-11-08T04:44:40+08:00",
+  "commit": "5f153a6a70891da522fce7ec74441f3d90817942",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"market\" AKA_DIAG_NO_SAMPLES=1 target/debug/aka-desktop",
+  "fixture": "默认 state.db；E-01 行情套件（数据层 + 渲染层）直接打真实 DOM 与 state.db；只读，不改库",
+  "buildMode": "dev",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
+  "formatScan": null,
+  "result": {
+    "ok": false,
+    "blocked": [],
+    "card": "S-01.01-01",
+    "layers": {
+      "data": "3/3",
+      "render": "3/4"
+    },
+    "otherCards": [
+      {
+        "card": "S-01.01-02",
+        "checks": "8/8",
+        "layers": {
+          "data": "1/1",
+          "render": "7/7"
+        }
+      },
+      {
+        "card": "S-02.01-01",
+        "checks": "1/1",
+        "layers": {
+          "render": "1/1"
+        }
+      },
+      {
+        "card": "S-01.01-03",
+        "checks": "3/3",
+        "layers": {
+          "render": "3/3"
+        }
+      }
+    ]
+  }
+}

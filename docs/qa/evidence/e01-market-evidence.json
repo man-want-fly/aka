@@ -1,0 +1,172 @@
+{
+  "suite": "E-01 market",
+  "startedAt": "2026-11-07T20:44:35.938Z",
+  "finishedAt": "2026-11-07T20:44:38.767Z",
+  "ok": false,
+  "checks": [
+    {
+      "id": "D-01",
+      "card": "S-01.01-01",
+      "ac": "AC-01.01-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "rows=120 sampleCount=120 dataDate=2024-12-27"
+    },
+    {
+      "id": "D-02",
+      "card": "S-01.01-02",
+      "ac": "AC-01.01-02",
+      "layer": "data",
+      "passed": true,
+      "detail": "全部=120 沪=48 深=46 创=17 科=9"
+    },
+    {
+      "id": "D-03",
+      "card": "S-01.01-01",
+      "ac": "AC-01.01-01（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "前 4 行成交额：399001=143054788399833.62 / 000001=19131215562958.02 / 399006=7175438595817.98 / 600519=182829114055.87"
+    },
+    {
+      "id": "D-04",
+      "card": "S-01.01-01",
+      "ac": "AC-01.01-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "coverage 2023-01-02~2024-12-27 dataDate=2024-12-27"
+    },
+    {
+      "id": "R-01",
+      "card": "S-01.01-01",
+      "ac": "AC-01.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "页头=\"样本 120 只 · 2024-12-27 收盘\" 徽标=\"SIM · 模拟数据\""
+    },
+    {
+      "id": "R-02",
+      "card": "S-01.01-01",
+      "ac": "AC-01.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "DOM 行数=120 全文档=120 去重=120 页脚=\"当前 120 行\" 重复= 前3=399001.SZ[1,430,547.88亿] / 000001.SH[191,312.16亿] / 399006.SZ[71,754.39亿] 子节点=HEAD:-:no-attr | ROW:399001.SZ:attr | ROW:000001.SH:attr | ROW:399006.SZ:attr 序列=399001.SZ,000001.SH,399006.SZ,600519.SH,002594.SZ,601029.SH,601018.SH,601014.SH,002138.SZ,002128.SZ,300112.SZ,601033.SH 数据重复=0"
+    },
+    {
+      "id": "R-03",
+      "card": "S-01.01-01",
+      "ac": "AC-01.01-01（补1）",
+      "layer": "render",
+      "passed": false,
+      "detail": "符号异常=1 停牌异常=0 002126.SZ=0.00%"
+    },
+    {
+      "id": "R-04",
+      "card": "S-01.01-01",
+      "ac": "AC-01.01-01（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "DOM 前 4 行成交额=143054788399833.62 / 19131215562958.02 / 7175438595817.98 / 182829114055.87"
+    },
+    {
+      "id": "R-05",
+      "card": "S-01.01-02",
+      "ac": "AC-01.01-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "DOM={\"all\":120,\"sh\":48,\"sz\":46,\"chinext\":17,\"star\":9} data={\"all\":120,\"sh\":48,\"sz\":46,\"chinext\":17,\"star\":9}"
+    },
+    {
+      "id": "R-06",
+      "card": "S-01.01-02",
+      "ac": "AC-01.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "首次点击：方向=desc 标记=换手率↓ 前5=21.247955743879473/21.216846078431374/21.144887037037037/21.11213226299694/21.03207033639144 首行 399001.SZ→688104.SH"
+    },
+    {
+      "id": "R-06B",
+      "card": "S-01.01-02",
+      "ac": "AC-01.01-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "二次点击：方向=asc 标记=换手率↑ 首行=002126.SZ；三次点击：默认列=desc 首行=399001.SZ（原=399001.SZ）"
+    },
+    {
+      "id": "R-07",
+      "card": "S-01.01-02",
+      "ac": "AC-01.01-03（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "方向=desc 空值 3 行；尾部代码=000001.SH,399001.SZ,399006.SZ；前5=1.870132878393639/1.814668799540622/1.7847960183842968/1.7778777715776015/1.7531165558482529"
+    },
+    {
+      "id": "R-07B",
+      "card": "S-01.01-02",
+      "ac": "AC-01.01-03（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "换手率降序 空值 3 行；尾部代码=000001.SH,399001.SZ,399006.SZ"
+    },
+    {
+      "id": "R-08",
+      "card": "S-01.01-02",
+      "ac": "AC-01.01-03（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "state.db={\"board\":\"chinext\",\"columns\":[\"code\",\"name\",\"lastPrice\",\"changePct\",\"changeAbs\",\"amount\",\"turnoverPct\"],\"sortDir\":\"desc\",\"sortKey\":\"turnoverPct\"} 当前分区行数=17"
+    },
+    {
+      "id": "R-09",
+      "card": "S-02.01-01",
+      "ac": "AC-02.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "报价头=宁德时代 / 300750.SZ hash=#/workbench/300750.SZ"
+    },
+    {
+      "id": "R-10",
+      "card": "S-01.01-03",
+      "ac": "AC-01.01-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "分区=chinext 排序=desc 隐藏列=已隐藏 选中=300750.SZ 滚动差=0px（记录=0px）"
+    },
+    {
+      "id": "R-12",
+      "card": "S-01.01-03",
+      "ac": "AC-01.01-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "第40行=002107.SZ 真实 scrollTop=1122px 可见=true 返回选中=002107.SZ 返回 scrollTop=1122px 存档 1122→1122"
+    },
+    {
+      "id": "R-11",
+      "card": "S-01.01-02",
+      "ac": "AC-01.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "↑↓ 002107.SZ→601036.SH Enter 进入=601036.SH"
+    },
+    {
+      "id": "R-13",
+      "card": "S-01.01-03",
+      "ac": "AC-01.01-04（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "连点间隔=40.0/45.0ms 目标=399001.SZ→000001.SH→399006.SZ 展示=399006.SZ hashchange=#/workbench/399006.SZ 报价头元素=1 空闪帧=0"
+    }
+  ],
+  "context": {
+    "snapshotRows": 120,
+    "sampleCount": 120,
+    "dataDate": "2024-12-27",
+    "boardCounts": {
+      "all": 120,
+      "sh": 48,
+      "sz": 46,
+      "chinext": 17,
+      "star": 9
+    }
+  }
+}

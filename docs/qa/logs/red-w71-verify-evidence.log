@@ -113,7 +113,8 @@
 exit=0
 ```
 
-- `docs/qa/evidence/` 只剩平铺文件：`ac020401-cross-page-evidence.json`（冻结）、`e01-market-evidence.json`（新取证，带 commit/dirty/card/otherCards）、`s2-evidence-p-line-20261107k.json`（冻结）。
+- `docs/qa/evidence/` 只剩平铺文件：`ac020401-cross-page-evidence.json`（冻结）、`e01-market-evidence.json`（新取证）、`s2-evidence-p-line-20261107k.json`（冻结）。
+- `e01-market-evidence-meta.json`：`commit=5f153a6…`、`dirty=false`（在提交后的干净树上重新取证），19 条 check 全部带 `card`；唯一失败 `R-03 002126.SZ=0.00%`（真实零涨跌行，卡面 `AC-01.01-01（补1）` 明写禁止 `0.00%` 冒充涨跌，属产品/卡面冲突，待 TL 裁定）。
 - `s2-20261106/`、`e01-20261107/` 已整体移至 `docs/qa/raw/`，`EXCLUDED_DIRS` 已删除，脚本无「显式跳过」计数。
 
 ## 半角 `（补n）` 盘点（TL 口径 18 处）
