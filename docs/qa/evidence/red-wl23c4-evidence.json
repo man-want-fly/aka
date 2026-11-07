@@ -1,0 +1,124 @@
+{
+  "snapshot": {
+    "runStartedAt": 1794074156803,
+    "code": "INTERNAL",
+    "message": "state.db 已损坏：file is not a database",
+    "trace": "TR-20261108-015555-0002",
+    "files": {
+      "WL-23-file-C1": "aka-diagnostics-TR-20261108-015555-0002-ok.json",
+      "WL-23-file-C2": "aka-diagnostics-TR-20261108-015555-0002-no-copy.json",
+      "WL-23-file-C3": "aka-diagnostics-TR-20261108-015555-0002-no-download.json",
+      "WL-23-file-C4": "aka-diagnostics-TR-20261108-015555-0002-both-fail.json"
+    }
+  },
+  "ok": false,
+  "suite": "S-01.02 watchlist (corrupt)",
+  "finishedAt": "2026-11-07T17:55:57.011Z",
+  "layers": {
+    "render": "5/6",
+    "data": "5/5"
+  },
+  "blocked": [],
+  "note": "AKA_DIAG=1 + --corrupt-db：真实库复制到临时目录并留 state.db.orig，只在副本写坏；open_with_fallback 隔离并降级，watchlist 读取抛损坏错误（带 traceId）。",
+  "checks": [
+    {
+      "id": "WL-23",
+      "card": "S-01.02-03",
+      "ac": "AC-01.02-04（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "不可恢复页=true，trace id「TR-20261108-015555-0002」，动作「重新生成数据」=true，未显示空自选=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-23B",
+      "card": "S-08.02-04",
+      "ac": "AC-08.02-05（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "错误码「INTERNAL」/ 重建=true / 导出诊断=true / 重试=false",
+      "blocked": false
+    },
+    {
+      "id": "WL-23C1",
+      "card": "S-08.02-04",
+      "ac": "S-08.02-04·导出四态（渲染层）",
+      "layer": "render",
+      "passed": true,
+      "detail": "已复制+已下载支：「已复制到剪贴板，并下载 aka-diagnostics-TR-20261108-015555-0002-ok.json」",
+      "blocked": false
+    },
+    {
+      "id": "WL-23C2",
+      "card": "S-08.02-04",
+      "ac": "S-08.02-04·导出四态（渲染层）",
+      "layer": "render",
+      "passed": true,
+      "detail": "仅已下载支：「已下载 aka-diagnostics-TR-20261108-015555-0002-no-copy.json（剪贴板不可用）」",
+      "blocked": false
+    },
+    {
+      "id": "WL-23C3",
+      "card": "S-08.02-04",
+      "ac": "S-08.02-04·导出四态（渲染层）",
+      "layer": "render",
+      "passed": true,
+      "detail": "仅已复制支：「已复制到剪贴板（下载被拦截）：aka-diagnostics-TR-20261108-015555-0002-no-download.json」",
+      "blocked": false
+    },
+    {
+      "id": "WL-23C4",
+      "card": "S-08.02-04",
+      "ac": "S-08.02-04·导出四态（渲染层）",
+      "layer": "render",
+      "passed": false,
+      "detail": "导出失败支：「导出失败：剪贴板与下载均不可用，请手动复制错误码与追踪号（红实验）」",
+      "blocked": false
+    },
+    {
+      "id": "WL-23-log",
+      "card": "S-01.02-03",
+      "ac": "AC-01.02-04（补3）",
+      "layer": "data",
+      "passed": true,
+      "blocked": false,
+      "detail": "页面 trace id TR-20261108-015555-0002 ∈ telemetry.jsonl"
+    },
+    {
+      "id": "WL-23-file-C1",
+      "card": "S-08.02-04",
+      "ac": "S-08.02-04·导出四态（渲染层）",
+      "layer": "data",
+      "passed": true,
+      "blocked": false,
+      "detail": "/Users/sixmillion/Downloads/aka-diagnostics-TR-20261108-015555-0002-ok.json size=193B mtime=01:55:56 文件名trace匹配=True 内容(code/message/traceId)匹配=True"
+    },
+    {
+      "id": "WL-23-file-C2",
+      "card": "S-08.02-04",
+      "ac": "S-08.02-04·导出四态（渲染层）",
+      "layer": "data",
+      "passed": true,
+      "blocked": false,
+      "detail": "/Users/sixmillion/Downloads/aka-diagnostics-TR-20261108-015555-0002-no-copy.json size=193B mtime=01:55:56 文件名trace匹配=True 内容(code/message/traceId)匹配=True"
+    },
+    {
+      "id": "WL-23-file-C3",
+      "card": "S-08.02-04",
+      "ac": "S-08.02-04·导出四态（渲染层）",
+      "layer": "data",
+      "passed": true,
+      "blocked": false,
+      "detail": "未落盘（aka-diagnostics-TR-20261108-015555-0002-no-download.json）"
+    },
+    {
+      "id": "WL-23-file-C4",
+      "card": "S-08.02-04",
+      "ac": "S-08.02-04·导出四态（渲染层）",
+      "layer": "data",
+      "passed": true,
+      "blocked": false,
+      "detail": "未落盘（aka-diagnostics-TR-20261108-015555-0002-both-fail.json）"
+    }
+  ]
+}

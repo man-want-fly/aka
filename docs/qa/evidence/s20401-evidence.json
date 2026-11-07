@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-07T17:00:56.397Z",
+  "finishedAt": "2026-11-07T17:54:18.991Z",
   "cardUnderTest": "S-02.04-02",
   "context": {
     "manifestCount": 105,
@@ -10,10 +10,11 @@
   "cards": [
     {
       "card": "S-02.04-01",
-      "checks": "8/8",
+      "checks": "9/9",
       "layers": {
         "data": "1/1",
-        "render": "7/7"
+        "render": "7/7",
+        "runtime": "1/1"
       },
       "acCovered": "6/6",
       "coveredAcs": [
@@ -197,7 +198,7 @@
       "ac": "AC-02.04-04（补2）",
       "layer": "runtime",
       "passed": true,
-      "detail": "M06 冷算 0.04ms / M02 冷算 0.05ms / M02 点击→曲线 27ms / 冷样本 45 P95 0.29ms"
+      "detail": "M06 冷算 0.03ms / M02 冷算 0.07ms / M02 点击→曲线 25ms / 冷样本 45 P95 0.12ms"
     },
     {
       "id": "R-16",
@@ -214,6 +215,14 @@
       "layer": "render",
       "passed": true,
       "detail": "标的=未选择标的 / 引导「请先在行情页选择一只标的 去行情页」/ 去行情页 href=#/market / M02 禁用=true / 副图实例=M06+M02 → M06+M02 / 行点击提示「请先在行情页选择一只标的」"
+    },
+    {
+      "id": "R-LAT",
+      "card": "S-02.04-01",
+      "ac": "AC-02.04-02",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "产品承诺 200ms、验收上限 250ms（含调度余量）；本次最慢 220ms"
     }
   ]
 }

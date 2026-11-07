@@ -1,33 +1,35 @@
 {
-  "suite": "S-02.04-02 加入图表/容量",
-  "label": "20261108-010056",
-  "runAt": "2026-11-08T01:00:56+08:00",
-  "commit": "366634c56de3d86d134b8ab40f4084731261b2c3",
-  "dirty": true,
-  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"drawer\" target/debug/aka-desktop",
+  "suite": "S-02.04-01 指标抽屉（搜索/分类/规划中/空态/关闭）",
+  "label": "20261108-015418",
+  "runAt": "2026-11-08T01:54:18+08:00",
+  "commit": "da0d385b686127031c7701b309b3a9abb68ae624",
+  "dirty": false,
+  "buildMode": "dev",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"drawer\" target/debug/aka-desktop（NODE_ENV=development vite build 产物）",
   "fixture": "默认 state.db；取证前清空 localStorage `aka.workbench.subplots.v1`（恢复默认 成交量+M06+M01）。套件先改 MACD 参数为 10/22/8、点满容量第 4 个副图、再恢复默认，随后经目录页跳 999999.XX 验证无标的态",
-  "environment": "macOS 本机；vite build 产物 + cargo build（debug，含 QA 注入）--features tauri/custom-protocol",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与本次运行时证据不是同一产物。",
   "formatScan": null,
   "result": {
     "ok": true,
-    "card": "S-02.04-02",
-    "acCovered": "7/7",
+    "card": "S-02.04-01",
+    "acCovered": "6/6",
     "layers": {
-      "data": "2/2",
-      "render": "8/8",
+      "data": "1/1",
+      "render": "7/7",
       "runtime": "1/1"
     },
     "blocked": [],
-    "checks": "11/11 属本卡（同文件其余 9 条按 AC 归属拆到 S-02.04-01 / S-03.01-05，不计本卡分母）",
+    "checks": "9/9 属本卡（同文件其余 11 条按 AC 归属拆到 S-02.04-02 / S-03.01-05，不计本卡分母）",
     "otherCards": [
       {
-        "card": "S-02.04-01",
-        "checks": "8/8",
+        "card": "S-02.04-02",
+        "checks": "11/11",
         "layers": {
-          "data": "1/1",
-          "render": "7/7"
+          "data": "2/2",
+          "render": "8/8",
+          "runtime": "1/1"
         },
-        "acCovered": "6/6"
+        "acCovered": "7/7"
       },
       {
         "card": "S-03.01-05",
@@ -43,8 +45,13 @@
         "card": "S-08.01-02",
         "checks": "0/1",
         "status": "待证",
-        "note": "AC-08.01-02（标的搜索浮层）尚未取证；此前 1/1 系 R-06 挂错卡，已改归 S-02.04-01（AC-02.04-02（补3））"
+        "note": "AC-08.01-02（标的搜索浮层）尚未取证"
       }
     ]
+  },
+  "latency": {
+    "productCommitmentMs": 200,
+    "acceptanceCapMs": 250,
+    "measuredMaxMs": "220"
   }
 }
