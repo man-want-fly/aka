@@ -1310,11 +1310,27 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   3. `runStarDiagnostics` 的产出随批入库到 `docs/qa/evidence/s010201-star-evidence.json` + meta；meta 写代码 commit（或 `base + dirty + patch`）。
   4. 只读错误映射：SQLite/IO 的只读报错 → 「磁盘只读」（现只出现在 diag 说明里，产品会抛原始英文报错）。否则 `WL-20` 即使注入成功，也会因文案不符而红。
 - **验收**：`WL-20/21` 的 `blocked=0`；`s010201-star-evidence.json` 在 `git ls-files` 里；`S-01.02-01` 的 12 项（星标 9 + `WL-10r` + `WL-14` + `WL-20`）能一次复算。
+- **TL 复核（2026-11-07，`b7cb33b` / CI `42366996383` 绿）**：四条落地；三卡已签。余项转 **W-48**（trace id 进日志），另见 **W-47**（注入开关关门）。
 - **回执（dev，2026-11-07，随代码同提交）**：
   1. `--readonly-db`：连接开 `PRAGMA query_only=ON`（SQLite 自己返回 `attempt to write a readonly database`）。比「拷临时目录 + 去写权限」更确定：WAL/迁移不受影响，错误仍走真实 SQLite 路径。`--corrupt-db`：启动前写入非 SQLite 内容，`open_with_fallback` 隔离 + 降级，`quick_check` 失败按 `DbError::Corrupt` 归类。另加 `--empty-dataset`（`list_securities` 返回 0 只）供补2 取证。三个开关只在 `AKA_DIAG=1` 时生效。
   2. 只读映射：`impl From<DbError> for AppError` 把含 `readonly`/`read-only` 的原始报错统一映射为「磁盘只读」；行情 toast 因此为「自选未保存：磁盘只读」，自选错误条为「自选未保存：磁盘只读」。
   3. 取证：`diag-evidence.sh` 增 `watchlist-empty|watchlist-corrupt|watchlist-readonly|star` 四个套件；`watchlistDiag` 按 `diag_faults` 分流，正常态 21 项（`data 7/7`、`render 14/14`、`ok=true`、`blocked=0`），故障态三份独立报告全绿。
   4. `s010201-star-evidence.json` + meta 已入库（9 项全绿）。
+
+### W-47｜dev：把 `--corrupt-db` 等注入开关关进编译期（开发，发布门禁）
+
+- **依据**：报告 4.7.19 二。现在只靠 `AKA_DIAG=1` 软门禁；release 二进制里 `corrupt_state_db()` 会**直接写坏真实 `state.db`**，没有临时目录也没有自带备份，只有脚本侧 `.backup` 兜。
+- **改动**（二选一，优先第一种）：
+  1. 三个开关与 `corrupt_state_db` 收进 `#[cfg(debug_assertions)]`（或 cargo `diag` feature），release 构建里不存在这段代码；
+  2. 保留运行时开关，但必须 `--diag-home=<tmp>` 三段式：路径不在 `~/Library/Application Support/aka`、且先校验目录可写，否则拒绝启动注入。
+- **验收**：`strings target/release/aka-desktop | grep -c "AKA-DIAG-CORRUPT"` = 0（方案 1）；或注入必须带 `--diag-home` 且真实路径被拒（方案 2）。`diag-evidence.sh` 五套件仍全绿。
+- **门禁**：本条未完成前，**禁止打包/发布**；与卡的 Gate C 分开记。
+
+### W-48｜dev：trace id 写入日志并可断言（开发）
+
+- **依据**：报告 4.7.19 三。`trace_id()` 每次现生成、不可复算，且只放进 `details.traceId` 给页面显示，不进 telemetry / stderr / 库——用户报号也查不到。
+- **改动**：生成时把同一 id 写入 `telemetry.jsonl`（含 `code`/`message`）；格式改可读版 `TR-YYYYMMDD-HHMMSS-0001`（保留唯一性）；`watchlist-corrupt` 套件加一条断言「页面 trace id ∈ 日志」。
+- **验收**：`corrupt` 套件由 1 项变 2 项且全绿；页面 id 能在 `telemetry.jsonl` 里 grep 到。
 
 ---
 
