@@ -109,16 +109,24 @@ if [ "$SUITE" = "s0602" ]; then
 fi
 
 python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" <<'PY'
-import json, subprocess, sys, datetime
+import json, subprocess, sys, datetime, hashlib
 evidence_path, meta_path, label, target, fixture, scan_file, scan_rc = sys.argv[1:8]
 d = json.load(open(evidence_path))
-commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
+base = subprocess.check_output(["git", "-C", root, "rev-parse", "HEAD"], text=True).strip()
+diff = subprocess.check_output(
+    ["git", "-C", root, "diff", "-U3", "--", "app/src", "app/scripts", "app/package.json"], text=True
+)
+dirty = bool(diff.strip())
+patch = f"sha256:{hashlib.sha256(diff.encode()).hexdigest()}" if dirty else None
 now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).isoformat(timespec="seconds")
 meta = {
     "suite": d.get("suite", ""),
     "label": label,
     "runAt": now,
-    "commit": commit,
+    "base": base,
+    "dirty": dirty,
+    "patch": patch,
     "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" target/release/aka-desktop",
     "fixture": fixture,
     "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",

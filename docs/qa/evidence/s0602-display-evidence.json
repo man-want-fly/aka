@@ -1,8 +1,8 @@
 {
   "suite": "S-06.02-01 display",
-  "startedAt": "2026-11-07T09:44:56.208Z",
-  "finishedAt": "2026-11-07T09:44:58.029Z",
-  "ok": false,
+  "startedAt": "2026-11-07T10:22:04.734Z",
+  "finishedAt": "2026-11-07T10:22:05.695Z",
+  "ok": true,
   "checks": [
     {
       "id": "set-default-compact",
@@ -89,11 +89,11 @@
       "detail": "量=124.0万手 额=1,828.29亿"
     },
     {
-      "id": "catalog-format-sample",
+      "id": "format-tooltip",
       "ac": "AC-06.02-02（补1）",
       "layer": "render",
-      "passed": false,
-      "detail": "口径页命中「1,684.20」=false（app/content/indicators 未交付时无示例段）"
+      "passed": true,
+      "detail": "tooltip「2024-10-10开 1,944.32 · 高 1,949.73低 1,899.46 · 收 1,900.01量 166.2万手 · 额 3,185.14亿DIF 4.80 元DEA 3.81 元MACD 柱 1.99 元RSI 45.12 %」"
     },
     {
       "id": "persist-compact",

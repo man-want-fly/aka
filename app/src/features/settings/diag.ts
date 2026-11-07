@@ -229,20 +229,34 @@ export async function runSettingsDiagnostics(): Promise<SettingsDiagReport> {
       `量=${volumeText} 额=${amountText}`,
     );
 
-    // 口径页示例：同一只 600519.SH 的收盘价样例须与行情/报价头同口径（补1 第四处）。
-    window.location.hash = "#/catalog";
-    await sleep(700);
-    const catalogText = (document.body.textContent ?? "").replace(/\s+/g, " ");
-    const catalogSample = catalogText.includes("1,684.20");
+    // 图表 tooltip：与行情表、报价头同口径（补1 第三处）。
+    const chart = document.querySelector<SVGSVGElement>("[data-chart='candle']");
+    const chartRect = chart?.getBoundingClientRect();
+    if (chart && chartRect) {
+      chart.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: chartRect.left + chartRect.width * 0.5,
+          clientY: chartRect.top + chartRect.height * 0.3,
+        }),
+      );
+    }
+    const tip = await waitFor(
+      () => document.querySelector<HTMLElement>("[data-chart-tooltip='1']"),
+      4_000,
+    ).catch(() => null);
+    const tipText = (tip?.textContent ?? "").replace(/\s+/g, " ").trim();
+    const tipOk =
+      /开 \d{1,3}(,\d{3})*\.\d{2} · 高 \d{1,3}(,\d{3})*\.\d{2}/.test(tipText) &&
+      /量 [\d,]+\.\d(手|[万亿]手)/.test(tipText) &&
+      /额 [\d,]+\.\d{2}(亿|万)?/.test(tipText);
     push(
-      "catalog-format-sample",
+      "format-tooltip",
       "AC-06.02-02（补1）",
       "render",
-      catalogSample,
-      `口径页命中「1,684.20」=${catalogSample}（app/content/indicators 未交付时无示例段）`,
+      tipOk,
+      `tooltip「${tipText}」`,
     );
-    window.location.hash = "#/settings";
-    await sleep(300);
 
     const afterReload = await ipc.viewStateGet(DISPLAY_SCOPE);
     push(

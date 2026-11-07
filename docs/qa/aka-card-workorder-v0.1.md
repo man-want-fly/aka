@@ -1264,6 +1264,13 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   4. 补 check：`S-01.02-01` 补3 只读注入（星标 200ms 回空心 + 「自选未保存：磁盘只读」）；`S-01.02-02` 补4 删除写失败（组/6 只在原位 + 错误条）；`S-01.02-03` 补2（数据集置空 30 行）、补3（`state.db` 损坏）、补4（移出失败 + 「移出失败，请重试」+ 行仍在）。真实 IO 故障造不出来就记 `blocked`，**不许写成 PASS**（第 10 条）。
   5. 证据 + meta 重出：`meta.commit` 写 `5dd2258`（watchlist）/ `f9a1a88`（display），或写 `base=aff1bbc, dirty=true, patch=<hash>`；`ok=true` 只在 `blocked=0` 且 `failed=0`。
 - **验收**：`npm run verify:format` 白名单外 0，且白名单里不再出现 `%` / `手` / 价格读数；watchlist 证据 21+ 项、`ok=true`、`blocked=0`；每卡 `ac` 字段与卡面 AC 一一对应；meta 的 `commit` 能在 `git show <commit>:app/src` 里找到当次代码。
+- **回执（dev，2026-11-07，随代码同提交；`base=7bff239`、`dirty=true`、`patch=sha256:0024e77a`）**：
+  1. 证据：`s0102-watchlist-evidence.json` 26 项，`ok=false`、`data 7/8`、`render 14/18`、`blocked=5`；`s0602-display-evidence.json` 14 项全绿、`ok=true`。两份 meta 均记 `base/dirty/patch`。
+  2. `verify:format`：`toFixed` 命中 4 处，全部几何；白名单外 0。`IndicatorReadouts.tsx` 的 R²→`formatFixed`、BIAS→`formatPct`、两处 B2→`formatIndicator`（调用数 0→3），白名单里已无 `%`/`手`/价格读数。
+  3. `WL-10 → S-01.02-02 / AC-01.02-03`；`WL-10r → S-01.02-01 / AC-01.02-01（补4）`；21 项原有 check 均补 `card` + `ac`。
+  4. 新增 `WL-20..WL-24` 覆盖三张卡的补2/补3/补4；无真实 IO/数据集注入通道（应用内不可改 `state.db` 权限、数据集为内存 mock、损坏库需独立启动），按第 10 条记 `blocked`，未写成 PASS。
+  5. `S-06.02-01` 已删口径页第四处，补 `format-tooltip`（图表 tooltip）；行情表/报价头/tooltip 三处全绿。
+  6. **未达成**：`ok=true, blocked=0` 因 5 项 blocked 未满足；补2/补3/补4 的页面字面（「当前数据集为空」「重新生成模拟数据」「移出失败，请重试」、损坏库页 + trace id）在产品中尚不存在，即使注入也会红。
 
 ### W-44｜BA：`1,684.20` 示例改挂 `S-03.03-01` + 补3 白名单改窄（BA）
 

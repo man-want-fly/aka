@@ -1,17 +1,26 @@
 {
   "suite": "S-01.02 watchlist",
-  "label": "20261107-174321",
-  "runAt": "2026-11-07T17:43:35+08:00",
-  "commit": "aff1bbc6d6e18f35cf2c3103d15adffe9d52a79e",
-  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"watchlist@20261107-174321\" target/release/aka-desktop",
+  "label": "20261107-182218",
+  "runAt": "2026-11-07T18:22:33+08:00",
+  "base": "7bff239a71300993c8d0ca88af566b17c83f0541",
+  "dirty": true,
+  "patch": "sha256:0024e77a7e1b8735a201976945c703a8151155f1f822a2e5f760b3b0b23f0e06",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"watchlist@20261107-182218\" target/release/aka-desktop",
   "fixture": "state.db 直插 497 条 SEED0000.SZ~SEED0496.SZ（group_name=NULL，其中 SEED0000.SZ 不在数据集）；连同套件早前入集的 TINY 行共 498，取证后 sqlite3 .backup 还原，产品代码未改动",
   "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",
+  "formatScan": null,
   "result": {
-    "ok": true,
+    "ok": false,
     "layers": {
-      "data": "7/7",
-      "render": "14/14"
+      "data": "7/8",
+      "render": "14/18"
     },
-    "blocked": []
+    "blocked": [
+      "WL-20: 只读注入需在运行中改 state.db 磁盘权限；取证脚本无该通道，未运行（星标回空心 + 「自选未保存：磁盘只读」未验）",
+      "WL-21: 删组写失败需运行中只读磁盘；取证脚本无该通道，未运行（组/6 只在原位 + 错误条未验）",
+      "WL-22: 数据集为内存 mock，无法置空；未运行（30 行 + 「当前数据集为空」+ 「重新生成模拟数据」未验）",
+      "WL-23: state.db 损坏需独立启动注入；本套件单次启动内无该通道，未运行（错误页 + trace id 未验）",
+      "WL-24: 移出写失败需运行中只读磁盘；取证脚本无该通道，未运行（「移出失败，请重试」+ 行仍在未验）"
+    ]
   }
 }

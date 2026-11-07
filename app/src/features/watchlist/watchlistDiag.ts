@@ -27,6 +27,7 @@ export const watchlistDiagStage = () => currentStage;
 
 interface Check {
   id: string;
+  card: string;
   ac: string;
   layer: "data" | "render";
   passed: boolean;
@@ -103,13 +104,14 @@ export async function runWatchlistDiagnostics() {
   const push = (
     id: string,
     layer: Check["layer"],
+    card: string,
     ac: string,
     passed: boolean,
     detail: string,
     blocked = false,
-  ) => checks.push({ id, ac, layer, passed, detail, blocked });
-  const block = (id: string, layer: Check["layer"], ac: string, detail: string) =>
-    push(id, layer, ac, false, detail, true);
+  ) => checks.push({ id, card, ac, layer, passed, detail, blocked });
+  const block = (id: string, layer: Check["layer"], card: string, ac: string, detail: string) =>
+    push(id, layer, card, ac, false, detail, true);
 
   markStage("settle");
   // Vite 启动时会对刚改动的文件触发一次 fast refresh，等 DOM 稳定再取证
@@ -124,6 +126,7 @@ export async function runWatchlistDiagnostics() {
     "WL-01",
     "data",
     "S-01.02-02",
+    "AC-01.02-02",
     Boolean(allGroup?.isBuiltin) && allGroup?.count === before.total,
     `基线 total=${before.total}，全部=${allGroup?.count}（builtin=${allGroup?.isBuiltin}），分组 ${before.groups
       .map((group) => `${group.name}:${group.count}`)
@@ -153,6 +156,7 @@ export async function runWatchlistDiagnostics() {
     "WL-02",
     "render",
     "S-01.02-03",
+    "AC-01.02-04（补5）",
     emptyGroupText.includes("这个分组还没有标的") &&
       emptyGroupText.includes("去行情页加星") &&
       emptyGroupText.includes("切回全部"),
@@ -167,6 +171,7 @@ export async function runWatchlistDiagnostics() {
     "WL-03",
     "data",
     "S-01.02-02",
+    "AC-01.02-02",
     afterCreate.groups.some((group) => group.name === GROUP_A) && Boolean(groupTab(GROUP_A)),
     `分组 ${GROUP_A} 落库且渲染 tab（自定义 ${afterCreate.groups.filter((group) => !group.isBuiltin).length} 个）`,
   );
@@ -181,6 +186,7 @@ export async function runWatchlistDiagnostics() {
     "WL-04",
     "render",
     "S-01.02-02",
+    "AC-01.02-02（补1）",
     blankError.includes("分组名不能为空") && blankSubmit?.disabled === true,
     `空白名提示「${blankError}」，新建按钮 disabled=${blankSubmit?.disabled}`,
   );
@@ -194,6 +200,7 @@ export async function runWatchlistDiagnostics() {
     "WL-05",
     "render",
     "S-01.02-02",
+    "AC-01.02-02（补2）",
     dupError.includes("已有同名分组") && dupSubmit?.disabled === true,
     `同名提示「${dupError}」，新建按钮 disabled=${dupSubmit?.disabled}，自定义组仍 ${dupCount} 个`,
   );
@@ -211,6 +218,7 @@ export async function runWatchlistDiagnostics() {
     "WL-06",
     "render",
     "S-01.02-02",
+    "AC-01.02-02（补3）",
     Boolean(builtinOps) &&
       builtinButtons.length === 2 &&
       builtinButtons.every((button) => button.disabled) &&
@@ -234,6 +242,7 @@ export async function runWatchlistDiagnostics() {
     "WL-07",
     "render",
     "S-01.02-02",
+    "AC-01.02-02",
     confirmText.includes("未分组") &&
       !confirmText.includes("（未分组）") &&
       confirmText.includes(`${groupACount} 只标的`),
@@ -259,6 +268,7 @@ export async function runWatchlistDiagnostics() {
     "WL-08b",
     "data",
     "S-01.02-02",
+    "AC-01.02-02",
     secondDeleteOk,
     `二次删除同一组返回 ${secondDeleteOk ? "成功（幂等）" : "失败"}`,
   );
@@ -266,6 +276,7 @@ export async function runWatchlistDiagnostics() {
     "WL-08",
     "data",
     "S-01.02-02",
+    "AC-01.02-02",
     deleted && sameTotal && itemUngrouped && groupACount > 0 && assignedGroup === GROUP_A && Boolean(ungroupedTab),
     `归属=${assignedGroup}→null，组已删除=${deleted}，total ${beforeDelete.total}→${afterDelete.total}，${TINY_CODE} groupName=null=${itemUngrouped}，未分组 tab=${Boolean(ungroupedTab)}`,
   );
@@ -273,6 +284,7 @@ export async function runWatchlistDiagnostics() {
     "WL-09",
     "render",
     "S-01.02-02",
+    "AC-01.02-02",
     groupTab("全部")?.getAttribute("aria-pressed") === "true",
     `删除后选中「${q<HTMLButtonElement>("[data-wl-group][aria-pressed='true']")?.textContent?.trim() ?? "?"}」`,
   );
@@ -281,8 +293,14 @@ export async function runWatchlistDiagnostics() {
   markStage("limit 500");
   const seedCount = (await ipc.watchlist()).items.filter((item) => item.security.startsWith("SEED")).length;
   if (seedCount === 0) {
-    block("WL-10", "data", "S-01.02-03", "缺 498 条合成标的 fixture（前置脚本未直插 state.db）");
-    block("WL-10r", "render", "S-01.02-03", "同上，无 500 上限样本可验提示与星标空心");
+    block("WL-10", "data", "S-01.02-02", "AC-01.02-03", "缺 498 条合成标的 fixture（前置脚本未直插 state.db）");
+    block(
+      "WL-10r",
+      "render",
+      "S-01.02-01",
+      "AC-01.02-01（补4）",
+      "同上，无 500 上限样本可验提示与星标空心",
+    );
   } else {
     const current = await ipc.watchlist();
     const codes = (await ipc.listSecurities()).map((security) => security.code);
@@ -329,7 +347,7 @@ export async function runWatchlistDiagnostics() {
           reason === "WATCHLIST_LIMIT";
         detail = `499→${at499}，500→${at500}，501 ${rejected ? `拒「${rejected}」reason=${reason}` : "被接受（错）"}`;
         if (at499 === 499 && at500 === 500) {
-          // 渲染层：在行情页点第 501 只的星标，必须出上限提示且星标仍空心（AC-01.02-03）。
+          // 渲染层：在行情页点第 501 只的星标，必须出上限提示且星标仍空心（AC-01.02-01（补4））。
           renderAnchor = c;
           window.location.hash = "#/market";
           const star = await waitFor(() => q<HTMLButtonElement>(`[data-star="${c}"]`), 8_000).catch(() => null);
@@ -362,11 +380,11 @@ export async function runWatchlistDiagnostics() {
         }
       }
     }
-    push("WL-10", "data", "S-01.02-03", passed, detail);
+    push("WL-10", "data", "S-01.02-02", "AC-01.02-03", passed, detail);
     if (renderAnchor) {
-      push("WL-10r", "render", "S-01.02-03", renderPassed, renderDetail);
+      push("WL-10r", "render", "S-01.02-01", "AC-01.02-01（补4）", renderPassed, renderDetail);
     } else {
-      block("WL-10r", "render", "S-01.02-03", renderDetail);
+      block("WL-10r", "render", "S-01.02-01", "AC-01.02-01（补4）", renderDetail);
     }
   }
 
@@ -385,6 +403,7 @@ export async function runWatchlistDiagnostics() {
     "WL-11",
     "render",
     "S-01.02-03",
+    "AC-01.02-04（补7）",
     shortRow?.dataset.wlState === "insufficient" &&
       Boolean(shortBadge) &&
       (shortBadge?.getAttribute("title") ?? "").includes("不足 20 根") &&
@@ -397,6 +416,7 @@ export async function runWatchlistDiagnostics() {
     "WL-12",
     "render",
     "S-01.02-03",
+    "AC-01.02-04（补7）",
     canEnter,
     `数据不足行可进工作台=${canEnter}（.wl-row-main 未 disabled）`,
   );
@@ -409,14 +429,16 @@ export async function runWatchlistDiagnostics() {
       "WL-13",
       "render",
       "S-01.02-03",
+      "AC-01.02-04（补1）",
       "缺「不在数据集」fixture（前置脚本未直插 state.db）",
     );
-    block("WL-14", "data", "S-01.02-01", "同上，无样本可点「移出」");
+    block("WL-14", "data", "S-01.02-01", "AC-01.02-01", "同上，无样本可点「移出」");
   } else {
     push(
       "WL-13",
       "render",
       "S-01.02-03",
+      "AC-01.02-04（补1）",
       seedRow.dataset.wlState === "missing" &&
         seedRow.classList.contains("wl-row--muted") &&
         Boolean(q(`[data-wl-item="${SEED_CODE}"] [data-wl-badge="missing"]`)) &&
@@ -430,6 +452,7 @@ export async function runWatchlistDiagnostics() {
       "WL-14",
       "data",
       "S-01.02-01",
+      "AC-01.02-01",
       removed,
       `不在数据集行点「×」后已从自选删除=${removed}（toggle_watch 先判已收藏再校验数据集）`,
     );
@@ -466,7 +489,7 @@ export async function runWatchlistDiagnostics() {
     buttonByText("取消")?.click();
     await sleep(200);
   }
-  push("WL-15", "render", "S-01.02-02", dupPassed, dupDetail);
+  push("WL-15", "render", "S-01.02-02", "AC-01.02-02（补2）", dupPassed, dupDetail);
 
   // ---- [渲染层] 搜索无结果 ----
   markStage("search empty");
@@ -480,6 +503,7 @@ export async function runWatchlistDiagnostics() {
     "WL-16",
     "render",
     "S-01.02-03",
+    "AC-01.02-04（补6）",
     searchText.includes("没有匹配「zqzzzz」的自选") && searchText.includes("清除搜索"),
     `搜索空态「${searchText.replace(/\s+/g, " ").trim()}」`,
   );
@@ -510,13 +534,14 @@ export async function runWatchlistDiagnostics() {
       "WL-17",
       "data",
       "S-01.02-02",
+      "AC-01.02-03",
       after === 20 &&
         limitRejected === "分组上限 20 个，请先删除不用的分组" &&
         limitReason === "GROUP_LIMIT",
       `建至 ${after} 个后，第 21 个 ${limitRejected ? `拒「${limitRejected}」reason=${limitReason}` : "被接受（错）"}`,
     );
   } catch (err) {
-    push("WL-17", "data", "S-01.02-02", false, `分组上限取证异常：${errorMessage(err)}`);
+    push("WL-17", "data", "S-01.02-02", "AC-01.02-03", false, `分组上限取证异常：${errorMessage(err)}`);
   }
 
   // ---- [渲染层] 20 组时新建入口置灰 + 上限提示 ----
@@ -530,6 +555,7 @@ export async function runWatchlistDiagnostics() {
     "WL-19",
     "render",
     "S-01.02-02",
+    "AC-01.02-03",
     (limitHint?.textContent ?? "").includes("分组上限 20 个，请先删除不用的分组") &&
       limitInput?.disabled === true &&
       limitSubmit?.disabled === true,
@@ -563,6 +589,7 @@ export async function runWatchlistDiagnostics() {
         "WL-18",
         "render",
         "S-01.02-03",
+        "AC-01.02-04",
         text.includes("自选还是空的") &&
           text.includes("去行情页") &&
           text.includes("导入 CSV（本期未开放）") &&
@@ -571,11 +598,48 @@ export async function runWatchlistDiagnostics() {
         `全部空态「${text}」，CSV 按钮 disabled=${csv?.disabled}`,
       );
     } else {
-      block("WL-18", "render", "S-01.02-03", `清空失败：total=${emptied.total}，全部空态未取证`);
+      block("WL-18", "render", "S-01.02-03", "AC-01.02-04", `清空失败：total=${emptied.total}，全部空态未取证`);
     }
   } catch (err) {
-    block("WL-18", "render", "S-01.02-03", `清空异常：${errorMessage(err)}`);
+    block("WL-18", "render", "S-01.02-03", "AC-01.02-04", `清空异常：${errorMessage(err)}`);
   }
+
+  // ---- [补项] 真实 IO 故障未提供注入通道，按第 10 条记 blocked，不写成 PASS ----
+  block(
+    "WL-20",
+    "render",
+    "S-01.02-01",
+    "AC-01.02-01（补3）",
+    "只读注入需在运行中改 state.db 磁盘权限；取证脚本无该通道，未运行（星标回空心 + 「自选未保存：磁盘只读」未验）",
+  );
+  block(
+    "WL-21",
+    "data",
+    "S-01.02-02",
+    "AC-01.02-02（补4）",
+    "删组写失败需运行中只读磁盘；取证脚本无该通道，未运行（组/6 只在原位 + 错误条未验）",
+  );
+  block(
+    "WL-22",
+    "render",
+    "S-01.02-03",
+    "AC-01.02-04（补2）",
+    "数据集为内存 mock，无法置空；未运行（30 行 + 「当前数据集为空」+ 「重新生成模拟数据」未验）",
+  );
+  block(
+    "WL-23",
+    "render",
+    "S-01.02-03",
+    "AC-01.02-04（补3）",
+    "state.db 损坏需独立启动注入；本套件单次启动内无该通道，未运行（错误页 + trace id 未验）",
+  );
+  block(
+    "WL-24",
+    "render",
+    "S-01.02-03",
+    "AC-01.02-04（补4）",
+    "移出写失败需运行中只读磁盘；取证脚本无该通道，未运行（「移出失败，请重试」+ 行仍在未验）",
+  );
 
   markStage("cleanup");
   for (const group of (await ipc.watchlist()).groups.filter((item) => !item.isBuiltin)) {
@@ -600,7 +664,7 @@ export async function runWatchlistDiagnostics() {
     },
     blocked: blockedChecks.map((check) => `${check.id}: ${check.detail}`),
     note:
-      "前置脚本直插 498 条 SEED 合成标的（含不在数据集的 SEED0000.SZ），取证后用备份还原；WL-15 只验前端撞名校验（内联提示 + 保存 disabled + 组数不变 + 无写入），移出失败的错误条注入归 AC-01.02-04（补4），本套件不覆盖。",
+      "前置脚本直插 498 条 SEED 合成标的（含不在数据集的 SEED0000.SZ），取证后用备份还原；WL-15 只验前端撞名校验（内联提示 + 保存 disabled + 组数不变 + 无写入）。WL-20..WL-24 为三张卡补2/补3/补4 的真实 IO 故障项：无注入通道，按第 10 条记 blocked，不计 PASS。",
     checks,
   };
   await ipc.diagWriteNamed("s0102-watchlist-evidence.json", JSON.stringify(report, null, 2));

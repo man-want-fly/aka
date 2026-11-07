@@ -1,4 +1,5 @@
 import type { SeriesDto } from "../lib/types";
+import { formatFixed, formatIndicator, formatPct } from "../lib/format";
 import { MAX_SUBPLOTS } from "../features/workbench/model";
 
 interface Props {
@@ -80,6 +81,17 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCou
     return value !== null && Number.isFinite(value) ? value : null;
   };
 
+  // 带单位读数按四类口径分流：% 走 formatPct、元/价格走 formatPrice、量走手口径、无量纲定点
+  const formatReadout = (value: number, unit: string): string => {
+    if (unit === "%") return formatIndicator(value, "percent");
+    if (unit === "元" || unit === "元/根") return `${formatIndicator(value, "price")} ${unit}`;
+    if (unit === "股") return formatIndicator(value, "volume");
+    if (unit.endsWith("手")) return `${formatFixed(value, 1)}${unit}`;
+    return `${formatFixed(value, 2)}${unit ? ` ${unit}` : ""}`;
+  };
+
+  const r2Value = r2 ? latest(r2.outputs[0]?.values) : null;
+
   return (
     <div
       className="indicator-readouts"
@@ -98,7 +110,7 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCou
               data-unit="无量纲"
               style={{ color: r2.outputs[0]?.color }}
             >
-              R² {latest(r2.outputs[0]?.values)?.toFixed(2) ?? "—"}
+              R² {r2Value === null ? "—" : formatFixed(r2Value, 2)}
             </span>
             <span className="caption">无量纲</span>
             <Sparkline
@@ -122,7 +134,7 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCou
                 style={{ color: output.color }}
               >
                 {E13_LABELS[output.key] ?? output.key}{" "}
-                {value === null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`}
+                {value === null ? "—" : formatPct(value)}
               </span>
               <Sparkline values={output.values} color={output.color} />
             </div>
@@ -157,8 +169,7 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCou
                     data-unit={unit}
                     style={{ color: output.color, fontSize: 11 }}
                   >
-                    {item.indicatorId}·{output.key} {value === null ? "—" : value.toFixed(2)}
-                    {unit ? ` ${unit}` : ""}
+                    {item.indicatorId}·{output.key} {value === null ? "—" : formatReadout(value, unit)}
                   </span>
                 );
               }),
@@ -176,8 +187,7 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCou
                     data-unit={unit}
                     style={{ color: output.color, fontSize: 11 }}
                   >
-                    {sub.indicatorId}·{output.key} {value === null ? "—" : value.toFixed(2)}
-                    {unit ? ` ${unit}` : ""}
+                    {sub.indicatorId}·{output.key} {value === null ? "—" : formatReadout(value, unit)}
                   </span>
                 );
               }),

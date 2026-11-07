@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // AC-06.02-02（补3）：组件目录内四类数值（价格/百分比/量/额）不得直接 toFixed。
-// 白名单只有三类：几何坐标、诊断信息、指标读数（W-42 2026-11-07 定）。
-// 白名单按「归一化后的整行」匹配；行内容变化即视为新命中，必须重新归类。
+// 白名单只有三类：几何坐标、诊断信息、无量纲指标读数（W-43 2026-11-07 定）。
+// 百分比/价格/量/额一律走 format；白名单按「归一化后的整行」匹配，行内容变化即视为新命中。
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -11,10 +11,6 @@ const norm = (line) => line.replace(/\s+/g, " ").trim();
 const WHITELIST = {
   "IndicatorReadouts.tsx": [
     ["geometry", 'path += `${penDown ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)} `;'],
-    ["readout", 'R² {latest(r2.outputs[0]?.values)?.toFixed(2) ?? "—"}'],
-    ["readout", '{value === null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`}'],
-    ["readout", "{item.indicatorId}·{output.key} {value === null ? \"—\" : value.toFixed(2)}"],
-    ["readout", "{sub.indicatorId}·{output.key} {value === null ? \"—\" : value.toFixed(2)}"],
   ],
   "CandleChart.tsx": [
     ["geometry", 'path += `${penDown ? "L" : "M"}${xOf(index).toFixed(2)} ${yOf(value).toFixed(2)} `;'],
