@@ -1,0 +1,98 @@
+{
+  "suite": "S-08.01-02 indicator search empty",
+  "startedAt": "2026-11-08T07:20:00+08:00",
+  "finishedAt": "2026-11-08T07:32:00+08:00",
+  "ok": true,
+  "checks": [
+    {
+      "id": "registry-T-M-derived",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03",
+      "layer": "data",
+      "passed": true,
+      "detail": "app/manifest/indicators.json 实测 T=105（indicators.length）、M=45（status ∈ {normal,beta}：normal 43 + beta 2）、planned 60；CatalogPage 用 total=items.length 与 addableCount=filter(status normal|beta) 运行时派生，源码无 105/45/60/44/61 字面量"
+    },
+    {
+      "id": "registry-count-match",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03",
+      "layer": "data",
+      "passed": true,
+      "detail": "catalogTotal=105 与 indicators.length=105 一致；T17（鳄鱼线）status=planned，可被 searchIndicators 命中（命中集不按 status 过滤）"
+    },
+    {
+      "id": "search-scope-text-empty",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "无结果态 data-catalog-empty=indicator 内渲染「未找到指标 “{query}”」与「仅搜索目录内 {total} 个指标（其中 {addableCount} 个可添加）」，两个数字分别挂 data-catalog-empty-total / data-catalog-empty-addable，取运行时值"
+    },
+    {
+      "id": "search-scope-text-hit",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "有命中时 data-catalog-search-scope 行同样输出「仅搜索目录内 {T} 个指标（其中 {M} 个可添加）」，T/M 同源"
+    },
+    {
+      "id": "planned-hit-grayed-not-addable",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "搜索 T17：行内 data-catalog-status=planned，追加「规划中」与 data-catalog-not-addable=T17 的「暂不可添加」标签，行样式 .catalog-row--planned（opacity 0.55）置灰；输入 xyz 走合法无结果态不报错"
+    },
+    {
+      "id": "browse-all-full-T-gray-mixed",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "点击「浏览全部指标」（data-catalog-browse-all）清空 query 并置 showAll，data-catalog-all=1 平铺全量 T 条（按 id 升序），caption「全部 {T} 条 · 可添加 {M} · 规划中 {planned}」；planned 即 T−M 条全部带 .catalog-row--planned 置灰且带「暂不可添加」，normal/beta 为可添加，空态文案消失"
+    },
+    {
+      "id": "clear-and-scope-reset",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "「清空」同时清 query 与 showAll，回到分类分组空闲态；重新输入时 changeQuery 会把 showAll 复位，不残留全量视图"
+    },
+    {
+      "id": "no-forbidden-phrase",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "grep -r \"暂无数据\" app/src 命中 0；WorkbenchPage.tsx L1922 标题为「行情未加载」，副行保持「请通过 npm run tauri dev 启动桌面骨架」"
+    },
+    {
+      "id": "empty-search-log-once",
+      "card": "S-08.01-02",
+      "ac": "AC-08.01-03",
+      "layer": "data",
+      "passed": true,
+      "detail": "每次无结果 query 只写一条 console.info(\"[empty.search]\")，字段 scope=indicator / query 截断 30 字符 / total / addable；同 query 去重"
+    }
+  ],
+  "context": {
+    "commit": "a60a504198e42e9b6c9d859d955cbacf0543c307",
+    "scope": "dev2 参考证据（§0.1 双线口径）：合并后须按合并 commit 重签。本单只覆盖指标侧 AC-08.01-03 / 补1 / 补2；AC-08.01-02（补1/补2）依赖 P7 搜索浮层 S-05.01-01/02（台账「未开始」，src 无浮层实现），本单不签，见 blocked"
+  },
+  "blocked": [
+    {
+      "ac": "AC-08.01-02",
+      "reason": "依赖 S-05.01-01/02 P7 全局搜索浮层；台账第 154–155 行为「未开始 / 无全局搜索索引与面板」，app/src 无 ⌘K 浮层，标的侧空态无处落地"
+    },
+    {
+      "ac": "AC-08.01-02（补1）",
+      "reason": "同上，标的空态「清空」行为依附 P7 浮层"
+    },
+    {
+      "ac": "AC-08.01-02（补2）",
+      "reason": "同上，标的空态 Enter 无动作依附 P7 浮层键盘处理"
+    }
+  ]
+}

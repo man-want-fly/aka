@@ -1,0 +1,29 @@
+{
+  "suite": "S-08.01-02 indicator search empty",
+  "commit": "a60a504198e42e9b6c9d859d955cbacf0543c307",
+  "command": "npm run typecheck && npm run verify:r03 && npm run verify:format && npm run verify:constants && npm run verify:evidence",
+  "environment": "macOS 本机；AKA-dev2 worktree / dev2",
+  "result": {
+    "ok": true,
+    "card": "S-08.01-02",
+    "layers": {
+      "data": "3/3",
+      "render": "6/6"
+    },
+    "scope": "本单只覆盖指标侧 AC-08.01-03 / 补1 / 补2；T=indicators.length=105、M=status∈{normal,beta}=45（normal 43 + beta 2）、planned 60 均由注册表实测，代码运行时派生且无硬编码条数",
+    "blocked": [
+      {
+        "ac": "AC-08.01-02",
+        "reason": "依赖 S-05.01-01/02 P7 全局搜索浮层（台账未开始，src 无浮层），标的侧空态无处落地"
+      },
+      {
+        "ac": "AC-08.01-02（补1）",
+        "reason": "依附 P7 浮层的标的空态「清空」行为"
+      },
+      {
+        "ac": "AC-08.01-02（补2）",
+        "reason": "依附 P7 浮层的标的空态 Enter 键盘处理"
+      }
+    ]
+  }
+}
