@@ -344,8 +344,10 @@ fn period_of(params: &Params, fallback: usize) -> usize {
     period_of_key(params, "period", fallback as i64)
 }
 
+/// 参数范围只由 manifest 声明、由 `validate` 强制（越界返回 E_PARAM_OUT_OF_RANGE）。
+/// 这里不做夹取：静默夹取会让越界值「看起来生效」（N=500 算成 200），比报错更糟。
 fn period_of_key(params: &Params, key: &str, fallback: i64) -> usize {
-    (param_int(params, key).unwrap_or(fallback).max(2) as usize).min(200)
+    param_int(params, key).unwrap_or(fallback) as usize
 }
 
 fn period_warmup(params: &Params) -> usize {
@@ -520,6 +522,33 @@ mod tests {
             .unwrap()
             .calc(&view_of(&close), &params, &mut out)
             .is_err());
+    }
+
+    #[test]
+    fn ma_period_range_is_enforced_not_clamped() {
+        // W-72：卡面 S-03.04 要求 MA period ∈ [2,500]；越界报错，不许静默夹取。
+        let meta = lookup(T01_ID).unwrap().meta();
+        let mut params = params(meta);
+        params.insert("period".into(), crate::ParamValue::Int(500));
+        assert!(crate::param::validate(meta.params, &params).is_ok());
+
+        let close = sample_close();
+        let mut out = vec![vec![0.0; close.len()]; 1];
+        lookup(T01_ID)
+            .unwrap()
+            .calc(&view_of(&close), &params, &mut out)
+            .unwrap();
+        let mean: f64 = close[20..520].iter().sum::<f64>() / 500.0;
+        assert!(
+            (out[0][519] - mean).abs() < 1e-9,
+            "N=500 必须按 500 计算，不许夹到 200"
+        );
+        assert!(out[0][..499].iter().all(|v| v.is_nan()));
+
+        params.insert("period".into(), crate::ParamValue::Int(501));
+        assert!(crate::param::validate(meta.params, &params).is_err(), "N=501 必须报错");
+        params.insert("period".into(), crate::ParamValue::Int(1));
+        assert!(crate::param::validate(meta.params, &params).is_err(), "N=1 必须报错");
     }
 
     #[test]

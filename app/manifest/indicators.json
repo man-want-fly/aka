@@ -29,7 +29,7 @@
           "key": "period",
           "label": "周期",
           "min": 2,
-          "max": 200,
+          "max": 500,
           "default": 20,
           "step": 1
         }
@@ -76,7 +76,7 @@
           "key": "period",
           "label": "周期",
           "min": 2,
-          "max": 200,
+          "max": 500,
           "default": 20,
           "step": 1
         }
@@ -122,7 +122,7 @@
           "key": "period",
           "label": "周期",
           "min": 2,
-          "max": 200,
+          "max": 500,
           "default": 20,
           "step": 1
         }
@@ -169,7 +169,7 @@
           "key": "period",
           "label": "周期",
           "min": 2,
-          "max": 200,
+          "max": 500,
           "default": 20,
           "step": 1
         }
@@ -215,7 +215,7 @@
           "key": "period",
           "label": "周期",
           "min": 2,
-          "max": 200,
+          "max": 500,
           "default": 20,
           "step": 1
         }
