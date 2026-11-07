@@ -1288,7 +1288,7 @@ export function CandleChart({
                                     ? "var(--rise)"
                                     : value < 0
                                       ? "var(--fall)"
-                                      : "#3b82f6"
+                                      : "var(--flat)"
                                   : line.color
                               }
                             />

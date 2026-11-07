@@ -705,7 +705,7 @@ select {
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   border: 1px solid var(--line);
   border-radius: var(--r2);
-  box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--shadow) 22%, transparent);
   font-family: var(--mono);
   font-size: 10.5px;
   line-height: 1.35;
@@ -851,7 +851,7 @@ select {
 .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #08131a;
+  color: var(--on-accent);
   font-weight: 600;
 }
 

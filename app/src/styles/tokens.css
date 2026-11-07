@@ -20,6 +20,9 @@
   --accent-soft: rgba(79, 163, 199, 0.13);
   --warn: #d9a340;
   --warn-soft: rgba(217, 163, 64, 0.12);
+  --flat: #4fa3c7;
+  --shadow: #000000;
+  --on-accent: #08131a;
   --r: 4px;
   --r2: 3px;
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
@@ -46,6 +49,9 @@ html[data-theme="light"] {
   --accent-soft: rgba(31, 110, 147, 0.09);
   --warn: #8a6410;
   --warn-soft: rgba(138, 100, 16, 0.09);
+  --flat: #1f6e93;
+  --shadow: #0b1a26;
+  --on-accent: #ffffff;
 }
 
 /* 红涨绿跌 / 绿涨红跌：只换语义色，不动主题色板 */
