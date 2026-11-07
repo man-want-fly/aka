@@ -1,0 +1,16 @@
+{
+  "suite": "S-07.01-01 datasource-status",
+  "commit": "7b4f87e58301eb8c0dbeda748632c58fdd257fc5",
+  "command": "cargo test -p app-core datasource_status && npm run typecheck",
+  "environment": "macOS 本机；AKA-dev2 worktree / dev2",
+  "result": {
+    "ok": true,
+    "card": "S-07.01-01",
+    "layers": {
+      "data": "5/5",
+      "render": "8/8"
+    },
+    "scope": "本批 AC 范围 = 4 必需/4 可选/2 运维/版本 6 字段/缺失态/工作台入口/禁词；必需能力缺失阻断工作台与 sha256 不一致标红依赖 S-07.03-02/03，本批不做",
+    "blocked": []
+  }
+}

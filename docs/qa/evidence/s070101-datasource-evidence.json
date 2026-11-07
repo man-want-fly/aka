@@ -1,0 +1,116 @@
+{
+  "suite": "S-07.01-01 datasource-status",
+  "startedAt": "2026-11-08T06:55:00+08:00",
+  "finishedAt": "2026-11-08T07:02:00+08:00",
+  "ok": true,
+  "checks": [
+    {
+      "id": "probe-required-4-of-4",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "Mock 样本包完整时 requiredOk/requiredTotal = 4/4；日线、复权因子、证券主数据、交易日历逐项真实调用成功才置绿"
+    },
+    {
+      "id": "version-six-fields",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "dataset_id / generated_at / row_count / coverage_start / coverage_end / sha256 六字段来自 manifest；row_count=62400，sha256 长度 64、短码 12"
+    },
+    {
+      "id": "ops-no-fake-gb",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "Mock 为内存数据源：dataDirReadable=true 等价于 manifest 可读，diskFreeGb=null（界面显示 —），并带「无数据目录」说明，不编造 GB"
+    },
+    {
+      "id": "tushare-static-0-of-4",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "tushareEnabled/tushareTotal = 0/4，仅静态摘要，不发起网络探测（D-09 0 网络）"
+    },
+    {
+      "id": "calendar-table-gone-3-of-4",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "CalendarGoneProvider（日历可查询但返回空表）下 requiredOk=3/4、state=unavailable、errorCode=E_REQUIRED_CAPABILITY_MISSING"
+    },
+    {
+      "id": "render-four-required-green",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "P9 能力两列网格渲染 8 项，每项带 data-capability-key/available；必需 4 项绿色 + 文字「可用」"
+    },
+    {
+      "id": "render-optional-st-yellow-note",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "ST 标记不可用时用黄色 dot/文案 + 备注「无 ST 标记：涨跌停按普通规则推导」；停牌标记同法标「无停牌标记：零成交量不区分停牌」"
+    },
+    {
+      "id": "render-summary-and-detail",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "顶部汇总 `x/4 必需 · y/4 可选`；非全绿时出现「查看详情」，定位到首个不可用能力项"
+    },
+    {
+      "id": "render-state-text-not-color-only",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "状态徽标同时给文字（可用/部分可用/不可用/未安装/检查失败）与颜色，不只靠颜色区分"
+    },
+    {
+      "id": "render-missing-dataset",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "version=null 时显示「未安装样本包」+「去环境页生成」入口，版本区 6 行全部显示 —"
+    },
+    {
+      "id": "render-sha-copy-full-64",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "sha256 行显示前 12 位；「复制」写入完整 64 位（clipboard 优先、textarea 兜底），复制后按钮显示「已复制」"
+    },
+    {
+      "id": "render-workbench-entry-on-gap",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "工作台挂载时探测，requiredOk<requiredTotal 才渲染 data-wb-datasource-entry 提示条与「查看数据源状态」按钮；全绿时不显示"
+    },
+    {
+      "id": "render-no-forbidden-phrases",
+      "card": "S-07.01-01",
+      "ac": "AC-07.01-01（补4）",
+      "layer": "render",
+      "passed": true,
+      "detail": "grep app/src + app/content：「真实行情」「已连接交易所」命中 0"
+    }
+  ],
+  "context": {
+    "commit": "7b4f87e58301eb8c0dbeda748632c58fdd257fc5",
+    "scope": "dev2 参考证据（§0.1 双线口径）：合并后须按合并 commit 重签。本批 AC 范围 = P9 首卡 4+4 能力、运维 2 项、版本 6 字段、缺失/未安装态、工作台入口与禁词；「必需能力缺失阻断工作台」与「sha256 不一致标红」无对应 AC 且依赖 S-07.03-02/03，不在本批"
+  }
+}
