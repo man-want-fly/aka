@@ -665,6 +665,18 @@ Gate C：`S-03.04-02` 按 BA `a846473` 的「可签」录入 PASS；`S-06.01-01`
 **`V3-02(outputs)` 加严（W-32，2026-11-07）**：原判据「**任一** `key ∪ aliases` 出现在 formula 段」过宽——`T15` 的 `senkouA`/`senkouB` 未定义，却靠 `chikou` 命中整条通过。这与 `viPlus` 误收 `VI−` 同病：宽到能「看着全绿」地放过错配。改为**逐项判定**：每个 `outputs[].key` 的 `key ∪ aliases` 至少在 formula 段命中一次，缺一项即 FAIL，不得因其他输出命中而放过。
 按新判据模拟 13 页：**变红 3 页**——`T24:llv`、`M02:j`、`M06:dea`/`hist`（共 4 个名字）。逐条核对，**这 4 个名字在 formula 段都已有定义**（`LLV_i = min(...)`、`J = 3K − 2D`、`DEA = EMA(...)`、「MACD 柱 = 2 × (DIF − DEA)」），缺的是**别名未登记**，不是内容没写。故处置为补登别名（`llv:[LLV]`、`j:[J]`、`dea:[DEA]`、`hist:[MACD 柱]`），**不改内容**；`T15` 已因 `senkouA/B` 别名到位而通过。结论与「先当内容缺」的直觉相反，验完才定。
 
+### 4.7.9 黄金回归的疑点结案与 `app/bench` 门禁缺口（2026-11-07）
+
+**结案（替换原怀疑）**：`indicator-golden` **193/193 通过**，CI 里两处都会跑——`cargo test --workspace --exclude aka-desktop`（`ci.yml:51-52`）与单列 `cargo test -p indicator-golden`（`ci.yml:54-55`）。它**只覆盖指标公式**：17 个 fixture（`fixtures/*.json`，合计 193 个 case，seed=42 合成 520 根 OHLCV，期望值由 `gen_reference.py` 按公开公式手算写入）；**不读 mock provider、不读 `600519`、不读 `app/bench`**。
+
+> 口径更正：此前口述「18 个 fixture」是把 `fixtures/` 目录下的 `gen_reference.py`（或 `__pycache__`）计了进去。复算 = `ls fixtures/*.json | wc -l` → **17**；`python3` 累加各 fixture 的 `cases` 长度 → **193**。以此为准。
+
+所以「夹具变了还绿」**不是覆盖缺失导致的矛盾，而是两类对象根本不同**：黄金回归验的是公式（`indicator-core` 的数值内核），`app/bench` 存的是**接口报文与聚合产出**（10 条 IPC 快照 + 3 只标的日/周/月 CSV + `report.json`）。前者绿不能证明后者对。
+
+**今天的门禁缺口（明确写入）**：**CI 完全不校验 `app/bench`**——`grep -n bench .github/workflows/ci.yml` → **0 命中**。快照是回归基线，却没有任何东西盯着它与代码同步；此前 `2ec7385`/`ab675c5` 两次靠人工重生成，就是缺口的直接证据。处置见工单 **W-33（TD-BENCH-02，前置）/ W-34（TD-BENCH-01，加门禁）**，顺序不可颠倒。
+
+**行数对账（只记规则，不裁定谁对）**：BA 报重生成 9642 行，开发实测 3408 行（`2ec7385` 干净 HEAD，12 文件 **+2920 / −488**）。3408 = 2920+488，**有可复现命令与基线 commit**；9642 未给出可复现口径，暂不采信。**规则：同一仓库状态不许出现两个都「对」的行数**——最终以能用一条命令复算的那个为准，另一个作废并说明口径差异（如全文件行数 vs 变更行数 vs 累计触碰行数），不得并列写进任何报告。
+
 ---
 
 ## 5. 拍板事项：11 条的最终状态

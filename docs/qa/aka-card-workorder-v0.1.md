@@ -1092,6 +1092,34 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 - **验收**：① 补登后 13 页复跑 `failed = 0`、`skipped = 0`；② 引用结果必须按制度第 12 条写「v3 判据 0 fail / 0 skip；整体 FAIL 因覆盖 13/44 不足」；③ 反例用例 FAIL；④ 输出逐项打印每个 output 的命中词 / 未命中。
 - **边界**：若复核发现某名字确实写错（不是别名问题），按制度第 11 条改内容，不登记别名。
 
+### W-33｜TD-BENCH-02（前置）：把 `app/bench` 里的实际耗时字段归一（开发，非 BA）
+
+- **依据**：`app/bench` 是回归基线，但快照里带实际耗时字段，每次跑必变（`computedMs` 实测 `0.29→0.05`、`0.06→0.01`）。**不先归一，W-34 的 `git diff --exit-code` 会永久报红；永远红的门禁等于没有门禁。**
+- **现状复算**：`grep -ro computedMs app/bench | wc -l` → **2**，落在 `ipc-snapshots/06-calc-t01-m06.json:32`、`ipc-snapshots/07-calc-alias-ma.json:23`。
+- **处置（照此实现）**：
+  1. `aka-aggregate-export` 生成快照时，把 `computedMs` 等**运行期测量值**归一为固定值 **`0`**（保留字段、保留类型，不删字段——删了快照就不再是真实报文契约）；
+  2. 归一点写进生成器而不是事后 sed；快照文件里不得再出现非零耗时；
+  3. 在 `app/bench/ipc-snapshots` 的说明处（或 `app/README.md` 对应段）记一句：**「本目录不含耗时断言，`computedMs` 恒为 0；真实耗时见 `app/bench/baselines/` 与 diag 日志」**。
+- **字段清单（区分稳态/易变）**：
+
+  | 字段 | 当前位置 | 是否易变 | 处置 |
+  |---|---|---|---|
+  | `computedMs` | 2 处快照 | **是**（实测耗时） | 归一为 `0` |
+  | `generatedAt` | 5 处快照 | 取决于数据集 manifest | 数据集固定则稳定；**不归一**，但 W-34 的门禁需固定数据集，否则同源漂移 |
+  | `thresholdMs` / `maxMs` | `baselines/macos-x86_64.json` | 是（机器相关） | 不在本单范围，见边界 |
+- **验收**：① 连续跑两次 `cargo run -p indicator-golden --bin aka-aggregate-export`，第二次 `git diff --exit-code app/bench` **exit 0**；② 两次产物逐文件 `sha256` 相同；③ `grep -ro computedMs app/bench` 的每一处值都是 `0`。
+- **边界**：`app/bench/baselines/`（含机器、rustc、阈值）与 `app/bench/reports/`（由 `aka-golden-report` 生成）**不纳入**本门禁范围，需要时另开单。
+
+### W-34｜TD-BENCH-01：CI 增加 `app/bench` 同步门禁（开发，非 BA；**必须在 W-33 之后**）
+
+- **依据**：`.github/workflows/ci.yml` 中 `bench` **0 命中**——`app/bench` 是回归基线却无人盯；`2ec7385`/`ab675c5` 两次靠人工重生成，即为缺口证据（见审计报告 4.7.9）。
+- **硬顺序**：**W-33 未验收通过，不得开 W-34**；反序落地等于加一条永久红门禁。
+- **实现（照此写进 CI）**：在 `cargo check` 与 `cargo test` 之后加一步：
+  `cargo run -p indicator-golden --bin aka-aggregate-export && git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`
+- **配套提交规则（写进 CI 步骤名与 `app/README.md`）**：改**夹具 / 注册表 / DTO / 数据集 seed** 的提交，必须在**同一提交**内重生成 `app/bench`；跨提交补快照视为门禁绕过。
+- **验收**：① 干净 HEAD 上 CI 该步 **exit 0**；② 故意改一个 DTO 字段名不重生成 → 该步 **exit 1**（反向用例，需在 PR 里贴一次日志）；③ 该步失败时的日志必须直接给出 `git diff --stat` 与首个差异文件，不许只报「快照不一致」。
+- **边界**：只比 `aggregates` 与 `ipc-snapshots` 两目录；`baselines`/`reports` 见 W-33 边界。
+
 ---
 
 ## 3. 执行顺序与验收
@@ -1099,5 +1127,6 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 1. **已完成（BA，2026-11-07）**：W-01、W-02、W-04～W-22。baseline 14 条 → **0 条**（`sector-12` 两条由 W-31 清零）。
 2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）。改完各跑一次 `npm run verify:constants`。
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
-4. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-5. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32）须由 TL 按验收判据复核后才能签。
+4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。
+5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34）须由 TL 按验收判据复核后才能签。
