@@ -356,18 +356,21 @@
         {
           "key": "upper",
           "labelZh": "上轨",
+          "aliases": ["上轨"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "middle",
           "labelZh": "中轨",
+          "aliases": ["中轨"],
           "kind": "line",
           "color": "var(--accent)"
         },
         {
           "key": "lower",
           "labelZh": "下轨",
+          "aliases": ["下轨"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -495,18 +498,21 @@
         {
           "key": "upper",
           "labelZh": "上轨",
+          "aliases": ["上轨"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "middle",
           "labelZh": "中轨",
+          "aliases": ["中轨"],
           "kind": "line",
           "color": "var(--accent)"
         },
         {
           "key": "lower",
           "labelZh": "下轨",
+          "aliases": ["下轨"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -554,12 +560,14 @@
         {
           "key": "upper",
           "labelZh": "上轨",
+          "aliases": ["上轨"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "lower",
           "labelZh": "下轨",
+          "aliases": ["下轨"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -617,18 +625,21 @@
         {
           "key": "upper",
           "labelZh": "上轨",
+          "aliases": ["上轨"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "middle",
           "labelZh": "中轨",
+          "aliases": ["中轨"],
           "kind": "line",
           "color": "var(--accent)"
         },
         {
           "key": "lower",
           "labelZh": "下轨",
+          "aliases": ["下轨"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -1091,6 +1102,7 @@
         {
           "key": "intercept",
           "labelZh": "LinReg 截距",
+          "aliases": ["截距"],
           "kind": "line",
           "color": "#a78bfa"
         }
@@ -1137,6 +1149,7 @@
         {
           "key": "r2",
           "labelZh": "R²",
+          "aliases": ["R²"],
           "kind": "line",
           "color": "#34d399"
         }
@@ -1183,6 +1196,7 @@
         {
           "key": "slope",
           "labelZh": "LinReg 斜率",
+          "aliases": ["斜率"],
           "kind": "line",
           "color": "#f472b6"
         }
@@ -1729,12 +1743,14 @@
         {
           "key": "ppo",
           "labelZh": "PPO",
+          "aliases": ["PPO"],
           "kind": "line",
           "color": "var(--accent)"
         },
         {
           "key": "signal",
           "labelZh": "信号线",
+          "aliases": ["信号线"],
           "kind": "line",
           "color": "var(--warn)"
         }
@@ -1781,6 +1797,7 @@
         {
           "key": "roc",
           "labelZh": "ROC",
+          "aliases": ["ROC"],
           "kind": "line",
           "color": "var(--accent)"
         }
@@ -1827,6 +1844,7 @@
         {
           "key": "mom",
           "labelZh": "MOM",
+          "aliases": ["动量"],
           "kind": "line",
           "color": "var(--accent)"
         }
@@ -2549,6 +2567,7 @@
         {
           "key": "nr7",
           "labelZh": "NR7",
+          "aliases": ["NR7"],
           "kind": "dot",
           "color": "var(--warn)"
         }
@@ -2646,6 +2665,7 @@
         {
           "key": "atrp",
           "labelZh": "ATRP",
+          "aliases": ["ATRP"],
           "kind": "line",
           "color": "#22d3ee"
         }
@@ -2692,6 +2712,7 @@
         {
           "key": "std",
           "labelZh": "StdDev",
+          "aliases": ["标准差"],
           "kind": "line",
           "color": "#a78bfa"
         }
