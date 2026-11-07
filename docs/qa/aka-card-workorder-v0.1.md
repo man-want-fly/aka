@@ -1339,6 +1339,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   1. `trace_id()` 改为 `TR-YYYYMMDD-HHMMSS-0001`（Asia/Shanghai，进程内序号从 0001 递增），仍保证同进程唯一。
   2. `AppCore::watchlist` 生成损坏错误时同步 `telemetry.emit("storage.corrupt", { traceId, code, message })`，落 `~/Library/Application Support/aka/logs/telemetry.jsonl`；页面 id 与日志同一字符串。
   3. `watchlist-corrupt` 套件新增 `WL-23-log`（页面 id ∈ `telemetry.jsonl`），由 1 项变 2 项（证据随取证批次入库）。
+  4. 第四次：`diag-evidence.sh` 的 meta 改为直接写 `commit` + `dirty`，不再拼 `base`/`patch`；五套件在干净提交上重跑，五份 meta 全部指向同一 commit。
 
 ---
 

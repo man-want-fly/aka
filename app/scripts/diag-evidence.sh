@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # 取证并归档：当次 evidence JSON + meta 一起落到 docs/qa/evidence/（W-41 第 2 项）。
 # 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star
-# 前置：app/ 根目录执行 npm run build 与 cargo build --release -p aka-desktop --features tauri/custom-protocol
+# 前置：app/ 根目录执行 npm run build 与 cargo build -p aka-desktop --features tauri/custom-protocol
+# 取证必须用 debug 构建：QA 注入开关在 release 里已整体编译掉（W-47）。
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+APP_BIN="$APP_DIR/target/debug/aka-desktop"
 DIAG_DIR="$HOME/Library/Application Support/aka/diag"
+TELEMETRY="$HOME/Library/Application Support/aka/logs/telemetry.jsonl"
 OUT="$APP_DIR/../docs/qa/evidence"
 DB="$HOME/Library/Application Support/aka/state.db"
 SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star}"
@@ -13,7 +16,7 @@ LABEL="$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT" "$DIAG_DIR"
 FLAGS=""
 
-pkill -f "target/release/aka-desktop" 2>/dev/null || true
+pkill -f "target/debug/aka-desktop" 2>/dev/null || true
 sleep 1
 
 BAK=""
@@ -52,9 +55,8 @@ PY
     JSON="$DIAG_DIR/s0102-watchlist-corrupt-evidence.json"
     NAME="s0102-watchlist-corrupt-evidence"
     FLAGS="--corrupt-db"
-    FIXTURE="启动带 --corrupt-db：打开前把 state.db 写成非 SQLite 内容，走真实隔离降级；取证后 .backup 还原"
-    BAK="/tmp/aka-state-watchlist-corrupt-$LABEL.db"
-    sqlite3 "$DB" ".backup '$BAK'"
+    FIXTURE="启动带 --corrupt-db：真实库复制到临时目录并留 state.db.orig，只在副本写坏；真实 state.db 不动"
+    BAK=""
     ;;
   watchlist-readonly)
     TARGET="watchlist-readonly@$LABEL"
@@ -143,7 +145,7 @@ esac
 before=0
 if [ -f "$JSON" ]; then before=$(stat -f %m "$JSON"); fi
 
-AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" "$APP_DIR/target/release/aka-desktop" $FLAGS &
+AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" "$APP_BIN" $FLAGS &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true; sleep 1; restore_db' EXIT
 
@@ -163,6 +165,45 @@ if [ "$ARCHIVED" -ne 1 ]; then
   exit 1
 fi
 
+# W-48：页面 trace id 必须能在 telemetry.jsonl 里查到，否则「可查」只是页面装饰。
+if [ "$SUITE" = "watchlist-corrupt" ]; then
+  python3 - "$OUT/$NAME.json" "$TELEMETRY" <<'PY'
+import json, pathlib, re, sys
+
+evidence_path, telemetry_path = sys.argv[1:3]
+data = json.load(open(evidence_path, encoding="utf-8"))
+page_ids = sorted(
+    set(re.findall(r"TR-\d{8}-\d{6}-\d{4}", json.dumps(data, ensure_ascii=False)))
+)
+log_path = pathlib.Path(telemetry_path)
+log = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
+hit = [item for item in page_ids if item in log]
+data.setdefault("checks", []).append(
+    {
+        "id": "WL-23-log",
+        "card": "S-01.02-03",
+        "ac": "AC-01.02-04（补3）",
+        "layer": "data",
+        "passed": bool(hit),
+        "blocked": False,
+        "detail": (
+            f"页面 trace id {hit[0]} ∈ telemetry.jsonl"
+            if hit
+            else f"页面 trace id {page_ids or '无'} 未命中 {log_path}"
+        ),
+    }
+)
+layers = {}
+for check in data["checks"]:
+    total, passed = layers.get(check["layer"], (0, 0))
+    layers[check["layer"]] = (total + 1, passed + (1 if check["passed"] else 0))
+data["layers"] = {key: f"{passed}/{total}" for key, (total, passed) in layers.items()}
+data["ok"] = all(check["passed"] for check in data["checks"])
+json.dump(data, open(evidence_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+print(f"WL-23-log passed={bool(hit)} ids={page_ids}")
+PY
+fi
+
 SCAN_FILE=""
 SCAN_RC=""
 if [ "$SUITE" = "s0602" ]; then
@@ -176,27 +217,25 @@ if [ "$SUITE" = "s0602" ]; then
 fi
 
 python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" <<'PY'
-import json, subprocess, sys, datetime, hashlib
+import json, subprocess, sys, datetime
 evidence_path, meta_path, label, target, fixture, scan_file, scan_rc, flags = sys.argv[1:9]
 d = json.load(open(evidence_path))
 root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
-base = subprocess.check_output(["git", "-C", root, "rev-parse", "HEAD"], text=True).strip()
-diff = subprocess.check_output(
-    ["git", "-C", root, "diff", "-U3", "--", "app/src", "app/scripts", "app/package.json"], text=True
+commit = subprocess.check_output(["git", "-C", root, "rev-parse", "HEAD"], text=True).strip()
+status = subprocess.check_output(
+    ["git", "-C", root, "status", "--porcelain", "--", "app"], text=True
 )
-dirty = bool(diff.strip())
-patch = f"sha256:{hashlib.sha256(diff.encode()).hexdigest()}" if dirty else None
+dirty = bool(status.strip())
 now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).isoformat(timespec="seconds")
 meta = {
     "suite": d.get("suite", ""),
     "label": label,
     "runAt": now,
-    "base": base,
+    "commit": commit,
     "dirty": dirty,
-    "patch": patch,
-    "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" target/release/aka-desktop {flags}".strip(),
+    "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" target/debug/aka-desktop {flags}".strip(),
     "fixture": fixture,
-    "environment": "macOS 本机；vite build 产物 + cargo release --features tauri/custom-protocol",
+    "environment": "macOS 本机；vite build 产物 + cargo build（debug，含 QA 注入）--features tauri/custom-protocol",
     "formatScan": (
         {
             "command": "npm run verify:format",
@@ -211,6 +250,6 @@ meta = {
 json.dump(meta, open(meta_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 print(f"已归档：{evidence_path}")
 print(f"已归档：{meta_path}")
-print(f"ok={d.get('ok')} layers={d.get('layers')} blocked={len(d.get('blocked', []))} scan={scan_rc or 0}")
+print(f"ok={d.get('ok')} layers={d.get('layers')} blocked={len(d.get('blocked', []))} commit={commit} dirty={dirty}")
 sys.exit(0 if d.get("ok") and (not scan_rc or int(scan_rc) == 0) else 2)
 PY
