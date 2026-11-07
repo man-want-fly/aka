@@ -1022,12 +1022,41 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 - **口径必须是代码，不是注释**：分区计数含指数且**按交易所归沪/深**（`.SH` → 沪、`.SZ` → 深），生成组按 `601`→沪、`002`→深、`300`→创、`688`→科；**禁止**直接按 `Board` 枚举分组——那会得 `47/44/17/9`（`Board::Index` 单独成组），而卡 L178/L204 的正确值是 `48/46/17/9`。
 - **验收**：① 正常仓库输出 21 → **23** 项 PASS；② 反向用例——把 `groups` 中 `40` 改 `41`，脚本必须 FAIL（若仍 PASS 即实现错误）；③ `mock.rs` 解析不出 `known`/`groups` → exit 2；④ 两项校验在输出里写明执行者与覆盖范围（制度第 9 条）。
 
+### W-30｜符号别名：manifest 内嵌 `aliases` + V3-01/V3-02 改名匹配（开发，非 BA）
+
+- **定位**：`app/manifest/indicators.json`（schema 增字段）+ `app/scripts/verify_indicator_docs.mjs`（`V3-01`/`V3-02`）。
+- **裁定（走法 1）**：建别名表。别名**内嵌进 manifest 对应条目，不另建 `symbol-aliases.json`**——key / label / 别名同属指标口径一个真源；独立文件要按 `id + key` 二次对齐，又是一个漂移面（W-23 的教训）。
+- **schema**：
+  - `params[]`、`outputs[]` 每条增可选 `"aliases": ["N", "周期"]`；`abbr` 旁增可选 `"abbrAliases": [...]`。
+  - 不设全局映射表；按条目本地登记，脚本按 `key ∪ aliases` 取词。
+- **维护人**：**BA 登记**（随内容页一起提），**TL 审**。只准登记**现有内容页已在用的词**，不许预先铺；单 key ≤3 个别名，新增须在提交信息里写明来源。
+- **匹配规则（写成代码，不是注释）**：
+  - 规范化：NFKC → casefold → 去空白；`U+2212` / `U+2013` / `U+2014` 统一成 `-`——`VI−` 与 `VI-` 视为同一词（M20 正好撞这个）。
+  - 拉丁别名必须**词边界**匹配（前后不得紧邻字母或数字）；中文别名按子串匹配。
+  - **用例钉死**：单字母别名 `N` 不得命中 `NaN`（M20 的 formula 里就有「输出 NaN」）。
+- **`V3-01` 改法**：锚点集合 = `abbr ∪ abbrAliases ∪ params(key ∪ aliases) ∪ outputs(key ∪ aliases)`；仍为「至少命中一个」，三者全空才 SKIP。
+- **`V3-02` 改法**：params 用 `key ∪ aliases` 与 `default` 同分句；outputs 改为「任一 output 的 `key ∪ aliases` 出现在 formula 段」。
+- **4 条失败的归因（分开算，不合并）**：
+
+  | 失败项 | 归因 | 处置 |
+  |---|---|---|
+  | `M20:V3-01` | **判据过严（命名）**，不是内容缺：formula 已写 `k = 0..N−1`、分母「同一窗口的真实波幅之和」、首值「索引 N（默认 14）」，窗口口径在；只是没用字面量 `period` | 别名 `period: [N, 周期]`、`viPlus: [VI+, VI−]`、`viMinus: [VI−, VI-]`；页面不动 |
+  | `M20:V3-02(outputs)` | **判据过严（命名）**：`VI+`/`VI−` 已在 formula 定义，`viPlus`/`viMinus` 只是机器 key | 同上 |
+  | `M24:V3-02(outputs)` | **判据过严（命名）**：formula 定义 `Mass`，key 是 `massIndex` | 别名 `massIndex: [Mass]` |
+  | `T09:V3-02(outputs)` | **判据过严（命名）**：formula 定义「上轨 / 中轨 / 下轨」 | 别名 `upper: [上轨]`、`middle: [中轨]`、`lower: [下轨]` |
+
+  **结论：4 条失败里 0 条是内容缺口，全部按命名问题改判据，内容页一个字不动。**
+- **不做的事**：不逼内容写「上轨（upper）」；不把判据放宽成「定义即可、不查字面」（那会退回「判不了」）。
+- **验收**：① 13 页复跑 `failed = 0`、`skipped = 0`；② `--self-test` 8 → **9**：新增「别名命中 → 通过」+「单字母别名不误命中 `NaN`」；③ 反向用例——删掉 `massIndex` 的别名后必须回到 FAIL；④ 输出里打印每个锚点的命中来源（命中词 / 未命中）。
+- **第 9 条人工检查项**：别名字段只能保证「已登记的别名被认出」，**发现不了内容里新造的名称**。范围：内容页四段内的符号名 vs manifest `key ∪ aliases`；通过条件：无未登记新名（人工走查，不计入 `skipped`）。
+- **第 10 条判不了时**：`aliases` 缺失按空数组处理（不 SKIP）；`indicators.json` 不可解析 → exit 2。
+
 ---
 
 ## 3. 执行顺序与验收
 
 1. **已完成（BA，2026-11-07）**：W-01、W-02、W-04～W-22。baseline 由 14 条降到 1 条（仅剩 `sector-12`）。
 2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）。改完各跑一次 `npm run verify:constants`。
-3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
+3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **收尾**：把 `sector-12` 正则收窄（放过含 `V1` / `待产品确认` 的行）后删除 baseline 条目，CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
 5. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24）须由 TL 按验收判据复核后才能签。
