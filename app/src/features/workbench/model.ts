@@ -289,7 +289,7 @@ export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
 /** 仅拦截明显非法组合，避免一次无意义的 IPC；真正的边界由 Rust 返回。 */
 export function localCheck(params: WorkbenchParams): string | null {
   const pairs: Array<[string, number, number, number]> = [
-    ["MA 周期", params.maPeriod, 2, 200],
+    ["MA 周期", params.maPeriod, 2, 500],
     ["MACD 快线", params.fast, 2, 200],
     ["MACD 慢线", params.slow, 2, 200],
     ["MACD 信号", params.signal, 2, 200],
