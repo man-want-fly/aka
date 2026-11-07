@@ -946,6 +946,35 @@ Gate C：`S-03.04-02` 按 BA `a846473` 的「可签」录入 PASS；`S-06.01-01`
 
 > 一句话给 PM：44 页收满、11 条别名全过、台账 13 张 / 42.5 人日复算一致；`S-09.01-01` 的 Gate A 结了、Gate B 因卡面改过要重签、Gate C 仍差那张架构文档。
 
+#### 4.7.15 `W-39` 红路径取证与首项落地（2026-11-07）
+
+**第 1 项（说明文字）已落**：`0f0575c` 在 `app/README.md`「关键约定」补一句：bench 快照内 `computedMs` / `generatedAt` **恒为 0**（W-33 归一），可逐字节复现；夹具/注册表变更须同提交重生成，由 CI 门禁校验。
+
+**红路径（人为漂移 → 判红 → 回滚 → 回绿）**：
+
+| 环节 | commit | CI run | 结论 | 关键证据 |
+| --- | --- | --- | --- | --- |
+| 漂移 | `31a4262` | `42358551826` | **failure** | 第 8 步「bench 快照可复现门禁」红；`npm ci` 起后续步骤全部 skipped |
+| 回滚 | `11160dc` | `42358751987` | **success** | 门禁步骤输出「快照可复现：export 产物与仓库基线一致」 |
+
+失败日志片段（`gh run view 42358551826 --log-failed`，`01-get-bars-d.json` 的 `generatedAt` 0→1）：
+
+```
+##[error]bench 快照漂移：夹具/注册表变了必须同提交重生成
+ app/bench/ipc-snapshots/01-get-bars-d.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+首个差异文件：app/bench/ipc-snapshots/01-get-bars-d.json
+--- a/app/bench/ipc-snapshots/01-get-bars-d.json
++++ b/app/bench/ipc-snapshots/01-get-bars-d.json
+@@ -7821,7 +7821,7 @@
+-      "generatedAt": 1,
++      "generatedAt": 0,
+```
+
+即 `--stat` 给出文件与行数、「首个差异文件」直接点名、diff 定位到 `provenance.generatedAt` 单字段，红路径判定成立。
+
+**漂移未进 main**：`31a4262` 的改动已由 `11160dc` 完整回滚，`git diff --stat 03f92e3 11160dc -- app/bench/` 为 0 行；工作树只剩两份未跟踪 `__pycache__`，与本单无关。
+
 ---
 
 ## 5. 拍板事项：11 条的最终状态
