@@ -136,7 +136,7 @@ jobs:
               done
               IFS=$old_ifs
             fi
-            echo "注入符号 $symbol：$count（期望 0）"
+            echo "diag symbol [$symbol] count=$count (expect 0)"
             if [ "$count" -ne 0 ]; then
               fail=1
               echo "::error::release 二进制含注入符号 $symbol（$count 处）"
