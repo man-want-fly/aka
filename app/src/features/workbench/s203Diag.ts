@@ -449,7 +449,7 @@ export async function runS203Diagnostics(hooks: S203Hooks) {
         before.length === MAX_SUBPLOTS &&
         Boolean(button?.disabled) &&
         button?.dataset.drawerFull === "1" &&
-        (button?.title ?? "") === "副图最多 3 个" &&
+        (button?.title ?? "").includes("副图最多 3 个") &&
         capacity.includes(`副图 ${MAX_SUBPLOTS}/${MAX_SUBPLOTS}`) &&
         after.join(",") === before.join(","),
       detail: `容量「${capacity.trim()}」· V01 禁用=${Boolean(button?.disabled)} full=${

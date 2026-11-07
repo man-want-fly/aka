@@ -600,7 +600,20 @@ export function WorkbenchPage({
         (window as unknown as Record<string, unknown>).__AKA_DRAWER_EVIDENCE__ = report;
       } catch (err) {
         if (!alive) return;
-        setDiagStatus(`S-02.04-01 取证失败：${describeError(err).message}`);
+        const message = describeError(err).message;
+        setDiagStatus(`S-02.04-01 取证失败：${message}`);
+        void ipc.diagWriteNamed(
+          "s20401-error.json",
+          JSON.stringify(
+            {
+              error: message,
+              stack: err instanceof Error ? err.stack : String(err),
+              failedAt: new Date().toISOString(),
+            },
+            null,
+            2,
+          ),
+        );
       }
     })();
     return () => {

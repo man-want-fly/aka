@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-06T21:05:46.809Z",
+  "finishedAt": "2026-11-07T03:40:04.620Z",
   "context": {
     "manifestCount": 105,
     "plannedCount": 61,
@@ -19,7 +19,7 @@
       "ac": "AC-02.04-03(补3)",
       "layer": "data",
       "passed": true,
-      "detail": "规划中 61 / normal 40 / beta 4 / 缺四字段 无（manifest.catalogTotal=105 为目录规划总量，非 status=planned 的条数）"
+      "detail": "规划中 61 / normal 42 / beta 2 / 缺四字段 无（manifest.catalogTotal=105 为目录规划总量，非 status=planned 的条数）"
     },
     {
       "id": "R-01",
@@ -54,7 +54,7 @@
       "ac": "AC-02.04-02",
       "layer": "render",
       "passed": true,
-      "detail": "搜索 md → D14,M07,F05,M06"
+      "detail": "搜索 md → D14,F05,M06,M07"
     },
     {
       "id": "R-06",
@@ -82,28 +82,28 @@
       "ac": "AC-02.04-02(补1)",
       "layer": "render",
       "passed": true,
-      "detail": "M06 按钮已添加态=1 / 文案「✓ 已添加」/ 重击后副图 1 面板 / 提示「该指标已添加」"
+      "detail": "M06 按钮已添加态=1 / 文案「✓ 已添加」/ 重击后副图 3 面板 / 提示「该指标已添加」"
     },
     {
       "id": "R-10",
       "ac": "AC-02.04-03",
       "layer": "render",
       "passed": true,
-      "detail": "副图 3 个 / 标题 MACD(12,26,9) | ATR | KDJ"
+      "detail": "移除 M06 后 2 格 → 加回后 3 格 / 标题 成交量 | RSI(14) | MACD(12,26,9) / 行已添加态=1 / 重复点击后 3 格"
     },
     {
       "id": "R-11",
       "ac": "AC-02.04-03(补1)",
       "layer": "render",
       "passed": true,
-      "detail": "第 4 个副图按钮 disabled=true / full=1 / 容量「主图 2/2 · 副图 3/3」/ tooltip「请先移除一个指标」/ 副图 3 个 / 实例 M06+V01+M02 → M06+V01+M02"
+      "detail": "第 4 个副图按钮 disabled=true / full=1 / 容量「主图 2/2 · 副图 3/3」/ tooltip「副图最多 3 个，请先移除一个指标」/ 副图 3 个 / 实例 M06+M01 → M06+M01"
     },
     {
       "id": "R-12",
       "ac": "AC-02.04-03(补2)",
       "layer": "render",
       "passed": true,
-      "detail": "移除 V01 后 V02 可添加=true / 副图 3 个 / V02 面板=在"
+      "detail": "移除 M01 后 RSI 可添加=true / 加回后副图 3 个 / M01 面板=在"
     },
     {
       "id": "R-13",
@@ -124,7 +124,7 @@
       "ac": "AC-02.04-04(补2)",
       "layer": "runtime",
       "passed": true,
-      "detail": "M06 冷算 0.03ms / M02 冷算 0.03ms / M02 点击→曲线 24ms / 冷样本 44 P95 0.09ms"
+      "detail": "M06 冷算 0.02ms / M02 冷算 0.03ms / M02 点击→曲线 24ms / 冷样本 44 P95 0.09ms"
     },
     {
       "id": "R-16",
@@ -138,7 +138,7 @@
       "ac": "AC-03.01-05(补1)",
       "layer": "render",
       "passed": true,
-      "detail": "标的=未选择标的 / 引导「请先在行情页选择一只标的 去行情页」/ 去行情页 href=#/market / M02 禁用=true / 副图实例=M06 → M06 / 行点击提示「请先在行情页选择一只标的」"
+      "detail": "标的=未选择标的 / 引导「请先在行情页选择一只标的 去行情页」/ 去行情页 href=#/market / M02 禁用=true / 副图实例=M06+M02 → M06+M02 / 行点击提示「请先在行情页选择一只标的」"
     }
   ]
 }

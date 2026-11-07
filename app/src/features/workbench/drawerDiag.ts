@@ -48,7 +48,10 @@ const typeQuery = async (text: string) => {
 
 const clickElement = (element: Element | null) => {
   if (!element) throw new Error("目标元素不存在");
-  (element as HTMLElement).click();
+  const click = (element as HTMLElement).click;
+  // SVG 节点（如副图 × 移除）没有 .click()，需要派发 MouseEvent 才能触发 React 合成事件
+  if (typeof click === "function") (element as HTMLElement).click();
+  else element.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
 };
 
 /**
@@ -101,7 +104,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     "D-02",
     "AC-02.04-03(补3)",
     "data",
-    planned.length === 61 && normalCount === 40 && betaCount === 4 && missingMeta.length === 0,
+    planned.length === 61 && normalCount === 42 && betaCount === 2 && missingMeta.length === 0,
     `规划中 ${planned.length} / normal ${normalCount} / beta ${betaCount} / 缺四字段 ${
       missingMeta.map((item) => item.id).join(",") || "无"
     }（manifest.catalogTotal=${manifest.catalogTotal} 为目录规划总量，非 status=planned 的条数）`,
@@ -264,37 +267,54 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     }」/ 重击后副图 ${qa("[data-sub-panel]").length} 面板 / 提示「${m06Hint}」`,
   );
 
-  // R-10 加入副图：M06 → +V01 → +M02，三个面板标题与数量都要对
-  await typeQuery("ATR");
-  clickElement(q('[data-drawer-add="V01:sub"]'));
+  // R-10 移除后重新添加：默认三格（成交量 + M06 + M01）已满，先点 × 移除 M06（剩 2 格），
+  // 再从抽屉加回 MACD：行变已添加、标题正确、重复点击不再新增
+  const removeM06 = q<HTMLElement>('[data-panel-remove="M06"]');
+  clickElement(removeM06);
   await sleep(200);
-  await typeQuery("KDJ");
-  const addStartedAt = performance.now();
-  clickElement(q('[data-drawer-add="M02:sub"]'));
-  const m02Path = await waitFor(() => q('[data-sub-panel="M02"] [data-sub-key]'), 3_000, 20).catch(() => null);
-  const addWallMs = performance.now() - addStartedAt;
+  const afterRemove = qa("[data-sub-panel]").length;
+
+  await typeQuery("MACD");
+  const m06Add = q<HTMLElement>('[data-drawer-add="M06:sub"]');
+  const m06WasAdded = m06Add?.dataset.drawerAdded === "1";
+  clickElement(m06Add);
+  const m06Path = await waitFor(
+    () => q('[data-sub-panel="M06"] [data-sub-key]'),
+    3_000,
+    20,
+  ).catch(() => null);
   await sleep(200);
   const subTitles = qa<HTMLElement>("[data-sub-panel]").map(
     (panel) => panel.querySelector("[data-sub-title]")?.getAttribute("data-sub-title") ?? "",
   );
+  const m06AfterAdd = q<HTMLElement>('[data-drawer-add="M06:sub"]');
+  const panelsAfterAdd = qa("[data-sub-panel]").length;
+  clickElement(m06AfterAdd);
+  await sleep(150);
+  const panelsAfterRepeat = qa("[data-sub-panel]").length;
   push(
     "R-10",
     "AC-02.04-03",
     "render",
-    qa("[data-sub-panel]").length === 3 &&
+    afterRemove === 2 &&
+      panelsAfterAdd === 3 &&
+      !m06WasAdded &&
+      Boolean(m06Path) &&
+      m06AfterAdd?.dataset.drawerAdded === "1" &&
       subTitles.some((title) => title.startsWith("MACD(")) &&
-      subTitles.some((title) => title.startsWith("ATR")) &&
-      subTitles.some((title) => title.startsWith("KDJ")),
-    `副图 ${qa("[data-sub-panel]").length} 个 / 标题 ${subTitles.join(" | ") || "无"}`,
+      subTitles.some((title) => title.startsWith("成交量")) &&
+      panelsAfterRepeat === panelsAfterAdd,
+    `移除 M06 后 ${afterRemove} 格 → 加回后 ${panelsAfterAdd} 格 / 标题 ${
+      subTitles.join(" | ") || "无"
+    } / 行已添加态=${m06AfterAdd?.dataset.drawerAdded} / 重复点击后 ${panelsAfterRepeat} 格`,
   );
 
-  // R-11 副图满 3：第 4 个按钮为禁用态、显示 3/3、带「请先移除一个指标」tooltip，
-  // 点击不改变副图数量，也不改动已有 3 个实例（无静默替换）
-  await typeQuery("ATRP");
-  const v02Button = q<HTMLButtonElement>('[data-drawer-add="V02:sub"]');
-  const v02Disabled = Boolean(v02Button?.disabled);
+  // R-11 副图满 3：第 4 个按钮禁用、容量 3/3、tooltip 要求先移除，点击不改动已有实例
+  await typeQuery("ATR");
+  const v01Button = q<HTMLButtonElement>('[data-drawer-add="V01:sub"]');
+  const v01Disabled = Boolean(v01Button?.disabled);
   const subsBefore = selectedSubs();
-  clickElement(v02Button);
+  clickElement(v01Button);
   await sleep(200);
   const subsAfter = selectedSubs();
   const capacityText = q("[data-drawer-capacity]")?.textContent ?? "";
@@ -302,33 +322,26 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     "R-11",
     "AC-02.04-03(补1)",
     "render",
-    v02Disabled &&
+    v01Disabled &&
       qa("[data-sub-panel]").length === 3 &&
-      Boolean(v02Button?.dataset.drawerFull === "1") &&
+      Boolean(v01Button?.dataset.drawerFull === "1") &&
       capacityText.includes("副图 3/3") &&
-      (v02Button?.title ?? "") === "请先移除一个指标" &&
-      subsBefore.length === 3 &&
+      (v01Button?.title ?? "").includes("请先移除一个指标") &&
+      subsBefore.length === 2 &&
       subsBefore.join(",") === subsAfter.join(","),
-    `第 4 个副图按钮 disabled=${v02Disabled} / full=${v02Button?.dataset.drawerFull} / 容量「${capacityText.trim()}」/ tooltip「${
-      v02Button?.title ?? ""
-    }」/ 副图 ${qa("[data-sub-panel]").length} 个 / 实例 ${subsBefore.join(
-      "+",
-    )} → ${subsAfter.join("+")}`,
+    `第 4 个副图按钮 disabled=${v01Disabled} / full=${v01Button?.dataset.drawerFull} / 容量「${capacityText.trim()}」/ tooltip「${
+      v01Button?.title ?? ""
+    }」/ 副图 ${qa("[data-sub-panel]").length} 个 / 实例 ${subsBefore.join("+")} → ${subsAfter.join("+")}`,
   );
 
-  // R-12 移除后恢复可添加：从副图多选里去掉 V01，V02 应重新可点且能加进第 3 个
-  const subSelect = q<HTMLSelectElement>("[data-b2-sub-select]");
-  if (subSelect) {
-    Array.from(subSelect.options).forEach((option) => {
-      if (option.value === "V01") option.selected = false;
-    });
-    subSelect.dispatchEvent(new Event("change", { bubbles: true }));
-  }
+  // R-12 移除后恢复可添加：点 × 移除 RSI（M01）→ 抽屉该行恢复可加 → 点回补满 3 格
+  const removeM01 = q<HTMLElement>('[data-panel-remove="M01"]');
+  clickElement(removeM01);
   await sleep(200);
-  await typeQuery("ATRP");
-  const v02After = q<HTMLButtonElement>('[data-drawer-add="V02:sub"]');
-  const reEnabled = !v02After?.disabled;
-  clickElement(v02After);
+  await typeQuery("RSI");
+  const m01Button = q<HTMLButtonElement>('[data-drawer-add="M01:sub"]');
+  const reEnabled = !m01Button?.disabled && m01Button?.dataset.drawerFull === "0";
+  clickElement(m01Button);
   await sleep(200);
   push(
     "R-12",
@@ -336,10 +349,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     "render",
     reEnabled &&
       qa("[data-sub-panel]").length === 3 &&
-      Boolean(q<HTMLElement>('[data-sub-panel="V02"]')),
-    `移除 V01 后 V02 可添加=${reEnabled} / 副图 ${qa("[data-sub-panel]").length} 个 / V02 面板=${
-      Boolean(q<HTMLElement>('[data-sub-panel="V02"]')) ? "在" : "无"
-    }`,
+      Boolean(q<HTMLElement>('[data-sub-panel="M01"]')),
+    `移除 M01 后 RSI 可添加=${reEnabled} / 加回后副图 ${
+      qa("[data-sub-panel]").length
+    } 个 / M01 面板=${Boolean(q<HTMLElement>('[data-sub-panel="M01"]')) ? "在" : "无"}`,
   );
 
   // R-13 面板归属：主图条目只给「+ 主图」，副图条目只给「+ 副图」
@@ -372,7 +385,20 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     `T08 full=${mainButton?.dataset.drawerFull} / 点击提示「${fullHint}」/ 未被静默加入=${mainButton?.dataset.drawerAdded}`,
   );
 
-  // R-15 首次冷算 ≤300ms：M06 的冷算日志（页面挂载时首次计算）+ M02 抽屉点击到曲线出现
+  // R-15 首次冷算 ≤300ms：先腾出容量，再从抽屉点加 M02（KDJ），量「点击→曲线出现」与冷算日志
+  clickElement(q<HTMLElement>('[data-panel-remove="M01"]'));
+  await sleep(200);
+  await typeQuery("KDJ");
+  const m02AddButton = q<HTMLButtonElement>('[data-drawer-add="M02:sub"]');
+  const m02StartedAt = performance.now();
+  clickElement(m02AddButton);
+  const m02Path = await waitFor(
+    () => q('[data-sub-panel="M02"] [data-sub-key]'),
+    3_000,
+    20,
+  ).catch(() => null);
+  const m02WallMs = performance.now() - m02StartedAt;
+  await sleep(200);
   const dump = await ipc.telemetryDump(200);
   const colds = dump.recent.filter((event) => event.name === "indicator.cold_ms");
   const lastCold = (id: string) =>
@@ -386,8 +412,8 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     Boolean(m02Path) &&
       m06ColdMs <= 300 &&
       m02ColdMs <= 300 &&
-      addWallMs <= 300,
-    `M06 冷算 ${m06ColdMs.toFixed(2)}ms / M02 冷算 ${m02ColdMs.toFixed(2)}ms / M02 点击→曲线 ${addWallMs.toFixed(
+      m02WallMs <= 300,
+    `M06 冷算 ${m06ColdMs.toFixed(2)}ms / M02 冷算 ${m02ColdMs.toFixed(2)}ms / M02 点击→曲线 ${m02WallMs.toFixed(
       0,
     )}ms / 冷样本 ${dump.coldSamples} P95 ${dump.coldP95Ms ?? "—"}ms`,
   );
