@@ -1287,6 +1287,7 @@
         {
           "key": "llv",
           "labelZh": "LLV",
+          "aliases": ["LLV"],
           "kind": "line",
           "color": "var(--fall)"
         }
@@ -1412,6 +1413,7 @@
         {
           "key": "j",
           "labelZh": "J",
+          "aliases": ["J"],
           "kind": "line",
           "color": "#8b5cf6"
         }
@@ -1619,12 +1621,14 @@
         {
           "key": "dea",
           "labelZh": "DEA",
+          "aliases": ["DEA"],
           "kind": "line",
           "color": "var(--warn)"
         },
         {
           "key": "hist",
           "labelZh": "MACD 柱",
+          "aliases": ["MACD 柱"],
           "kind": "histogram",
           "color": "var(--rise)"
         }
