@@ -1,13 +1,13 @@
 # AKA Story 卡 × 技术架构模块映射（v0.1）
 
-> 依据：`docs/architecture/aka-module-architecture.md`（crate/前端分层）、`docs/story-cards/aka-story-index-v0.1.csv`（72 卡元数据）、`docs/qa/aka-story-completion-ledger-v0.1.md`（完成度状态）。本文件只做模块归属，不复制签字结论；放行一律以 `docs/qa/aka-card-gate-log-v0.1.csv` 三列为准。
+> 依据：`docs/architecture/aka-module-architecture.md`（crate/前端分层）、`docs/story-cards/aka-story-index-v0.1.csv`（73 卡元数据）、`docs/qa/aka-story-completion-ledger-v0.1.md`（完成度状态）。本文件只做模块归属，不复制签字结论；放行一律以 `docs/qa/aka-card-gate-log-v0.1.csv` 三列为准。
 
 | 项 | 值 |
 |---|---|
-| Story 卡 | 72 张（P0 71 / P1 1 / V1 0） |
+| Story 卡 | 73 张（P0 72 / P1 1 / V1 0） |
 | 人日合计 | 见卡文件 §1「卡片总览表」 |
 | 主责模块 | 19 个（Rust 6 / 前端 10 / 跨层 3） |
-| 未归属 | 0 |
+| 未归属 | 1（`S-09.01-01` 架构图集，TL 交付卡，不落代码模块） |
 
 
 ## 1. 划分口径
@@ -45,6 +45,7 @@
 | **合计** | | **72** | |
 
 > 人日不在本表复制：各模块人日由逐卡规模估算相加，统一见卡文件 §1「卡片总览表」；本表只做模块归属。
+> 本表 72 + `S-09.01-01`（架构图集，TL 交付卡，不落任何代码模块）= 卡集 73 张；差 1 为设计使然，非漏登。
 
 
 ## 3. Rust workspace（6 个 crate）
