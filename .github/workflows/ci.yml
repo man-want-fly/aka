@@ -54,6 +54,14 @@ jobs:
       - name: 黄金回归报告（T-03 门禁，失败打印首个偏差下标）
         run: cargo test -p indicator-golden -- --nocapture
 
+      # W-34 / TD-BENCH-01：夹具或注册表变了却忘记同提交重生成快照，这里会红。
+      # 可复现性由 W-33 保证：快照内墙钟字段（computedMs / generatedAt）已归零。
+      - name: bench 快照可复现门禁（W-34 / TD-BENCH-01）
+        working-directory: .
+        run: |
+          cargo run -p indicator-golden --manifest-path app/Cargo.toml --bin aka-aggregate-export
+          git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots
+
       - name: npm ci
         run: npm ci
 
