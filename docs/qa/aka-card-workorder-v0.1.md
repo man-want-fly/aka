@@ -27,9 +27,9 @@
 
 ## 0.3 合并与台账纪律（2026-11-07 起）
 
-1. **合并前置三件**：`main` 工作区干净（未提交改动先提交或丢弃）；已 push 到 `origin/main`；CI 在 tip 上跑过。三条缺一不许合——现在 `main` 脏着 `lib.rs`/`commands.rs`，且领先 `origin/main` 11 个 commit，等于 `W-49` 在这批代码上没有证据。
+1. **合并前置三件**：`main` 工作区干净（未提交改动先提交或丢弃）；已 push 到 `origin/main`；CI 在 tip 上跑过。三条缺一不许合。**当前状态**：`main` 工作区脏（`Watchlist.tsx` 等诊断改造），tip `0000b3f` 未推，最新 CI 停在 `c8b9e49`。
 2. **交叉文件以 main 为准**：`app-core/src/core.rs` 的停牌四字段与 `value.indefinite` 由 dev A 先落，dev B 合并时只叠加自己那部分；`app/bench`、`indicators.json` 由 TL 先裁。
-3. **重跑分工**：合并方（dev B）跑 `W-34`；`W-49` 以 CI run 为准，dev B 报 run id、TL 核；合回 `main` 后在 `main` tip 再跑一次，**最终以 `main` tip 为结论**。
+3. **重跑分工**：合并方（dev B）跑 `W-34`；`W-49` 以 CI run 为准，dev B 报 run id、TL 核；**另加两项必跑**：`npm run verify:constants` 与 `npm run verify:docs`——`D01` 在主树仍是 `planned`（`a6b93e8` 只在 dev2），而卡面已按 `normal` 写，合并后若 `verify:constants` 红，说明合并把注册表落下了。合回 `main` 后在 `main` tip 再跑一次，**最终以 `main` tip 为结论**。
 4. **制度第 15 条：开发只报数字与证据，不改台账。** 台账 diff 只能由 BA 产生；开发可在提交说明里给「建议数字」，进台账必须经 BA 重算。违反时数字可留、版本结论作废（本轮 v0.20 即按此处理）。
 5. **允许拆提交**（功能 + 收尾各一个），不许 amend；卡面与 gate-log 引用必须写全所有相关 SHA。
 
@@ -1489,13 +1489,23 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. 加 `verify:evidence` 脚本：断言 `set(check.card) == {meta.cardId}`；`layers` 由 `checks` 按 `layer` 现算并与 meta 比对，**meta 不许手填 layers**；不符即 `exit 1`。
 4. **验收**：① 故意塞一条他卡 check，脚本必须红；② 手改 meta 的 layers 与 checks 不符，必须红；③ 现有三份证据迁移后全绿。
 
-### W-61（BA）卡面单根词表收口 + `W-53` 边界补句
+### W-61（BA）`W-53` 边界补句（前三条主树已解决）
 
-1. `S-07.05-02` L5130：`quality_flags` 只留 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`，删 `APPROXIMATED`/`MISSING`。
-2. L5159 pill 配色同步删这两项（`PRICE_ANOMALY` 保持红）。
-3. 在 `S-07.05-01` 词表处注明：`APPROXIMATED`/`MISSING` 是**报告行名**，不进 `QualityFlag`（bar 不可达）。
-4. L5151 后补一句：**首根无前值不判除权**。
-5. **验收**：`grep -n "APPROXIMATED\|MISSING"` 在 `S-07.05-02` 段落只剩「报告行名」说明；`verify:constants` 绿。
+**现状更正**：`S-07.05-02` 的 L5160/L5167/L5175 在主树**已改完**——单根只留 `EX_RIGHTS`/`SUSPENDED`/`ZERO_VOLUME`/`PRICE_ANOMALY`，`APPROXIMATED`/`MISSING` 已注明为报告行名、不作单根 pill。此前判「两处漏改」是看了落后的 dev2，不作数。只剩一条：
+
+1. L5151 后补一句：**首根无前值不判除权**（实现为 `prev.map(...).unwrap_or(false)`）。
+2. **验收**：`S-07.05-02` 段落内 `APPROXIMATED`/`MISSING` 仅以「报告行名」出现；`verify:constants` 绿。
+
+### W-62（BA）`S-07.05-03` 立项：卡、索引、台账一笔提交
+
+**背景**：`1834319` 只在 `S-07.05-02` 加了「承接方（渲染缺口）」段并标注「由新开前端卡 `S-07.05-03` 承接」，但**卡体、索引、台账都没有**——当前状态是「指向一张不存在的卡」，不算立项。
+
+1. **卡体**：在 `S-07.05-02` 之后新建 `S-07.05-03`（F-07.05，P0），正文写两条 AC 原文（`AC-07.05-02` 浮层六字段、`AC-07.05-02（补3）` P9 跳转），并注明 `补1/补2/补4` 的浮层渲染同批验证；卡面归属 dev A，`app/src`。
+2. **索引**：`aka-story-index-v0.1.csv` 增一行；`S-07.05-02` 的规模 `2.0` 改 `1.0`。
+3. **卡文件头部与 §1 总览**：`73 张` → `74 张`；总人日 **207.9 不变**（`S-07.05-02` 2.0→1.0、`S-07.05-03` 1.0）。
+4. **台账 v0.21**：总卡 **74**；`已交付 19` 不变；`S-07.05-02` 记 `数值层已具备`（数据 7/7、渲染 0/2），`S-07.05-03` 记 `未开始`；状态和必须 **= 74**，逐项重算，不许手改总数。
+5. **为什么总量不加**：渲染工作原本就在 `S-07.05-02` 的 2.0 里，拆卡只是把同一份工作量分开放；拆一次涨一次就会变成刷总量的口子。
+6. **验收**：索引复算 `74 207.9`；`verify:constants` 与 `verify:docs` 绿；四件在**同一提交**，不许先挂空再补。
 
 ---
 
@@ -1506,4 +1516,4 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）、**W-41**（blocked 归零 + 证据归档 + `WL-15` 改判据 + 格式化扫描）、**W-43**（白名单收窄 + `WL-10/10r` 归卡 + 缺项补证）必须一并落地；**W-45**（自选空态 / 损坏库页 / 移出失败文案）、**W-46**（只读与损坏库注入通道 + 星标证据入库）为 `S-01.02-01/02/03` 的收口前置；**W-49**（CI release 构建 + 注入符号断言，含红路径取证）把 W-47 的本地实测转为常设门禁（**W-49 已于当日作废，由 W-58 接手**：断言对象改为入口名并加源码级断言）；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。W-33 功能部分已签 `7cbad20`（说明文字见 **W-39**）；W-34 已签 `5131f89`（首跑 run `42355133312` 成功，红路径反例见 **W-39**）。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；`W-58`/`W-59` 待落地。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；`W-58`/`W-59` 待落地。
