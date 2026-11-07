@@ -178,7 +178,7 @@ fi
 # W-48：页面 trace id 必须能在 telemetry.jsonl 里查到，否则「可查」只是页面装饰。
 if [ "$SUITE" = "watchlist-corrupt" ]; then
   python3 - "$OUT/$NAME.json" "$TELEMETRY" <<'PY'
-import json, pathlib, re, sys
+import glob, json, os, pathlib, re, sys, time
 
 evidence_path, telemetry_path = sys.argv[1:3]
 data = json.load(open(evidence_path, encoding="utf-8"))
@@ -201,6 +201,41 @@ data.setdefault("checks", []).append(
             if hit
             else f"页面 trace id {page_ids or '无'} 未命中 {log_path}"
         ),
+    }
+)
+
+# W-63：anchor.click() 没抛不等于文件落盘，必须 fs.stat 到真实文件且大小 > 0。
+trace = page_ids[0] if page_ids else ""
+downloads = []
+if trace:
+    pattern = os.path.expanduser(f"~/Downloads/aka-diagnostics-{trace}*.json")
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        downloads = sorted(glob.glob(pattern), key=os.path.getmtime)
+        if downloads:
+            break
+        time.sleep(0.5)
+file_checked = False
+detail = f"未找到 ~/Downloads/aka-diagnostics-{trace or '无'}.json"
+if downloads:
+    latest = downloads[-1]
+    size = os.path.getsize(latest)
+    try:
+        payload = json.load(open(latest, encoding="utf-8"))
+        same = payload.get("traceId") == trace
+    except Exception:
+        same = False
+    file_checked = size > 0 and same
+    detail = f"{latest} size={size}B traceId匹配={same}"
+data.setdefault("checks", []).append(
+    {
+        "id": "WL-23-file",
+        "card": "S-08.02-04",
+        "ac": "AC-08.02-05（补1）",
+        "layer": "data",
+        "passed": file_checked,
+        "blocked": False,
+        "detail": detail,
     }
 )
 layers = {}

@@ -93,6 +93,16 @@ jobs:
       - name: 前端构建产物存在性
         run: test -f dist/index.html
 
+      # W-63：导出分支注入是 dev-only，release 产物必须零命中（源码守卫由上面的源码层门禁检查）。
+      - name: 导出注入仅 dev（W-63）
+        run: |
+          if grep -R -q -- 'aka.diag.export' dist; then
+            echo "::error::release 前端产物含 dev-only 导出注入键 aka.diag.export（W-63）"
+            grep -R -n -- 'aka.diag.export' dist | head -n 5
+            exit 1
+          fi
+          echo "导出注入仅 dev：生产产物 0 命中"
+
       # W-49 / W-58 源码层断言：产物 strings 为 0 只证当前实现过得了，证不了下次摘掉 cfg
       # 会被拦住。这里同时确认：release 的 invoke_handler 不含写命令、debug 仍注册（调试能力
       # 被误删也要拦）、diag_faults/diag_write/diag_write_named/write_diag 均被

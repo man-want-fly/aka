@@ -128,6 +128,34 @@ for (const symbol of LITERALS) {
   if (hits === 0) console.log(`字面量 ${symbol}：源码 0 处（只由产物层断言）`);
 }
 
+/** W-63：导出分支注入只允许出现在 `import.meta.env.DEV` 守卫内；键名集中在 src/lib/diagExport.ts。 */
+const exportLib = readFileSync(new URL("src/lib/diagExport.ts", root), "utf8");
+const EXPORT_KEY = "aka.diag.export";
+const GUARD = "if (import.meta.env.DEV) {";
+const guardPositions = [];
+for (let at = exportLib.indexOf(GUARD); at >= 0; at = exportLib.indexOf(GUARD, at + 1)) {
+  guardPositions.push(at);
+}
+const keyPositions = [];
+for (let at = exportLib.indexOf(EXPORT_KEY); at >= 0; at = exportLib.indexOf(EXPORT_KEY, at + 1)) {
+  keyPositions.push(at);
+}
+const guarded = (pos) => guardPositions.some((start) => pos > start && pos - start <= 300);
+if (guardPositions.length < 1) {
+  failures.push("diagExport.ts 缺 import.meta.env.DEV 守卫（W-63）");
+}
+if (keyPositions.length !== guardPositions.length || !keyPositions.every(guarded)) {
+  failures.push(
+    `导出注入键 ${EXPORT_KEY} 出现 ${keyPositions.length} 次 / DEV 守卫 ${guardPositions.length} 个，存在键名不在守卫内（W-63）`,
+  );
+}
+// 键名只许集中在 diagExport.ts；调用方直接写键名等于绕开守卫。
+for (const rel of ["src/components/Watchlist.tsx", "src/features/watchlist/watchlistDiag.ts"]) {
+  if (readFileSync(new URL(rel, root), "utf8").includes(EXPORT_KEY)) {
+    failures.push(`${rel} 直接使用了 ${EXPORT_KEY}，应走 src/lib/diagExport.ts（W-63）`);
+  }
+}
+
 if (failures.length > 0) {
   for (const message of failures) console.error(`::error::诊断入口源码层门禁失败：${message}`);
   process.exit(1);

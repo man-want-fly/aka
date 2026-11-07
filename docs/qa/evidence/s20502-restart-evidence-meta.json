@@ -4,23 +4,29 @@
   "runAt": "2026-11-07T23:55:53+08:00",
   "commit": "8b399c8cf0558ef0048ecaec34ff3f0fe5139a14",
   "dirty": false,
-  "command": "两段：AKA_DIAG=1 AKA_DIAG_TARGET=\"restart\" target/debug/aka-desktop（A 段写 sessionStorage 后 kill -TERM；B 段新进程复看）",
+  "command": "两段：AKA_DIAG=1 AKA_DIAG_TARGET=\"restart\" target/debug/aka-desktop（A 段写 sessionStorage 后 kill -TERM；B 段新进程复看）；合并：node app/scripts/merge-restart-evidence.mjs <A> <B> <merged>",
   "fixture": "默认 state.db；副图 MACD 参数 12/26/9→10/22/8→恢复；DIAG020.SZ（20 根）用于数据不足断言",
   "environment": "macOS 本机；vite build 产物 + cargo build（debug，含 QA 注入）--features tauri/custom-protocol",
   "formatScan": null,
+  "phases": {
+    "before-exit": "s20502-restart-phase-a.json（9/9，AC 2/4）",
+    "after-restart": "s20502-restart-evidence.json（8/8，AC 2/4）"
+  },
+  "merged": {
+    "file": "s20502-restart-merged.json",
+    "generatedBy": "app/scripts/merge-restart-evidence.mjs",
+    "note": "卡级 17/17 与 AC 4/4 由脚本现算，不是手写合并"
+  },
   "result": {
     "ok": true,
     "card": "S-02.05-02",
-    "acCovered": "4/4（A 段 AC-02.05-04 / 补1，B 段 补2 / 补3）",
+    "checks": "17/17",
     "layers": {
-      "data": "2/2",
       "render": "14/14",
+      "data": "2/2",
       "runtime": "1/1"
     },
-    "blocked": [],
-    "phases": {
-      "before-exit": "9/9",
-      "after-restart": "8/8"
-    }
+    "acCovered": "4/4",
+    "blocked": []
   }
 }

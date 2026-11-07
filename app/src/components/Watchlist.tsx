@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { readDiagExportMode } from "../lib/diagExport";
 import { describeError, ipc } from "../lib/ipc";
 import { StarButton } from "./StarButton";
 import type { SecurityDto, WatchItemDto, WatchlistDto } from "../lib/types";
@@ -232,6 +233,7 @@ export function Watchlist({
 
   /** S-08.02-04 补1：损坏卡除「重建」外还要能导出诊断（无文件系统插件时以剪贴板 + 下载双通道）。 */
   const exportDiagnostics = async () => {
+    const mode = readDiagExportMode();
     const fileName = `aka-diagnostics-${traceId ?? "unknown"}.json`;
     const payload = JSON.stringify(
       {
@@ -245,7 +247,11 @@ export function Watchlist({
       2,
     );
     let copied = false;
-    if (navigator.clipboard?.writeText) {
+    if (mode === "ok" || mode === "no-download") {
+      copied = true;
+    } else if (mode === "no-copy" || mode === "both-fail") {
+      copied = false;
+    } else if (navigator.clipboard?.writeText) {
       try {
         await navigator.clipboard.writeText(payload);
         copied = true;
@@ -254,17 +260,21 @@ export function Watchlist({
       }
     }
     let downloaded = false;
-    try {
-      const blob = new Blob([payload], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = fileName;
-      anchor.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1_000);
-      downloaded = true;
-    } catch {
+    if (mode === "no-download" || mode === "both-fail") {
       downloaded = false;
+    } else {
+      try {
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName;
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1_000);
+        downloaded = true;
+      } catch {
+        downloaded = false;
+      }
     }
     setExportStatus(
       copied && downloaded

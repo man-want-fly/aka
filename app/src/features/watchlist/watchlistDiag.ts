@@ -1,3 +1,4 @@
+import { clearDiagExportMode, setDiagExportMode } from "../../lib/diagExport";
 import { describeError, ipc } from "../../lib/ipc";
 
 /**
@@ -753,28 +754,58 @@ async function runCorruptMode(push: Push) {
     `错误码「${code}」/ 重建=${Boolean(action)} / 导出诊断=${Boolean(exportAction)} / 重试=${Boolean(retryAction)}`,
   );
 
-  // 补1（QA 返工）：导出诊断的成功/半成功/失败都要有可见文案，否则「拿到没有」不可判定。
+  // 补1（W-63）：四支文案各一条独立断言，禁止析取；分支由 dev-only 注入开关强制。
   const statusNode = () => q<HTMLElement>("[data-wl-export-status]");
-  const statusBefore = (statusNode()?.textContent ?? "").trim();
-  exportAction?.click();
-  const statusText = await waitFor(
-    () => {
-      const text = (statusNode()?.textContent ?? "").trim();
-      return text && text !== statusBefore ? text : null;
-    },
-    2_000,
-  ).catch(() => "");
+  const clickExport = async (mode: "ok" | "no-copy" | "no-download" | "both-fail") => {
+    setDiagExportMode(mode);
+    const before = (statusNode()?.textContent ?? "").trim();
+    exportAction?.click();
+    return waitFor(
+      () => {
+        const text = (statusNode()?.textContent ?? "").trim();
+        return text && text !== before ? text : null;
+      },
+      2_000,
+    ).catch(() => "");
+  };
+  const fileName = `aka-diagnostics-${trace}.json`;
+  const bothOk = await clickExport("ok");
   push(
-    "WL-23C",
+    "WL-23C1",
     "render",
     "S-08.02-04",
     "AC-08.02-05（补1）",
-    Boolean(exportAction) &&
-      (statusText.includes("已复制") ||
-        statusText.includes("已下载") ||
-        statusText.includes("导出失败")),
-    `点击「导出诊断」→ 状态文案「${statusText || "缺失"}」`,
+    Boolean(exportAction) && bothOk === `已复制到剪贴板，并下载 ${fileName}`,
+    `已复制+已下载支：「${bothOk || "缺失"}」`,
   );
+  const noCopy = await clickExport("no-copy");
+  push(
+    "WL-23C2",
+    "render",
+    "S-08.02-04",
+    "AC-08.02-05（补1）",
+    Boolean(exportAction) && noCopy === `已下载 ${fileName}（剪贴板不可用）`,
+    `仅已下载支：「${noCopy || "缺失"}」`,
+  );
+  const noDownload = await clickExport("no-download");
+  push(
+    "WL-23C3",
+    "render",
+    "S-08.02-04",
+    "AC-08.02-05（补1）",
+    Boolean(exportAction) && noDownload === `已复制到剪贴板（下载被拦截）：${fileName}`,
+    `仅已复制支：「${noDownload || "缺失"}」`,
+  );
+  const bothFail = await clickExport("both-fail");
+  push(
+    "WL-23C4",
+    "render",
+    "S-08.02-04",
+    "AC-08.02-05（补1）",
+    Boolean(exportAction) && bothFail === "导出失败：剪贴板与下载均不可用，请手动复制错误码与追踪号",
+    `导出失败支：「${bothFail || "缺失"}」`,
+  );
+  clearDiagExportMode();
 }
 
 /** 补4（删组）/ 补4（移出）/ 补3（星标）：只读库下的三处写失败。 */

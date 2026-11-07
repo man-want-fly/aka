@@ -1,11 +1,11 @@
 {
   "suite": "S-02.04-02 加入图表/容量",
-  "label": "20261107-235542",
-  "runAt": "2026-11-07T23:55:42+08:00",
-  "commit": "8b399c8cf0558ef0048ecaec34ff3f0fe5139a14",
-  "dirty": false,
+  "label": "20261108-010056",
+  "runAt": "2026-11-08T01:00:56+08:00",
+  "commit": "366634c56de3d86d134b8ab40f4084731261b2c3",
+  "dirty": true,
   "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"drawer\" target/debug/aka-desktop",
-  "fixture": "默认 state.db；套件先改 MACD 参数为 10/22/8、点满容量第 4 个副图、再恢复默认，随后经目录页跳 999999.XX 验证无标的态",
+  "fixture": "默认 state.db；取证前清空 localStorage `aka.workbench.subplots.v1`（恢复默认 成交量+M06+M01）。套件先改 MACD 参数为 10/22/8、点满容量第 4 个副图、再恢复默认，随后经目录页跳 999999.XX 验证无标的态",
   "environment": "macOS 本机；vite build 产物 + cargo build（debug，含 QA 注入）--features tauri/custom-protocol",
   "formatScan": null,
   "result": {
@@ -18,29 +18,32 @@
       "runtime": "1/1"
     },
     "blocked": [],
-    "checks": "11/11 属本卡（同文件其余 9 条属 S-02.04-01 / S-08.01-02 / S-03.01-05，不计本卡分母）",
+    "checks": "11/11 属本卡（同文件其余 9 条按 AC 归属拆到 S-02.04-01 / S-03.01-05，不计本卡分母）",
     "otherCards": [
       {
         "card": "S-02.04-01",
-        "checks": "7/7",
+        "checks": "8/8",
         "layers": {
           "data": "1/1",
-          "render": "6/6"
-        }
-      },
-      {
-        "card": "S-08.01-02",
-        "checks": "1/1",
-        "layers": {
-          "render": "1/1"
-        }
+          "render": "7/7"
+        },
+        "acCovered": "6/6"
       },
       {
         "card": "S-03.01-05",
         "checks": "1/1",
         "layers": {
           "render": "1/1"
-        }
+        },
+        "acCovered": ""
+      }
+    ],
+    "pending": [
+      {
+        "card": "S-08.01-02",
+        "checks": "0/1",
+        "status": "待证",
+        "note": "AC-08.01-02（标的搜索浮层）尚未取证；此前 1/1 系 R-06 挂错卡，已改归 S-02.04-01（AC-02.04-02（补3））"
       }
     ]
   }

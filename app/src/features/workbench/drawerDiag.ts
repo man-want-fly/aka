@@ -14,13 +14,20 @@ interface Check {
 const cardOf = (ac: string) => {
   if (ac.startsWith("AC-02.04-01") || ac.startsWith("AC-02.04-02")) return "S-02.04-01";
   if (ac.startsWith("AC-02.04-03") || ac.startsWith("AC-02.04-04")) return "S-02.04-02";
-  if (ac.startsWith("AC-08.01-02")) return "S-08.01-02";
   if (ac.startsWith("AC-03.01-05")) return "S-03.01-05";
   return "未归属";
 };
 
 /** 本卡 AC 全集（S-02.04-02 卡面验收标准），用于现算「本卡 AC 覆盖 x/y」。 */
 const CARD_ACS: Record<string, string[]> = {
+  "S-02.04-01": [
+    "AC-02.04-01",
+    "AC-02.04-02",
+    "AC-02.04-02（补1）",
+    "AC-02.04-02（补2）",
+    "AC-02.04-02（补3）",
+    "AC-02.04-02（补4）",
+  ],
   "S-02.04-02": [
     "AC-02.04-03",
     "AC-02.04-03（补1）",
@@ -90,15 +97,6 @@ const selectedSubs = () => {
 
 const input = () => q<HTMLInputElement>("[data-drawer-search]");
 
-/** 输入并等过 200ms 防抖 + 一帧渲染（260ms 在冷启动/大目录下偏紧，放宽到 600ms） */
-const typeQuery = async (text: string) => {
-  const field = await waitFor(input);
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-  setter?.call(field, text);
-  field.dispatchEvent(new Event("input", { bubbles: true }));
-  await sleep(600);
-};
-
 const clickElement = (element: Element | null) => {
   if (!element) throw new Error("目标元素不存在");
   const click = (element as HTMLElement).click;
@@ -121,6 +119,28 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const items = manifest.indicators;
   const planned = items.filter((item) => item.status === "planned");
   const implemented = items.length - planned.length;
+
+  /**
+   * AC-02.04-02：产品是 200ms 防抖 + 同步过滤。先清空并等分类导航重新出现
+   * （= 搜索已撤销、该分类全量列表已渲染；清空等待不计入时延断言），
+   * 再输入并等预期结果，超时上限 300ms——超时即红，不用固定 sleep 放宽时延。
+   */
+  const typeQuery = async (text: string, probe: () => boolean) => {
+    const field = await waitFor(input);
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    const type = (value: string) => {
+      setter?.call(field, value);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    type("");
+    await waitFor(() => q('[data-drawer-cat][aria-pressed="true"]'), 400, 20).catch(() => {
+      throw new Error("清空搜索后 400ms 内未恢复分类列表");
+    });
+    type(text);
+    await waitFor(() => (probe() ? true : null), 300, 20).catch(() => {
+      throw new Error(`搜索「${text}」300ms 内未出现预期结果（200ms 防抖 + 同步过滤）`);
+    });
+  };
 
   // ---- 数据层 ----
   const counts = Object.fromEntries(
@@ -205,7 +225,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     `置灰条目 ${plannedInDom.length} / 缺缩写 ${plannedInDom.filter((row) => !row.hasAbbr).length} / 面板异常 ${plannedInDom.filter((row) => row.panel !== "主" && row.panel !== "副").length}`,
   );
 
-  await typeQuery("MACD");
+  await typeQuery("MACD", () => (qa<HTMLElement>("[data-drawer-row]")[0]?.dataset.drawerRow ?? "") === "M06");
   const macdRows = qa<HTMLElement>("[data-drawer-row]");
   const firstMacd = macdRows[0];
   // 名称含 MACD 的其他条目只能是规划中变体（M07 归一化 MACD），必须置灰；
@@ -231,9 +251,13 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     } / 命中高亮=${firstMacd?.querySelector("mark") ? "有" : "无"}`,
   );
 
-  await typeQuery("kdj");
+  const onlyM02 = () => {
+    const ids = rowIds("[data-drawer-row]");
+    return ids.length === 1 && ids[0] === "M02";
+  };
+  await typeQuery("kdj", onlyM02);
   const lower = rowIds("[data-drawer-row]");
-  await typeQuery("KDJ");
+  await typeQuery("KDJ", onlyM02);
   const upper = rowIds("[data-drawer-row]");
   push(
     "R-04",
@@ -246,7 +270,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     `kdj → ${lower.join(",") || "无"} / KDJ → ${upper.join(",") || "无"}`,
   );
 
-  await typeQuery("md");
+  await typeQuery("md", () => {
+    const ids = rowIds("[data-drawer-row]");
+    return ids.length < items.length && ids.includes("M06");
+  });
   push(
     "R-05",
     "AC-02.04-02（补2）",
@@ -255,21 +282,24 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     `搜索 md → ${rowIds("[data-drawer-row]").join(",") || "无"}`,
   );
 
-  await typeQuery("xyz");
+  await typeQuery("xyz", () => Boolean(q("[data-drawer-empty]")));
   const empty = await waitFor(() => q("[data-drawer-empty]")).catch(() => null);
   const clear = q<HTMLElement>("[data-drawer-clear], .state-card__action");
   clickElement(clear);
   await sleep(120);
   push(
     "R-06",
-    "AC-08.01-02",
+    "AC-02.04-02（补3）",
     "render",
     Boolean(empty) && qa("[data-drawer-row]").length > 0,
     `无结果空态=${empty ? "出现" : "缺失"} / 清除后行数=${qa("[data-drawer-row]").length}`,
   );
 
   // 点置灰条目必须给出「规划中」提示
-  await typeQuery("HMA");
+  await typeQuery(
+    "HMA",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-status="planned"]')),
+  );
   const plannedRow = qa<HTMLElement>('[data-drawer-status="planned"]')[0];
   clickElement(plannedRow ?? null);
   await sleep(80);
@@ -301,7 +331,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   await sleep(120);
 
   // R-09 已添加态：M06 默认就在副图，行内必须显示「已添加」且重复点击不再新增
-  await typeQuery("MACD");
+  await typeQuery(
+    "MACD",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-add="M06:sub"]')),
+  );
   const m06Button = q<HTMLElement>('[data-drawer-add="M06:sub"]');
   const panelsBefore = qa("[data-sub-panel]").length;
   clickElement(m06Button);
@@ -327,7 +360,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   await sleep(200);
   const afterRemove = qa("[data-sub-panel]").length;
 
-  await typeQuery("MACD");
+  await typeQuery(
+    "MACD",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-add="M06:sub"]')),
+  );
   const m06Add = q<HTMLElement>('[data-drawer-add="M06:sub"]');
   const m06WasAdded = m06Add?.dataset.drawerAdded === "1";
   clickElement(m06Add);
@@ -384,7 +420,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const macdTitleBefore =
     q('[data-sub-panel="M06"] [data-sub-title]')?.getAttribute("data-sub-title") ?? "";
 
-  await typeQuery("ATR");
+  await typeQuery(
+    "ATR",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-add="V01:sub"]')),
+  );
   const v01Button = q<HTMLButtonElement>('[data-drawer-add="V01:sub"]');
   const v01Disabled = Boolean(v01Button?.disabled);
   const subsBefore = selectedSubs();
@@ -426,7 +465,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const removeM01 = q<HTMLElement>('[data-panel-remove="M01"]');
   clickElement(removeM01);
   await sleep(200);
-  await typeQuery("RSI");
+  await typeQuery(
+    "RSI",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-add="M01:sub"]')),
+  );
   const m01Button = q<HTMLButtonElement>('[data-drawer-add="M01:sub"]');
   const reEnabled = !m01Button?.disabled && m01Button?.dataset.drawerFull === "0";
   clickElement(m01Button);
@@ -444,10 +486,16 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   );
 
   // R-13 面板归属：主图条目只给「+ 主图」，副图条目只给「+ 副图」
-  await typeQuery("Envelopes");
+  await typeQuery(
+    "Envelopes",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-row="T08"]')),
+  );
   const mainRow = q<HTMLElement>('[data-drawer-row="T08"]');
   const mainHasSubButton = Boolean(mainRow?.querySelector('[data-drawer-add$=":sub"]'));
-  await typeQuery("KDJ");
+  await typeQuery(
+    "KDJ",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-row="M02"]')),
+  );
   const subRow = q<HTMLElement>('[data-drawer-row="M02"]');
   const subHasMainButton = Boolean(subRow?.querySelector('[data-drawer-add$=":main"]'));
   push(
@@ -459,7 +507,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   );
 
   // R-14 主图满 2：点第 3 个给明确提示，不静默替换掉已有叠加
-  await typeQuery("Envelopes");
+  await typeQuery(
+    "Envelopes",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-add="T08:main"]')),
+  );
   const mainButton = q<HTMLElement>('[data-drawer-add="T08:main"]');
   const mainFull = mainButton?.dataset.drawerFull === "1";
   clickElement(mainButton);
@@ -476,7 +527,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   // R-15 首次冷算 ≤300ms：先腾出容量，再从抽屉点加 M02（KDJ），量「点击→曲线出现」与冷算日志
   clickElement(q<HTMLElement>('[data-panel-remove="M01"]'));
   await sleep(200);
-  await typeQuery("KDJ");
+  await typeQuery(
+    "KDJ",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-add="M02:sub"]')),
+  );
   const m02AddButton = q<HTMLButtonElement>('[data-drawer-add="M02:sub"]');
   const m02StartedAt = performance.now();
   clickElement(m02AddButton);
@@ -543,7 +597,10 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const guide = q<HTMLElement>("[data-drawer-no-target]");
   const guideText = (guide?.textContent ?? "").replace(/\s+/g, " ").trim();
   const goMarket = guide?.querySelector<HTMLAnchorElement>("[data-drawer-go-market]");
-  await typeQuery("kdj");
+  await typeQuery(
+    "kdj",
+    () => rowIds("[data-drawer-row]").length < items.length && Boolean(q('[data-drawer-add="M02:sub"]')),
+  );
   const m02Button = q<HTMLButtonElement>('[data-drawer-add="M02:sub"]');
   const blocked = m02Button?.dataset.drawerBlocked === "1" && Boolean(m02Button.disabled);
   const subsBeforeNoTarget = selectedSubs();
