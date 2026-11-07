@@ -1,0 +1,76 @@
+{
+  "suite": "S-07.05-02 bar-provenance",
+  "startedAt": "2026-11-07T23:20:20+08:00",
+  "finishedAt": "2026-11-07T23:20:22+08:00",
+  "ok": false,
+  "checks": [
+    {
+      "id": "provenance-six-fields",
+      "ac": "AC-07.05-02 / AC-07.05-02（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "bar_provenance 返回 provider/batch_id/ingested_at/dataset_id/adj_mode/quality_flags；dataset_id 与 manifest 一致；mock 批次固定 b-20260101-01"
+    },
+    {
+      "id": "ex-rights-and-adjacent-prices",
+      "ac": "AC-07.05-02（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "600519.SH 2024-04-29 quality_flags 含 EX_RIGHTS；2024-04-26 的 raw_close 与 close 不同（qfq 折算）"
+    },
+    {
+      "id": "missing-meta-error-code",
+      "ac": "AC-07.05-02（补4）",
+      "layer": "data",
+      "passed": true,
+      "detail": "batch_id/ingested_at 为空 → missingFields=[batchId, ingestedAt]，errorCode=E_PROVENANCE_MISSING，其余字段正常"
+    },
+    {
+      "id": "suspended-not-zero-volume",
+      "ac": "AC-07.05-02（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "诊断样本 20 根停牌只标 SUSPENDED，volume=0 不叠 ZERO_VOLUME"
+    },
+    {
+      "id": "ex-rights-week-month-granularity",
+      "ac": "AC-07.05-02（补1） / W-53",
+      "layer": "data",
+      "passed": true,
+      "detail": "600519.SH 2024-04-29 所在周线根与 2024-04 月线根均含 EX_RIGHTS；粒度只到周/月"
+    },
+    {
+      "id": "missing-approximated-not-bar-flags",
+      "ac": "W-52",
+      "layer": "data",
+      "passed": true,
+      "detail": "MISSING/APPROXIMATED 已从 K 线标记词表移除；MISSING 留在质量报告行与 E_PROVENANCE_MISSING"
+    },
+    {
+      "id": "bench-snapshot-reproducible",
+      "ac": "AC-07.05-02（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "aka-aggregate-export 连续两次生成，全部快照 sha256 一致"
+    },
+    {
+      "id": "provenance-overlay",
+      "ac": "AC-07.05-02",
+      "layer": "render",
+      "passed": false,
+      "detail": "未实现：app/src 归另一位开发，本批未改；数据契约 barProvenance 已就绪"
+    },
+    {
+      "id": "p9-example-jump-to-overlay",
+      "ac": "AC-07.05-02（补3）",
+      "layer": "render",
+      "passed": false,
+      "detail": "未实现：P9 的 security/date 已由 qualityReport.rows[].examples 提供，跳转与浮层仍缺"
+    }
+  ],
+  "context": {
+    "commit": "6056c78069e7eec045152c8af16f11723e4ebbce",
+    "supersedes": ["49009b4abb3325a68fcb6b2ae9ef76c9f9049af5"],
+    "scope": "本批 AC 范围 = 单根溯源字段、复权前后价、E_PROVENANCE_MISSING、EX_RIGHTS 日/周/月标记；溯源浮层渲染不属本批，未实现记 failed"
+  }
+}

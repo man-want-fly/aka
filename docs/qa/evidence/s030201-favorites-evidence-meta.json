@@ -1,0 +1,15 @@
+{
+  "suite": "S-03.02-01 favorites",
+  "commit": "5d8dd5e24b62faddaed751f0232980142cccbc00",
+  "supersedes": ["c945e6598423df8f28767f14fbdc6c265af4ee62"],
+  "command": "cargo test -p app-core -p data-store",
+  "environment": "macOS 本机；AKA-dev2 worktree / dev2",
+  "result": {
+    "ok": true,
+    "layers": {
+      "data": "11/11"
+    },
+    "scope": "本批 AC 范围 = 数据层持久化两项（首装 8 项幂等、增删幂等/不补回）及排序/offline；渲染层收藏区 AC 不属本批（app/src 未改）",
+    "blocked": []
+  }
+}

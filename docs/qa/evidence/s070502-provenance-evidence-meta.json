@@ -1,0 +1,20 @@
+{
+  "suite": "S-07.05-02 bar-provenance",
+  "commit": "6056c78069e7eec045152c8af16f11723e4ebbce",
+  "supersedes": ["49009b4abb3325a68fcb6b2ae9ef76c9f9049af5"],
+  "command": "cargo test -p app-core -p data-provider -p data-store; cargo run -p indicator-golden --bin aka-aggregate-export (x2)",
+  "environment": "macOS 本机；AKA-dev2 worktree / dev2",
+  "result": {
+    "ok": false,
+    "layers": {
+      "data": "7/7",
+      "render": "0/2"
+    },
+    "scope": "本批 AC 范围 = 数据层单根溯源字段/缺失错误码/除权标记；渲染层溯源浮层与 P9 跳转不属本批（app/src 归 UI 负责人），功能未写记 failed",
+    "failed": [
+      "render:provenance-overlay",
+      "render:p9-example-jump-to-overlay"
+    ],
+    "blocked": []
+  }
+}

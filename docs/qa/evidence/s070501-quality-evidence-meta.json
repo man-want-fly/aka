@@ -1,0 +1,14 @@
+{
+  "suite": "S-07.05-01 quality-scan",
+  "commit": "e55476070aa3aa0370f73cbacf747b65d702c574",
+  "command": "cargo test -p app-core",
+  "environment": "macOS 本机；AKA-dev2 worktree / dev2",
+  "result": {
+    "ok": true,
+    "layers": {
+      "data": "11/11"
+    },
+    "scope": "本批 AC 范围 = 6 项检查引擎与报告缓存/过期；P9 报告页渲染 AC 不属本批（app/src 未改）",
+    "blocked": []
+  }
+}
