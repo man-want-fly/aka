@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "../../app/AppShell";
-import { CandleChart } from "../../components/CandleChart";
+import { CandleChart, type ChartViewport } from "../../components/CandleChart";
 import { IndicatorReadouts } from "../../components/IndicatorReadouts";
 import { ParamPanel } from "../../components/ParamPanel";
 import { SimBadge } from "../../components/SimBadge";
@@ -32,9 +32,11 @@ import {
   type TimeframeCode,
 } from "../../features/workbench/diag";
 import { runS205Diagnostics } from "../../features/workbench/s205Diag";
+import { runS207Diagnostics } from "../../features/workbench/s207Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
 import { runRestartDiagnostics, restartDiagStage } from "../../features/workbench/restartDiag";
 import { runWatchlistDiagnostics, watchlistDiagStage } from "../../features/watchlist/watchlistDiag";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type {
   AppError,
@@ -63,6 +65,36 @@ interface Props {
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
   onNavigate: (key: "workbench" | "market" | "catalog") => void;
+}
+
+/**
+ * 图表子树兜底：渲染期抛错会把整棵图表卸载，光看空白无法定位。
+ * 捕获时落盘 s207-crash.json（含 componentStack），并把错误显示在图表位。
+ */
+class ChartCrashBoundary extends Component<{ children: ReactNode }, { message: string }> {
+  state = { message: "" };
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    void ipc.diagWriteNamed(
+      "s207-crash.json",
+      JSON.stringify(
+        {
+          at: new Date().toISOString(),
+          message: error.message,
+          stack: error.stack ?? "",
+          componentStack: info.componentStack ?? "",
+        },
+        null,
+        2,
+      ),
+    );
+    this.setState({ message: error.message });
+  }
+
+  render() {
+    if (this.state.message) return <div className="error-box">图表渲染失败：{this.state.message}</div>;
+    return this.props.children;
+  }
 }
 
 const RANGES = [
@@ -125,7 +157,8 @@ export function WorkbenchPage({
   const [activeCode, setActiveCode] = useState(initialCode ?? "300750.SZ");
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">("qfq");
   const [timeframe, setTimeframe] = useState<TimeframeCode>("D");
-  const [range, setRange] = useState(120);
+  // S-02.07-01 视口：按 (code, period) 记忆，默认 120 根；切标的/周期各用各的
+  const [viewport, setViewportState] = useState<ChartViewport | null>(null);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [params, setParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
@@ -134,6 +167,37 @@ export function WorkbenchPage({
     () => (manifest ? defaultsFromIndicators(manifest.indicators) : DEFAULT_PARAMS),
     [manifest],
   );
+
+  // S-02.07-01 视口记忆：按 (code, period) 存；sessionStorage 只为同进程内刷新页面保留
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem("aka.chart.viewport");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, ChartViewport>;
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (value && Number.isFinite(value.start) && Number.isFinite(value.end)) {
+          viewportMemory.current.set(key, value);
+        }
+      });
+    } catch {
+      /* 记忆损坏时按空表处理，不影响主流程 */
+    }
+  }, []);
+
+  const viewportKey = `${activeCode}|${timeframe}`;
+  const setViewport = useCallback((next: ChartViewport) => {
+    viewportRef.current = next;
+    setViewportState(next);
+    viewportMemory.current.set(viewportKey, next);
+    try {
+      window.sessionStorage.setItem(
+        "aka.chart.viewport",
+        JSON.stringify(Object.fromEntries(viewportMemory.current)),
+      );
+    } catch {
+      /* 存储不可用时只保留内存记忆 */
+    }
+  }, [viewportKey]);
 
   // S-02.05-02 会话记忆：同一会话内切页/切标的保留参数；重启回到 manifest 默认值
   useEffect(() => {
@@ -160,7 +224,33 @@ export function WorkbenchPage({
   // 供 diag 逐根比对读取「当前渲染帧」的引擎结果（effect 闭包不会随后续 render 更新）
   const calcRef = useRef<CalcResponse | null>(null);
   const barsRef = useRef<BarsResponse | null>(null);
-  const rangeRef = useRef(120);
+  const viewportRef = useRef<ChartViewport | null>(null);
+  const viewportMemory = useRef<Map<string, ChartViewport>>(new Map());
+
+  // bars 到位/切标的后落视口：同一 (code, period) 有记忆就恢复，否则默认 120 根
+  useEffect(() => {
+    if (!bars || bars.bars.length === 0) {
+      viewportRef.current = null;
+      setViewportState(null);
+      return;
+    }
+    // 切标的瞬间 bars 仍是上一批，等请求参数与当前 code/timeframe 对齐后再落
+    if (bars.security !== activeCode || bars.timeframe !== timeframe) return;
+    const total = bars.bars.length;
+    const remembered = viewportMemory.current.get(viewportKey);
+    if (remembered) {
+      const count = Math.min(remembered.end - remembered.start + 1, total);
+      const start = Math.max(0, Math.min(remembered.start, total - count));
+      const next = { start, end: start + count - 1 };
+      viewportRef.current = next;
+      setViewportState(next);
+      return;
+    }
+    const count = Math.min(120, total);
+    const next = { start: total - count, end: total - 1 };
+    viewportRef.current = next;
+    setViewportState(next);
+  }, [bars, activeCode, timeframe, viewportKey]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   // 数据不足的内联提示按指标 id 归位，不上升为全局错误条
@@ -385,7 +475,9 @@ export function WorkbenchPage({
     let alive = true;
     (async () => {
       const enabled = await ipc.diagEnabled();
-      if (!enabled || !alive) return;
+      const target = await ipc.diagTarget();
+      // 指定了其它取证目标时让路，避免两套套件同时切标的/周期
+      if (!enabled || !alive || (target !== "" && target !== "s2")) return;
       window.sessionStorage.setItem("aka.s2.diag.once", "1");
       setDiagStatus("S2 取证：运行中");
       try {
@@ -430,7 +522,10 @@ export function WorkbenchPage({
           snapshot: () => ({
             calc: calcRef.current,
             barsLength: barsRef.current?.bars.length ?? 0,
-            windowSize: rangeRef.current,
+            windowSize: viewportRef.current
+              ? viewportRef.current.end - viewportRef.current.start + 1
+              : 0,
+            viewStart: viewportRef.current?.start ?? 0,
             barsClose: (barsRef.current?.bars ?? []).map((bar) => bar.close),
           }),
         });
@@ -503,6 +598,145 @@ export function WorkbenchPage({
       alive = false;
     };
   }, [manifest, registry, securities, defaultParams]);
+
+  // S-02.07-01/02 缩放·十字光标·数据不足取证：AKA_DIAG_TARGET=s207 时自跑一次
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (window.sessionStorage.getItem("aka.s207.diag.done") === "1") return;
+    let alive = true;
+    let minWait = 0;
+    // 等待「切标的/周期/参数」后的真实渲染帧：至少等 minWait，再要求两次相同的稳定签名
+    const waitReady = async (label: string, timeoutMs = 4000) => {
+      if (minWait > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, minWait));
+        minWait = 0;
+      }
+      let previous = "";
+      let stable = 0;
+      let lastNode = false;
+      const startedAt = performance.now();
+      while (performance.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, 120));
+        const frame = barsRef.current;
+        const result = calcRef.current;
+        const node = document.querySelector('[data-chart="candle"]');
+        lastNode = node !== null;
+        const signature = [
+          frame?.security,
+          frame?.timeframe,
+          frame?.adj,
+          frame?.bars.length,
+          result?.generation,
+          result?.barCount,
+          node?.getAttribute("data-bar-count"),
+          node?.getAttribute("data-view-start"),
+          node?.getAttribute("data-view-end"),
+        ].join("|");
+        if (frame && result && node && result.barCount === frame.bars.length && signature === previous) {
+          stable += 1;
+          if (stable >= 2) return;
+        } else {
+          stable = 0;
+          previous = signature;
+        }
+      }
+      throw new Error(
+        `等待就绪超时：${label}（node=${lastNode ? "有" : "无"} 末次签名=${previous} error=${
+          document.querySelector(".error-box")?.textContent?.slice(0, 120) ?? "无"
+        }）`,
+      );
+    };
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s207" || !alive) return;
+      window.sessionStorage.setItem("aka.s207.diag.done", "1");
+      // 取证期间把渲染异常落盘：CandleChart 抛错会让图表整棵子树卸载，只留 UI 状态无法定位
+      const onCrash = (event: ErrorEvent) => {
+        void ipc.diagWriteNamed(
+          "s207-crash.json",
+          JSON.stringify(
+            {
+              at: new Date().toISOString(),
+              message: event.message,
+              stack: event.error instanceof Error ? (event.error.stack ?? "") : "",
+            },
+            null,
+            2,
+          ),
+        );
+      };
+      window.addEventListener("error", onCrash);
+      setDiagStatus("S-02.07-01/02 取证：运行中");
+      try {
+        const report = await runS207Diagnostics({
+          getActiveCode: () => activeCodeRef.current,
+          setCode: (code) => {
+            minWait = 600;
+            setActiveCode(code);
+          },
+          setTimeframe: (tf) => {
+            minWait = 600;
+            setTimeframe(tf);
+          },
+          setAdj: (next) => {
+            minWait = 600;
+            setAdj(next);
+          },
+          setParams: (next) => {
+            minWait = 700;
+            setParams(next);
+            setAppliedParams(next);
+          },
+          setDateRange: (from, to) => {
+            minWait = 700;
+            setDateFrom(from);
+            setDateTo(to);
+          },
+          clearDateRange: () => {
+            minWait = 700;
+            setDateFrom("");
+            setDateTo("");
+          },
+          setSubIds: (ids) => {
+            minWait = 200;
+            setSubIds(ids);
+          },
+          bars: () => barsRef.current,
+          calc: () => calcRef.current,
+          viewport: () => viewportRef.current,
+          waitReady,
+        });
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-02.07-01/02 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_S207_EVIDENCE__ = report;
+      } catch (err) {
+        const message = describeError(err).message;
+        setDiagStatus(`S-02.07-01/02 取证失败：${message}`);
+        try {
+          await ipc.diagWriteNamed(
+            "s207-error.json",
+            JSON.stringify(
+              {
+                at: new Date().toISOString(),
+                message,
+                stack: err instanceof Error ? (err.stack ?? "") : String(err),
+              },
+              null,
+              2,
+            ),
+          );
+        } catch {
+          // 取证失败时不再因写盘错误覆盖原始异常
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, registry, securities]);
 
   // S-02.05-02 物理重启验证：AKA_DIAG_TARGET=restart 时按 localStorage 标记跑第一次或第二次启动
   useEffect(() => {
@@ -768,19 +1002,29 @@ export function WorkbenchPage({
 
               <span className="caption">显示</span>
               <div className="seg">
-                {RANGES.map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    aria-pressed={range === item.value}
-                    onClick={() => {
-                      setRange(item.value);
-                      rangeRef.current = item.value;
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+                {RANGES.map((item) => {
+                  const total = bars?.bars.length ?? 0;
+                  const count = viewport ? viewport.end - viewport.start + 1 : 0;
+                  const pressed =
+                    total > 0 && (item.value === 9999 ? count >= total : count === item.value);
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      aria-pressed={pressed}
+                      onClick={() => {
+                        if (!bars || bars.bars.length === 0) return;
+                        const shown =
+                          item.value === 9999
+                            ? bars.bars.length
+                            : Math.min(item.value, bars.bars.length);
+                        setViewport({ start: bars.bars.length - shown, end: bars.bars.length - 1 });
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
               </div>
 
               <span className="caption">日期</span>
@@ -877,15 +1121,20 @@ export function WorkbenchPage({
             <div className="chart-card">
               {bars ? (
                 <>
+                  <ChartCrashBoundary>
                   <CandleChart
                     bars={bars.bars}
                     series={calc?.series ?? []}
-                    windowSize={range}
+                    viewport={
+                      viewport ?? { start: Math.max(0, bars.bars.length - 120), end: bars.bars.length - 1 }
+                    }
+                    onViewportChange={setViewport}
                     overlayIds={overlayIds}
                     subIds={subIds}
                     subNotices={calcNotices ?? undefined}
                     subLabels={subLabels}
                     units={units}
+                    adjMode={adj}
                   />
                   <IndicatorReadouts
                     series={calc?.series ?? []}
@@ -894,6 +1143,7 @@ export function WorkbenchPage({
                     subIds={subIds}
                     units={units}
                   />
+                  </ChartCrashBoundary>
                 </>
               ) : (
                 <div className="empty">
@@ -990,7 +1240,14 @@ export function WorkbenchPage({
             缓存 <b>{calc ? (calc.cacheHit ? "命中" : "未命中") : "—"}</b>
           </span>
           <span>
-            渲染 <b>{range === 9999 ? "全部" : `${range} 根`}</b>
+            渲染{" "}
+            <b>
+              {viewport
+                ? viewport.end - viewport.start + 1 >= (bars?.bars.length ?? 0)
+                  ? "全部"
+                  : `${viewport.end - viewport.start + 1} 根`
+                : "—"}
+            </b>
           </span>
           <span className="mono">{bars ? formatDate(lastBar?.date ?? "") : ""}</span>
           {diagStatus && <span className="diag-status">{diagStatus}</span>}

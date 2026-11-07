@@ -570,10 +570,10 @@
 });
 
 <span class="c">// 统一错误（Rust serde → TS）</span>
-<span class="c">// { code: "PARAM_OUT_OF_RANGE", message: "周期需在 2~200 之间",</span>
-<span class="c">//   retryable: false, indicatorId: "ma", field: "period", got: 1, min: 2, max: 200 }</span></pre>
+<span class="c">// { code: "PARAM_OUT_OF_RANGE", message: "周期需在 2~500 之间",  // 上下限取自 manifest/constants.json 的 params.periodMin / periodMax</span>
+<span class="c">//   retryable: false, indicatorId: "ma", field: "period", got: 1, min: 2, max: 500 }</span></pre>
 
-  <div class="callout"><b>单一事实来源：</b>参数范围、默认值、步长只写在 Rust 注册表。<code>indicator_registry</code> 把 <code>ParamSpec</code> 原样序列化给前端，前端据此渲染控件；<code>calc_indicators</code> 用同一份规格校验。前端不复制一份限制，避免「前端 2~200、后端崩在 0」。</div>
+  <div class="callout"><b>单一事实来源：</b>参数范围、默认值、步长只写在 Rust 注册表，区间边界由 <code>manifest/constants.json</code>（<code>params.periodMin</code> / <code>params.periodMax</code>）给出。<code>indicator_registry</code> 把 <code>ParamSpec</code> 原样序列化给前端，前端据此渲染控件；<code>calc_indicators</code> 用同一份规格校验。前端不复制一份限制，文档也不另抄一份区间，避免「前端 2~500、后端崩在 0」。</div>
 </div>
 
 <div class="card">

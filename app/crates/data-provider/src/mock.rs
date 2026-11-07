@@ -119,6 +119,49 @@ impl MockProvider {
         self
     }
 
+    /// 取证专用：停牌样本（D-19 合成行：OHLC=停牌前收盘、量/额为 0）。
+    /// 用于 AC-02.07-03 补2/补4：停牌日 K 线不画、量柱 0、光标落该位显示「停牌」。
+    pub fn with_diag_suspended_series(
+        self,
+        count: usize,
+        start: usize,
+        len: usize,
+    ) -> Self {
+        self.push_diag_suspended("DIAGSUSP.SZ", "诊断停牌序列", count, start, len)
+    }
+
+    fn push_diag_suspended(
+        mut self,
+        code: &str,
+        name: &str,
+        count: usize,
+        start: usize,
+        len: usize,
+    ) -> Self {
+        if count == 0 || len == 0 || self.find_security(code).is_some() {
+            return self;
+        }
+        let security = make_security(code, name, Board::SzMain, false, 10.0);
+        let mut bars = generate_bars(&security, &self.calendar);
+        bars.truncate(count);
+        if start < bars.len() {
+            let anchor = if start > 0 { bars[start - 1].close } else { bars[0].open };
+            for index in start..(start + len).min(bars.len()) {
+                bars[index].open = anchor;
+                bars[index].high = anchor;
+                bars[index].low = anchor;
+                bars[index].close = anchor;
+                bars[index].volume = 0.0;
+                bars[index].amount = 0.0;
+            }
+        }
+        self.securities.push(security);
+        if let Ok(mut cache) = self.raw_cache.lock() {
+            cache.insert(code.to_string(), std::sync::Arc::new(bars));
+        }
+        self
+    }
+
     pub fn dataset_id(&self) -> &'static str {
         MOCK_DATASET_ID
     }

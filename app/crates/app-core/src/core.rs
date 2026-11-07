@@ -237,7 +237,11 @@ impl AppCore {
         let provider = MockProvider::new();
         // 取证运行注入 20 根短序列样本；正常启动不注入，产品行为不变
         let provider = if std::env::var("AKA_DIAG").ok().as_deref() == Some("1") {
-            provider.with_diag_short_series(20).with_diag_tiny_series(12)
+            provider
+                .with_diag_short_series(20)
+                .with_diag_tiny_series(12)
+                // S-02.07-02 取证样本：120 根中第 80~99 根为停牌合成行（量/额为 0）
+                .with_diag_suspended_series(120, 80, 20)
         } else {
             provider
         };
@@ -614,6 +618,7 @@ impl AppCore {
                 close: candle.close,
                 volume: candle.volume,
                 amount: candle.amount,
+                adj_factor: candle.adj_factor,
                 source: candle.source.clone(),
                 quality: candle.quality.clone(),
             })
@@ -666,23 +671,8 @@ impl AppCore {
             validate(meta.params, &params).map_err(|err| param_error(meta.id, err))?;
 
             let warmup = (meta.warmup)(&params);
-            if total < warmup + 1 {
-                return Err(AppError::new(
-                    ErrorCode::InsufficientData,
-                    format!(
-                        "{} 需要至少 {} 根 K 线（预热 {}），当前 {} 根",
-                        meta.name_zh,
-                        warmup + 1,
-                        warmup,
-                        total
-                    ),
-                )
-                .with_details(serde_json::json!({
-                    "indicatorId": meta.id,
-                    "required": warmup + 1,
-                    "got": total,
-                })));
-            }
+            // S-02.07-02 前置 2：预热不足的指标由引擎输出全段 NaN（`short_series_respects_warmup_for_every_indicator`
+            // 已覆盖全部 44 个实现指标），不在这里让整个请求失败；否则月线 24 根时 T01/T03 也会被 T02 连坐。
 
             let key = calc_key(&series, meta, &params, &window.range);
             let params_hash = params_hash(&params);

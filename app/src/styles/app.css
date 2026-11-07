@@ -693,6 +693,31 @@ select {
   opacity: 1;
 }
 
+/* S-02.07-01 十字光标 tooltip：跟随光标、偏移 12px，近边界由 JS 翻转对齐方向 */
+.chart-tooltip {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 128px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--text2);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.chart-tooltip-date {
+  color: var(--muted);
+}
+
 .watermark {
   position: absolute;
   right: 12px;

@@ -62,6 +62,8 @@ pub struct BarDto {
     pub close: f64,
     pub volume: f64,
     pub amount: f64,
+    /// 复权因子（1.0 = 不复权原始价）；S-02.07-02 除权日 tooltip 要显示实际调整因子
+    pub adj_factor: f64,
     /// 行级溯源
     pub source: String,
     pub quality: Vec<String>,

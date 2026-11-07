@@ -68,6 +68,8 @@ export interface DiagHooks {
     calc: CalcResponse | null;
     barsLength: number;
     windowSize: number;
+    /** S-02.07-01 视口起点（绝对下标），默认 120 根时为 barsLength-windowSize */
+    viewStart: number;
     /** 逐根收盘价（T16 方向判定等渲染断言与图表口径对齐） */
     barsClose: number[];
   };
@@ -259,7 +261,7 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
   const snapshot = hooks.snapshot();
   if (svg && snapshot.calc) {
     const count = Math.min(snapshot.windowSize, snapshot.barsLength);
-    const offset = snapshot.barsLength - count;
+    const offset = snapshot.viewStart ?? snapshot.barsLength - count;
     const candles = Array.from(
       document.querySelectorAll<SVGElement>("[data-candle][data-index]"),
     );
@@ -424,7 +426,7 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
   const snapshotOf = () => hooks.snapshot();
   const windowStart = () => {
     const snap = snapshotOf();
-    return Math.max(0, snap.barsLength - snap.windowSize);
+    return snap.viewStart ?? Math.max(0, snap.barsLength - snap.windowSize);
   };
   const valuesOf = (id: string, key: string): Array<number | null> | null => {
     const series = snapshotOf().calc?.series.find((item) => item.indicatorId === id);

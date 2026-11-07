@@ -160,6 +160,8 @@ export interface BarDto {
   close: number;
   volume: number;
   amount: number;
+  /** 复权因子：1.0 = 不复权原始价（S-02.07-02 除权日 tooltip 口径用）；后端 serde camelCase */
+  adjFactor: number;
   source: string;
   quality: string[];
 }

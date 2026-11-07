@@ -1,0 +1,48 @@
+{
+  "version": "v0.1",
+  "updatedAt": "2026-11-07",
+  "note": "指标目录、样本集、徽标与验收范围的唯一常量源。文档/代码/AC 只能引用这里的值；不一致即门禁失败。",
+  "catalog": {
+    "total": 105,
+    "p0": 84,
+    "p1": 21,
+    "planned": 61,
+    "implemented": 44,
+    "completeness": {
+      "complete": 78,
+      "partial": 19,
+      "beta": 8
+    },
+    "pendingSpecPlanned": 13,
+    "completionCount": 6,
+    "rulings": {
+      "afterT03T21Promotion": {
+        "normal": 42,
+        "beta": 2,
+        "pendingSpecAll": 15
+      }
+    }
+  },
+  "dataset": {
+    "securities": 120,
+    "stocks": 112,
+    "indices": 8,
+    "barsPerSecurity": 520,
+    "rows": 62400,
+    "firstDate": "2023-01-02",
+    "lastDate": "2024-12-27"
+  },
+  "params": {
+    "periodMin": 2,
+    "periodMax": 500
+  },
+  "pages": {
+    "registry": "app/src/app/AppShell.tsx",
+    "acceptance": "route registry 中 enabled=true 的页面全量验收；未交付页面不计入，新增页面由其自身卡承载 AC"
+  },
+  "badges": {
+    "beta": "仅 status=beta 触发，用户可见；completeness=beta 不触发",
+    "pendingSpec": "specStatus != manualComplete 触发，用户可见",
+    "completeness": "仅内部验收分层，用户不可见"
+  }
+}
