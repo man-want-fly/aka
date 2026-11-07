@@ -997,12 +997,37 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 - **依据**：TL 裁定（报告 4.7.5）；页数项是唯一变量，模板/声明/抽检为固定交付。
 - **验收**：四个位置统一 `12.0`；不再出现 `18.0` 或「84 页」作为本卡规模依据。
 
+### W-28｜`verify:docs` 判据 v3：结构化锚点与不可判定显式化（开发，非 BA）
+
+- **定位**：`app/scripts/verify_indicator_docs.mjs`、`package.json` 的 `verify:docs`、报告 `app/dist/content-coverage-report.json`。
+- **现状**：四类检查（覆盖集合、四段 80 字、版本、`formulaSummary` 公式锚点）让内容库 13/44 页全绿，但 `T24` 的 `abbr = HHV / LLV` 因 `formulaSummary` 纯中文而 `anchors = []`，**公式检查静默空转**；`includes(token)` 只要求符号在全文任意位置出现一次；`len()` 把破折号、全角括号都算字；`params` 段无结构要求；无空话词与无来源数字检查。
+- **判据 v3（6 条，`V3-01` ～ `V3-06`）**：
+
+  | ID | 判据 | 执行者 / 覆盖范围（制度第 9 条） | 判不了时（制度第 10 条） |
+  |---|---|---|---|
+  | `V3-01` | **锚点只取结构化字段**：`abbr`（按 `/`、`\|`、空格拆词）+ `params[].key` + `outputs[].key`；**禁止**从 `formulaSummary` 用正则刮符号 | 脚本自动；覆盖 `app/content/indicators/*.json` 的 `formula` 段与 `indicators.json` 的 `abbr`/`params`/`outputs` | 三者全空 → 记 `SKIP` 并点名列出（不得静默 PASS） |
+  | `V3-02` | **锚点同现，不是提到**：每个 `params[].key` 必须与其 `default` 值出现在**同一分句**；**分句切分集合 = `。`、`；`、`！`、`？`、换行（含 CRLF）**，**`，` 不作边界**（逗号是句内停顿，切了会把「默认 20，步长 1」误判为不同现）；`outputs[].key` 至少一个出现在 `formula` 段 | 脚本自动；覆盖 `app/content/indicators/*.json` 的 `formula`/`params` 段与 `indicators.json` 的 `params`/`outputs` | **不产生 SKIP**（切分集合固定，无灰色地带）：key 全段未出现 → **FAIL**；key 与 default 不在同一分句 → **FAIL**；`default` 非标量 → **FAIL 并指向 manifest**（实测 105 条 params 全为标量，当前不会触发） |
+  | `V3-03` | **长度按有效字符计**：剔除 Unicode 标点（`P*`）与空白（`Z*`）后计数，80 字门槛按有效字符 | 脚本自动；覆盖 `definition`/`formula`/`params`/`usage`/`completion_note` | 无（纯字符处理，不产生 SKIP） |
+  | `V3-04` | **`params` 段走结构要求，不提高字数门槛**（门槛维持 80 有效字符）：①「调大」「调小」各至少出现 1 次；② 各至少有一个分句（切分集合同 `V3-02`）含该词且**该分句有效字数 ≥ 10（含方向词本身）**；③ 每个 `params[].key` 在段内至少出现 1 次 | 脚本自动；覆盖 `params` 段 + `params[].key` | **无 SKIP**（切分、计数、词表命中全是确定性的）：条款缺失 → **FAIL**（内容缺口，可修）；不是「具体后果」这种语义判断 |
+  | `V3-05` | **空话词与无来源数字**：空话词表命中即 `FAIL`（`用于判断趋势`、`仅供参考`、`可能有效`、`通常表明`）；`(胜率\|年化\|成功率\|准确率)` 后 20 字符内出现数字且无来源标记（`来源`/`[S\d]`/URL）→ `FAIL` | 脚本自动；词表放 `app/manifest/doc-lint-words.json` 单一源（不得在脚本内再写一份）；覆盖四段 + `completion_note` | 词表文件缺失/不可解析 → **exit 2**（输入缺失，绝不空跑 PASS） |
+  | `V3-06` | **元判据**：① 每条判据在 stdout 打印 `ID｜执行者｜覆盖范围｜不可判定处置`；② 报告 JSON 增 `skipped[]`（`id:rule`）与 `skipped_count`，与 `failed[]` 分开计数；③ **PASS = `failed=0 且 skipped=0`**（SKIP 不算通过）；④ **落地后先拿现有 13 页跑一遍**：`skipped > 0` 时逐条归类——「内容真的缺」还是「判据判不了」；判后者即判据缺陷，**必须修判据**，不得当内容问题处理，也不得塞进人工清单蒙混 | 脚本自动；覆盖脚本自身输出、报告结构与首次 13 页试跑记录 | 报告结构缺 `skipped` 字段 → `FAIL`；首次试跑未附 SKIP 归类表 → `FAIL`（判据自身不可判定时也按 FAIL） |
+
+- **依据**：审计报告 4.7.1 第 9、10 条；同日三次同根因事故（空门禁、`includes` 单次命中、`anchors=[]` 静默跳过）。
+- **验收**：① `--self-test` 由 5 用例增至 **8**：新增「无锚点 → SKIP 且点名」「参数 key 与默认值不同现 → FAIL」「空话词命中 → FAIL」；② 用现有 13 页跑一次，`T24` 必须凭 `abbr` 的 `HHV`/`LLV` 通过公式检查（不再是空转）；③ 报告 JSON 含 `skipped_count`，且 SKIP>0 时结论为 FAIL；④ 判据 v3 落地前，`verify:docs` 的 PASS 结论不得用于任何卡的 Gate A 签署；⑤ **首次试跑须落档**：`skipped` 应为 0（v3 各条除 `V3-01` 外全确定性）；`V3-04` 预计 **9/13** 通过，`M02`/`M06`/`M24`/`T15` 因 `params` 段缺「调小」FAIL——这 4 条属**内容缺口**，不是判据判不了；若试跑里出现 SKIP，按 ④ 归类，判据缺陷优先修判据。
+
+### W-29｜`verify_constants.mjs`：两项派生校验 + 分区口径写死（开发，非 BA）
+
+- **定位**：`app/scripts/verify_constants.mjs`（`--docs` 模式）。
+- **应加**：两项**现算现比**——① 六分类计数（读 `indicators.json` 的 `category`）；② 分区计数（解析 `mock.rs` 的 `known` 列表、`groups` 与指数注册）。
+- **口径必须是代码，不是注释**：分区计数含指数且**按交易所归沪/深**（`.SH` → 沪、`.SZ` → 深），生成组按 `601`→沪、`002`→深、`300`→创、`688`→科；**禁止**直接按 `Board` 枚举分组——那会得 `47/44/17/9`（`Board::Index` 单独成组），而卡 L178/L204 的正确值是 `48/46/17/9`。
+- **验收**：① 正常仓库输出 21 → **23** 项 PASS；② 反向用例——把 `groups` 中 `40` 改 `41`，脚本必须 FAIL（若仍 PASS 即实现错误）；③ `mock.rs` 解析不出 `known`/`groups` → exit 2；④ 两项校验在输出里写明执行者与覆盖范围（制度第 9 条）。
+
 ---
 
 ## 3. 执行顺序与验收
 
 1. **已完成（BA，2026-11-07）**：W-01、W-02、W-04～W-22。baseline 由 14 条降到 1 条（仅剩 `sector-12`）。
 2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）。改完各跑一次 `npm run verify:constants`。
-3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
+3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **收尾**：把 `sector-12` 正则收窄（放过含 `V1` / `待产品确认` 的行）后删除 baseline 条目，CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
 5. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24）须由 TL 按验收判据复核后才能签。
