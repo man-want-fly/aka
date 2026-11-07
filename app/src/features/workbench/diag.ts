@@ -1651,7 +1651,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     debounce: {
       target: "1→12→120（台账判据）+ 1→12→60（成功单次 compute 佐证）",
       computeCountSemantics:
-        "compute.count 为请求批次计数：一条 calc 请求可含多个实例（本项目 50 个），事件 count=本批实算实例数；连键断言的是「请求只发 1 次」，不是「只算 1 个实例」",
+        "compute.count 每次 calc 请求发 1 条；字段 count=本批新增实算条数（cache miss，去重后）、instances=批内实例总数（本项目 50）、skip=批内去重跳过（6）、cacheHit=全命中；热缓存 count=0 不等于没算过。连键断言的是「请求只发 1 次」，不是「只算 1 个实例」",
       burst120,
       burst60,
       telemetry: {
