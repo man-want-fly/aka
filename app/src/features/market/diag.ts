@@ -231,7 +231,7 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
     );
 
     // ---- 渲染层：涨跌幅三态逐行比对 / 停牌 / 空值 ----
-    const rowsByCode = new Map(rows.map((row) => [row.code, row]));
+    const rowsByCode = new Map(rows.map((row) => [row.security, row]));
     const pctProblems: string[] = [];
     const suspendedProblems: string[] = [];
     for (const row of domRows) {
