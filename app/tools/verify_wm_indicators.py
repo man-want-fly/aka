@@ -9,6 +9,10 @@
 3. 逐点比对每个指标的数值（参考实现的全段 NaN 是合法结果：月线 24 根不足以过观察期）。
 
 任何一项超容差 → 退出码 1。报告写到 `bench/wm-indicators/compare-report.json`。
+
+复现命令（产物不入库，见 app/.gitignore）：
+    # 1) 前端取证：AKA_DIAG=1 AKA_DIAG_TARGET=s207 启动桌面端，落盘 s207-wm-series.json
+    # 2) 独立复算：cd app && python3 tools/verify_wm_indicators.py [--dump <path>]
 """
 
 import argparse
