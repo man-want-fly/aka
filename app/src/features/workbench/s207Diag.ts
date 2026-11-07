@@ -460,6 +460,8 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     fast: 12,
     slow: 26,
     signal: 9,
+    bollPeriod: 20,
+    bollMult: 2,
   });
   hooks.clearDateRange();
   hooks.setSubIds(["M06"]);
@@ -605,7 +607,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
 
   // 38 根 + MA60：整段数据不足（AC-02.07-03）
   await attempt("R-07", "AC-02.07-03", "render", async () => {
-    hooks.setParams({ maPeriod: 60, maType: "sma", fast: 12, slow: 26, signal: 9 });
+    hooks.setParams({ maPeriod: 60, maType: "sma", fast: 12, slow: 26, signal: 9, bollPeriod: 20, bollMult: 2 });
     hooks.setDateRange("2024-11-06", "2024-12-27");
     await hooks.waitReady("38 根 + MA60");
     const total = viewInfo().total;
@@ -660,7 +662,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
 
   // 月线：不足预热如何呈现（一次定清）
   await attempt("R-09", "AC-02.07-03 W/M", "render", async () => {
-    hooks.setParams({ maPeriod: 20, maType: "sma", fast: 12, slow: 26, signal: 9 });
+    hooks.setParams({ maPeriod: 20, maType: "sma", fast: 12, slow: 26, signal: 9, bollPeriod: 20, bollMult: 2 });
     hooks.setTimeframe("M");
     await hooks.waitReady("月线");
     const view = viewInfo();
@@ -843,7 +845,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
   hooks.setCode(originalCode);
   hooks.setTimeframe("D");
   hooks.setAdj("none");
-  hooks.setParams({ maPeriod: 20, maType: "sma", fast: 12, slow: 26, signal: 9 });
+  hooks.setParams({ maPeriod: 20, maType: "sma", fast: 12, slow: 26, signal: 9, bollPeriod: 20, bollMult: 2 });
   hooks.clearDateRange();
 
   const report = {

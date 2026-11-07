@@ -49,6 +49,7 @@ import {
   type TimeframeCode,
 } from "../../features/workbench/diag";
 import { runS205Diagnostics } from "../../features/workbench/s205Diag";
+import { runS20501Diagnostics } from "../../features/workbench/s20501Diag";
 import { runS203Diagnostics } from "../../features/workbench/s203Diag";
 import { runS20202Diagnostics } from "../../features/workbench/s20202Diag";
 import { runS20101Diagnostics } from "../../features/workbench/s20101Diag";
@@ -192,6 +193,9 @@ export function WorkbenchPage({
   const [dateTo, setDateTo] = useState("");
   const [params, setParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
   const [appliedParams, setAppliedParams] = useState<WorkbenchParams>(DEFAULT_PARAMS);
+  // S-02.05-01：越界不计算；上一份有效参数用于超时（>300ms）回退
+  const [paramTimeout, setParamTimeout] = useState(false);
+  const lastGoodParamsRef = useRef<WorkbenchParams>(DEFAULT_PARAMS);
   const defaultParams = useMemo(
     () => (manifest ? defaultsFromIndicators(manifest.indicators) : DEFAULT_PARAMS),
     [manifest],
@@ -234,7 +238,21 @@ export function WorkbenchPage({
     if (!stored) return;
     setParams(stored);
     setAppliedParams(stored);
+    lastGoodParamsRef.current = stored;
   }, []);
+  // S-02.05-01：合法参数 120ms 防抖后即时生效；越界值不入计算，图上保留上一份有效结果
+  const paramsIssue = localCheck(params);
+  useEffect(() => {
+    if (paramsIssue) return;
+    if (sameParams(params, appliedParams)) return;
+    const timer = window.setTimeout(() => {
+      setAppliedParams({ ...params });
+      writeSessionParams(params);
+      setError(null);
+    }, REQUEST_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [params, appliedParams, paramsIssue]);
+
   // B2 主图叠加与副图选择：纯客户端切换，指标实例已全量下发
   // S-02.02-02：chart.overlays[] 本地持久化，容量 2，K 线本身不计入
   const [overlayIds, setOverlayIds] = useState<string[]>(() => {
@@ -497,6 +515,7 @@ export function WorkbenchPage({
       setLoading(true);
       setError(null);
 
+      const requestParams = appliedParams;
       const request = {
         security: activeCode,
         timeframe,
@@ -504,7 +523,7 @@ export function WorkbenchPage({
         from: dateFrom || undefined,
         to: dateTo || undefined,
         generation: current,
-        instances: buildInstances(appliedParams),
+        instances: buildInstances(requestParams),
       };
 
       const phaseAtIssue = diagPhase.current;
@@ -537,6 +556,18 @@ export function WorkbenchPage({
           setLoading(false);
 
           if (calcResult.ok) {
+            // AC-02.05-01 补4：服务端耗时 >300ms 提示超时并回退上一组有效参数
+            const forcedTimeout =
+              (window as unknown as Record<string, unknown>).__AKA_FORCE_PARAM_TIMEOUT__ === true;
+            if (calcResult.value.computedMs > 300 || forcedTimeout) {
+              setParamTimeout(true);
+              setParams(lastGoodParamsRef.current);
+              setAppliedParams(lastGoodParamsRef.current);
+              writeSessionParams(lastGoodParamsRef.current);
+            } else {
+              setParamTimeout(false);
+              lastGoodParamsRef.current = requestParams;
+            }
             setCalc(calcResult.value);
             calcRef.current = calcResult.value;
             setCalcNotices(noticesForBars(nextBars.bars.length, subIds, manifest));
@@ -761,6 +792,34 @@ export function WorkbenchPage({
         (window as unknown as Record<string, unknown>).__AKA_S205_EVIDENCE__ = report;
       } catch (err) {
         setDiagStatus(`S-02.05-02 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, registry, securities, defaultParams]);
+
+  // S-02.05-01 参数设置面板取证：AKA_DIAG_TARGET=s20501 时在注册表/标的就绪后自跑一次
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (window.sessionStorage.getItem("aka.s20501.diag.done") === "1") return;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s20501" || !alive) return;
+      window.sessionStorage.setItem("aka.s20501.diag.done", "1");
+      setDiagStatus("S-02.05-01 取证：运行中");
+      try {
+        await new Promise((resolve) => window.setTimeout(resolve, 800));
+        const report = await runS20501Diagnostics({ registry, defaults: defaultParams });
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-02.05-01 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_S20501_EVIDENCE__ = report;
+      } catch (err) {
+        setDiagStatus(`S-02.05-01 取证失败：${describeError(err).message}`);
       }
     })();
     return () => {
@@ -1267,16 +1326,20 @@ export function WorkbenchPage({
   const handleApply = () => {
     const issue = localCheck(params);
     if (issue) {
-      setError({ code: "INVALID_ARGUMENT", message: issue, retryable: false });
+      // 越界值不夹取、不重算：字段自身标红，图上显示「参数无效」角标
       return;
     }
     setError(null);
+    lastGoodParamsRef.current = { ...params };
+    setParamTimeout(false);
     setAppliedParams({ ...params });
     writeSessionParams(params);
   };
 
   const handleRestoreDefaults = () => {
     setError(null);
+    setParamTimeout(false);
+    lastGoodParamsRef.current = defaultParams;
     setParams(defaultParams);
     setAppliedParams(defaultParams);
     writeSessionParams(defaultParams);
@@ -1586,6 +1649,20 @@ export function WorkbenchPage({
             {error && <div className="error-box">{error.message}</div>}
 
             <div className="chart-card">
+              {paramsIssue && (
+                <span
+                  className="adj-badge param-badge"
+                  data-param-invalid-badge="1"
+                  title={paramsIssue}
+                >
+                  参数无效
+                </span>
+              )}
+              {paramTimeout && (
+                <div className="param-timeout" data-param-timeout="1" role="status">
+                  计算超时，参数可能过大，已恢复上一组有效参数
+                </div>
+              )}
               {adj === "none" && (
                 <span className="adj-badge" data-adj-badge="none">
                   不复权

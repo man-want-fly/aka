@@ -1,5 +1,5 @@
 import manifestJson from "../../../manifest/indicators.json";
-import type { InstanceRequest, ParamSpec } from "../../lib/types";
+import type { InstanceRequest, ParamSpec, ParamValueMap } from "../../lib/types";
 
 export interface WorkbenchParams {
   maPeriod: number;
@@ -7,6 +7,8 @@ export interface WorkbenchParams {
   fast: number;
   slow: number;
   signal: number;
+  bollPeriod: number;
+  bollMult: number;
 }
 
 const PARAMS_STORAGE_KEY = "aka.workbench.params.v1";
@@ -22,12 +24,21 @@ export function defaultsFromIndicators(
     }
     return param.default;
   };
+  const floatDefault = (id: string, key: string) => {
+    const param = indicators.find((item) => item.id === id)?.params.find((spec) => spec.key === key);
+    if (!param || param.kind !== "float") {
+      throw new Error(`manifest 缺少 ${id}.${key} 的小数默认值`);
+    }
+    return param.default;
+  };
   return {
     maPeriod: intDefault("T01", "period"),
     maType: "sma",
     fast: intDefault("M06", "fast"),
     slow: intDefault("M06", "slow"),
     signal: intDefault("M06", "signal"),
+    bollPeriod: intDefault("T09", "period"),
+    bollMult: floatDefault("T09", "mult"),
   };
 }
 
@@ -36,6 +47,8 @@ export const DEFAULT_PARAMS: WorkbenchParams = defaultsFromIndicators(
 );
 
 const isInt = (value: unknown): value is number => Number.isInteger(value);
+const isNum = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
 
 /** 会话记忆：只存在于当前应用会话，重启回到 manifest 默认值。 */
 export function readSessionParams(): WorkbenchParams | null {
@@ -48,6 +61,8 @@ export function readSessionParams(): WorkbenchParams | null {
       !isInt(parsed.fast) ||
       !isInt(parsed.slow) ||
       !isInt(parsed.signal) ||
+      !isInt(parsed.bollPeriod) ||
+      !isNum(parsed.bollMult) ||
       !["sma", "ema", "wma"].includes(parsed.maType ?? "")
     ) {
       return null;
@@ -85,7 +100,9 @@ export function sameParams(a: WorkbenchParams, b: WorkbenchParams) {
     a.maType === b.maType &&
     a.fast === b.fast &&
     a.slow === b.slow &&
-    a.signal === b.signal
+    a.signal === b.signal &&
+    a.bollPeriod === b.bollPeriod &&
+    a.bollMult === b.bollMult
   );
 }
 
@@ -251,7 +268,9 @@ export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
     ...B2_IDS.map((indicatorId) => ({
       instanceId: `b2-${indicatorId}`,
       indicatorId,
-      params: {},
+      params: (indicatorId === "T09"
+        ? { period: params.bollPeriod, mult: params.bollMult }
+        : {}) as ParamValueMap,
     })),
     // B3 全量 13 个：全部为副图候选，参数留空走 manifest 默认值。
     ...B3_IDS.map((indicatorId) => ({
@@ -274,11 +293,15 @@ export function localCheck(params: WorkbenchParams): string | null {
     ["MACD 快线", params.fast, 2, 200],
     ["MACD 慢线", params.slow, 2, 200],
     ["MACD 信号", params.signal, 2, 200],
+    ["BOLL 周期", params.bollPeriod, 2, 200],
   ];
   for (const [label, value, min, max] of pairs) {
     if (!Number.isInteger(value) || value < min || value > max) {
-      return `${label}需为 ${min}~${max} 的整数`;
+      return `${label}需为 ${min}–${max} 的整数`;
     }
+  }
+  if (!isNum(params.bollMult) || params.bollMult < 0.5 || params.bollMult > 5.0) {
+    return "BOLL 标准差倍数需在 0.5–5.0 之间";
   }
   if (params.fast >= params.slow) {
     return "MACD 快线必须小于慢线";
