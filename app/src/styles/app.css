@@ -2420,3 +2420,112 @@ mark {
   color: var(--text2);
   font-size: 12px;
 }
+
+/* ---------------- P9 数据质量（S-07.05-01） ---------------- */
+.ds-stale {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.ds-stale button {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--warn);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.qa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.qa-table th {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.qa-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.qa-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.qa-treatment {
+  color: var(--muted);
+}
+
+.qa-status {
+  margin-left: 6px;
+  font-size: 11.5px;
+}
+
+.qa-status--ok {
+  color: var(--down);
+}
+
+.qa-status--info {
+  color: var(--text2);
+}
+
+.qa-status--warn {
+  color: var(--warn);
+}
+
+.qa-status--bad {
+  color: var(--up);
+}
+
+.qa-code {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--line2);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.qa-example-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.qa-none {
+  color: var(--faint);
+}
+
+.qa-example-list {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--line2);
+  border-radius: 6px;
+  list-style: none;
+  font-size: 11.5px;
+}
+
+.qa-example-list li {
+  display: flex;
+  gap: 16px;
+  padding: 2px 0;
+  color: var(--text2);
+}

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "../../app/AppShell";
 import { formatRowCount } from "../../features/workbench/datasetOverview";
+import { formatDateTime } from "../../lib/datetime";
 import { formatFixed } from "../../lib/format";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { DatasourceCapabilityDto, DatasourceStatusDto } from "../../lib/types";
 import { BackfillSection } from "./BackfillSection";
+import { QualitySection } from "./QualitySection";
 
 interface Props {
   onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
@@ -27,16 +29,6 @@ const STATE_TONE: Record<DatasourceStatusDto["state"], "ok" | "warn" | "bad"> = 
 };
 
 const MISSING = "—";
-
-/** epoch 秒 → 本地时区 `YYYY-MM-DD HH:mm`（只读展示，不做时区换算）。 */
-function formatDateTime(epoch: number): string {
-  if (!Number.isFinite(epoch) || epoch <= 0) return MISSING;
-  const date = new Date(epoch * 1000);
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
-    date.getHours(),
-  )}:${pad(date.getMinutes())}`;
-}
 
 function capTone(cap: DatasourceCapabilityDto): "ok" | "warn" | "bad" {
   if (cap.available) return "ok";
@@ -291,6 +283,8 @@ export function DatasourcePage({ onNavigate }: Props) {
           </header>
           <p className="ds-op-note">离线 MVP 不联网；健康检查与启用交互在 S-07.01-02。</p>
         </section>
+
+        <QualitySection />
 
         <BackfillSection />
       </main>
