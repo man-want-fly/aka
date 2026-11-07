@@ -41,8 +41,22 @@ const LEFT = 6;
 const RIGHT = 938;
 const PRICE_TOP = 12;
 const PRICE_BOTTOM = 300;
-const MACD_TOP = 394;
-const MACD_BOTTOM = 522;
+const DATE_AXIS_H = 26;
+
+/** 副图面板在 user 坐标系里的上下边界：由 DOM 实测，不写死（S-02.03-01 补1 起主图/副图高度随面板数变化） */
+const panelBox = (id: string) => {
+  const panel = q<SVGGElement>(`[data-sub-panel="${id}"]`);
+  if (!panel) return null;
+  const box = panel.getBBox();
+  return { top: box.y, bottom: box.y + box.height };
+};
+
+/** 图表内容底边（user 坐标）：viewBox 高度 − 日期轴高度 */
+const chartBottom = () => {
+  const viewBox = svg().getAttribute("viewBox") ?? "";
+  const height = Number(viewBox.split(/\s+/)[3] ?? "NaN");
+  return height - DATE_AXIS_H;
+};
 
 const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
@@ -68,16 +82,18 @@ const viewInfo = () => {
   };
 };
 
-/** 与 CandleChart 的 pointer 换算一致：viewBox meet 居中 */
+/** 与 CandleChart 的 pointer 换算一致：viewBox meet 居中（高度随副图数量变化，不能写死 560） */
 const geometry = () => {
   const node = svg();
   const rect = node.getBoundingClientRect();
-  const scale = Math.min(rect.width / 1000, rect.height / 560);
+  const viewBox = node.getAttribute("viewBox") ?? "";
+  const height = Number(viewBox.split(/\s+/)[3] ?? "NaN") || 560;
+  const scale = Math.min(rect.width / 1000, rect.height / height);
   return {
     rect,
     scale,
     offsetX: (rect.width - 1000 * scale) / 2,
-    offsetY: (rect.height - 560 * scale) / 2,
+    offsetY: (rect.height - height * scale) / 2,
   };
 };
 
@@ -500,7 +516,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     const verticalSpans =
       num(vLine, "x1") === num(vLine, "x2") &&
       num(vLine, "y1") === PRICE_TOP &&
-      num(vLine, "y2") === MACD_BOTTOM;
+      num(vLine, "y2") === chartBottom();
     const passed =
       Math.abs(crossX - candleX) <= 1 &&
       Math.abs(crossX - point.xUser) <= 1 &&
@@ -520,15 +536,17 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
   });
 
   await attempt("R-02", "AC-02.07-01", "render", async () => {
-    await moveTo(10, 450);
+    const box = panelBox("M06");
+    if (!box) return { passed: false, detail: "未找到副图面板 M06" };
+    await moveTo(10, (box.top + box.bottom) / 2);
     const tooltip = q('[data-chart-tooltip="1"]');
     const region = tooltip?.getAttribute("data-region") ?? "";
     const hLine = q('[data-crosshair-h="1"]');
     const y = num(hLine, "y1");
-    const inSub = y >= MACD_TOP && y <= MACD_BOTTOM;
+    const inSub = y >= box.top && y <= box.bottom;
     return {
       passed: region === "M06" && inSub,
-      detail: `鼠标移到副图：tooltip 面板=${region} · 横线 y=${y}（副图 ${MACD_TOP}~${MACD_BOTTOM}）=${inSub}`,
+      detail: `鼠标移到副图：tooltip 面板=${region} · 横线 y=${y}（副图 ${box.top}~${box.bottom}）=${inSub}`,
     };
   });
 
@@ -632,16 +650,21 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
       (element) => Math.abs(num(element, "x") - (RIGHT + 8)) < 0.5,
     ).length;
     const candles = qa("[data-candle]").length;
+    // 主图叠加按当前选择挂载（容量 2）；不要求 T01~T05 全部挂载，只要求“已挂载的 MA60 全部整段不画线且各有提示”
+    const mountedMa = ["T01", "T02", "T03", "T04", "T05"].filter((id) =>
+      qa("[data-overlay]").some((node) => node.getAttribute("data-overlay") === id),
+    );
     const passed =
       total === 38 &&
-      notices.length === 5 &&
+      mountedMa.length > 0 &&
+      notices.length === mountedMa.length &&
       maPaths.length === 0 &&
       noticeTexts.every((text) => text.includes("当前 38 根")) &&
       priceTicks >= 5 &&
       candles > 0;
     return {
       passed,
-      detail: `总数 ${total} · 提示 ${notices.length} 条（${t01 ?? "无"}）· T01~T05 线段 ${maPaths.length} 条 · d 长度 ${overlayInfo} · y 轴刻度 ${priceTicks} · K 线 ${candles} 根（占位保留）`,
+      detail: `总数 ${total} · 挂载 MA ${mountedMa.join("/")} · 提示 ${notices.length} 条（${t01 ?? "无"}）· T01~T05 线段 ${maPaths.length} 条 · d 长度 ${overlayInfo} · y 轴刻度 ${priceTicks} · K 线 ${candles} 根（占位保留）`,
     };
   });
 
@@ -673,17 +696,21 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     const subNotice = q('[data-sub-notice="M06"]')?.textContent ?? "";
     const subPath = q('[data-macd="dif"]');
     const subD = subPath?.getAttribute("d") ?? "";
+    // 主图叠加只挂当前选择（T01 + T09）；月线 24 根时两者预热都满足，不应出现整段不足提示
+    const t09 = q('[data-overlay="T09"]');
+    const t09Drawn = (t09?.getAttribute("d") ?? "").length > 0;
     const empty =
       subPanel?.getAttribute("data-sub-empty") === "1" &&
       subNotice.includes("需要") &&
       subD.length === 0 &&
-      overlayNotices.length === 3 &&
+      overlayNotices.length === 0 &&
+      t09Drawn &&
       points === 5 &&
       view.total === 24;
     return {
       passed: empty,
       detail: `月线 ${view.total} 根 · 整段不画线提示 ${overlayNotices.length} 条（${overlayNotices
-        .join(" | ")}）· T01 有效点 ${points} · M06 副图 empty=${subPanel?.getAttribute(
+        .join(" | ")}）· T01 有效点 ${points} · T09 已绘制=${t09Drawn} · M06 副图 empty=${subPanel?.getAttribute(
         "data-sub-empty",
       )} 文案「${subNotice}」· 副图路径长度 ${subD.length}`,
     };
