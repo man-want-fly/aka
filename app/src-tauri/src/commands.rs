@@ -181,10 +181,16 @@ pub async fn position_delete(state: State<'_, AppState>, security: String) -> Re
 #[tauri::command]
 pub async fn diag_enabled() -> Result<bool, AppError> {
     #[cfg(debug_assertions)]
-    let enabled = std::env::var("AKA_DIAG").ok().as_deref() == Some("1");
+    let enabled = diag_env_enabled();
     #[cfg(not(debug_assertions))]
     let enabled = false;
     Ok(enabled)
+}
+
+/// 环境变量读取集中在此，源码层门禁按「函数是否被 cfg 覆盖」检查。
+#[cfg(debug_assertions)]
+fn diag_env_enabled() -> bool {
+    std::env::var("AKA_DIAG").ok().as_deref() == Some("1")
 }
 
 /// 取证落地页：P/G 线共用同一套采样，但 release 必须直接落到工作台；
@@ -193,10 +199,15 @@ pub async fn diag_enabled() -> Result<bool, AppError> {
 #[tauri::command]
 pub async fn diag_target() -> Result<String, AppError> {
     #[cfg(debug_assertions)]
-    let target = std::env::var("AKA_DIAG_TARGET").unwrap_or_default();
+    let target = diag_env_target();
     #[cfg(not(debug_assertions))]
     let target = String::new();
     Ok(target)
+}
+
+#[cfg(debug_assertions)]
+fn diag_env_target() -> String {
+    std::env::var("AKA_DIAG_TARGET").unwrap_or_default()
 }
 
 /// 取证留档所需的构建元数据（口径 R-S0-07-01）。

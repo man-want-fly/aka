@@ -16,12 +16,16 @@ const SYMBOLS = [
   "diag_write",
   "diag_faults",
   "s2-evidence",
+  "aka/diag",
 ];
 
 /** 写命令：release 的 invoke_handler 不得出现，debug 必须出现，且命令函数必须有 cfg。 */
 const WRITE_COMMANDS = ["diag_faults", "diag_write", "diag_write_named"].filter((name) =>
   SYMBOLS.includes(name),
 );
+
+/** 其余符号是字面量（启动参数 / 环境变量 / 诊断文件名 / 落盘路径）：只能出现在 cfg 覆盖的函数里。 */
+const LITERALS = SYMBOLS.filter((name) => !WRITE_COMMANDS.includes(name));
 
 const root = new URL("../src-tauri/src/", import.meta.url);
 const lib = readFileSync(new URL("lib.rs", root), "utf8");
@@ -53,8 +57,7 @@ for (const command of WRITE_COMMANDS) {
 }
 
 /** fn 定义之前（跨过注释与其他属性）必须出现 #[cfg(debug_assertions)]。 */
-const coveredByCfg = (name) => {
-  const lines = commands.split("\n");
+const coveredByCfg = (name, lines) => {
   const at = lines.findIndex((line) => line.includes(`fn ${name}(`));
   if (at < 0) return { ok: false, reason: "未找到函数定义" };
   for (let i = at - 1; i >= Math.max(0, at - 8); i -= 1) {
@@ -67,13 +70,54 @@ const coveredByCfg = (name) => {
   return { ok: false, reason: "函数上方未见 #[cfg(debug_assertions)]" };
 };
 
-for (const name of [...WRITE_COMMANDS, "write_diag"]) {
-  const result = coveredByCfg(name);
+const files = {
+  "lib.rs": lib.split("\n"),
+  "commands.rs": commands.split("\n"),
+};
+
+/** 从命中行向上找最近的函数定义（跳过注释行）。 */
+const enclosingFn = (lines, at) => {
+  for (let i = at; i >= 0; i -= 1) {
+    const match = lines[i].match(/^\s*(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z0-9_]+)/);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+for (const name of WRITE_COMMANDS) {
+  const result = coveredByCfg(name, files["commands.rs"]);
   if (!result.ok) failures.push(`fn ${name}：${result.reason}`);
+}
+if (!coveredByCfg("write_diag", files["commands.rs"]).ok) {
+  failures.push("fn write_diag：函数上方未见 #[cfg(debug_assertions)]");
+}
+
+/** 字面量逐个归属：每一处出现都必须在 cfg(debug_assertions) 覆盖的函数内。 */
+for (const symbol of LITERALS) {
+  let hits = 0;
+  for (const [file, lines] of Object.entries(files)) {
+    lines.forEach((line, at) => {
+      if (!line.includes(symbol)) return;
+      if (line.trim().startsWith("//")) return;
+      hits += 1;
+      const fn = enclosingFn(lines, at);
+      if (!fn) {
+        failures.push(`${file}:${at + 1} ${symbol} 不在任何函数内`);
+        return;
+      }
+      if (!coveredByCfg(fn, lines).ok) {
+        failures.push(`${file}:${at + 1} ${symbol} 所在 fn ${fn} 未覆盖 #[cfg(debug_assertions)]`);
+      }
+    });
+  }
+  if (hits === 0) console.log(`字面量 ${symbol}：源码 0 处（只由产物层断言）`);
 }
 
 if (failures.length > 0) {
   for (const message of failures) console.error(`::error::诊断入口源码层门禁失败：${message}`);
   process.exit(1);
 }
-console.log(`诊断入口源码层门禁通过：release 无写命令注册；${WRITE_COMMANDS.join(" / ")} 与 write_diag 均有 cfg(debug_assertions)。`);
+console.log(
+  `诊断入口源码层门禁通过：release 无写命令注册；${WRITE_COMMANDS.join(" / ")} 与 write_diag 均有 cfg(debug_assertions)；` +
+    `${LITERALS.length} 个字面量仅出现在 cfg 覆盖的函数内。`,
+);

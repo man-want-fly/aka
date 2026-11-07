@@ -36,6 +36,16 @@ fn diag_flag(args: &[String], name: &str) -> bool {
     diag_enabled() && args.iter().any(|arg| arg == name)
 }
 
+/// 四个 QA 启动参数集中在此处，源码层门禁可按「函数是否被 cfg 覆盖」逐条检查。
+#[cfg(debug_assertions)]
+fn faults_from_args(args: &[String]) -> DiagFaults {
+    DiagFaults {
+        dataset_empty: diag_flag(args, "--empty-dataset"),
+        corrupt_db: diag_flag(args, "--corrupt-db"),
+        read_only_db: diag_flag(args, "--readonly-db"),
+    }
+}
+
 /// 注入坏库：真实 state.db 先备份到临时目录，再在临时副本上写坏；
 /// 产品库永远不被覆写，也不依赖脚本侧 `.backup` 兜底。
 #[cfg(debug_assertions)]
@@ -80,11 +90,7 @@ pub fn run() {
             let faults = {
                 #[cfg(debug_assertions)]
                 {
-                    DiagFaults {
-                        dataset_empty: diag_flag(&args, "--empty-dataset"),
-                        corrupt_db: diag_flag(&args, "--corrupt-db"),
-                        read_only_db: diag_flag(&args, "--readonly-db"),
-                    }
+                    faults_from_args(&args)
                 }
                 #[cfg(not(debug_assertions))]
                 {
