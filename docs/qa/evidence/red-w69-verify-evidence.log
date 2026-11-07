@@ -1,0 +1,81 @@
+# W-69 负例：审计 §4.7.36 的 14 组攻击逐组重跑
+
+- 日期：2026-11-08
+- 对象：`app/scripts/verify_evidence.mjs`（W-69 重写版）
+- 沙箱：`/tmp/w69-sandbox`（脚本 + 白名单 + 卡面副本），未改动仓库证据目录
+- 每组独立目录、单独判 `exit`，不互相兜底
+- 截止日以 CI 时钟为准；本地改钟不算通过
+
+```
+--- 攻击 #1 单条合法 check（基线） —— 期望 exit=0，实测 exit=0
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 0 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #2 checks 改成字符串 + 同目录合法文件 —— 期望 exit=1，实测 exit=1
+    FAIL broken-evidence.json: checks 不是对象数组（坏 JSON 不许静默跳过）
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #3 passed:"false" —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check base-1 的 passed="false" 不是布尔（"false" 不算通过）
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #4 ac:"AC-0"（真 AC 前缀） —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: base-1 的 ac="AC-0" 既非整 AC token 也非卡面锚点
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #5 ac:"随手写" —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: base-1 的 ac="随手写" 既非整 AC token 也非卡面锚点
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #6 缺 layer + meta 声明 "undefined":"1/1" —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check base-1 的 layer=undefined 不在 data|render|runtime
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #7 layer:"runtime2" —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check base-1 的 layer="runtime2" 不在 data|render|runtime
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #8 otherCards 同一张卡声明两次 —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: otherCards[1].card=S-03.01-04 重复声明
+    FAIL f-evidence.json: 声明分母合计 3 != checks.length 2（不许跳过现算）
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 2 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #9 otherCards 声明某卡但 0 条 check —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: 声明了卡 S-08.01-03 但没有任何 check
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #10 card / result.card 小写 —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: check base-1 的 card=s-02.04-01 不在卡集
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #11 空证据目录 —— 期望 exit=1，实测 exit=1
+    FAIL 未在 /tmp/w69-sandbox/cases/c11 扫描到任何证据（拒绝空转）
+    证据归属门禁：卡集 74 张，扫描 0 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #12 一份证据 0 条 check —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: 声明了卡 S-02.04-01 但没有任何 check
+    FAIL f-evidence.json-meta: result.layers={"render":"1/1"} 与 checks 现算={} 不一致
+    FAIL f-evidence.json: 声明分母合计 1 != checks.length 0（不许跳过现算）
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 3 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #13 全新证据加进白名单（自助后门） —— 期望 exit=1，实测 exit=1
+    FAIL app/scripts/evidence-legacy-whitelist.json: sha256=0d308409763536134a0074f52c0d8aee377656b0395a2dcaf3b72a8fc7860666 != 脚本常量 9501db648d6647db27f8e8a09ad0123428627d27489e11f8c8603be8147d7e4a（白名单被改动，全部冻结条目失效；改白名单必须改脚本并单独过审）
+    FAIL evil-new-evidence.json: check evil-1 的 card 必须为非空字符串
+    FAIL evil-new-evidence.json: check evil-1 的 layer=undefined 不在 data|render|runtime
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 3 项（截止 2026-11-22，以 CI 时钟为准）
+
+--- 攻击 #14 正文假锚点（不是锚点行） —— 期望 exit=1，实测 exit=1
+    FAIL f-evidence.json: base-1 的 ac=S-02.04-01·假锚点（不是锚点行） 未命中卡 S-02.04-01 的「卡面锚点：」整行（正文提及不算）
+    证据归属门禁：卡集 74 张，扫描 1 份证据，冻结 0 份，失败 1 项（截止 2026-11-22，以 CI 时钟为准）
+
+=== 汇总：符合期望 14 / 14，不符合 0 / 14
+```
+
+## 还原后真实证据目录
+
+```
+证据归属门禁：卡集 74 张，扫描 2 份证据，冻结 24 份，失败 0 项（截止 2026-11-22，以 CI 时钟为准）
+exit=0
+```
+
+- 冻结 24 份 = W-68 的 17 份旧证据 + 7 份非 meta、无 `checks` 的历史探针 JSON
+- 白名单 JSON 的 sha256 由脚本常量 `LEGACY_WHITELIST_FILE_SHA256` 锁定，改一格即红
