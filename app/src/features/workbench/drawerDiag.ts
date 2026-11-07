@@ -309,7 +309,28 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     } / 行已添加态=${m06AfterAdd?.dataset.drawerAdded} / 重复点击后 ${panelsAfterRepeat} 格`,
   );
 
-  // R-11 副图满 3：第 4 个按钮禁用、容量 3/3、tooltip 要求先移除，点击不改动已有实例
+  // R-11 副图满 3：第 4 个按钮禁用、容量 3/3、tooltip 要求先移除，点击不改动已有实例。
+  // 先把 MACD 参数改成 10/22/8 再点第 4 个副图，证明「已满时新增被拒」不会改动已有指标参数。
+  const applyButton = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+    (button) => button.textContent?.includes("应用参数"),
+  );
+  for (const [key, value] of [
+    ["fast", "10"],
+    ["slow", "22"],
+    ["signal", "8"],
+  ] as const) {
+    const field = q<HTMLInputElement>(`[data-param-input="${key}"]`);
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    setter?.call(field, value);
+    field?.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  await sleep(160);
+  clickElement(applyButton ?? null);
+  await sleep(400);
+  const paramsBefore = window.sessionStorage.getItem("aka.workbench.params.v1");
+  const macdTitleBefore =
+    q('[data-sub-panel="M06"] [data-sub-title]')?.getAttribute("data-sub-title") ?? "";
+
   await typeQuery("ATR");
   const v01Button = q<HTMLButtonElement>('[data-drawer-add="V01:sub"]');
   const v01Disabled = Boolean(v01Button?.disabled);
@@ -318,6 +339,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   await sleep(200);
   const subsAfter = selectedSubs();
   const capacityText = q("[data-drawer-capacity]")?.textContent ?? "";
+  const paramsAfter = window.sessionStorage.getItem("aka.workbench.params.v1");
   push(
     "R-11",
     "AC-02.04-03(补1)",
@@ -328,11 +350,24 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
       capacityText.includes("副图 3/3") &&
       (v01Button?.title ?? "").includes("请先移除一个指标") &&
       subsBefore.length === 2 &&
-      subsBefore.join(",") === subsAfter.join(","),
+      subsBefore.join(",") === subsAfter.join(",") &&
+      macdTitleBefore === "MACD(10,22,8)",
     `第 4 个副图按钮 disabled=${v01Disabled} / full=${v01Button?.dataset.drawerFull} / 容量「${capacityText.trim()}」/ tooltip「${
       v01Button?.title ?? ""
-    }」/ 副图 ${qa("[data-sub-panel]").length} 个 / 实例 ${subsBefore.join("+")} → ${subsAfter.join("+")}`,
+    }」/ 副图 ${qa("[data-sub-panel]").length} 个 / 实例 ${subsBefore.join("+")} → ${subsAfter.join(
+      "+",
+    )} / MACD 标题「${macdTitleBefore}」`,
   );
+  push(
+    "D-03",
+    "AC-02.04-03(补1)",
+    "data",
+    paramsBefore === paramsAfter && Boolean(paramsBefore?.includes("10")) && Boolean(paramsAfter?.includes("10")),
+    `新增被拒前后参数快照 ${paramsBefore ?? "null"} → ${paramsAfter ?? "null"}`,
+  );
+  // 复位到默认参数，避免影响后续用例
+  clickElement(q<HTMLElement>("[data-param-restore]"));
+  await sleep(300);
 
   // R-12 移除后恢复可添加：点 × 移除 RSI（M01）→ 抽屉该行恢复可加 → 点回补满 3 格
   const removeM01 = q<HTMLElement>('[data-panel-remove="M01"]');
