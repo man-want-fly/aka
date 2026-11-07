@@ -38,6 +38,7 @@
         {
           "key": "sma",
           "labelZh": "SMA",
+          "aliases": ["SMA"],
           "kind": "line",
           "color": "var(--accent)"
         }
@@ -130,6 +131,7 @@
         {
           "key": "wma",
           "labelZh": "WMA",
+          "aliases": ["WMA"],
           "kind": "line",
           "color": "#8b5cf6"
         }
@@ -1040,6 +1042,7 @@
         {
           "key": "forecast",
           "labelZh": "LinReg 预测",
+          "aliases": ["Forecast"],
           "kind": "line",
           "color": "#60a5fa"
         }
@@ -1275,6 +1278,7 @@
         {
           "key": "hhv",
           "labelZh": "HHV",
+          "aliases": ["HHV"],
           "kind": "line",
           "color": "var(--rise)"
         },
@@ -1327,6 +1331,7 @@
         {
           "key": "rsi",
           "labelZh": "RSI",
+          "aliases": ["RSI"],
           "kind": "line",
           "color": "var(--accent)"
         }
@@ -1605,6 +1610,7 @@
         {
           "key": "dif",
           "labelZh": "DIF",
+          "aliases": ["DIF"],
           "kind": "line",
           "color": "var(--accent)"
         },
@@ -2585,6 +2591,7 @@
         {
           "key": "atr",
           "labelZh": "ATR",
+          "aliases": ["ATR"],
           "kind": "line",
           "color": "#f59e0b"
         }
@@ -2922,6 +2929,7 @@
         {
           "key": "gapo",
           "labelZh": "GAPO",
+          "aliases": ["GAPO"],
           "kind": "line",
           "color": "#f59e0b"
         }

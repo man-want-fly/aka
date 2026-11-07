@@ -4,7 +4,7 @@
  *
  * 用法：
  *   node scripts/verify_indicator_docs.mjs              # 校验内容库
- *   node scripts/verify_indicator_docs.mjs --self-test  # 脚本自身九用例（用例 9 含两条断言）
+ *   node scripts/verify_indicator_docs.mjs --self-test  # 脚本自身九用例（用例 9 含五条断言）
  *
  * 退出码：
  *   0 = 覆盖、四段、版本、判据 v3 全部通过，且 skipped=0（SKIP 不算通过）
@@ -59,13 +59,16 @@ const containsToken = (haystack, needle) =>
   String(haystack ?? "").toLowerCase().includes(String(needle ?? "").toLowerCase());
 
 const CJK = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
-const isWordChar = (ch) => ch !== undefined && /[a-z0-9]/.test(ch);
+const isWordChar = (ch) => ch !== undefined && /[A-Za-z0-9]/.test(ch);
 
-/** 别名归一化：NFKC → casefold（toLowerCase）→ 三种减号统一为 "-" */
+/**
+ * 别名归一化：NFKC → 三种减号统一为 "-"。
+ * 一律大小写敏感：不做 casefold / lowercase——那会把参数 `k` 与输出 `K` 合并成假通过；
+ * 大小写变体只能靠 manifest 显式登记别名区分。
+ */
 function normalizeTerm(value) {
   return String(value ?? "")
     .normalize("NFKC")
-    .toLowerCase()
     .replace(/[\u2212\u2013\u2014]/g, "-");
 }
 
@@ -427,7 +430,7 @@ function main() {
   process.exit(ok ? 0 : 1);
 }
 
-// ---------- 脚本自测（九用例，用例 9 含两条断言） ----------
+// ---------- 脚本自测（九用例，用例 9 含五条断言） ----------
 function buildFixturePage(item) {
   const anchors = structuredAnchors(item);
   const paramKeys = (item.params ?? [])
@@ -598,7 +601,8 @@ function runSelfTest() {
     `exit=${r8.status} failed=${report8.failed.filter((entry) => entry.includes("V3-05")).join(",")}`,
   );
 
-  // 用例9（W-30）：别名命中 → PASS；单字母别名 N 不误命中 NaN（两条断言）
+  // 用例9（W-30）：别名命中 → PASS；删掉别名 → 必须 FAIL（证明别名是必要条件）；
+  // 三条不误命中：N/NaN、k/K、senkou/senkouA（大小写敏感 + 双侧词边界，不做前缀放宽）
   const aliasTargetId = "M20";
   const aliasTarget = items.find((item) => item.id === aliasTargetId);
   if (!aliasTarget) throw new Error("manifest 中找不到 M20，无法构造别名用例");
@@ -648,10 +652,58 @@ function runSelfTest() {
     nanReport.failed.some((entry) => entry.startsWith(`${aliasTargetId}:formula`)) &&
     nanFormula.includes("NaN") &&
     !matchesAnchor(nanFormula, "N");
+
+  // 9d 大小写敏感：参数 k 不得命中输出 K（同词大写仍须命中）
+  const kText = "公式：输出摆动值 K 由同一窗口计算得到。";
+  const kFail = !matchesAnchor(kText, "k") && matchesAnchor(kText, "K");
+  // 9e 不做前缀放宽：senkou 不得命中 senkouA / senkouB
+  const senkouText = "公式：senkouA 与 senkouB 分别取不同前移周期。";
+  const senkouFail =
+    !matchesAnchor(senkouText, "senkou") && matchesAnchor(senkouText, "senkouA");
+
+  // 9b 反向用例：删掉 M24 的 massIndex 别名后，同一页必须回到 FAIL（证明别名是必要条件）
+  const massTargetId = "M24";
+  const massTarget = items.find((item) => item.id === massTargetId);
+  if (!massTarget) throw new Error("manifest 中找不到 M24，无法构造 massIndex 反向用例");
+  const massWord = ((massTarget.outputs ?? []).find(
+    (output) => output.key === "massIndex" && (output.aliases ?? []).length,
+  )?.aliases ?? [])[0];
+  if (!massWord) throw new Error("manifest 的 M24 未登记 massIndex 别名，W-30 反向用例无法成立");
+  const massDir = path.join(root, "mass");
+  writeFixturePages(massDir, coverage, {
+    mutate: (item, page) => {
+      if (item.id !== massTargetId) return;
+      page.formula = `公式：${massWord} 由最高价与最低价的区间比值累加得到，窗口取 9，不做额外平滑。${filler}`;
+    },
+  });
+  const massPassReportDir = path.join(root, "report9c1");
+  const massPassRun = run(massDir, massPassReportDir, { AKA_MANIFEST_PATH: MANIFEST_PATH });
+  const massPassReport = readReport(massPassReportDir);
+  const massPass =
+    massPassRun.status === 0 &&
+    !massPassReport.failed.some((entry) => entry.startsWith(`${massTargetId}:`));
+
+  const noMassAliasManifest = JSON.parse(JSON.stringify(manifest));
+  const noMassAliasItems = noMassAliasManifest.indicators ?? noMassAliasManifest;
+  const noMassAliasItem = noMassAliasItems.find((item) => item.id === massTargetId);
+  for (const output of noMassAliasItem.outputs ?? []) delete output.aliases;
+  const noMassAliasManifestPath = path.join(root, "manifest-no-mass-alias.json");
+  fs.writeFileSync(noMassAliasManifestPath, JSON.stringify(noMassAliasManifest, null, 2));
+  const noMassAliasReportDir = path.join(root, "report9c2");
+  const noMassAliasRun = run(massDir, noMassAliasReportDir, {
+    AKA_MANIFEST_PATH: noMassAliasManifestPath,
+  });
+  const noMassAliasReport = readReport(noMassAliasReportDir);
+  const noMassAliasFail =
+    noMassAliasRun.status === 1 &&
+    noMassAliasReport.failed.some((entry) => entry.startsWith(`${massTargetId}:V3-02(outputs)`));
+
   record(
-    "用例9 别名命中 → PASS；单字母 N 不误命中 NaN",
-    aliasPass && nanFail,
-    `别名 exit=${rAlias.status} 词=${aliasWord}；NaN 仅出现于 NaN（exit=${nanRun.status}，N 命中=${matchesAnchor(nanFormula, "N")}）`,
+    "用例9 别名命中 → PASS；删 massIndex 别名 → FAIL；N/NaN、k/K、senkou/senkouA 均不命中",
+    aliasPass && massPass && noMassAliasFail && nanFail && kFail && senkouFail,
+    `别名 exit=${rAlias.status} 词=${aliasWord}；massIndex 别名=${massWord}（exit=${massPassRun.status} / 删后 ${noMassAliasRun.status}）；` +
+      `N/NaN=${matchesAnchor(nanFormula, "N")}；k/K=${matchesAnchor(kText, "k")}/${matchesAnchor(kText, "K")}；` +
+      `senkou/senkouA=${matchesAnchor(senkouText, "senkou")}`,
   );
 
   console.log("指标口径页门禁自测");
