@@ -133,12 +133,8 @@ pub enum QualityFlag {
     Suspended,
     /// 除权日：相邻日复权因子变化，价格跳变不算异常。
     ExRights,
-    /// 量类数据被近似（无逐笔/分时数据时的标记）。
-    Approximated,
     /// 有记录但成交量为 0（非停牌）。
     ZeroVolume,
-    /// 交易日缺失（由扫描器在区间层给出，不写回 BarRow）。
-    Missing,
     /// 价格异常（close ≤ 0 或涨跌幅超板块上限 + 1%）。
     PriceAnomaly,
 }
@@ -152,9 +148,7 @@ impl QualityFlag {
             QualityFlag::SplitDay => "splitDay",
             QualityFlag::Suspended => "SUSPENDED",
             QualityFlag::ExRights => "EX_RIGHTS",
-            QualityFlag::Approximated => "APPROXIMATED",
             QualityFlag::ZeroVolume => "ZERO_VOLUME",
-            QualityFlag::Missing => "MISSING",
             QualityFlag::PriceAnomaly => "PRICE_ANOMALY",
         }
     }
