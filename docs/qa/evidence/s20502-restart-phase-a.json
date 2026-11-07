@@ -7,7 +7,7 @@
       "ac": "AC-02.05-04",
       "layer": "render",
       "passed": true,
-      "detail": "已选中 300750.SZ，副图标题 MACD(12,26,9)"
+      "detail": "已选中 DIAG020.SZ，副图标题 MACD(12,26,9)"
     },
     {
       "id": "PA-02",
@@ -67,8 +67,8 @@
     }
   ],
   "phaseA": {
-    "finishedAt": "2026-11-06T22:56:35.118Z",
-    "code": "300750.SZ",
+    "finishedAt": "2026-11-07T13:16:44.493Z",
+    "code": "DIAG020.SZ",
     "appliedBeforeExit": "10/22/8",
     "storedBeforeExit": "10/22/8",
     "exitMethod": "kill -TERM aka-desktop 进程（等同关闭应用窗口）"

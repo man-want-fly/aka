@@ -1,0 +1,80 @@
+{
+  "suite": "S-08.02-04 indefinite",
+  "startedAt": "2026-11-07T14:28:16.431Z",
+  "finishedAt": "2026-11-07T14:28:17.363Z",
+  "ok": true,
+  "layers": {
+    "data": "2/2",
+    "render": "6/6",
+    "runtime": "1/1"
+  },
+  "checks": [
+    {
+      "id": "D-01",
+      "ac": "AC-08.02-04(补1)",
+      "layer": "data",
+      "passed": true,
+      "detail": "停牌 DIAGQSUP: 量=0 涨跌幅=null 涨跌额=null 振幅=0 量比=null"
+    },
+    {
+      "id": "D-02",
+      "ac": "AC-08.02-04(补3)",
+      "layer": "data",
+      "passed": true,
+      "detail": "非有限值 0 个"
+    },
+    {
+      "id": "R-01",
+      "ac": "AC-08.02-04(补1)",
+      "layer": "render",
+      "passed": true,
+      "detail": "停牌行 DIAGQSUP.SZ: 量比「—」涨跌幅「—」振幅「0.00%」suspended=1"
+    },
+    {
+      "id": "R-02",
+      "ac": "AC-08.02-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "量比 data-indefinite=1 tooltip「停牌日无成交，量比无定义」"
+    },
+    {
+      "id": "R-03",
+      "ac": "AC-08.02-04(补2)",
+      "layer": "render",
+      "passed": true,
+      "detail": "行情页命中 无"
+    },
+    {
+      "id": "R-04",
+      "ac": "AC-08.02-04(补2)",
+      "layer": "render",
+      "passed": true,
+      "detail": "目录页命中 无"
+    },
+    {
+      "id": "R-05",
+      "ac": "AC-08.02-04(补2)",
+      "layer": "render",
+      "passed": true,
+      "detail": "工作台命中 无"
+    },
+    {
+      "id": "R-06",
+      "ac": "AC-08.02-04(补3)",
+      "layer": "render",
+      "passed": true,
+      "detail": "末根 T01 读数 value=,text=T01 — 元"
+    },
+    {
+      "id": "T-01",
+      "ac": "AC-08.02-04(补3)",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "telemetry value.indefinite code=E_INDEFINITE instanceId=main-ma indicatorId=T01 key=sma"
+    }
+  ],
+  "context": {
+    "rows": 128,
+    "dataDate": "2024-12-27"
+  }
+}

@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-07T03:40:04.620Z",
+  "finishedAt": "2026-11-07T13:10:18.567Z",
   "context": {
     "manifestCount": 105,
     "plannedCount": 61,
@@ -96,7 +96,14 @@
       "ac": "AC-02.04-03(补1)",
       "layer": "render",
       "passed": true,
-      "detail": "第 4 个副图按钮 disabled=true / full=1 / 容量「主图 2/2 · 副图 3/3」/ tooltip「副图最多 3 个，请先移除一个指标」/ 副图 3 个 / 实例 M06+M01 → M06+M01"
+      "detail": "第 4 个副图按钮 disabled=true / full=1 / 容量「主图 2/2 · 副图 3/3」/ tooltip「副图最多 3 个，请先移除一个指标」/ 副图 3 个 / 实例 M06+M01 → M06+M01 / MACD 标题「MACD(10,22,8)」"
+    },
+    {
+      "id": "D-03",
+      "ac": "AC-02.04-03(补1)",
+      "layer": "data",
+      "passed": true,
+      "detail": "新增被拒前后参数快照 {\"maPeriod\":20,\"maType\":\"sma\",\"fast\":10,\"slow\":22,\"signal\":8,\"bollPeriod\":20,\"bollMult\":2} → {\"maPeriod\":20,\"maType\":\"sma\",\"fast\":10,\"slow\":22,\"signal\":8,\"bollPeriod\":20,\"bollMult\":2}"
     },
     {
       "id": "R-12",
@@ -124,7 +131,7 @@
       "ac": "AC-02.04-04(补2)",
       "layer": "runtime",
       "passed": true,
-      "detail": "M06 冷算 0.02ms / M02 冷算 0.03ms / M02 点击→曲线 24ms / 冷样本 44 P95 0.09ms"
+      "detail": "M06 冷算 0.04ms / M02 冷算 0.05ms / M02 点击→曲线 24ms / 冷样本 45 P95 0.24ms"
     },
     {
       "id": "R-16",

@@ -1,0 +1,20 @@
+{
+  "suite": "S-08.02-04 indefinite",
+  "label": "20261107-222812",
+  "runAt": "2026-11-07T22:28:19+08:00",
+  "commit": "2638335aad88ca121e1a7f90d49d429503ad006a",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s080204\" AKA_DIAG_INF=1 target/debug/aka-desktop",
+  "fixture": "默认 state.db；AKA_DIAG_INF=1 把工作台首实例（T01）窗口末值注入 +∞，验证 Infinity→「—」且日志记 E_INDEFINITE；只读行情/目录/工作台，不改库",
+  "environment": "macOS 本机；vite build 产物 + cargo build（debug，含 QA 注入）--features tauri/custom-protocol",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "layers": {
+      "data": "2/2",
+      "render": "6/6",
+      "runtime": "1/1"
+    },
+    "blocked": []
+  }
+}

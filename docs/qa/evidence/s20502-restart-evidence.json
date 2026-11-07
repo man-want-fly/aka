@@ -1,20 +1,20 @@
 {
   "ok": true,
   "phase": "after-restart",
-  "finishedAt": "2026-11-06T23:01:42.958Z",
+  "finishedAt": "2026-11-07T13:16:58.561Z",
   "phaseA": {
-    "finishedAt": "2026-11-06T22:56:35.118Z",
-    "code": "300750.SZ",
+    "finishedAt": "2026-11-07T13:16:44.493Z",
+    "code": "DIAG020.SZ",
     "appliedBeforeExit": "10/22/8",
     "storedBeforeExit": "10/22/8",
     "exitMethod": "kill -TERM aka-desktop 进程（等同关闭应用窗口）"
   },
   "phaseB": {
-    "finishedAt": "2026-11-06T23:01:42.958Z",
+    "finishedAt": "2026-11-07T13:16:58.561Z",
     "firstScreen": "12/26/9",
     "stored": null,
     "restoreDisabled": true,
-    "reopened": "300750.SZ",
+    "reopened": "DIAG020.SZ",
     "subtitleDefault": true,
     "insufficientNotice": "MACD 需要 34 根，当前 20 根"
   },
@@ -52,7 +52,7 @@
       "ac": "AC-02.05-04",
       "layer": "render",
       "passed": true,
-      "detail": "打开 300750.SZ 后副图标题 MACD(12,26,9)"
+      "detail": "打开 DIAG020.SZ 后副图标题 MACD(12,26,9)"
     },
     {
       "id": "PA-15",

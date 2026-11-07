@@ -1,9 +1,9 @@
 {
   "ok": true,
   "suite": "S-01.02 watchlist (corrupt)",
-  "finishedAt": "2026-11-07T11:31:18.340Z",
+  "finishedAt": "2026-11-07T14:28:24.311Z",
   "layers": {
-    "render": "1/1",
+    "render": "2/2",
     "data": "1/1"
   },
   "blocked": [],
@@ -15,7 +15,16 @@
       "ac": "AC-01.02-04（补3）",
       "layer": "render",
       "passed": true,
-      "detail": "不可恢复页=true，trace id「TR-20261107-193116-0002」，动作「重新生成数据」=true，未显示空自选=true",
+      "detail": "不可恢复页=true，trace id「TR-20261107-222822-0002」，动作「重新生成数据」=true，未显示空自选=true",
+      "blocked": false
+    },
+    {
+      "id": "WL-23B",
+      "card": "S-08.02-04",
+      "ac": "AC-08.02-05（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "错误码「INTERNAL」/ 重建=true / 导出诊断=true / 重试=false",
       "blocked": false
     },
     {
@@ -25,7 +34,7 @@
       "layer": "data",
       "passed": true,
       "blocked": false,
-      "detail": "页面 trace id TR-20261107-193116-0002 ∈ telemetry.jsonl"
+      "detail": "页面 trace id TR-20261107-222822-0002 ∈ telemetry.jsonl"
     }
   ]
 }

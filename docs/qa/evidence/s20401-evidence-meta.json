@@ -1,0 +1,20 @@
+{
+  "suite": "S-02.04-02 加入图表/容量",
+  "label": "20261107-211326",
+  "runAt": "2026-11-07T21:13:26+08:00",
+  "commit": "8373e3db49098effb8fdc44d2f8361aa04e973e7",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"drawer\" target/debug/aka-desktop",
+  "fixture": "默认 state.db；套件先改 MACD 参数为 10/22/8、点满容量第 4 个副图、再恢复默认，随后经目录页跳 999999.XX 验证无标的态",
+  "environment": "macOS 本机；vite build 产物 + cargo build（debug，含 QA 注入）--features tauri/custom-protocol",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "layers": {
+      "data": "3/3",
+      "render": "16/16",
+      "runtime": "1/1"
+    },
+    "blocked": []
+  }
+}
