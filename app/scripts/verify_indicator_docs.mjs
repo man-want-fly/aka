@@ -4,7 +4,7 @@
  *
  * 用法：
  *   node scripts/verify_indicator_docs.mjs              # 校验内容库
- *   node scripts/verify_indicator_docs.mjs --self-test  # 脚本自身九用例（用例 9 含五条断言）
+ *   node scripts/verify_indicator_docs.mjs --self-test  # 脚本自身十用例（用例 9 含五条断言）
  *
  * 退出码：
  *   0 = 覆盖、四段、版本、判据 v3 全部通过，且 skipped=0（SKIP 不算通过）
@@ -20,7 +20,7 @@
  *   V3-01 锚点只取结构化字段 abbr/abbrAliases（/、|、空格拆词）+ params(key∪aliases) +
  *         outputs(key∪aliases)，禁止从 formulaSummary 正则刮符号；三者全空 → SKIP 并点名。
  *   V3-02 每个 params 的 key∪aliases 必须与其 default 在同一分句出现（分句边界 =
- *         。；！？与换行，逗号不作边界）；任一 output 的 key∪aliases 出现在 formula 段。
+ *         。；！？与换行，逗号不作边界）；每个 output 的 key∪aliases 都必须出现在 formula 段。
  *   V3-03 长度按有效字符计（剔除 Unicode 标点 P 类与空白 Z 类），80 字门槛。
  *   V3-04 params 段结构：调大/调小各至少一次且所在分句有效字数 ≥10，每个 params key 段内出现。
  *   V3-05 空话词命中即 FAIL；无来源数字命中即 FAIL；词表单一源 app/manifest/doc-lint-words.json。
@@ -216,7 +216,7 @@ function checkPageV3(item, page, words) {
     failed.push(`${id}:formula(${anchors.map((anchor) => anchor.term).join("/")})`);
   }
 
-  // V3-02 params 的 key∪aliases 与 default 同分句；任一 output 的 key∪aliases 出现在 formula 段
+  // V3-02 params 的 key∪aliases 与 default 同分句；每个 output 的 key∪aliases 都必须出现在 formula 段
   const paramClauses = [...splitClauses(paramsText), ...splitClauses(formulaText)];
   for (const param of item.params ?? []) {
     const key = param?.key;
@@ -233,9 +233,16 @@ function checkPageV3(item, page, words) {
     );
     if (!sameClause) failed.push(`${id}:V3-02(${key})`);
   }
-  const outputTerms = (item.outputs ?? []).flatMap((output) => termsOf(output));
-  if (outputTerms.length > 0 && !outputTerms.some((term) => matchesAnchor(formulaText, term))) {
-    failed.push(`${id}:V3-02(outputs)`);
+  // W-32：逐项命中，不允许「一个输出命中即掩盖其余输出未定义」
+  const missingOutputKeys = (item.outputs ?? [])
+    .filter((output) => {
+      const terms = termsOf(output);
+      return terms.length > 0 && !terms.some((term) => matchesAnchor(formulaText, term));
+    })
+    .map((output) => output.key)
+    .filter((key) => typeof key === "string" && key.trim());
+  if (missingOutputKeys.length > 0) {
+    failed.push(`${id}:V3-02(outputs:${missingOutputKeys.join("/")})`);
   }
 
   // V3-03 长度按有效字符（M02 等长段落已在覆盖检查里按 80 计）
@@ -437,7 +444,8 @@ function buildFixturePage(item) {
     .map((param) => param?.key)
     .filter((key) => typeof key === "string" && key.trim());
   const outputTerms = (item.outputs ?? []).flatMap((output) => termsOf(output));
-  const formulaTerms = [outputTerms[0], paramKeys[0], anchors[0]?.term].filter(Boolean);
+  // W-32 逐项命中：夹具页必须把每个输出的 key/别名都写进 formula，不能只写第一个
+  const formulaTerms = [outputTerms.join("、"), paramKeys[0], anchors[0]?.term].filter(Boolean);
   const anchor = formulaTerms.length ? formulaTerms.join("、") : item.id;
   const filler = "口径说明用于占位，确保段落长度达标。".repeat(6);
   const paramLines = paramKeys.map((key) => {
@@ -609,12 +617,16 @@ function runSelfTest() {
   const aliasWord = ((aliasTarget.outputs ?? []).find((output) => (output.aliases ?? []).length)
     ?.aliases ?? [])[0];
   if (!aliasWord) throw new Error("manifest 的 M20 未登记 output 别名，W-30 用例无法成立");
+  // W-32 逐项命中：被测输出只写别名，其余输出写各自 key，保证别名是唯一命中路径
+  const otherOutputKeys = (aliasTarget.outputs ?? [])
+    .filter((output) => !(output.aliases ?? []).includes(aliasWord))
+    .map((output) => output.key);
   const filler = "口径说明用于占位，确保段落长度达标。".repeat(6);
   const aliasDir = path.join(root, "alias");
   writeFixturePages(aliasDir, coverage, {
     mutate: (item, page) => {
       if (item.id !== aliasTargetId) return;
-      page.formula = `公式：${aliasWord} 与另一条曲线由同一窗口的波幅比值得到，窗口长度取 14，不做额外平滑。${filler}`;
+      page.formula = `公式：${[aliasWord, ...otherOutputKeys].join("、")} 与另一条曲线由同一窗口的波幅比值得到，窗口长度取 14，不做额外平滑。${filler}`;
     },
   });
   const aliasReportDir = path.join(root, "report9a");
@@ -696,14 +708,45 @@ function runSelfTest() {
   const noMassAliasReport = readReport(noMassAliasReportDir);
   const noMassAliasFail =
     noMassAliasRun.status === 1 &&
-    noMassAliasReport.failed.some((entry) => entry.startsWith(`${massTargetId}:V3-02(outputs)`));
+    noMassAliasReport.failed.some((entry) =>
+      entry.startsWith(`${massTargetId}:V3-02(outputs:`),
+    );
 
   record(
     "用例9 别名命中 → PASS；删 massIndex 别名 → FAIL；N/NaN、k/K、senkou/senkouA 均不命中",
     aliasPass && massPass && noMassAliasFail && nanFail && kFail && senkouFail,
-    `别名 exit=${rAlias.status} 词=${aliasWord}；massIndex 别名=${massWord}（exit=${massPassRun.status} / 删后 ${noMassAliasRun.status}）；` +
+    `别名 exit=${rAlias.status} ${aliasReport.failed.join(",") || "-"} 词=${aliasWord}；massIndex 别名=${massWord}（exit=${massPassRun.status} ${massPassReport.failed.join(",") || "-"} / 删后 ${noMassAliasRun.status} ${noMassAliasReport.failed.join(",") || "-"}）` +
       `N/NaN=${matchesAnchor(nanFormula, "N")}；k/K=${matchesAnchor(kText, "k")}/${matchesAnchor(kText, "K")}；` +
-      `senkou/senkouA=${matchesAnchor(senkouText, "senkou")}`,
+      `senkou/senkouA=${matchesAnchor(senkouText, "senkou")}/${matchesAnchor(senkouText, "senkouA")}；` +
+      `判定=${aliasPass}/${massPass}/${noMassAliasFail}/${nanFail}/${kFail}/${senkouFail}`,
+  );
+
+  // 用例10（W-32）：只命中一个输出、另一个未定义 → 必须 FAIL（逐项命中，不允许「任一」蒙过）
+  const multiTarget = coverage.find((item) => (item.outputs ?? []).length >= 2);
+  if (!multiTarget) throw new Error("manifest 中找不到多输出指标，无法构造 W-32 反例");
+  const firstOutputTerms = termsOf(multiTarget.outputs[0]);
+  if (!firstOutputTerms.length) throw new Error(`${multiTarget.id} 首个输出无 key/别名，W-32 反例无法成立`);
+  const missingKeys = multiTarget.outputs
+    .slice(1)
+    .map((output) => output.key)
+    .filter((key) => typeof key === "string" && key.trim());
+  const oneOutputDir = path.join(root, "one-output");
+  writeFixturePages(oneOutputDir, coverage, {
+    mutate: (item, page) => {
+      if (item.id !== multiTarget.id) return;
+      page.formula = `公式：${firstOutputTerms[0]} 是本指标的主输出，其余输出在本页刻意不写。${filler}`;
+    },
+  });
+  const oneOutputReportDir = path.join(root, "report10");
+  const r10 = run(oneOutputDir, oneOutputReportDir);
+  const report10 = readReport(oneOutputReportDir);
+  const w32Fail =
+    r10.status === 1 &&
+    report10.failed.includes(`${multiTarget.id}:V3-02(outputs:${missingKeys.join("/")})`);
+  record(
+    "用例10 只命中一个输出 → FAIL（W-32 逐项命中）",
+    w32Fail,
+    `exit=${r10.status} 未命中=${missingKeys.join("/")} failed=${report10.failed.filter((entry) => entry.includes("V3-02")).join(",")}`,
   );
 
   console.log("指标口径页门禁自测");
