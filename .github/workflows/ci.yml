@@ -93,9 +93,19 @@ jobs:
       - name: 前端构建产物存在性
         run: test -f dist/index.html
 
+      # W-49 / W-58 源码层断言：产物 strings 为 0 只证当前实现过得了，证不了下次摘掉 cfg
+      # 会被拦住。这里同时确认：release 的 invoke_handler 不含写命令、debug 仍注册（调试能力
+      # 被误删也要拦）、diag_faults/diag_write/diag_write_named/write_diag 均被
+      # cfg(debug_assertions) 覆盖。两层分工：产物层拦「符号进二进制」，源码层拦「入口被注册/漏 cfg」。
+      # 符号表在 scripts/verify-diag-gate.mjs 内，与下面 symbol 列表保持同一份。
+      - name: 诊断入口源码层门禁（W-49 / W-58）
+        run: node scripts/verify-diag-gate.mjs
+
       # W-49：release 二进制不得残留 QA 注入入口，把 W-47 的本地验收变成常设门禁。
       # 写法要点：grep -c 在 0 命中时自身 exit 1，必须先取计数再判 -ne 0；
       # 每个符号独立断言，失败不提前退出，避免一条掩盖其余。
+      # 匹配用非标识符边界：否则 AKA_DIAG 会兜住 AKA_DIAG_TARGET、diag_write 会兜住
+      # diag_write_named，断言看似 11 条、实际少几条独立生效（W-58 漏项实验的依据）。
       # 2026-11 QA 复核后扩围：除四个启动参数外，另拦环境变量与诊断写入口/文件名。
       - name: release 注入符号门禁（W-49）
         run: |
@@ -107,13 +117,14 @@ jobs:
             "AKA-DIAG-CORRUPT" "--corrupt-db" "--readonly-db" "--empty-dataset" \
             "AKA_DIAG" "AKA_DIAG_TARGET" "AKA_DIAG_INF" \
             "diag_write_named" "diag_write" "diag_faults" "s2-evidence"; do
-            count=$(grep -F -c -- "$symbol" /tmp/aka-release-strings.txt || true)
+            pattern="(^|[^A-Za-z0-9_])${symbol}([^A-Za-z0-9_]|\$)"
+            count=$(grep -E -c -- "$pattern" /tmp/aka-release-strings.txt || true)
             echo "注入符号 $symbol：$count（期望 0）"
             if [ "$count" -ne 0 ]; then
               fail=1
               echo "::error::release 二进制含注入符号 $symbol（$count 处）"
               echo "--- $symbol 命中行 + 前后 5 条上下文 ---"
-              grep -F -n -B 5 -A 5 -- "$symbol" /tmp/aka-release-strings.txt | head -n 30
+              grep -E -n -B 5 -A 5 -- "$pattern" /tmp/aka-release-strings.txt | head -n 30
             fi
           done
           exit "$fail"
