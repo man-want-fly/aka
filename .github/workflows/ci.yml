@@ -102,7 +102,7 @@ jobs:
           BIN=target/release/aka-desktop
           strings "$BIN" > /tmp/aka-release-strings.txt
           fail=0
-          for symbol in "AKA-DIAG-CORRUPT" "--corrupt-db" "--readonly-db"; do
+          for symbol in "AKA-DIAG-CORRUPT" "--corrupt-db" "--readonly-db" "--empty-dataset"; do
             count=$(grep -F -c -- "$symbol" /tmp/aka-release-strings.txt || true)
             echo "注入符号 $symbol：$count（期望 0）"
             if [ "$count" -ne 0 ]; then
