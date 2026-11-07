@@ -1,0 +1,10 @@
+{
+  "evidence": "s0102-watchlist-evidence.json",
+  "commit": "33c265d",
+  "workingTree": "clean（未跟踪项仅 .workbuddy/ 与 __pycache__ 等临时目录，不入库）",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=watchlist@<epoch> npm run tauri dev（前置脚本直插 state.db 至 497 条合成标的，取证后按备份还原）",
+  "finishedAt": "2026-11-07T00:04:16.290Z",
+  "result": "ok=true，19/19 通过（数据层 6 / 渲染层 13，0 blocked）",
+  "diffVsPrevious": "仅 finishedAt 不同（上一批 2026-11-06T23:42:03.397Z）；19 项 check 的 id / passed / layer / blocked / detail 逐项一致，含 WL-11（数据不足）与 WL-13/14（不在数据集）的判据断言。",
+  "context": "本批用于覆盖「listSecurities 去 120 截断、改为不传 limit 取全量代码表」与「0 根/读取失败归数据不足」两处改动后的回归取证。"
+}
