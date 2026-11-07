@@ -131,10 +131,12 @@ pub async fn storage_rebuild(state: State<'_, AppState>) -> Result<(), AppError>
     state.core.rebuild_state_db(&path)
 }
 
-/// QA 取证入口：当前故障注入开关（仅 `AKA_DIAG=1` 时可信）。
+/// QA 取证入口：当前故障注入开关（仅 debug 构建且 `AKA_DIAG=1` 时可信）。
 #[tauri::command]
 pub async fn diag_faults(state: State<'_, AppState>) -> Result<crate::state::DiagFaults, AppError> {
-    if std::env::var("AKA_DIAG").ok().as_deref() != Some("1") {
+    if !cfg!(debug_assertions)
+        || std::env::var("AKA_DIAG").ok().as_deref() != Some("1")
+    {
         return Ok(crate::state::DiagFaults::default());
     }
     Ok(state.faults())
@@ -174,10 +176,11 @@ pub async fn position_delete(state: State<'_, AppState>, security: String) -> Re
     state.core.delete_position(&security)
 }
 
-/// S2 实机取证：只有显式设置 `AKA_DIAG=1` 启动时才允许前端自跑诊断。
+/// S2 实机取证：只有 debug 构建且显式设置 `AKA_DIAG=1` 启动时才允许前端自跑诊断。
 #[tauri::command]
 pub async fn diag_enabled() -> Result<bool, AppError> {
-    Ok(std::env::var("AKA_DIAG").ok().as_deref() == Some("1"))
+    Ok(cfg!(debug_assertions)
+        && std::env::var("AKA_DIAG").ok().as_deref() == Some("1"))
 }
 
 /// 取证落地页：P/G 线共用同一套采样，但 release 必须直接落到工作台；

@@ -250,6 +250,8 @@ impl StateDb {
     /// QA 注入（`--readonly-db`）：让连接进入 SQLite 只读模式。
     /// 后续写操作由 SQLite 自己返回 `attempt to write a readonly database`，
     /// 走产品真实的只读错误映射，而不是另造一条假错误。
+    /// 发布构建不编译该方法（注入入口整体收在 debug 断言内）。
+    #[cfg(debug_assertions)]
     #[doc(hidden)]
     pub fn enable_query_only_for_diag(&self) -> Result<(), DbError> {
         self.conn

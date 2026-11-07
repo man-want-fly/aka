@@ -1325,6 +1325,10 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   2. 保留运行时开关，但必须 `--diag-home=<tmp>` 三段式：路径不在 `~/Library/Application Support/aka`、且先校验目录可写，否则拒绝启动注入。
 - **验收**：`strings target/release/aka-desktop | grep -c "AKA-DIAG-CORRUPT"` = 0（方案 1）；或注入必须带 `--diag-home` 且真实路径被拒（方案 2）。`diag-evidence.sh` 五套件仍全绿。
 - **门禁**：本条未完成前，**禁止打包/发布**；与卡的 Gate C 分开记。
+- **回执（dev，2026-11-07，随代码同提交）**：
+  1. 走方案 1：`diag_enabled` / `diag_flag` / `corrupt_state_db` / 窗口置顶全部 `#[cfg(debug_assertions)]`；`data-store::enable_query_only_for_diag` 同；`diag_faults` 与 `diag_enabled` 在 release 恒 `false`。
+  2. 坏库注入改为临时目录：把真实库复制到 `$TMPDIR/aka-diag-corrupt-<pid>/state.db`（另留 `state.db.orig` 备份），只写坏副本；真实 `state.db` 不覆写，不再依赖脚本 `.backup`。
+  3. 验收：`strings target/release/aka-desktop | grep -c "AKA-DIAG-CORRUPT"` = 0；`--corrupt-db` / `--readonly-db` / `--empty-dataset` 同样 0 命中。
 
 ### W-48｜dev：trace id 写入日志并可断言（开发）
 
