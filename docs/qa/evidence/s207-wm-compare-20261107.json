@@ -1,0 +1,927 @@
+{
+  "formatVersion": 1,
+  "comparator": "python3 tools/verify_wm_indicators.py",
+  "generatedAt": "2026-11-07T01:56:16.408Z",
+  "dumpPath": "/Users/sixmillion/Library/Application Support/aka/diag/s207-wm-series.json",
+  "codes": [
+    {
+      "security": "600519.SH",
+      "periods": {
+        "weekly": {
+          "bars": 104,
+          "aggregateOk": true,
+          "aggregateProblems": [],
+          "maxPriceDiff": 0.0,
+          "maxVolumeDiff": 0.0,
+          "maxAmountDiff": 0.0,
+          "series": [
+            {
+              "indicatorId": "T01",
+              "outputs": [
+                {
+                  "key": "sma",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 2.2737367544323206e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T02",
+              "outputs": [
+                {
+                  "key": "ema",
+                  "ok": true,
+                  "warmup": 59,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 2.2737367544323206e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T03",
+              "outputs": [
+                {
+                  "key": "wma",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 6.821210263296962e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T04",
+              "outputs": [
+                {
+                  "key": "dema",
+                  "ok": true,
+                  "warmup": 59,
+                  "warmupFirstFinite": 38,
+                  "finite": 66,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T05",
+              "outputs": [
+                {
+                  "key": "tema",
+                  "ok": true,
+                  "warmup": 89,
+                  "warmupFirstFinite": 57,
+                  "finite": 47,
+                  "maxDiff": 4.547473508864641e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T19",
+              "outputs": [
+                {
+                  "key": "forecast",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 9.094947017729282e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T20",
+              "outputs": [
+                {
+                  "key": "intercept",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 4.547473508864641e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T21",
+              "outputs": [
+                {
+                  "key": "r2",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 7.771561172376096e-16,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T22",
+              "outputs": [
+                {
+                  "key": "slope",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 1.4210854715202004e-14,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "E13",
+              "outputs": [
+                {
+                  "key": "bias6",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": 5,
+                  "finite": 99,
+                  "maxDiff": 4.440892098500626e-14,
+                  "problems": []
+                },
+                {
+                  "key": "bias12",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": null,
+                  "finite": 93,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "bias24",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": null,
+                  "finite": 81,
+                  "maxDiff": 6.394884621840902e-14,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "M06",
+              "outputs": [
+                {
+                  "key": "dif",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": 33,
+                  "finite": 71,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "dea",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": null,
+                  "finite": 71,
+                  "maxDiff": 5.684341886080802e-14,
+                  "problems": []
+                },
+                {
+                  "key": "hist",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": null,
+                  "finite": 71,
+                  "maxDiff": 1.1368683772161603e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "V08",
+              "outputs": [
+                {
+                  "key": "gapo",
+                  "ok": true,
+                  "warmup": 14,
+                  "warmupFirstFinite": 14,
+                  "finite": 90,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            }
+          ],
+          "ok": true
+        },
+        "monthly": {
+          "bars": 24,
+          "aggregateOk": true,
+          "aggregateProblems": [],
+          "maxPriceDiff": 0.0,
+          "maxVolumeDiff": 0.0,
+          "maxAmountDiff": 0.0,
+          "series": [
+            {
+              "indicatorId": "T01",
+              "outputs": [
+                {
+                  "key": "sma",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 4.547473508864641e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T02",
+              "outputs": [
+                {
+                  "key": "ema",
+                  "ok": true,
+                  "warmup": 59,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 2.2737367544323206e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T03",
+              "outputs": [
+                {
+                  "key": "wma",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 4.547473508864641e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T04",
+              "outputs": [
+                {
+                  "key": "dema",
+                  "ok": true,
+                  "warmup": 59,
+                  "warmupFirstFinite": -1,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T05",
+              "outputs": [
+                {
+                  "key": "tema",
+                  "ok": true,
+                  "warmup": 89,
+                  "warmupFirstFinite": -1,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T19",
+              "outputs": [
+                {
+                  "key": "forecast",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 4.547473508864641e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T20",
+              "outputs": [
+                {
+                  "key": "intercept",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 4.547473508864641e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T21",
+              "outputs": [
+                {
+                  "key": "r2",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 2.220446049250313e-16,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T22",
+              "outputs": [
+                {
+                  "key": "slope",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 1.4210854715202004e-14,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "E13",
+              "outputs": [
+                {
+                  "key": "bias6",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": 5,
+                  "finite": 19,
+                  "maxDiff": 2.1316282072803006e-14,
+                  "problems": []
+                },
+                {
+                  "key": "bias12",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": null,
+                  "finite": 13,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "bias24",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": null,
+                  "finite": 1,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "M06",
+              "outputs": [
+                {
+                  "key": "dif",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": -1,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "dea",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": null,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "hist",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": null,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "V08",
+              "outputs": [
+                {
+                  "key": "gapo",
+                  "ok": true,
+                  "warmup": 14,
+                  "warmupFirstFinite": 14,
+                  "finite": 10,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            }
+          ],
+          "ok": true
+        }
+      }
+    },
+    {
+      "security": "002594.SZ",
+      "periods": {
+        "weekly": {
+          "bars": 104,
+          "aggregateOk": true,
+          "aggregateProblems": [],
+          "maxPriceDiff": 0.0,
+          "maxVolumeDiff": 0.0,
+          "maxAmountDiff": 0.0,
+          "series": [
+            {
+              "indicatorId": "T01",
+              "outputs": [
+                {
+                  "key": "sma",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T02",
+              "outputs": [
+                {
+                  "key": "ema",
+                  "ok": true,
+                  "warmup": 59,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T03",
+              "outputs": [
+                {
+                  "key": "wma",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 1.7053025658242404e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T04",
+              "outputs": [
+                {
+                  "key": "dema",
+                  "ok": true,
+                  "warmup": 59,
+                  "warmupFirstFinite": 38,
+                  "finite": 66,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T05",
+              "outputs": [
+                {
+                  "key": "tema",
+                  "ok": true,
+                  "warmup": 89,
+                  "warmupFirstFinite": 57,
+                  "finite": 47,
+                  "maxDiff": 5.684341886080802e-14,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T19",
+              "outputs": [
+                {
+                  "key": "forecast",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 2.2737367544323206e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T20",
+              "outputs": [
+                {
+                  "key": "intercept",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 1.7053025658242404e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T21",
+              "outputs": [
+                {
+                  "key": "r2",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 5.551115123125783e-16,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T22",
+              "outputs": [
+                {
+                  "key": "slope",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 85,
+                  "maxDiff": 1.7763568394002505e-15,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "E13",
+              "outputs": [
+                {
+                  "key": "bias6",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": 5,
+                  "finite": 99,
+                  "maxDiff": 2.842170943040401e-14,
+                  "problems": []
+                },
+                {
+                  "key": "bias12",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": null,
+                  "finite": 93,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "bias24",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": null,
+                  "finite": 81,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "M06",
+              "outputs": [
+                {
+                  "key": "dif",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": 33,
+                  "finite": 71,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "dea",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": null,
+                  "finite": 71,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "hist",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": null,
+                  "finite": 71,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "V08",
+              "outputs": [
+                {
+                  "key": "gapo",
+                  "ok": true,
+                  "warmup": 14,
+                  "warmupFirstFinite": 14,
+                  "finite": 90,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            }
+          ],
+          "ok": true
+        },
+        "monthly": {
+          "bars": 24,
+          "aggregateOk": true,
+          "aggregateProblems": [],
+          "maxPriceDiff": 0.0,
+          "maxVolumeDiff": 0.0,
+          "maxAmountDiff": 0.0,
+          "series": [
+            {
+              "indicatorId": "T01",
+              "outputs": [
+                {
+                  "key": "sma",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 1.1368683772161603e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T02",
+              "outputs": [
+                {
+                  "key": "ema",
+                  "ok": true,
+                  "warmup": 59,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 5.684341886080802e-14,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T03",
+              "outputs": [
+                {
+                  "key": "wma",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 5.684341886080802e-14,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T04",
+              "outputs": [
+                {
+                  "key": "dema",
+                  "ok": true,
+                  "warmup": 59,
+                  "warmupFirstFinite": -1,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T05",
+              "outputs": [
+                {
+                  "key": "tema",
+                  "ok": true,
+                  "warmup": 89,
+                  "warmupFirstFinite": -1,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T19",
+              "outputs": [
+                {
+                  "key": "forecast",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 1.1368683772161603e-13,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T20",
+              "outputs": [
+                {
+                  "key": "intercept",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 5.684341886080802e-14,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T21",
+              "outputs": [
+                {
+                  "key": "r2",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 5.551115123125783e-16,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "T22",
+              "outputs": [
+                {
+                  "key": "slope",
+                  "ok": true,
+                  "warmup": 19,
+                  "warmupFirstFinite": 19,
+                  "finite": 5,
+                  "maxDiff": 3.552713678800501e-15,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "E13",
+              "outputs": [
+                {
+                  "key": "bias6",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": 5,
+                  "finite": 19,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "bias12",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": null,
+                  "finite": 13,
+                  "maxDiff": 2.842170943040401e-14,
+                  "problems": []
+                },
+                {
+                  "key": "bias24",
+                  "ok": true,
+                  "warmup": 5,
+                  "warmupFirstFinite": null,
+                  "finite": 1,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "M06",
+              "outputs": [
+                {
+                  "key": "dif",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": -1,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "dea",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": null,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                },
+                {
+                  "key": "hist",
+                  "ok": true,
+                  "warmup": 33,
+                  "warmupFirstFinite": null,
+                  "finite": 0,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            },
+            {
+              "indicatorId": "V08",
+              "outputs": [
+                {
+                  "key": "gapo",
+                  "ok": true,
+                  "warmup": 14,
+                  "warmupFirstFinite": 14,
+                  "finite": 10,
+                  "maxDiff": 0.0,
+                  "problems": []
+                }
+              ],
+              "ok": true
+            }
+          ],
+          "ok": true
+        }
+      }
+    }
+  ],
+  "ok": true
+}

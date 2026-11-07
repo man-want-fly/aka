@@ -107,14 +107,19 @@ if (firstDate) {
   failures.push("mock 起始日: 未能在 mock.rs 中解析 MOCK_FIRST_DATE");
 }
 
-// ---------- 3. 裁定迁移状态（只告警，不算失败） ----------
-const stillBeta = items.filter((x) => x.status === "beta").map((x) => x.id);
-const promotedPending = ["T03", "T21"].filter((id) => stillBeta.includes(id));
-if (promotedPending.length > 0) {
-  warnings.push(
-    `裁定迁移未完成：${promotedPending.join(" / ")} 仍为 status=beta；应转正为 normal（工单 W-04）。当前 beta 徽标数 ${stillBeta.length}，目标 2。`,
-  );
-}
+// ---------- 3. 裁定结果（W-24 正向断言，防止被悄悄改回去） ----------
+const betaSet = items
+  .filter((x) => x.status === "beta")
+  .map((x) => x.id)
+  .sort()
+  .join(",");
+check("beta 集合恰为", betaSet, "T16,T19");
+check("normal 条数", status.normal ?? 0, 42);
+check("T03 specStatus", items.find((x) => x.id === "T03")?.specStatus, "manualComplete");
+check("T21 specStatus", items.find((x) => x.id === "T21")?.specStatus, "manualComplete");
+// 「全域名口径待定」= 全部 105 条里 specStatus !== manualComplete 的条数；
+// 与上面「规划中且口径待定」的 13 是两个口径（后者只统计 status=planned 的 61 条），不互相替代。
+check("全域名口径待定（含已实现）", items.filter((x) => x.specStatus !== "manualComplete").length, 15);
 
 // ---------- 4. 文档漂移扫描 ----------
 /**
@@ -149,6 +154,29 @@ const DOC_FILES = [
   "docs/prd/aka-prd-v0.1.md",
 ];
 
+/**
+ * 显式白名单（W-09 / sector-12）：逐条列出「pattern + 文件 + 行号 + 该行必须含有的原文片段 + 放行理由」。
+ * 匹配条件是 file + mustInclude 原文片段（≥20 字），不使用「行里含 V1 就跳过」这类规则豁免——
+ * 那样任何文档随手加个 V1 就免疫了。line 仅作人工核对参考：卡片正被多方并发编辑，行号会整体平移；
+ * 原文片段一旦被改写，条目立即失效并报 STALE 失败，迫使放行者重新逐条确认。
+ */
+const DRIFT_ALLOWLIST = [
+  {
+    pattern: "sector-12",
+    file: CARDS,
+    line: 3621,
+    mustInclude: "12 个行业板块降级至 V1，MVP 只保留指数",
+    reason: "产品裁定原文：12 行业板块降级 V1、MVP 不排期；此处是在陈述降级，不是主张 MVP 含 12 行业",
+  },
+  {
+    pattern: "sector-12",
+    file: CARDS,
+    line: 4686,
+    mustInclude: "**不写 `sector_members`**（12 行业板块降级 V1）",
+    reason: "生成器禁令原文：明确不写 sector_members，属正确口径",
+  },
+];
+
 function loadBaseline() {
   if (!fs.existsSync(BASELINE_PATH)) return [];
   return JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")).known ?? [];
@@ -159,6 +187,7 @@ const knownSet = new Set(baseline.map((entry) => entry.pattern));
 const matchedKnown = new Set();
 
 const drift = [];
+const matchedAllow = new Set();
 if (CHECK_DOCS) {
   for (const pattern of PATTERNS) {
     for (const rel of pattern.files ?? DOC_FILES) {
@@ -169,11 +198,28 @@ if (CHECK_DOCS) {
         pattern.re.lastIndex = 0;
         const match = pattern.re.exec(line);
         if (!match) return;
+        const allow = DRIFT_ALLOWLIST.find(
+          (a) => a.pattern === pattern.id && a.file === rel && line.includes(a.mustInclude),
+        );
+        if (allow) {
+          matchedAllow.add(`${allow.pattern}|${allow.file}|${allow.mustInclude}`);
+          allow.actualLine = index + 1;
+          return;
+        }
         const snippet = match[0];
         const entry = { pattern: pattern.id, snippet, file: rel, line: index + 1, ...pattern };
         if (knownSet.has(pattern.id)) matchedKnown.add(pattern.id);
         else drift.push(entry);
       });
+    }
+  }
+}
+
+// 白名单条目一旦对不上（行号漂移、原文改写、pattern 改名），视为失效并失败，不允许静默免疫
+if (CHECK_DOCS) {
+  for (const a of DRIFT_ALLOWLIST) {
+    if (!matchedAllow.has(`${a.pattern}|${a.file}|${a.mustInclude}`)) {
+      failures.push(`显式白名单失效：${a.file}:${a.line} [${a.pattern}] 原文片段已变或不再命中，需重新逐条确认`);
     }
   }
 }
@@ -201,6 +247,12 @@ if (failures.length > 0) {
 if (CHECK_DOCS) {
   console.log("");
   console.log(`文档已登记漂移 ${matchedKnown.size} 项（baseline，不阻断）`);
+  console.log(`显式白名单命中 ${matchedAllow.size} 项（逐条 file:line + 原文）`);
+  for (const a of DRIFT_ALLOWLIST) {
+    if (matchedAllow.has(`${a.pattern}|${a.file}|${a.mustInclude}`)) {
+      console.log(`  ALLOW  ${a.file}:${a.actualLine ?? a.line}  [${a.pattern}]  ${a.reason}`);
+    }
+  }
   console.log(`文档未登记漂移 ${drift.length} 项`);
   for (const item of drift) {
     console.log(`  DRIFT ${item.file}:${item.line}  [${item.id}]  ${item.snippet.trim()}  → ${item.desc}（${item.workorder}）`);

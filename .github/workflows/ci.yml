@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "docs/**"
       - ".github/workflows/ci.yml"
   pull_request:
     paths:
       - "app/**"
+      - "docs/**"
       - ".github/workflows/ci.yml"
 
 concurrency:
@@ -54,6 +56,12 @@ jobs:
 
       - name: npm ci
         run: npm ci
+
+      - name: 常量单一源门禁（G1，不一致即红）
+        run: npm run verify:constants
+
+      - name: 指标口径页门禁（W-03，库缺失 exit 2 / 不合格 exit 1）
+        run: npm run verify:docs
 
       - name: tsc --noEmit
         run: npx tsc --noEmit

@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 1420",
+    "prebuild": "node scripts/verify_constants.mjs --docs && node scripts/verify_indicator_docs.mjs",
     "build": "tsc --noEmit && vite build",
+    "verify:constants": "node scripts/verify_constants.mjs --docs",
+    "verify:docs": "node scripts/verify_indicator_docs.mjs",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview --port 1421",
     "golden": "cargo test -p indicator-golden -- --nocapture",

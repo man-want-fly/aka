@@ -1,0 +1,134 @@
+{
+  "ok": true,
+  "finishedAt": "2026-11-07T01:56:33.150Z",
+  "generatedAt": "2026-11-07T01:56:16.408Z",
+  "wmDump": "/Users/sixmillion/Library/Application Support/aka/diag/s207-wm-series.json",
+  "checks": [
+    {
+      "id": "D-00",
+      "ac": "S-02.07-01 W/M",
+      "layer": "data",
+      "passed": true,
+      "detail": "W/M 指标独立复算 dump：/Users/sixmillion/Library/Application Support/aka/diag/s207-wm-series.json（600519.SH / 002594.SZ × D/W/M × 12 指标）"
+    },
+    {
+      "id": "D-01",
+      "ac": "S-02.07-01 W/M",
+      "layer": "data",
+      "passed": true,
+      "detail": "600519.SH D520/W104/M24 · 002594.SZ D520/W104/M24；ISO 周/自然月重聚合逐根比对一致"
+    },
+    {
+      "id": "D-02",
+      "ac": "S-02.07-01 W/M",
+      "layer": "data",
+      "passed": true,
+      "detail": "warmup 与周期无关（同一参数下 W 与 M 相同）：T01:19 T02:59 T03:19 T04:59 T05:89 T19:19 T20:19 T21:19 T22:19 E13:5 M06:33 V08:14"
+    },
+    {
+      "id": "D-03",
+      "ac": "AC-02.07-03",
+      "layer": "data",
+      "passed": true,
+      "detail": "M=24 根：不足观察期 T02(warmup 59)/T04(warmup 59)/T05(warmup 89)/M06(warmup 33) · 可算 T01:5 T03:5 T19:5 T20:5 T21:5 T22:5"
+    },
+    {
+      "id": "R-01",
+      "ac": "AC-02.07-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "40 根视口=38 · 十字线 x=263.5263157894737 与 K 线中心 263.5263157894737 差 0.00px · 竖线贯穿 12~522 · 横线仅在主图=true · tooltip 含开/高/量=true · 副图 x 对齐=true · 副图读数 -10.135036836999689/-4.716225675465842/-10.837622323067693"
+    },
+    {
+      "id": "R-02",
+      "ac": "AC-02.07-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "鼠标移到副图：tooltip 面板=M06 · 横线 y=449.5331695331695（副图 394~522）=true"
+    },
+    {
+      "id": "R-03",
+      "ac": "AC-02.07-01 补1",
+      "layer": "render",
+      "passed": true,
+      "detail": "缩到 20 根后再放大 3 次 → 20 根（视口 450~469 / 共 520）"
+    },
+    {
+      "id": "R-04",
+      "ac": "AC-02.07-01 补3",
+      "layer": "render",
+      "passed": true,
+      "detail": "双击复位 → 120 根（期望 120），末端 519/519"
+    },
+    {
+      "id": "R-05",
+      "ac": "AC-02.07-01 补2",
+      "layer": "render",
+      "passed": true,
+      "detail": "全历史视口 start=0 · 越界拖拽位移 -28.00px · 松手后位移 0.00 · start=0 · 根数 520/520"
+    },
+    {
+      "id": "R-06",
+      "ac": "AC-02.07-01 补4",
+      "layer": "render",
+      "passed": true,
+      "detail": "600519 缩放到 55 根 [233,287] → 300750 默认 120 根（期望 120）→ 切回 [233,287]（55 根）"
+    },
+    {
+      "id": "R-07",
+      "ac": "AC-02.07-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "总数 38 · 提示 5 条（SMA 需要 60 根，当前 38 根）· T01~T05 线段 0 条 · d 长度 T01:0 T02:0 T03:0 T04:0 T05:0 · y 轴刻度 7 · K 线 38 根（占位保留）"
+    },
+    {
+      "id": "R-08",
+      "ac": "AC-02.07-03 补5",
+      "layer": "render",
+      "passed": true,
+      "detail": "清日期范围后 520 根 · 数据不足提示 0 条 · T01/T03 线段 2 条（自动出现）"
+    },
+    {
+      "id": "R-09",
+      "ac": "AC-02.07-03 W/M",
+      "layer": "render",
+      "passed": true,
+      "detail": "月线 24 根 · 整段不画线提示 3 条（EMA 需要 60 根，当前 24 根 | DEMA 需要 60 根，当前 24 根 | TEMA 需要 90 根，当前 24 根）· T01 有效点 5 · M06 副图 empty=1 文案「MACD(12,26,9) 需要 34 根，当前 24 根」· 副图路径长度 0"
+    },
+    {
+      "id": "R-10",
+      "ac": "AC-02.07-01 W",
+      "layer": "render",
+      "passed": true,
+      "detail": "周线 104 根 · 可视 104 根 / K 线 104 根 · T01 首个有效下标 19 · 副图首点 x 对齐=true"
+    },
+    {
+      "id": "R-11",
+      "ac": "AC-02.07-01 W/M",
+      "layer": "render",
+      "passed": true,
+      "detail": "月线第 3 根：副图读数「DIF — 元」· 主图读数「T01 — 元」· tooltip 含「—」=true"
+    },
+    {
+      "id": "R-12",
+      "ac": "AC-02.07-03 补2/补4",
+      "layer": "render",
+      "passed": true,
+      "detail": "视口 0~119 · 停牌组 20 个（行情层 20）· 量柱 20 根 · K 线实体 100 根 · hover=90 · 读数 有 · tooltip 停牌区=有 · 「2023-05-08停牌DIF 0.20 元DEA 0.23 元MACD 柱 -0.07 元」不含 OHLC=true"
+    },
+    {
+      "id": "R-13",
+      "ac": "AC-02.07-03 补3",
+      "layer": "render",
+      "passed": true,
+      "detail": "首根 2023-12-01 · [2024-01-01] index=21 · hover=21 · splitDay 标记=true · q=20:2023-12-29/simulated 21:2024-01-01/simulated,splitDay 22:2024-01-02/simulated · marker path <path data-split-marker=\"2024-01-01\" data-split-factor=\"0.5\" d=\"M310.78 75.89 L317.78 75.89 L314.28 71.89 Z\" fill=\"var(--accent)\" opacity=\"0 · 不复权 tooltip「除权日 · 不复权（因子 0.5000）」因子=0.5 · 前复权 tooltip「除权日 · 前复权已调整（因子 0.5000）」标记仍在=true"
+    },
+    {
+      "id": "R-14",
+      "ac": "AC-02.07-03 补1",
+      "layer": "render",
+      "passed": true,
+      "detail": "空心点 7 个（x 去重 7）· 折线 2 段 · 跨越空洞的线段 0 · 面板 有 · 序列 120 根/有效 100/warmup 13 · 视口 0~119"
+    }
+  ]
+}

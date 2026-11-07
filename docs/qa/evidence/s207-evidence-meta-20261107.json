@@ -1,0 +1,30 @@
+{
+  "workorder": "S-02.07-01 / S-02.07-02",
+  "commit": "a1fbf05",
+  "commitTime": "2026-11-07 09:56:03 +0800",
+  "tree": "提交后（s207 相关源码与 a1fbf05 一致）",
+  "generatedAt": "2026-11-07T01:56:16.408Z",
+  "finishedAt": "2026-11-07T01:56:33.150Z",
+  "ok": true,
+  "checks": {
+    "total": 18,
+    "passed": 18,
+    "ids": [
+      "D-00", "D-01", "D-02", "D-03",
+      "R-01", "R-02", "R-03", "R-04", "R-05", "R-06", "R-07", "R-08", "R-09",
+      "R-10", "R-11", "R-12", "R-13", "R-14"
+    ]
+  },
+  "commands": [
+    "AKA_DIAG=1 AKA_DIAG_TARGET=s207 ./target/debug/aka-desktop",
+    "python3 tools/verify_wm_indicators.py（D/W/M × 12 指标逐点复算）",
+    "./node_modules/.bin/tsc --noEmit",
+    "cargo test -p app-core -p data-store -p indicator-core -p indicator-golden"
+  ],
+  "files": {
+    "rendered": "docs/qa/evidence/s207-evidence-20261107.json",
+    "seriesDump": "docs/qa/evidence/s207-wm-series-20261107.json",
+    "wmCompare": "docs/qa/evidence/s207-wm-compare-20261107.json"
+  },
+  "note": "证据在提交后重跑生成（generatedAt 晚于 commitTime 13 秒），原始序列 dump 与 W/M 复算报告同批产出，可独立复验。"
+}
