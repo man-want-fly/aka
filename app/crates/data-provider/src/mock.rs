@@ -262,13 +262,17 @@ impl DataProvider for MockProvider {
         let from = req.from.unwrap_or(self.first_date());
         let to = req.to.unwrap_or(self.last_date());
 
+        // 复权锚点取数据集首末交易日的因子（不是请求区间端点，AC-02.02-03 补1）
+        let first_adj = raw.first().map(|row| row.adj_factor).unwrap_or(1.0);
+        let last_adj = raw.last().map(|row| row.adj_factor).unwrap_or(1.0);
+
         let mut rows = Vec::new();
         for row in raw.iter() {
             if row.date < from || row.date > to {
                 continue;
             }
             let mut row = row.clone();
-            apply_adjust(&mut row, req.adj);
+            apply_adjust(&mut row, req.adj, first_adj, last_adj);
             rows.push(row);
         }
 
@@ -453,8 +457,16 @@ fn make_security(code: &str, name: &str, board: Board, is_index: bool, price: f6
 fn generate_bars(security: &Security, calendar: &[Date]) -> Vec<BarRow> {
     let seed = fnv1a(&security.code);
     let mut rng = Rng::new(seed);
-    let has_split = !security.is_index && seed % 5 == 0;
-    let split_at = MOCK_BARS_PER_SECURITY / 2;
+    // AC-02.02-03 夹具：600519.SH 在 2024-04-29 显式注入一次 2:1 拆分（除权事件）
+    let fixture_split = if security.code == "600519.SH" {
+        calendar
+            .iter()
+            .position(|date| *date == Date::new(2024, 4, 29))
+    } else {
+        None
+    };
+    let has_split = !security.is_index && (seed % 5 == 0 || fixture_split.is_some());
+    let split_at = fixture_split.unwrap_or(MOCK_BARS_PER_SECURITY / 2);
 
     let limit = match security.board {
         Board::ChiNext | Board::Star => 0.20,
@@ -526,6 +538,11 @@ fn generate_bars(security: &Security, calendar: &[Date]) -> Vec<BarRow> {
         }
         if has_split && i == split_at {
             row.quality.push(QualityFlag::SplitDay);
+            // AC-02.02-03 补2 的给定样本：除权日成交量固定 12,345,600 股（123,456 手）
+            if fixture_split.is_some() {
+                row.volume = 12_345_600.0;
+                row.amount = round2(row.volume * (row.high + row.low + row.close) / 3.0);
+            }
         }
 
         prev_close = row.close / if has_split && i < split_at { 2.0 } else { 1.0 };
@@ -535,12 +552,13 @@ fn generate_bars(security: &Security, calendar: &[Date]) -> Vec<BarRow> {
     rows
 }
 
-fn apply_adjust(row: &mut BarRow, adj: Adjust) {
+fn apply_adjust(row: &mut BarRow, adj: Adjust, first_adj: f64, last_adj: f64) {
     let factor = match adj {
         Adjust::None => return,
-        Adjust::Qfq => row.adj_factor,
-        // 后复权：以拆分前价格为基准，拆分后价格 ×2
-        Adjust::Hfq => 1.0 / row.adj_factor,
+        // 前复权锚定数据集最新交易日
+        Adjust::Qfq => row.adj_factor / last_adj,
+        // 后复权锚定数据集最早交易日（拆分后价格按历史因子抬升，保证除权日连续）
+        Adjust::Hfq => row.adj_factor / first_adj,
     };
     if (factor - 1.0).abs() < f64::EPSILON {
         return;
@@ -549,7 +567,7 @@ fn apply_adjust(row: &mut BarRow, adj: Adjust) {
     row.high = round2(row.high * factor);
     row.low = round2(row.low * factor);
     row.close = round2(row.close * factor);
-    row.volume = (row.volume / factor).round();
+    // 成交量不受复权影响（本卡集口径 §0.1、AC-02.02-03 补2）
 }
 
 #[cfg(test)]
@@ -682,6 +700,73 @@ mod tests {
         assert!(
             (0.85..1.15).contains(&ratio),
             "复权后拆分日不应出现断崖，实际比值 {ratio}"
+        );
+    }
+
+    /// AC-02.02-03 夹具：600519.SH 在 2024-04-29 的显式除权事件。
+    #[test]
+    fn fixture_600519_ex_rights_on_2024_04_29() {
+        let provider = MockProvider::new();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("runtime");
+        let fetch = |adj| {
+            runtime.block_on(async {
+                provider
+                    .daily_bars(BarRequest {
+                        security: "600519.SH".into(),
+                        timeframe: Timeframe::Day,
+                        adj,
+                        from: None,
+                        to: None,
+                    })
+                    .await
+                    .expect("bars")
+            })
+        };
+        let qfq = fetch(Adjust::Qfq);
+        let none = fetch(Adjust::None);
+        let index = qfq
+            .rows
+            .iter()
+            .position(|row| row.date == Date::new(2024, 4, 29))
+            .expect("2024-04-29 应在交易日历内");
+        assert!(qfq.rows[index]
+            .quality
+            .contains(&QualityFlag::SplitDay));
+
+        let qfq_ratio = qfq.rows[index].close / qfq.rows[index - 1].close;
+        assert!(
+            (qfq_ratio - 1.0).abs() <= 0.105,
+            "前复权不应跳空，实际比值 {qfq_ratio}"
+        );
+        let none_ratio = none.rows[index].close / none.rows[index - 1].close;
+        assert!(
+            (none_ratio - 0.5).abs() < 0.12,
+            "不复权应看到约 50% 的除权断崖，实际比值 {none_ratio}"
+        );
+
+        // 成交量不受复权影响：同一交易日在三种口径下完全相同
+        let hfq = fetch(Adjust::Hfq);
+        assert_eq!(none.rows[index].volume, 12_345_600.0);
+        for offset in [index - 1, index] {
+            assert_eq!(qfq.rows[offset].volume, none.rows[offset].volume);
+            assert_eq!(qfq.rows[offset].volume, hfq.rows[offset].volume);
+        }
+
+        // 后复权同样不应跳空，且拆分前价格 ≥ 不复权
+        let hfq_ratio = hfq.rows[index].close / hfq.rows[index - 1].close;
+        assert!(
+            (hfq_ratio - 1.0).abs() <= 0.105,
+            "后复权不应跳空，实际比值 {hfq_ratio}"
+        );
+        assert!(hfq.rows[index - 1].close >= none.rows[index - 1].close);
+
+        // 最新交易日锚点：前复权收等于原始收盘（最新因子 = 1.00000000）
+        assert_eq!(qfq.rows.last().unwrap().date, Date::new(2024, 12, 27));
+        assert_eq!(
+            qfq.rows.last().unwrap().close,
+            none.rows.last().unwrap().close
         );
     }
 }

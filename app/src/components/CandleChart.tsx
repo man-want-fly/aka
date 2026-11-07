@@ -263,7 +263,7 @@ export function CandleChart({
     const count = endAbs - startAbs + 1;
     const visible = bars.slice(startAbs, endAbs + 1);
 
-    // 主图叠加：B1 的 8 条固定 + B2 所选（多输出指标逐条展开）
+    // 主图叠加：只为用户所选的 overlayIds（容量 2，K 线本身不计入，S-02.02-02）
     const seen = new Set<string>();
     const overlayLines: Array<{
       id: string;
@@ -280,7 +280,7 @@ export function CandleChart({
       insufficient: boolean;
       firstValid: number;
     }> = [];
-    [...B1_OVERLAY_IDS, ...overlayIds].forEach((indicatorId) => {
+    overlayIds.forEach((indicatorId) => {
       if (seen.has(indicatorId)) return;
       const item = series.find((entry) => entry.indicatorId === indicatorId);
       if (!item) return;
@@ -905,8 +905,10 @@ export function CandleChart({
                   strokeWidth={0.9}
                 />
                 <rect
-                  data-candle={rising ? "up" : "down"}
+                  data-candle={ rising ? "up" : "down" }
                   data-index={index}
+                  data-date={bar.date}
+                  data-close={formatPrice(bar.close)}
                   x={x - bodyWidth / 2}
                   y={bodyTop}
                   width={bodyWidth}
@@ -1418,34 +1420,31 @@ export function CandleChart({
             </text>
           ))}
 
-          {/* 图例 */}
-          <g className="mono" fontSize={9.5}>
-            <text x={RIGHT - 300} y={24} fill="var(--muted)">
-              T01–T05 · T19/T20/T22{overlayIds.length > 0 ? ` · B2: ${overlayIds.join("/")}` : ""}
-            </text>
-            <text x={RIGHT - 100} y={24} fill="var(--muted)">
-              {view.subPanels.map((panel) => panel.id).join(" / ")}
-            </text>
-            <text x={RIGHT - 8} y={24} fill="var(--faint)" textAnchor="end">
-              {view.subPanels
-                .flatMap((panel) => panel.lines.map((line) => line.label))
-                .join(" / ")}
-            </text>
-            {view.overlayLines
-              .filter((line) => overlayIds.includes(line.indicatorId))
-              .map((line, index) => (
+          {/* 图例：0 叠加时整块隐藏，不占位（S-02.02-02） */}
+          {overlayIds.length > 0 && (
+            <g className="mono" fontSize={9.5} data-overlay-legend="1">
+              <text x={RIGHT - 100} y={24} fill="var(--muted)">
+                {view.subPanels.map((panel) => panel.id).join(" / ")}
+              </text>
+              <text x={RIGHT - 8} y={24} fill="var(--faint)" textAnchor="end">
+                {view.subPanels
+                  .flatMap((panel) => panel.lines.map((line) => line.label))
+                  .join(" / ")}
+              </text>
+              {view.overlayLines.map((line, index) => (
                 <text
                   key={`legend-${line.id}`}
                   data-legend-line={`${line.indicatorId}.${line.key}`}
                   x={RIGHT - 300}
-                  y={38 + index * 11}
+                  y={24 + index * 11}
                   fill={line.color}
                   fontSize={9}
                 >
                   {line.label}
                 </text>
               ))}
-          </g>
+            </g>
+          )}
 
           {/* 十字光标：竖向虚线贯穿主图与全部副图；横向线只在光标所在面板 */}
           {hover !== null && (

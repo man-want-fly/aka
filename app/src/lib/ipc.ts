@@ -80,6 +80,10 @@ export const ipc = {
   diagWriteNamed: (name: string, payload: string): Promise<string> =>
     invoke<string>("diag_write_named", { name, payload }),
 
+  /** S-02.02-02：前端写入运行日志（如 switch.period_ms），落 telemetry.jsonl */
+  telemetryNote: (name: string, fields?: Record<string, unknown>): Promise<void> =>
+    invoke<void>("telemetry_note", { name, fields: fields ?? {} }),
+
   marketSnapshot: (): Promise<MarketSnapshotDto> => invoke<MarketSnapshotDto>("market_snapshot"),
 
   watchlist: (): Promise<WatchlistDto> => invoke<WatchlistDto>("watchlist_read"),

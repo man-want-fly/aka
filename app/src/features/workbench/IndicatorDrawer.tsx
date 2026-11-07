@@ -283,7 +283,7 @@ export function IndicatorDrawer({
                       data-drawer-full={full ? "1" : "0"}
                       disabled={!hasTarget || (!added && !planned && full && panel === "sub")}
                       aria-disabled={!hasTarget || added || planned || full}
-                      title={!hasTarget ? "请先在行情页选择一只标的" : !added && !planned && full ? (panel === "main" ? `主图最多 ${MAX_MAIN_OVERLAYS} 个，请先移除一个` : `副图最多 ${MAX_SUBPLOTS} 个，请先移除一个指标`) : undefined}
+                      title={!hasTarget ? "请先在行情页选择一只标的" : !added && !planned && full ? (panel === "main" ? `主图最多 ${MAX_MAIN_OVERLAYS} 个叠加，请先移除一个` : `副图最多 ${MAX_SUBPLOTS} 个，请先移除一个指标`) : undefined}
                       data-drawer-blocked={!hasTarget ? "1" : "0"}
                       onClick={(event) => {
                         event.stopPropagation();

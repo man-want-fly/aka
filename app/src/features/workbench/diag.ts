@@ -154,7 +154,7 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
   );
   const readoutHost = document.querySelectorAll("[data-readout-host='1']").length;
 
-  let tooltipBefore = attrs("[data-readout^='ma-']", "data-readout").length;
+  let tooltipBefore = attrs("[data-readout^='ma-'], [data-readout^='ov-']", "data-readout").length;
   let maEntries: Array<{ id: string; value: string; unit: string; text: string }> = [];
   let hoverIndex = "";
   let hoverError: string | null = null;
@@ -174,12 +174,14 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
         }),
       );
       await sleep(160);
-      tooltipBefore = attrs("[data-readout^='ma-']", "data-readout").length;
+      tooltipBefore = attrs("[data-readout^='ma-'], [data-readout^='ov-']", "data-readout").length;
       hoverIndex =
         document
           .querySelector("[data-readout-host='1']")
           ?.getAttribute("data-hover-index") ?? "";
-      maEntries = Array.from(document.querySelectorAll("[data-readout^='ma-']")).map(
+      maEntries = Array.from(
+        document.querySelectorAll("[data-readout^='ma-'], [data-readout^='ov-']"),
+      ).map(
         (element) => ({
           id: element.getAttribute("data-readout") ?? "",
           value: element.getAttribute("data-value") ?? "",
@@ -388,14 +390,15 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
     hoverError,
     ok:
       Boolean(svg) &&
-      overlayCount >= 8 &&
+      // S-02.02-02 起主图叠加容量 2（默认 SMA20 + BOLL，共 4 条输出线），不再是固定 8 线
+      overlayCount >= 4 &&
       macdCount === 3 &&
       histCount >= 2 &&
       colorOk &&
       statisticalCount >= 4 &&
       unitLabels.length >= 4 &&
       t21TwoDecimals &&
-      tooltipBefore >= 8 &&
+      tooltipBefore >= 4 &&
       hoverIndex !== "" &&
       decimalsOk &&
       tooltipParity.ok === true &&

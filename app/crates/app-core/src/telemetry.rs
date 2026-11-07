@@ -97,13 +97,19 @@ impl Telemetry {
     }
 
     pub fn emit(&self, name: &'static str, fields: Vec<(&'static str, Value)>) {
+        let fields = fields
+            .into_iter()
+            .map(|(key, value)| (key.to_string(), value))
+            .collect();
+        self.emit_dynamic(name, fields);
+    }
+
+    /// 前端指定事件名的埋点（如 `switch.period_ms`）；字段键值同 JSON Map。
+    pub fn emit_dynamic(&self, name: &str, fields: Map<String, Value>) {
         let event = TelemetryEvent {
             ts_ms: now_ms(),
             name: name.to_string(),
-            fields: fields
-                .into_iter()
-                .map(|(key, value)| (key.to_string(), value))
-                .collect(),
+            fields,
         };
 
         if let Some(path) = &self.log_path {

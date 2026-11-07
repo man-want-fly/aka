@@ -190,6 +190,17 @@ pub async fn diag_write(
     write_diag(&app, "s2-evidence.json", &payload)
 }
 
+/// 前端埋点：事件名由前端给出（如 `switch.period_ms`），字段随 Map 落 telemetry.jsonl。
+#[tauri::command]
+pub async fn telemetry_note(
+    state: State<'_, AppState>,
+    name: String,
+    fields: Option<serde_json::Map<String, Value>>,
+) -> Result<(), AppError> {
+    state.core.telemetry().emit_dynamic(&name, fields.unwrap_or_default());
+    Ok(())
+}
+
 /// 命名诊断落盘：不同批次（S2 / E-01 / E-02）证据分开存档，避免互相覆盖。
 #[tauri::command]
 pub async fn diag_write_named(

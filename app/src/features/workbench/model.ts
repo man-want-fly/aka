@@ -125,9 +125,10 @@ export const B3_SUB_CHOICES: Choice[] = choices([
 export const SUB_CHOICES: Choice[] = [...B2_SUB_CHOICES, ...B3_SUB_CHOICES, ...choices(["E13"])];
 
 /** B1 回归族与 BIAS：AC-03.04-11 / -15 要求自 B2 起可上图（T19/T21 为 beta，带徽标、不进默认）。 */
-export const B1_OVERLAY_CHOICES: Choice[] = choices(["T19", "T20", "T21", "T22"]);
+export const B1_OVERLAY_CHOICES: Choice[] = choices(["T01", "T19", "T20", "T21", "T22"]);
 
-export const DEFAULT_B2_OVERLAYS = ["T09", "T24"];
+/** 默认主图叠加 = SMA(20) + BOLL(20,2)：与 AC-02.02-04 的给定初始态一致 */
+export const DEFAULT_B2_OVERLAYS = ["T01", "T09"];
 export const DEFAULT_SUB_ID = "M06";
 /** 主图叠加容量（S-02.04-02）：满 2 后需先移除才能加 */
 export const MAX_MAIN_OVERLAYS = 2;

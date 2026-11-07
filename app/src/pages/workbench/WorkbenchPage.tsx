@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AppShell } from "../../app/AppShell";
 import { CandleChart, type ChartViewport } from "../../components/CandleChart";
 import { IndicatorReadouts } from "../../components/IndicatorReadouts";
@@ -38,6 +45,7 @@ import {
 } from "../../features/workbench/diag";
 import { runS205Diagnostics } from "../../features/workbench/s205Diag";
 import { runS203Diagnostics } from "../../features/workbench/s203Diag";
+import { runS20202Diagnostics } from "../../features/workbench/s20202Diag";
 import { runS207Diagnostics } from "../../features/workbench/s207Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
 import { runRestartDiagnostics, restartDiagStage } from "../../features/workbench/restartDiag";
@@ -161,7 +169,16 @@ export function WorkbenchPage({
     [manifest],
   );
   const [activeCode, setActiveCode] = useState(initialCode ?? "300750.SZ");
-  const [adj, setAdj] = useState<"none" | "qfq" | "hfq">("qfq");
+  // S-02.02-02：复权口径本地持久化（chart.adj），默认前复权
+  const [adj, setAdj] = useState<"none" | "qfq" | "hfq">(() => {
+    try {
+      const stored = window.localStorage.getItem("aka.chart.adj");
+      if (stored === "none" || stored === "qfq" || stored === "hfq") return stored;
+    } catch {
+      /* 存储不可用时用默认值 */
+    }
+    return "qfq";
+  });
   const [timeframe, setTimeframe] = useState<TimeframeCode>("D");
   // S-02.07-01 视口：按 (code, period) 记忆，默认 120 根；切标的/周期各用各的
   const [viewport, setViewportState] = useState<ChartViewport | null>(null);
@@ -213,7 +230,49 @@ export function WorkbenchPage({
     setAppliedParams(stored);
   }, []);
   // B2 主图叠加与副图选择：纯客户端切换，指标实例已全量下发
-  const [overlayIds, setOverlayIds] = useState<string[]>(DEFAULT_B2_OVERLAYS);
+  // S-02.02-02：chart.overlays[] 本地持久化，容量 2，K 线本身不计入
+  const [overlayIds, setOverlayIds] = useState<string[]>(() => {
+    try {
+      const raw = window.localStorage.getItem("aka.chart.overlays");
+      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+      if (Array.isArray(parsed)) {
+        const ids = parsed.filter((item): item is string => typeof item === "string");
+        return ids.slice(0, MAX_MAIN_OVERLAYS);
+      }
+    } catch {
+      /* 存储损坏时回默认 */
+    }
+    return DEFAULT_B2_OVERLAYS;
+  });
+  // S-02.02-02：复权/叠加选择落本地，重启恢复
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("aka.chart.adj", adj);
+    } catch {
+      /* 存储不可用不阻塞主流程 */
+    }
+  }, [adj]);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("aka.chart.overlays", JSON.stringify(overlayIds));
+    } catch {
+      /* 存储不可用不阻塞主流程 */
+    }
+  }, [overlayIds]);
+  /** 切换计时起点：复权/周期按钮点击时写入，数据落图后打 switch.*_ms */
+  const switchStartRef = useRef<{ at: number; kind: "period" | "adj" } | null>(null);
+  const pendingSwitchRef = useRef<{
+    at: number;
+    kind: "period" | "adj";
+    security: string;
+    timeframe: TimeframeCode;
+    adj: "none" | "qfq" | "hfq";
+    barsMs: number;
+    calcMs: number;
+  } | null>(null);
+  const lastSwitchKeyRef = useRef(`${adj}|${timeframe}`);
+  /** 首次切换立即发请求；请求在途时的后续连点仍走 100ms 防抖，只保留最后一次 */
+  const inFlightRef = useRef(false);
   // S-02.03-01：副图格（含成交量）的顺序与高度，全局持久化
   const [subPlots, setSubPlots] = useState<SubPlotSetting[]>(readSubPlots);
   const subIds = useMemo(
@@ -288,6 +347,35 @@ export function WorkbenchPage({
     setViewportState(next);
   }, [bars, activeCode, timeframe, viewportKey]);
   const [loading, setLoading] = useState(false);
+  /** 切换超过 120ms 才换骨架；120ms 内保留旧图 + 半透明遮罩 */
+  const [slowLoading, setSlowLoading] = useState(false);
+  useEffect(() => {
+    if (!loading) {
+      setSlowLoading(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSlowLoading(true), 120);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
+
+  // S-02.02-02：切换耗时在状态提交后打点——click → 新数据上图（DOM 提交）的耗时，
+  // 不含 rAF 排队那一帧，避免 AC-02.02-02 的 150ms 被浏览器调度噪声吃掉。
+  useLayoutEffect(() => {
+    const pending = pendingSwitchRef.current;
+    if (loading || !pending) return;
+    pendingSwitchRef.current = null;
+    const totalMs = performance.now() - pending.at;
+    void ipc
+      .telemetryNote(pending.kind === "adj" ? "switch.adj_ms" : "switch.period_ms", {
+        total_ms: Math.round(totalMs * 10) / 10,
+        security: pending.security,
+        timeframe: pending.timeframe,
+        adj: pending.adj,
+        bars_ms: Math.round(pending.barsMs * 10) / 10,
+        calc_ms: Math.round(pending.calcMs * 10) / 10,
+      })
+      .catch(() => undefined);
+  }, [loading]);
   const [error, setError] = useState<AppError | null>(null);
   // 数据不足的内联提示按指标 id 归位，不上升为全局错误条
   const [calcNotices, setCalcNotices] = useState<Record<string, string> | null>(null);
@@ -386,9 +474,20 @@ export function WorkbenchPage({
   useEffect(() => {
     if (!isTauriRuntime()) return;
     let cancelled = false;
+    // 复权/周期切换：首次点击立即取数（AC-02.02-02 总耗时 ≤150ms）；在途连点按 100ms 防抖只留最后一次
+    const switchKey = `${adj}|${timeframe}`;
+    const isSwitch = lastSwitchKeyRef.current !== switchKey;
+    lastSwitchKeyRef.current = switchKey;
+    const debounceMs =
+      isSwitch && switchStartRef.current
+        ? inFlightRef.current
+          ? 100
+          : 0
+        : REQUEST_DEBOUNCE_MS;
     const timer = window.setTimeout(() => {
       if (cancelled) return;
       const current = ++generation.current;
+      inFlightRef.current = true;
       setLoading(true);
       setError(null);
 
@@ -426,6 +525,7 @@ export function WorkbenchPage({
       Promise.all([barsPromise, calcPromise])
         .then(([nextBars, calcResult]) => {
           if (current !== generation.current) return;
+          inFlightRef.current = false;
           setBars(nextBars);
           barsRef.current = nextBars;
           setLoading(false);
@@ -449,6 +549,20 @@ export function WorkbenchPage({
               setCalcNotices(null);
               setError(failure);
             }
+          }
+
+          // S-02.02-02：复权/周期切换总耗时写入 telemetry（AC-02.02-02 的 switch.period_ms 取证）。
+          // 打点推迟到本批状态提交之后（useLayoutEffect），避免把 rAF 排队的一帧算进切换耗时。
+          if (isSwitch && switchStartRef.current) {
+            pendingSwitchRef.current = {
+              ...switchStartRef.current,
+              security: activeCode,
+              timeframe,
+              adj,
+              barsMs,
+              calcMs,
+            };
+            switchStartRef.current = null;
           }
 
           if (phaseAtIssue !== "debounce" && phaseAtIssue !== "cold" && phaseAtIssue !== "warm") {
@@ -495,7 +609,7 @@ export function WorkbenchPage({
           const waiter = diagWaiters.current.shift();
           if (waiter) waiter(sample);
         });
-    }, REQUEST_DEBOUNCE_MS);
+    }, debounceMs);
 
     return () => {
       cancelled = true;
@@ -873,6 +987,113 @@ export function WorkbenchPage({
     };
   }, [manifest, registry, securities]);
 
+  // S-02.02-02 复权切换取证：AKA_DIAG_TARGET=s20202 时自跑一次
+  const s20202Started = useRef(false);
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (s20202Started.current) return;
+    let alive = true;
+    let minWait = 0;
+    const waitReady = async (label: string, timeoutMs = 8000) => {
+      if (minWait > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, minWait));
+        minWait = 0;
+      }
+      let previous = "";
+      let stable = 0;
+      let lastNode = false;
+      const startedAt = performance.now();
+      while (performance.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, 120));
+        const frame = barsRef.current;
+        const result = calcRef.current;
+        const node = document.querySelector('[data-chart="candle"]');
+        lastNode = node !== null;
+        const signature = [
+          frame?.security,
+          frame?.timeframe,
+          frame?.adj,
+          frame?.bars.length,
+          result?.generation,
+          result?.barCount,
+          node?.getAttribute("data-bar-count"),
+          node?.getAttribute("data-view-start"),
+          node?.getAttribute("data-view-end"),
+        ].join("|");
+        if (frame && result && node && result.barCount === frame.bars.length && signature === previous) {
+          stable += 1;
+          if (stable >= 2) return;
+        } else {
+          stable = 0;
+          previous = signature;
+        }
+      }
+      throw new Error(
+        `等待就绪超时：${label}（node=${lastNode ? "有" : "无"} 末次签名=${previous} error=${
+          document.querySelector(".error-box")?.textContent?.slice(0, 120) ?? "无"
+        }）`,
+      );
+    };
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s20202" || !alive) return;
+      s20202Started.current = true;
+      setDiagStatus("S-02.02-02 取证：运行中");
+      const onCrash = (event: ErrorEvent) => {
+        void ipc.diagWriteNamed(
+          "s20202-crash.json",
+          JSON.stringify(
+            {
+              at: new Date().toISOString(),
+              message: event.message,
+              stack: event.error instanceof Error ? (event.error.stack ?? "") : "",
+            },
+            null,
+            2,
+          ),
+        );
+      };
+      window.addEventListener("error", onCrash);
+      try {
+        const report = await runS20202Diagnostics({
+          getActiveCode: () => activeCodeRef.current,
+          setCode: (code) => {
+            minWait = 600;
+            setActiveCode(code);
+          },
+          setDateRange: (from, to) => {
+            minWait = 700;
+            setDateFrom(from);
+            setDateTo(to);
+          },
+          clearDateRange: () => {
+            minWait = 700;
+            setDateFrom("");
+            setDateTo("");
+          },
+          bars: () => barsRef.current,
+          calc: () => calcRef.current,
+          waitReady,
+          telemetry: () => ipc.telemetryDump(600),
+        });
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-02.02-02 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_S20202_EVIDENCE__ = report;
+      } catch (err) {
+        if (!alive) return;
+        setDiagStatus(`S-02.02-02 取证失败：${describeError(err).message}`);
+      } finally {
+        window.removeEventListener("error", onCrash);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, registry, securities]);
+
   // S-02.05-02 物理重启验证：AKA_DIAG_TARGET=restart 时按 localStorage 标记跑第一次或第二次启动
   useEffect(() => {
     if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
@@ -1113,8 +1334,12 @@ export function WorkbenchPage({
                     key={mode}
                     type="button"
                     aria-pressed={timeframe === mode}
+                    data-timeframe={mode}
                     title={`${label}线`}
-                    onClick={() => setTimeframe(mode)}
+                    onClick={() => {
+                      switchStartRef.current = { at: performance.now(), kind: "period" };
+                      setTimeframe(mode);
+                    }}
                   >
                     {mode}
                   </button>
@@ -1134,7 +1359,11 @@ export function WorkbenchPage({
                     key={mode}
                     type="button"
                     aria-pressed={adj === mode}
-                    onClick={() => setAdj(mode)}
+                    data-adj-mode={mode}
+                    onClick={() => {
+                      switchStartRef.current = { at: performance.now(), kind: "adj" };
+                      setAdj(mode);
+                    }}
                   >
                     {label}
                   </button>
@@ -1212,12 +1441,21 @@ export function WorkbenchPage({
                 className="b2-select"
                 aria-label="主图叠加"
                 data-b2-overlay-select="1"
+                data-overlay-count={overlayIds.length}
                 multiple
                 size={3}
                 value={overlayIds}
+                title={
+                  overlayIds.length >= MAX_MAIN_OVERLAYS
+                    ? `主图最多 ${MAX_MAIN_OVERLAYS} 个叠加，请先移除一个`
+                    : undefined
+                }
                 onChange={(event) =>
                   setOverlayIds(
-                    Array.from(event.target.selectedOptions, (option) => option.value),
+                    Array.from(event.target.selectedOptions, (option) => option.value).slice(
+                      0,
+                      MAX_MAIN_OVERLAYS,
+                    ),
                   )
                 }
               >
@@ -1260,6 +1498,23 @@ export function WorkbenchPage({
             {error && <div className="error-box">{error.message}</div>}
 
             <div className="chart-card">
+              {adj === "none" && (
+                <span className="adj-badge" data-adj-badge="none">
+                  不复权
+                </span>
+              )}
+              {loading && bars && (
+                <div
+                  className="chart-mask"
+                  data-chart-mask="1"
+                  aria-hidden="true"
+                />
+              )}
+              {loading && bars && slowLoading && (
+                <div className="chart-skeleton" data-chart-skeleton="1">
+                  重算中…
+                </div>
+              )}
               {bars ? (
                 <>
                   <ChartCrashBoundary>

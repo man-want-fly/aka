@@ -84,6 +84,7 @@ pub fn run() {
             commands::diag_build_info,
             commands::diag_write,
             commands::diag_write_named,
+            commands::telemetry_note,
         ])
         .run(tauri::generate_context!())
         .expect("AKA 启动失败");
