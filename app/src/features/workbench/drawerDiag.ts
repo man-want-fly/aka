@@ -3,11 +3,64 @@ import type { Category, ManifestResponse } from "../../lib/types";
 
 interface Check {
   id: string;
+  card: string;
   ac: string;
   layer: "data" | "render" | "runtime";
   passed: boolean;
   detail: string;
 }
+
+/** 本套件一份证据里混了多张卡的检查项：card 逐条归位，分母按卡拆。 */
+const cardOf = (ac: string) => {
+  if (ac.startsWith("AC-02.04-01") || ac.startsWith("AC-02.04-02")) return "S-02.04-01";
+  if (ac.startsWith("AC-02.04-03") || ac.startsWith("AC-02.04-04")) return "S-02.04-02";
+  if (ac.startsWith("AC-08.01-02")) return "S-08.01-02";
+  if (ac.startsWith("AC-03.01-05")) return "S-03.01-05";
+  return "未归属";
+};
+
+/** 本卡 AC 全集（S-02.04-02 卡面验收标准），用于现算「本卡 AC 覆盖 x/y」。 */
+const CARD_ACS: Record<string, string[]> = {
+  "S-02.04-02": [
+    "AC-02.04-03",
+    "AC-02.04-03（补1）",
+    "AC-02.04-03（补2）",
+    "AC-02.04-03（补3）",
+    "AC-02.04-04",
+    "AC-02.04-04（补1）",
+    "AC-02.04-04（补2）",
+  ],
+};
+
+const summarizeCards = (checks: Check[]) => {
+  const cards = new Map<string, Check[]>();
+  for (const check of checks) {
+    const list = cards.get(check.card) ?? [];
+    list.push(check);
+    cards.set(check.card, list);
+  }
+  return Array.from(cards.entries()).map(([card, list]) => {
+    const layers: Record<string, string> = {};
+    for (const check of list) {
+      const [passed, total] = (layers[check.layer] ?? "0/0").split("/").map(Number);
+      layers[check.layer] = `${passed + (check.passed ? 1 : 0)}/${total + 1}`;
+    }
+    const acs = CARD_ACS[card];
+    const covered = acs ? acs.filter((ac) => list.some((check) => check.ac === ac && check.passed)) : [];
+    return {
+      card,
+      checks: `${list.filter((check) => check.passed).length}/${list.length}`,
+      layers,
+      ...(acs
+        ? {
+            acCovered: `${covered.length}/${acs.length}`,
+            coveredAcs: covered,
+            uncoveredAcs: acs.filter((ac) => !covered.includes(ac)),
+          }
+        : {}),
+    };
+  });
+};
 
 const CATEGORIES: Category[] = ["trend", "momentum", "volatility", "volume", "stat", "breadth"];
 
@@ -62,7 +115,7 @@ const clickElement = (element: Element | null) => {
 export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const checks: Check[] = [];
   const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
-    checks.push({ id, ac, layer, passed, detail });
+    checks.push({ id, card: cardOf(ac), ac, layer, passed, detail });
   };
 
   const items = manifest.indicators;
@@ -102,7 +155,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const betaCount = items.filter((item) => item.status === "beta").length;
   push(
     "D-02",
-    "AC-02.04-03(补3)",
+    "AC-02.04-03（补3）",
     "data",
     planned.length === 61 && normalCount === 42 && betaCount === 2 && missingMeta.length === 0,
     `规划中 ${planned.length} / normal ${normalCount} / beta ${betaCount} / 缺四字段 ${
@@ -145,7 +198,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   }
   push(
     "R-02",
-    "AC-02.04-03(补3)",
+    "AC-02.04-03（补3）",
     "render",
     plannedInDom.length === 61 &&
       plannedInDom.every((row) => row.hasAbbr && (row.panel === "主" || row.panel === "副")),
@@ -184,7 +237,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const upper = rowIds("[data-drawer-row]");
   push(
     "R-04",
-    "AC-02.04-02",
+    "AC-02.04-02（补1）",
     "render",
     lower.length === 1 &&
       upper.length === 1 &&
@@ -196,7 +249,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   await typeQuery("md");
   push(
     "R-05",
-    "AC-02.04-02",
+    "AC-02.04-02（补2）",
     "render",
     rowIds("[data-drawer-row]").includes("M06"),
     `搜索 md → ${rowIds("[data-drawer-row]").join(",") || "无"}`,
@@ -209,7 +262,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   await sleep(120);
   push(
     "R-06",
-    "S-08.01-02",
+    "AC-08.01-02",
     "render",
     Boolean(empty) && qa("[data-drawer-row]").length > 0,
     `无结果空态=${empty ? "出现" : "缺失"} / 清除后行数=${qa("[data-drawer-row]").length}`,
@@ -223,7 +276,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const hintText = q("[data-drawer-hint]")?.textContent ?? "";
   push(
     "R-07",
-    "AC-02.04-03",
+    "AC-02.04-02（补4）",
     "render",
     Boolean(plannedRow) && hintText.includes("规划中"),
     `点击置灰条目「${plannedRow?.textContent?.trim().slice(0, 12) ?? "无"}」→ 提示「${hintText}」`,
@@ -256,7 +309,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const m06Hint = q("[data-drawer-hint]")?.textContent ?? "";
   push(
     "R-09",
-    "AC-02.04-02(补1)",
+    "AC-02.04-03",
     "render",
     m06Button?.dataset.drawerAdded === "1" &&
       Boolean(m06Button?.textContent?.includes("已添加")) &&
@@ -342,7 +395,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const paramsAfter = window.sessionStorage.getItem("aka.workbench.params.v1");
   push(
     "R-11",
-    "AC-02.04-03(补1)",
+    "AC-02.04-03（补1）",
     "render",
     v01Disabled &&
       qa("[data-sub-panel]").length === 3 &&
@@ -360,7 +413,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   );
   push(
     "D-03",
-    "AC-02.04-03(补1)",
+    "AC-02.04-03（补1）",
     "data",
     paramsBefore === paramsAfter && Boolean(paramsBefore?.includes("10")) && Boolean(paramsAfter?.includes("10")),
     `新增被拒前后参数快照 ${paramsBefore ?? "null"} → ${paramsAfter ?? "null"}`,
@@ -380,7 +433,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   await sleep(200);
   push(
     "R-12",
-    "AC-02.04-03(补2)",
+    "AC-02.04-03（补2）",
     "render",
     reEnabled &&
       qa("[data-sub-panel]").length === 3 &&
@@ -399,7 +452,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const subHasMainButton = Boolean(subRow?.querySelector('[data-drawer-add$=":main"]'));
   push(
     "R-13",
-    "AC-02.04-04(补1)",
+    "AC-02.04-04（补1）",
     "render",
     Boolean(mainRow) && !mainHasSubButton && Boolean(subRow) && !subHasMainButton,
     `T08(主) 带副图按钮=${mainHasSubButton} / M02(副) 带主图按钮=${subHasMainButton}`,
@@ -442,7 +495,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const m02ColdMs = Number(lastCold("M02")?.fields.coldMs ?? Number.NaN);
   push(
     "R-15",
-    "AC-02.04-04(补2)",
+    "AC-02.04-04（补2）",
     "runtime",
     Boolean(m02Path) &&
       m06ColdMs <= 300 &&
@@ -464,7 +517,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     : -1;
   push(
     "R-16",
-    "AC-02.04-04(补2)",
+    "AC-02.04-04（补2）",
     "render",
     Number.isFinite(animMs) && animMs >= 180 && animMs <= 200 && covering === 0,
     `面板动画 ${animMs.toFixed(0)}ms / 覆盖坐标轴的绝对定位层 ${covering} 个`,
@@ -500,7 +553,7 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const noTargetHint = q("[data-drawer-hint]")?.textContent ?? "";
   push(
     "R-17",
-    "AC-03.01-05(补1)",
+    "AC-03.01-05（补1）",
     "render",
     noTargetName.includes("未选择标的") &&
       Boolean(guide) &&
@@ -519,7 +572,9 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   const report = {
     ok: checks.every((check) => check.passed),
     finishedAt: new Date().toISOString(),
+    cardUnderTest: "S-02.04-02",
     context: { manifestCount: items.length, plannedCount: planned.length, implementedCount: implemented },
+    cards: summarizeCards(checks),
     checks,
   };
   await ipc.diagWriteNamed("s20401-evidence.json", JSON.stringify(report, null, 2));

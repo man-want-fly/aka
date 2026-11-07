@@ -19,11 +19,33 @@ export const restartDiagStage = () => currentStage;
 
 interface Check {
   id: string;
+  card: string;
   ac: string;
   layer: "data" | "render" | "runtime";
   passed: boolean;
   detail: string;
 }
+
+const CARD = "S-02.05-02";
+/** 本卡 AC 全集（S-02.05-02 卡面验收标准），用于现算「本卡 AC 覆盖 x/y」。 */
+const CARD_ACS = ["AC-02.05-04", "AC-02.05-04（补1）", "AC-02.05-04（补2）", "AC-02.05-04（补3）"];
+
+const summarize = (checks: Check[]) => {
+  const layers: Record<string, string> = {};
+  for (const check of checks) {
+    const [passed, total] = (layers[check.layer] ?? "0/0").split("/").map(Number);
+    layers[check.layer] = `${passed + (check.passed ? 1 : 0)}/${total + 1}`;
+  }
+  const covered = CARD_ACS.filter((ac) => checks.some((check) => check.ac === ac && check.passed));
+  return {
+    card: CARD,
+    checks: `${checks.filter((check) => check.passed).length}/${checks.length}`,
+    layers,
+    acCovered: `${covered.length}/${CARD_ACS.length}`,
+    coveredAcs: covered,
+    uncoveredAcs: CARD_ACS.filter((ac) => !covered.includes(ac)),
+  };
+};
 
 const q = <T extends Element>(selector: string) => document.querySelector<T>(selector);
 const qa = <T extends Element>(selector: string) =>
@@ -83,8 +105,8 @@ const storedParams = () => {
 
 export async function runRestartDiagnostics(defaults: WorkbenchParams) {
   const checks: Check[] = [];
-  const push = (id: string, layer: Check["layer"], passed: boolean, detail: string) => {
-    checks.push({ id, ac: "AC-02.05-04", layer, passed, detail });
+  const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
+    checks.push({ id, card: CARD, ac, layer, passed, detail });
   };
 
   const marker = window.localStorage.getItem(MARK);
@@ -114,7 +136,7 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
     chosen.querySelector<HTMLButtonElement>(".wl-row-main")?.click();
     markStage("wait default sub title A");
     await waitFor(() => subTitle("MACD(12,26,9)"));
-    push("PA-01", "render", Boolean(code) && Boolean(subTitle("MACD(12,26,9)")), `已选中 ${code}，副图标题 MACD(12,26,9)`);
+    push("PA-01", "AC-02.05-04", "render", Boolean(code) && Boolean(subTitle("MACD(12,26,9)")), `已选中 ${code}，副图标题 MACD(12,26,9)`);
 
     markStage("apply 10/22/8 A");
     setNumber("#macd-fast", 10);
@@ -126,14 +148,15 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
     await waitFor(() => subTitle("MACD(10,22,8)"), 5_000);
 
     const stored = storedParams();
-    push("PA-02", "render", Boolean(subTitle("MACD(10,22,8)")), "应用后副图标题 MACD(10,22,8)");
+    push("PA-02", "AC-02.05-04", "render", Boolean(subTitle("MACD(10,22,8)")), "应用后副图标题 MACD(10,22,8)");
     push(
       "PA-03",
+      "AC-02.05-04",
       "data",
       stored?.fast === 10 && stored?.slow === 22 && stored?.signal === 8,
       `应用后 sessionStorage = ${stored ? `${stored.fast}/${stored.slow}/${stored.signal}` : "空"}`,
     );
-    push("PA-04", "render", triplet() === "10/22/8", `应用后 ParamPanel 显示 ${triplet()}`);
+    push("PA-04", "AC-02.05-04", "render", triplet() === "10/22/8", `应用后 ParamPanel 显示 ${triplet()}`);
 
     // ---- AC-02.05-04 主路径：点「恢复默认」→ 图例回 12,26,9 → 按钮 disabled ----
     markStage("restore click A");
@@ -143,18 +166,19 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
     markStage("wait disabled after restore");
     await waitFor(() => (restoreButton()?.disabled ? true : null));
     const restore = restoreButton()!;
-    push("PA-05", "render", triplet() === "12/26/9", `恢复后 ParamPanel 显示 ${triplet()}`);
-    push("PA-06", "render", Boolean(subTitle("MACD(12,26,9)")), "恢复后副图标题 MACD(12,26,9)");
-    push("PA-07", "render", restore.disabled === true, `恢复后按钮 disabled=${restore.disabled}`);
+    push("PA-05", "AC-02.05-04", "render", triplet() === "12/26/9", `恢复后 ParamPanel 显示 ${triplet()}`);
+    push("PA-06", "AC-02.05-04", "render", Boolean(subTitle("MACD(12,26,9)")), "恢复后副图标题 MACD(12,26,9)");
+    push("PA-07", "AC-02.05-04", "render", restore.disabled === true, `恢复后按钮 disabled=${restore.disabled}`);
 
     // ---- 补1：tooltip + 点击禁用按钮无新请求（渲染层 + 运行层）----
-    push("PA-08", "render", restore.title === "当前即为默认参数", `恢复按钮 tooltip=「${restore.title}」`);
+    push("PA-08", "AC-02.05-04（补1）", "render", restore.title === "当前即为默认参数", `恢复按钮 tooltip=「${restore.title}」`);
     const before = await computeCount();
     restore.click(); // disabled 按钮的点击不触发处理函数
     await sleep(400);
     const after = await computeCount();
     push(
       "PA-09",
+      "AC-02.05-04（补1）",
       "runtime",
       before === after,
       `点击禁用按钮前后 indicator.compute 计数 ${before} → ${after}`,
@@ -180,7 +204,13 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
       exitMethod: "kill -TERM aka-desktop 进程（等同关闭应用窗口）",
     };
     window.localStorage.setItem(MARK, JSON.stringify(phaseA));
-    const reportA = { ok: checks.every((check) => check.passed), phase: "before-exit", checks, phaseA };
+    const reportA = {
+      ok: checks.every((check) => check.passed),
+      phase: "before-exit",
+      cardSummary: summarize(checks),
+      checks,
+      phaseA,
+    };
     await ipc.diagWriteNamed("s20502-restart-evidence.json", JSON.stringify(reportA, null, 2));
     return reportA;
   }
@@ -196,9 +226,10 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
   const initial = triplet();
   const restore = restoreButton()!;
 
-  push("PA-10", "data", storedNow === null, `重启后 sessionStorage = ${storedNow ? "非空" : "空"}`);
+  push("PA-10", "AC-02.05-04（补2）", "data", storedNow === null, `重启后 sessionStorage = ${storedNow ? "非空" : "空"}`);
   push(
     "PA-11",
+    "AC-02.05-04（补2）",
     "render",
     initial === `${defaults.fast}/${defaults.slow}/${defaults.signal}` &&
       defaults.fast === 12 &&
@@ -206,9 +237,10 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
       defaults.signal === 9,
     `重启后首屏参数 ${initial}（manifest 默认 ${defaults.fast}/${defaults.slow}/${defaults.signal}）`,
   );
-  push("PA-12", "render", restore.disabled === true, `重启后恢复按钮 disabled=${restore.disabled}`);
+  push("PA-12", "AC-02.05-04（补2）", "render", restore.disabled === true, `重启后恢复按钮 disabled=${restore.disabled}`);
   push(
     "PA-13",
+    "AC-02.05-04（补2）",
     "render",
     document.body.textContent?.includes("MACD(10,22,8)") !== true,
     "重启首屏无残留 MACD(10,22,8)",
@@ -221,7 +253,7 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
   if (!target) throw new Error("找不到要重新打开的标的");
   target.querySelector<HTMLButtonElement>(".wl-row-main")?.click();
   await waitFor(() => subTitle("MACD(12,26,9)"));
-  push("PA-14", "render", Boolean(subTitle("MACD(12,26,9)")), `打开 ${phaseA.code} 后副图标题 MACD(12,26,9)`);
+  push("PA-14", "AC-02.05-04（补2）", "render", Boolean(subTitle("MACD(12,26,9)")), `打开 ${phaseA.code} 后副图标题 MACD(12,26,9)`);
 
   // ---- 补3：20 根日线 + 恢复默认 → 副图内联「MACD 需要 34 根，当前 20 根」，不报错 ----
   markStage("apply 10/22/8 B");
@@ -271,9 +303,9 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
     const text = node?.textContent ?? "";
     return text.includes("MACD 需要 34 根，当前 20 根") ? text : null;
   }, 8_000);
-  push("PA-15", "render", notice === "MACD 需要 34 根，当前 20 根", `副图提示「${notice}」`);
-  push("PA-16", "render", !q(".error-box"), "20 根时无全局错误条");
-  push("PA-17", "render", triplet() === "12/26/9", `20 根时恢复默认后 ParamPanel 显示 ${triplet()}`);
+  push("PA-15", "AC-02.05-04（补3）", "render", notice === "MACD 需要 34 根，当前 20 根", `副图提示「${notice}」`);
+  push("PA-16", "AC-02.05-04（补3）", "render", !q(".error-box"), "20 根时无全局错误条");
+  push("PA-17", "AC-02.05-04（补3）", "render", triplet() === "12/26/9", `20 根时恢复默认后 ParamPanel 显示 ${triplet()}`);
 
   window.localStorage.removeItem(MARK);
   const report = {
@@ -291,6 +323,7 @@ export async function runRestartDiagnostics(defaults: WorkbenchParams) {
       insufficientNotice: notice,
     },
     checks,
+    cardSummary: summarize(checks),
   };
   await ipc.diagWriteNamed("s20502-restart-evidence.json", JSON.stringify(report, null, 2));
   return report;
