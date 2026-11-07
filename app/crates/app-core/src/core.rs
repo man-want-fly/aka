@@ -1969,6 +1969,8 @@ mod tests {
                 amount: volume * close,
                 adj_factor: 1.0,
                 quality: vec![],
+                batch_id: None,
+                ingested_at: None,
             });
             date = date.next_weekday();
         }

@@ -195,14 +195,15 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
   );
   const normalCount = items.filter((item) => item.status === "normal").length;
   const betaCount = items.filter((item) => item.status === "beta").length;
+  const statusTotal = planned.length + normalCount + betaCount;
   push(
     "D-02",
     "AC-02.04-03（补3）",
     "data",
-    planned.length === 61 && normalCount === 42 && betaCount === 2 && missingMeta.length === 0,
-    `规划中 ${planned.length} / normal ${normalCount} / beta ${betaCount} / 缺四字段 ${
+    statusTotal === manifest.catalogTotal && betaCount === 2 && missingMeta.length === 0,
+    `规划中 ${planned.length} / normal ${normalCount} / beta ${betaCount} / 加总 ${statusTotal}=目录总量 ${manifest.catalogTotal} / 缺四字段 ${
       missingMeta.map((item) => item.id).join(",") || "无"
-    }（manifest.catalogTotal=${manifest.catalogTotal} 为目录规划总量，非 status=planned 的条数）`,
+    }（分布数值不在此抄第二份，由 verify:constants 对照 constants.json 核）`,
   );
 
   // ---- 渲染层 ----
@@ -242,9 +243,9 @@ export async function runDrawerDiagnostics(manifest: ManifestResponse) {
     "R-02",
     "AC-02.04-03（补3）",
     "render",
-    plannedInDom.length === 61 &&
+    plannedInDom.length === planned.length &&
       plannedInDom.every((row) => row.hasAbbr && (row.panel === "主" || row.panel === "副")),
-    `置灰条目 ${plannedInDom.length} / 缺缩写 ${plannedInDom.filter((row) => !row.hasAbbr).length} / 面板异常 ${plannedInDom.filter((row) => row.panel !== "主" && row.panel !== "副").length}`,
+    `置灰条目 ${plannedInDom.length} / 数据层规划中 ${planned.length} / 缺缩写 ${plannedInDom.filter((row) => !row.hasAbbr).length} / 面板异常 ${plannedInDom.filter((row) => row.panel !== "主" && row.panel !== "副").length}`,
   );
 
   await typeQuery("MACD", () => (qa<HTMLElement>("[data-drawer-row]")[0]?.dataset.drawerRow ?? "") === "M06");
