@@ -965,10 +965,10 @@ Then 三次均返回同一标的（宁德时代 `300750.SZ`）；性能按 V-07 
 1. **WARN 由 1 → 0**：`裁定迁移未完成：T03 / T21 仍为 status=beta…` 这条消失，`告警` 段不再输出。
 2. **PASS 由 16 → 20**（新增 4 条正向断言，缺一即 FAIL）：
    - `beta 集合` = `{T16, T19}` 且数量 = `catalog.rulings.afterT03T21Promotion.beta`（2）；
-   - `normal 条数` = `catalog.rulings.afterT03T21Promotion.normal`（42）；
+   - `normal 条数` = `catalog.rulings.afterT03T21Promotion.normal`（写此单时为 42；`D01` 转 `normal` 后现值 **43**，以 `constants.json` 为准，脚本不写死）；
    - `T03.specStatus` 与 `T21.specStatus` 均 = `manualComplete`（口径文本已补全）；若仍为 `partial`，全量待定会是 17 而不是 15，视为 W-24 未完成；
    - 全量 `specStatus != manualComplete` 条数 = `catalog.rulings.afterT03T21Promotion.pendingSpecAll`（15）。
-3. **不变的断言**：`implemented` 仍 44、`planned` 仍 61、`completeness` 仍 78/19/8、`pendingSpecPlanned` 仍 13、`isCompletion` 仍 6。若这五项有任何一项变化，说明改错了对象（例如把 T16 也转了正）。
+3. **不变的断言**：`implemented` 仍 44、`planned` 仍 61、`completeness` 仍 78/19/8、`pendingSpecPlanned` 仍 13、`isCompletion` 仍 6（写此单时值；`D01` 转 `normal` 后现为 implemented **45**、planned **60**，总量 105 不变，见 `W-66` 第 4 条）。若这五项有任何一项变化，说明改错了对象（例如把 T16 也转了正）。
 4. **文档侧**：baseline 仅剩 `sector-12` 1 条，且属有意保留（V1 说明 + 表结构约束）。要到「零漂移」，需由脚本把这 1 条的白名单改成正则收窄（只匹配「MVP 启用 12 行业」表述，放过含 `V1` / `待产品确认` 的行），再删除 baseline 条目；**不要把新漂移加进 baseline**。
 
 **验收命令**：
@@ -1507,11 +1507,12 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 **背景**：卡面没有任何 AC 承诺「导出四态各自可达」，而 `WL-23C1..C4` 被挂到 `AC-08.02-05（补1）`，读起来像失败路径已验证；`R-LAT` 的 250ms 上限也在卡面无依据。
 
 1. 在 `S-08.02-04` 的「导出诊断」段补：「四种状态文案各自正确渲染；`ok`/`no-download`/`both-fail` 由 dev-only 注入，注入在 release 不生效，不代表失败路径已真实发生。」并给该段锚点 `S-08.02-04·导出四态（渲染层）`。**（已落 `d27f640`，卡面 L5781）**
-2. 在 `S-02.04-01` / `AC-02.04-02` 处补：「产品承诺 200ms；验收上限 250ms（含调度余量）」。若产品不认 250ms，则改为 dev 优化到 200ms 内，本条不写。**（未落）**
+2. 在 `S-02.04-01` / `AC-02.04-02` 处补：「产品承诺 200ms；验收上限 250ms（含调度余量）」。若产品不认 250ms，则改为 dev 优化到 200ms 内，本条不写。**（已落 `045cbd6`，卡面 L1006 / L1025）**
 3. **不新增 AC、不涨分母**；断言映射改到上述锚点，由 dev A 在 `W-64` 同步改。**（已落）**
-4. **基数写清**：`D01` 转 `normal` 后，索引与台账 `S-03.01-01` 行的「可添加 44 + planned 61」改为「45 + 60」；`verify:docs` 的 45/45 是「可添加指标 45」的文档覆盖，不是新增检查项。**（未落）**
+4. **基数写清**：`D01` 转 `normal` 后，索引与台账 `S-03.01-01` 行的「可添加 44 + planned 61」改为「45 + 60」；`verify:docs` 的 45/45 是「可添加指标 45」的文档覆盖，不是新增检查项。**（已落 `045cbd6`，索引 L22、台账 L104；`normal` 43 / `beta` 2 同步写清）**
 5. **纪律**：`S-02.04-01` **补句前不签、补后重跑转绿再签**，不许长期停在「有条件」。`R-LAT` 实测 **221ms** 保留在案；若补句后它是唯一卡口，再定「优化到 200ms 内」或「认 250ms 并改产品口径」，二者择一，不允许默认漂移。
 6. **验收**：`verify:docs` / `verify:constants` 绿；索引 74 / 207.9 不变；两处 45/60 改完。
+7. **TL 结项（2026-11-08，见 §4.7.35）**：第 1/3 条 `d27f640`、第 2/4 条 `045cbd6`，六条全部落地；纪律执行到位（221ms 保留、补句后重跑 9/9），`S-02.04-01` 已签 `f3037e6`。**结项。**
 
 ### W-67（dev A）合并后三处小修
 
@@ -1519,6 +1520,18 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 2. **`beta === 2` 硬编码**：从 `drawerDiag.ts` 挪到 `constants.json`，断言改为「DOM beta 徽标数 = 数据层 beta 数」；`R-02` 补 `planned.length > 0` 防双零。
 3. **生产装配断言**：补一条 `data-provider` 侧测试，证明 ingestion 路径确实写入 `batch_id`/`ingested_at`（现在只有 `core.rs:101-102` 的 DTO 透传，测试构造器补 `None` 证明不了生产赋值）。
 4. **验收**：`W-64` 全绿；证据 `verify:evidence` 通过；`verify:constants` 总数 105 不变。
+5. **TL 复核（2026-11-08，见 §4.7.35）：三件已落 `f3037e6`，签 `f3037e6`。** `R-17 → S-03.01-04`、`beta` 读单一源、装配断言（日/周逐根）均成立。**但第 3 条的实现方式是 `app-core` 侧装配断言（`AppCore::new_mock()`），不是字面要求的 `data-provider` 侧测试**——因桌面端 `src-tauri/src/lib.rs:103` 就是 `new_mock()`、`Tushare` 仍是骨架，该断言跑的确实是当前生产装配路径，故按「达成意图」签；`Tushare` 接入时必须补 provider 级 provenance 断言，否则会退化为绑定 mock 常量。
+
+### W-68（dev A）`verify:evidence` 加固：跨卡借分母即红、旧格式限期清零、`ac` 口径校验
+
+**背景**：`f3037e6` 引入的 `verify:evidence` 只查 `card ∈ 卡集`，未按 `W-60` 第 3 条做 `set(check.card) == 声明卡集`。实测：往 `s20401-evidence.json` 塞一条真实他卡 check，脚本仅 `WARN`、`exit 0`，且因 `metaTotal != checks.length` 直接跳过 `layers` 现算；再把 `layers` 改成任意值仍 `exit 0`。旧格式 warning 无截止条件，等于永久后门。
+
+1. **归属闭合**：每个证据文件必须满足 `set(checks.card) == {result.card} ∪ otherCards[].card`；多一张未声明的卡、少一张已声明的卡，都 `exit 1`。`W-60` 原句是 `== {cardId}`，出现 `otherCards` 就必须显式声明并逐卡现算，不许用「多阶段」绕过。
+2. **逐卡现算**：`result.layers` 与每条 `otherCards[].layers` 都由 `checks` 按 `card + layer` 现算比对；任何一份声明与现算不一致即红。`metaTotal != checks.length` 时**不再降级为 warning**，直接红（确需多阶段就用显式 `stages` 字段逐阶段现算）。
+3. **旧格式截止**：冻结白名单（文件名 + `sha256`）——白名单外任何 check 缺 `card` 即红；白名单文件内容任一字节变动、hash 不匹配即红（强制迁移，不许改了内容还赖在旧格式里）；**2026-11-22 之后**无论是否白名单，缺 `card` 一律红。
+4. **`ac` 校验（口径按 §4.7.35 第 7 条）**：`ac` 以 `AC-` 开头时，必须是该 check 所属卡的 AC，且能在卡面找到该 AC 字面；`ac` 含 `·`（卡面锚点）时，必须能在卡面全文逐字命中。**不许为了让 `S-08.02-04` 过门禁而放宽此校验。**
+5. **负例自测（缺一不签）**：① 塞一条他卡 check → 红；② 手改 `layers` 与 checks 不符 → 红；③ 旧白名单文件改一个字 → 红；④ `ac` 写不存在的锚点 → 红。四条各留一份红路径 run 记录，再还原成绿。
+6. **验收**：在现有 19 份证据上 `verify:evidence` 绿（warning 仅允许白名单内且未到期）；第 5 条四条负例逐条红；`verify:constants` / `verify:docs` 不受影响。
 
 ### W-59（dev A）`verify:docs` 转 required
 
@@ -1574,4 +1587,4 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）、**W-41**（blocked 归零 + 证据归档 + `WL-15` 改判据 + 格式化扫描）、**W-43**（白名单收窄 + `WL-10/10r` 归卡 + 缺项补证）必须一并落地；**W-45**（自选空态 / 损坏库页 / 移出失败文案）、**W-46**（只读与损坏库注入通道 + 星标证据入库）为 `S-01.02-01/02/03` 的收口前置；**W-49**（CI release 构建 + 注入符号断言，含红路径取证）把 W-47 的本地实测转为常设门禁（**W-49 已于当日作废，由 W-58 接手**：断言对象改为入口名并加源码级断言）；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。W-33 功能部分已签 `7cbad20`（说明文字见 **W-39**）；W-34 已签 `5131f89`（首跑 run `42355133312` 成功，红路径反例见 **W-39**）。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63/W-64/W-65/W-66/W-67）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；**`W-63` 全签 `8ae6bdc`**、`W-58` 签 `8ae6bdc`；`W-59`/`W-65` 待落地；`W-66` 只落第 1 条，第 2/4 条待办。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63/W-64/W-65/W-66/W-67/W-68）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；**`W-63` 全签 `8ae6bdc`**、`W-58` 签 `8ae6bdc`；`W-66` 六条全落（`d27f640` + `045cbd6`）结项、`W-67` 签 `f3037e6`；`W-59` 待落地、`W-65` 待补 260ms 红路径；**`W-68` 未开签**——`verify:evidence` 现实现不满足 `W-60`。
