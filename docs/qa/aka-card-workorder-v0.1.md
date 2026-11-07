@@ -1359,6 +1359,11 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 - **顺手清理（低优先，随本条一起）**：`corrupt_state_db()` 返回的 `$TMPDIR/aka-diag-corrupt-<pid>/` 在注入结束/退出时清理（或在启动时扫除本进程旧目录）；验收：debug 跑一次 corrupt + 退出后目录不新增。
 - **边界**：只断言二进制不含注入符号，不替代 `W-47` 的「真实库不被覆写」；`storage_rebuild` 等产品命令不在断言范围。
 - **成本**：新增一次 release 构建；CI 需开 cargo 缓存，否则每次全量编。若构建时间不可接受，先记时再议，不许以「慢」为由改成 `cargo check --release`（不产出二进制，测不到）。
+- **回执（dev，2026-11-07，随代码同提交）**：
+  1. `ci.yml` 在 `vite build` 后新增 `release 注入符号门禁（W-49）`，`cargo build --release -p aka-desktop` 后对四个符号逐个断言；计数先落变量再判 `-ne 0`（避开 `grep -c` 0 命中的 exit 1），四条循环内各自打印、不提前退出。
+  2. 命中时打印 `::error::` 标注、命中行号与前后 5 条上下文；任一条非 0 最终 `exit 1`，无 `continue-on-error`。
+  3. 顺手清理：坏库临时副本在 `open_with_fallback` 降级后**立即**删除（不等退出钩子），启动时再扫掉历史 `aka-diag-corrupt-*`；`AppState.db_path` 保留真实路径，`重新生成数据`重建的是产品库。
+  4. 本地验收：干净 HEAD 四符号均 0；debug 跑 `--corrupt-db` 运行中与退出后 `$TMPDIR/aka-diag-corrupt-*` 均为 **0**；corrupt 套件重跑仍 2/2。
 
 ---
 

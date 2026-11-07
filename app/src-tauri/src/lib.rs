@@ -54,10 +54,29 @@ fn corrupt_state_db(path: &std::path::Path) -> std::path::PathBuf {
     temp
 }
 
+/// 崩溃或 SIGTERM 退出可能留下上次的临时库目录，启动时先扫掉，避免逐次累积。
+#[cfg(debug_assertions)]
+fn cleanup_stale_diag_temp() {
+    let Ok(entries) = std::fs::read_dir(std::env::temp_dir()) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        if entry
+            .file_name()
+            .to_string_lossy()
+            .starts_with("aka-diag-corrupt-")
+        {
+            let _ = std::fs::remove_dir_all(entry.path());
+        }
+    }
+}
+
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
     tauri::Builder::default()
         .setup(move |app| {
+            #[cfg(debug_assertions)]
+            cleanup_stale_diag_temp();
             let faults = {
                 #[cfg(debug_assertions)]
                 {
@@ -79,6 +98,7 @@ pub fn run() {
                 .map_err(|err| std::io::Error::other(err.message))?;
             let (core, db_path) = match db_path.clone() {
                 Some(path) => {
+                    let real_path = path.clone();
                     // 坏库注入只作用于临时副本，真实 state.db 与其备份都不动。
                     #[cfg(debug_assertions)]
                     let path = if faults.corrupt_db {
@@ -87,6 +107,13 @@ pub fn run() {
                         path
                     };
                     let db = StateDb::open_with_fallback(&path);
+                    // 坏库副本已降级为内存库，临时目录即刻清掉；不依赖退出钩子。
+                    #[cfg(debug_assertions)]
+                    if faults.corrupt_db {
+                        if let Some(dir) = path.parent() {
+                            let _ = std::fs::remove_dir_all(dir);
+                        }
+                    }
                     #[cfg(debug_assertions)]
                     if faults.read_only_db {
                         db.enable_query_only_for_diag()
@@ -98,7 +125,8 @@ pub fn run() {
                             db.degraded_reason().unwrap_or("unknown")
                         );
                     }
-                    (core.with_state_db(db), Some(path))
+                    // 状态里保留真实路径：「重新生成数据」重建的是产品库，不是临时副本。
+                    (core.with_state_db(db), Some(real_path))
                 }
                 None => {
                     eprintln!("[state.db] 无法解析 home 目录，本次运行不持久化");
