@@ -1,8 +1,8 @@
 {
   "suite": "",
-  "label": "20261108-022834",
-  "runAt": "2026-11-08T02:28:34+08:00",
-  "commit": "e92a151d8088ac37a7300b19f919bf80c036190f",
+  "label": "20261108-025344",
+  "runAt": "2026-11-08T02:53:44+08:00",
+  "commit": "f3037e6c998721f2547613cd4ab8e2783f812e1a",
   "dirty": false,
   "buildMode": "dev",
   "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"drawer\" target/debug/aka-desktop（NODE_ENV=development vite build 产物）",
@@ -19,7 +19,7 @@
       "runtime": "1/1"
     },
     "blocked": [],
-    "checks": "9/9 属本卡（同文件其余 12 条按 AC 归属拆到 S-02.04-02 / S-03.01-05，不计本卡分母）",
+    "checks": "9/9 属本卡；其余按 AC 归属拆到 S-02.04-02 / S-03.01-04，不计本卡分母",
     "otherCards": [
       {
         "card": "S-02.04-02",
@@ -32,7 +32,7 @@
         "acCovered": "7/7"
       },
       {
-        "card": "S-03.01-05",
+        "card": "S-03.01-04",
         "checks": "1/1",
         "layers": {
           "render": "1/1"

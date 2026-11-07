@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-07T18:28:00.130Z",
+  "finishedAt": "2026-11-07T18:53:27.839Z",
   "cardUnderTest": "S-02.04-02",
   "context": {
     "manifestCount": 105,
@@ -48,7 +48,7 @@
       "uncoveredAcs": []
     },
     {
-      "card": "S-03.01-05",
+      "card": "S-03.01-04",
       "checks": "1/1",
       "layers": {
         "render": "1/1"
@@ -70,7 +70,7 @@
       "ac": "AC-02.04-03（补3）",
       "layer": "data",
       "passed": true,
-      "detail": "规划中 60 / normal 43 / beta 2 / 加总 105=目录总量 105 / 缺四字段 无（分布数值不在此抄第二份，由 verify:constants 对照 constants.json 核）"
+      "detail": "规划中 60 / normal 43 / beta 2（constants=2）/ 加总 105=目录总量 105 / 缺四字段 无"
     },
     {
       "id": "R-01",
@@ -198,7 +198,7 @@
       "ac": "AC-02.04-04（补2）",
       "layer": "runtime",
       "passed": true,
-      "detail": "M06 冷算 0.04ms / M02 冷算 0.06ms / M02 点击→曲线 26ms / 冷样本 45 P95 0.1ms"
+      "detail": "M06 冷算 0.03ms / M02 冷算 0.07ms / M02 点击→曲线 25ms / 冷样本 45 P95 0.13ms"
     },
     {
       "id": "R-16",
@@ -210,7 +210,7 @@
     },
     {
       "id": "R-17",
-      "card": "S-03.01-05",
+      "card": "S-03.01-04",
       "ac": "AC-03.01-05（补1）",
       "layer": "render",
       "passed": true,
