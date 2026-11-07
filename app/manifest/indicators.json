@@ -842,12 +842,14 @@
         {
           "key": "senkouA",
           "labelZh": "先行带 A",
+          "aliases": ["先行带 A"],
           "kind": "line",
           "color": "var(--rise)"
         },
         {
           "key": "senkouB",
           "labelZh": "先行带 B",
+          "aliases": ["先行带 B"],
           "kind": "line",
           "color": "var(--fall)"
         },
@@ -2228,7 +2230,7 @@
         {
           "key": "viPlus",
           "labelZh": "VI+",
-          "aliases": ["VI+", "VI−"],
+          "aliases": ["VI+"],
           "kind": "line",
           "color": "var(--rise)"
         },
