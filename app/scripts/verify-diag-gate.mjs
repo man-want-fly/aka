@@ -27,9 +27,10 @@ const WRITE_COMMANDS = ["diag_faults", "diag_write", "diag_write_named"].filter(
 /** 其余符号是字面量（启动参数 / 环境变量 / 诊断文件名 / 落盘路径）：只能出现在 cfg 覆盖的函数里。 */
 const LITERALS = SYMBOLS.filter((name) => !WRITE_COMMANDS.includes(name));
 
-const root = new URL("../src-tauri/src/", import.meta.url);
-const lib = readFileSync(new URL("lib.rs", root), "utf8");
-const commands = readFileSync(new URL("commands.rs", root), "utf8");
+const root = new URL("../", import.meta.url);
+const lib = readFileSync(new URL("src-tauri/src/lib.rs", root), "utf8");
+const commands = readFileSync(new URL("src-tauri/src/commands.rs", root), "utf8");
+const core = readFileSync(new URL("crates/app-core/src/core.rs", root), "utf8");
 const failures = [];
 
 const handlerBlocks = [];
@@ -71,8 +72,9 @@ const coveredByCfg = (name, lines) => {
 };
 
 const files = {
-  "lib.rs": lib.split("\n"),
-  "commands.rs": commands.split("\n"),
+  "src-tauri/src/lib.rs": lib.split("\n"),
+  "src-tauri/src/commands.rs": commands.split("\n"),
+  "crates/app-core/src/core.rs": core.split("\n"),
 };
 
 /** 从命中行向上找最近的函数定义（跳过注释行）。 */
@@ -84,11 +86,23 @@ const enclosingFn = (lines, at) => {
   return null;
 };
 
+/** 语句级 cfg：命中行上方几条内出现 #[cfg(debug_assertions)]（中间只隔注释/属性/空行）。 */
+const statementGated = (lines, at) => {
+  for (let i = at - 1; i >= Math.max(0, at - 4); i -= 1) {
+    const text = lines[i].trim();
+    if (!text || text.startsWith("//")) continue;
+    if (text.includes("#[cfg(debug_assertions)]")) return true;
+    if (text.startsWith("#[")) continue;
+    return false;
+  }
+  return false;
+};
+
 for (const name of WRITE_COMMANDS) {
-  const result = coveredByCfg(name, files["commands.rs"]);
+  const result = coveredByCfg(name, files["src-tauri/src/commands.rs"]);
   if (!result.ok) failures.push(`fn ${name}：${result.reason}`);
 }
-if (!coveredByCfg("write_diag", files["commands.rs"]).ok) {
+if (!coveredByCfg("write_diag", files["src-tauri/src/commands.rs"]).ok) {
   failures.push("fn write_diag：函数上方未见 #[cfg(debug_assertions)]");
 }
 
@@ -100,6 +114,7 @@ for (const symbol of LITERALS) {
       if (!line.includes(symbol)) return;
       if (line.trim().startsWith("//")) return;
       hits += 1;
+      if (statementGated(lines, at)) return;
       const fn = enclosingFn(lines, at);
       if (!fn) {
         failures.push(`${file}:${at + 1} ${symbol} 不在任何函数内`);

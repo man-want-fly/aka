@@ -210,6 +210,27 @@ fn with_diag_samples(provider: MockProvider) -> MockProvider {
     provider
 }
 
+/// S-08.02-04 取证注入：仅 debug 构建且 `AKA_DIAG=1` + `AKA_DIAG_INF=1` 时，
+/// 把首个实例首个输出的末值改成 +∞，走真实的「Infinity → None + E_INDEFINITE」路径。
+/// 集中在此便于源码层门禁按「函数是否被 cfg 覆盖」检查两个环境变量字面量。
+#[cfg(debug_assertions)]
+fn diag_inject_indefinite(index: usize, end: usize, values: &mut [Vec<f64>]) {
+    if std::env::var("AKA_DIAG").ok().as_deref() != Some("1")
+        || std::env::var("AKA_DIAG_INF").ok().as_deref() != Some("1")
+    {
+        return;
+    }
+    if index != 0 {
+        return;
+    }
+    if let Some(first) = values.first_mut() {
+        let last = end - 1;
+        if last < first.len() {
+            first[last] = f64::INFINITY;
+        }
+    }
+}
+
 impl AppCore {
     pub async fn new(provider: Box<dyn DataProvider>) -> Result<Self, AppError> {
         let dataset_coverage = provider
@@ -794,22 +815,9 @@ impl AppCore {
                         indicator
                             .calc(&view, &params, &mut values)
                             .map_err(|err| calc_error(meta.id, err))?;
-                        // S-08.02-04 取证注入：仅 debug 构建且 `AKA_DIAG=1` + `AKA_DIAG_INF=1` 时，
-                        // 把首个实例首个输出的末值改成 +∞，走真实的「Infinity → None + E_INDEFINITE」路径。
-                        // 正常启动与发布构建都编译掉，产品行为不变（W-47）。
-                        if index == 0 {
-                            #[cfg(debug_assertions)]
-                            if std::env::var("AKA_DIAG").ok().as_deref() == Some("1")
-                                && std::env::var("AKA_DIAG_INF").ok().as_deref() == Some("1")
-                            {
-                                if let Some(first) = values.first_mut() {
-                                    let last = window.end - 1;
-                                    if last < first.len() {
-                                        first[last] = f64::INFINITY;
-                                    }
-                                }
-                            }
-                        }
+                        // S-08.02-04 取证注入：正常启动与发布构建都编译掉，产品行为不变（W-47）。
+                        #[cfg(debug_assertions)]
+                        diag_inject_indefinite(index, window.end, &mut values);
                         let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
                         computed_ms += elapsed_ms;
                         computed += 1;
