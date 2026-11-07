@@ -1329,6 +1329,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   1. 走方案 1：`diag_enabled` / `diag_flag` / `corrupt_state_db` / 窗口置顶全部 `#[cfg(debug_assertions)]`；`data-store::enable_query_only_for_diag` 同；`diag_faults` 与 `diag_enabled` 在 release 恒 `false`。
   2. 坏库注入改为临时目录：把真实库复制到 `$TMPDIR/aka-diag-corrupt-<pid>/state.db`（另留 `state.db.orig` 备份），只写坏副本；真实 `state.db` 不覆写，不再依赖脚本 `.backup`。
   3. 验收：`strings target/release/aka-desktop | grep -c "AKA-DIAG-CORRUPT"` = 0；`--corrupt-db` / `--readonly-db` / `--empty-dataset` 同样 0 命中。
+- **TL 复核（2026-11-07，签 `1292eb9`）**：自跑 release `strings`，五个符号全 0、debug 各 1；`#[cfg(debug_assertions)]` 覆盖 `diag_enabled` / `diag_flag` / `corrupt_state_db` / `enable_query_only_for_diag` / faults 构造 / 窗口置顶整段，release 走 `DiagFaults::default()`；`Cargo.toml` 未给 release 开 `debug-assertions`；release 在 19:37 构建、其后无源码更新。真实库 `quick_check=ok`，坏库只写 `$TMPDIR/aka-diag-corrupt-<pid>/state.db`。CI 只跑 check/test + tsc + vite build，不构建 release，本条验收来自本地实测，不记 CI。**发布门禁解除**（仍待 `1292eb9` 之前的发布流程确认：打包脚本须用 release profile）。小瑕：`$TMPDIR` 有两个未清理的注入副本目录，记在案不派工。
 
 ### W-48｜dev：trace id 写入日志并可断言（开发）
 
@@ -1340,6 +1341,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   2. `AppCore::watchlist` 生成损坏错误时同步 `telemetry.emit("storage.corrupt", { traceId, code, message })`，落 `~/Library/Application Support/aka/logs/telemetry.jsonl`；页面 id 与日志同一字符串。
   3. `watchlist-corrupt` 套件新增 `WL-23-log`（页面 id ∈ `telemetry.jsonl`），由 1 项变 2 项（证据随取证批次入库）。
   4. 第四次：`diag-evidence.sh` 的 meta 改为直接写 `commit` + `dirty`，不再拼 `base`/`patch`；五套件在干净提交上重跑，五份 meta 全部指向同一 commit。
+- **TL 复核（2026-11-07，签 `7abf3b8`）**：页面 `TR-20261107-193116-0002` 在 `~/Library/Application Support/aka/logs/telemetry.jsonl` 命中 1 条 `storage.corrupt`（含 `code`/`message`/`traceId`），同串；corrupt 套件 2/2（`WL-23` + `WL-23-log`）；五份 meta `commit=7abf3b8 / dirty=false`，runAt 全部晚于该提交、早于证据提交。`WL-23-log` 由 `diag-evidence.sh` 抓页面 id 后 grep 日志生成，不是前端自报。格式为标准 `civil_from_days`，时区 epoch+8h。**签**；trace id 仍不可复算，本条只认「页面 id ∈ 日志」。
 
 ---
 
@@ -1350,4 +1352,4 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）、**W-41**（blocked 归零 + 证据归档 + `WL-15` 改判据 + 格式化扫描）、**W-43**（白名单收窄 + `WL-10/10r` 归卡 + 缺项补证）必须一并落地；**W-45**（自选空态 / 损坏库页 / 移出失败文案）、**W-46**（只读与损坏库注入通道 + 星标证据入库）为 `S-01.02-01/02/03` 的收口前置；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。W-33 功能部分已签 `7cbad20`（说明文字见 **W-39**）；W-34 已签 `5131f89`（首跑 run `42355133312` 成功，红路径反例见 **W-39**）。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46）须由 TL 按验收判据复核后才能签。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48）须由 TL 按验收判据复核后才能签。W-47/W-48 已于 2026-11-07 签（`1292eb9` / `7abf3b8`），发布门禁解除。

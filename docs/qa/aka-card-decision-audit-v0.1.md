@@ -1152,6 +1152,33 @@ Gate C：`S-03.04-02` 按 BA `a846473` 的「可签」录入 PASS；`S-06.01-01`
 
 ---
 
+#### 4.7.20 W-47/W-48 复核：两条门禁关闭（2026-11-07，`7abf3b8` / CI `42368632909`）
+
+**一、独立复核（未采信自报）**
+
+- release 二进制 `strings`（我自己跑）：`AKA-DIAG-CORRUPT`、`--corrupt-db`、`--readonly-db`、`--empty-dataset`、`aka-diag-corrupt` **全 0**；同一组在 debug 二进制各 1 命中。release 里有 `storage.corrupt`（正常错误路径）、无 `state.db.orig`。
+- 构建新鲜度：`target/release/aka-desktop` 19:37，`find src-tauri/src crates -name '*.rs' -newer` 为空；`Cargo.toml` 只有 `[profile.dev] opt-level=1`，未给 release 开 `debug-assertions`。快照即 `7abf3b8` 源码（`9266bb8` 只动证据与 `.gitignore`）。
+- 代码边界：`diag_enabled` / `diag_flag` / `corrupt_state_db` 整段 `#[cfg(debug_assertions)]`，`faults` 构造整块分条件编译，release 走 `DiagFaults::default()`；`diag_faults` / `diag_enabled` 在 release 恒 `false`；`enable_query_only_for_diag` 同。不是只包入口。
+- 真实库：`pragma quick_check` = `ok`（90 KB，19:32）；坏库注入只写 `$TMPDIR/aka-diag-corrupt-<pid>/state.db`，另留 `state.db.orig`，不碰产品库。
+- trace id：页面 `TR-20261107-193116-0002` 与 `~/Library/Application Support/aka/logs/telemetry.jsonl` 同串命中 1 条：`{"name":"storage.corrupt","fields":{"code":"INTERNAL","message":"state.db 已损坏：file is not a database","traceId":"TR-20261107-193116-0002"}}`。格式 `TR-YYYYMMDD-HHMMSS-NNNN`（epoch+8h 的上海时间，进程内序号从 1 起），`civil_from_days` 为标准实现。
+- 证据：corrupt 2/2（`WL-23` render、`WL-23-log` data）；五份 meta 统一 `commit=7abf3b8 / dirty=false`，runAt 19:31:12–19:32:15，晚于 `7abf3b8`（19:30:44）、早于 `9266bb8`（19:32:44）——第四次取证终于绑到干净 commit。
+- CI：`1292eb9` 的 run `42368074925` 确为 `cancelled`，不作证据；tip `9266bb8` 的 run `42368632909` `success`，包含全部五个提交。但 CI 只跑 `cargo check/test` + `tsc` + `vite build`，**不构建 release、不跑 strings**——W-47 的验收来自本次本地实测，不能记在 CI 头上。
+
+**二、签名**
+
+- **W-47 签 `1292eb9`**（`lib.rs` / `commands.rs` / `state_db.rs`，方案 1）。
+- **W-48 签 `7abf3b8`**（`error.rs` / `core.rs` / `watchlistDiag.ts` / `diag-evidence.sh`）。
+- **三张 watchlist 卡重绑 `sign_commit=7abf3b8`**：签后 `error.rs` 的 trace 呈现、`core.rs` 的埋点、`watchlistDiag.ts` 的断言均被改，按「签后该范围被改即失效」重新落签；文案与行为未回退，取证在新提交上复跑一致。
+
+**三、遗留（不阻塞，记录在案）**
+
+- `$TMPDIR/aka-diag-corrupt-5153`、`aka-diag-corrupt-5673` 两次注入的副本目录未清理，含 `state.db` 副本；仅 debug 构建产生，建议下次注入完清目录。
+- trace id 仍是现生成、不可复算；本条只要求「页面 id ∈ 日志」，已成立。
+
+> 一句话：W-47/W-48 均签，发布门禁解除。注意这是「编译期不存在」，不是「运行时忽略」——以后别再以 `AKA_DIAG` 名义把开关加回 release。
+
+---
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。
