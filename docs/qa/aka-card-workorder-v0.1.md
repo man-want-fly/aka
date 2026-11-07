@@ -1106,7 +1106,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   | 字段 | 当前位置 | 是否易变 | 处置 |
   |---|---|---|---|
   | `computedMs` | 2 处快照 | **是**（实测耗时） | 归一为 `0` |
-  | `generatedAt` | 5 处快照 | 取决于数据集 manifest | 数据集固定则稳定；**不归一**，但 W-34 的门禁需固定数据集，否则同源漂移 |
+  | `generatedAt` | 5 处 bars 快照 | **是**（墙钟，实测两次跑差 4037 秒） | **归一为 `0`**（字段保留）。原判「数据集固定则稳定、不归一」已由 `7cbad20` 实测推翻，2026-11-07 TL 复核接受扩大范围 |
   | `thresholdMs` / `maxMs` | `baselines/macos-x86_64.json` | 是（机器相关） | 不在本单范围，见边界 |
 - **验收**：① 连续跑两次 `cargo run -p indicator-golden --bin aka-aggregate-export`，第二次 `git diff --exit-code app/bench` **exit 0**；② 两次产物逐文件 `sha256` 相同；③ `grep -ro computedMs app/bench` 的每一处值都是 `0`。
 - **边界**：`app/bench/baselines/`（含机器、rustc、阈值）与 `app/bench/reports/`（由 `aka-golden-report` 生成）**不纳入**本门禁范围，需要时另开单。
@@ -1186,7 +1186,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 - **顺序不能反**：**dev 先加校验**，BA 后改卡；否则 BA 改完重跑 Gate A 仍会因「校验器不覆盖」判 FAIL（第 9 条）。
 - **dev 改动**：`app/scripts/verify_constants.mjs` 增一条派生校验——
   - 名称：`模块数｜脚本自动｜docs/architecture/aka-story-cards-by-tech-module-v0.1.md §2`
-  - 口径：文档 §2 中 `^\| [ABC][0-9]+ ` 行数 = **19**（现算现比，不入 `constants.json`）
+  - 口径：文档 `## 2.`–`## 3.` 段内，**第 2 列**为反引号包裹的 `[ABC][0-9]+` 的行数 = **19**（现算现比，不入 `constants.json`）。原文字写「`^\| [ABC][0-9]+ `」（要求编号在第 1 列）是笔误，实际表形状是「层 \| 编号 + 模块名 \| …」，2026-11-07 已由 dev 按实际形状实现并签（`92199b9`）
   - 反向用例：临时删一行须 exit ≠ 0（按 W-03 self-test 惯例补断言）
 - **BA 改动（卡面 4 类，共 8 处裸写）**：
   1. 表头「交付物」行的路径后标 `（planned，本卡交付）`，满足 4.5 的 G8 豁免形态；
@@ -1201,13 +1201,39 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   ```
 - **收口**：改完由 TL 重跑 Gate A 并更新 `gate-log`；Gate C 仍是 FAIL（交付物未产出），本工单不解除不可放行。
 
+### W-38｜BA 收口：计划单人日自洽 + 两张卡台账升状态（BA）
+
+- **依据**：报告 4.7.13 五。`docs/planning/aka-next-batch-order-v0.1.md` 的工作区改动**三批未提交**；且只改了单卡人日，没改汇总。
+- **改动**：
+  1. `S-03.03-03` 的 `18.0 → 12.0` **保留**（与索引 CSV、台账 v0.13 一致，卡集总量 `207.9` 不变）；
+  2. 同文件 L198「再加约 **18–24** 人日的跨 Epic 补齐」改为「约 **22–24** 人日」（该段 1.5–2.5 + 2.0–3.0 + 6.5 + 12.0 复算）；
+  3. **提交该文件**（不得再随下批拖）；
+  4. 台账把 `S-02.05-01`、`S-02.08-01` 由 `Blocked` 升 **已交付**（Gate C 已签 `525d360` / `1d02300`），派生数一次改全：已交付 `11→13` 张、`36.5→42.5` 人日；剩余 `62→60` 张、`171.4→165.4`；占比 `15.1%→17.8%`（按卡）、`17.6%→20.4%`（按人日）；E-02 行同步。
+- **不改**：卡面、AC、索引 CSV（`estimate_pd` 不变）。
+- **验收**：
+
+  ```bash
+  grep -c "18–24" docs/planning/aka-next-batch-order-v0.1.md        # 期望 0
+  git status --porcelain docs/planning/aka-next-batch-order-v0.1.md  # 期望空
+  # 台账复算：期望 73 207.9 13 42.5 60 165.4 17.8 20.4
+  ```
+
+### W-39｜dev 收口：W-33 说明文字 + W-34 失败日志与首跑（开发）
+
+- **依据**：报告 4.7.13 一#4、二#2。`W-33` 第 3 项说明文字未落地；`W-34` 验收 ③ 未实现、且 CI 从未运行（`main` 领先远端 114 个 commit），故 `d7bf94d` 暂不签。
+- **改动**：
+  1. `app/README.md`（或 `app/bench/ipc-snapshots/` 的说明处）写一句：「本目录不含耗时断言，`computedMs` 与 `provenance.generatedAt` 恒为 0；真实耗时见 `app/bench/baselines/` 与 diag 日志」；
+  2. W-34 的 CI 步骤在 `git diff --exit-code` 前补 `git diff --stat` 与首个差异文件输出（如 `git diff --name-only | head -1`），**保留** `--exit-code` 的退出语义；
+  3. 修完 push，首跑绿后把 run URL 贴到本工单回执；TL 在**同一个** `d7bf94d` 上补签（`gate-log` 只登记卡，本单签字记在工单回执与报告 4.7.13）。
+- **验收**：本地故意改一个 DTO 字段名、不重生成 → 该步 exit 1 且日志含 `--stat` 与文件名；还原后 exit 0。
+
 ---
 
 ## 3. 执行顺序与验收
 
 1. **已完成（BA，2026-11-07）**：W-01、W-02、W-04～W-22。baseline 14 条 → **0 条**（`sector-12` 两条由 W-31 清零）。
-2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）、**W-35**（卡集 `31 Feature / 9 Epic / P0 71+V1 1` 四处改对）、**W-36**（台账 73 张派生数 11 处一次改全）、**W-37**（`S-09.01-01` 卡面 8 处模块数改派生 + 交付物标 planned；**须等 dev 校验先落地**）。改完各跑一次 `npm run verify:constants`。
+2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）、**W-35**（卡集 `31 Feature / 9 Epic / P0 71+V1 1` 四处改对）、**W-36**（台账 73 张派生数 11 处一次改全）、**W-37**（`S-09.01-01` 卡面 8 处模块数改派生 + 交付物标 planned；**须等 dev 校验先落地**，dev 半 `92199b9` 已签、BA 半实测只改了 3 行）、**W-38**（计划单人日汇总自洽 + 两张卡升已交付）。改完各跑一次 `npm run verify:constants`。
 3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
-4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。
+4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。W-33 功能部分已签 `7cbad20`（说明文字见 **W-39**）；W-34 因 CI 从未首跑**暂不签**（`d7bf94d`），口径见 **W-39**。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37）须由 TL 按验收判据复核后才能签。
+6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39）须由 TL 按验收判据复核后才能签。
