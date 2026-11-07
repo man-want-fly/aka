@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "finishedAt": "2026-11-07T18:53:27.839Z",
+  "finishedAt": "2026-11-07T22:59:17.712Z",
   "cardUnderTest": "S-02.04-02",
   "context": {
     "manifestCount": 105,
@@ -198,7 +198,7 @@
       "ac": "AC-02.04-04（补2）",
       "layer": "runtime",
       "passed": true,
-      "detail": "M06 冷算 0.03ms / M02 冷算 0.07ms / M02 点击→曲线 25ms / 冷样本 45 P95 0.13ms"
+      "detail": "M06 冷算 0.04ms / M02 冷算 0.05ms / M02 点击→曲线 28ms / 冷样本 45 P95 0.29ms"
     },
     {
       "id": "R-16",
@@ -222,7 +222,7 @@
       "ac": "AC-02.04-02",
       "layer": "runtime",
       "passed": true,
-      "detail": "产品承诺 200ms、验收上限 250ms（含调度余量）；本次最慢 221ms"
+      "detail": "产品承诺 200ms、验收上限 250ms（含调度余量）；本次最慢 223ms"
     }
   ]
 }

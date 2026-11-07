@@ -540,6 +540,8 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - **台账列（每次签字一行，记入审计 §4.7.45 表）**：`run_id`、`head_sha`、`signed_sha`、`relation(equal|ancestor)`、`ancestor_check(0|非0)`、`conclusion`、`cancelled_runs`、`note`。`conclusion≠success` 或 `ancestor_check≠0` → 不得签。
     - **被取消 run 必须登记**：在 `cancelled_runs` 写 `run_id@sha`，`note` 写取消原因（`concurrency cancel-in-progress`）与覆盖它的 `run_id@tip`；不得留悬空记录，也不得把被取消 run 当成证据。
     - **不选 B/C/D**：B（main 不取消）与 C（按 sha 分组）都变成每次 push 全量跑，macOS runner 成本与排队上升；D（手工 rerun）在活跃推送期会与后续 push 互相取消，形成乒乓。A 的零额外 CI 成本是唯一可持续解。
+17. **两份台账分主（2026-11-08 写死）**：`docs/qa/aka-card-gate-log-v0.1.csv` 由 **TL 写**（Gate A/B/C、`gate_c_source`、`blocker`、`ledger_status` 的签字相关格、`sign_commit`、`sign_scope`），BA 与 dev **只读不写**；`docs/qa/aka-story-completion-ledger-v0.1.md` 由 **BA 写**（逐卡完成状态、人日、派生数），TL 与 dev **只读不写**。越权写入按无效处理：同一提交回退并在审计记一条。两份台账冲突时，完成状态与人日以 BA 台账为准，Gate 与签字以 gate-log 为准，不得互相替代。
+18. **已签卡面改动与失效申报（2026-11-08 起）**：已签字卡面**只允许 BA 改**；任何提交若 diff 击中已签卡（故事卡分节或 `sign_scope` 中的文件路径），提交信息必须带 `Sign-Invalidates: S-xx.xx-xx, ...`，且与 `verify:sign-impact` 实算集合**完全一致**；漏报、多报、非法卡号一律红。TL 在批次边界重签，重签前旧签字按规则 8 失效。失效集合由工具现算，不允许维护「哪些卡已签」的人手名单。**trailer 由工具生成**：提交前跑 `npm run verify:sign-impact -- --staged --print-trailer`，把输出原样粘进提交信息（或走 `git commit -F`）；校验按**集合相等**，不要求字节/顺序一致——工具输出就是全量，少一个即红，因此不存在「应付得过去的最小集合」。
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
 
@@ -1942,7 +1944,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 | `W-77` | `c111f5f` | 卡 `L1156`–`L1167` 参数表回抄 + `AC-02.05-03（补1）` 双框 + `model.ts` MA 一行 | 签 |
 
 - `S-02.05-01` 的 Gate 行在 `c111f5f` 重签：Gate A/B 沿用结论但卡面已改，故同 commit 重新确认；Gate C 来源改为 `dev c111f5f + s20501Diag（11/11）`。技术决策未变，仅范围/呈现回抄 `ParamSpec`。
-- `S-03.04`、`S-03.06` 在 `gate-log` 无行（未交付卡），签字以本表 + 工单为准，不补造卡行。
+- `S-03.04`、`S-03.06` 的缺行按 §4.7.47 补齐（一卡一行）：`W-75` 的 15 张卡全部有行，`W-76` 落 `S-03.06-04`；`W-72` 无卡面改动，不补卡行。
 
 **三、制度第 16 条（CI 包含性口径，选 A；原误写第 15 条，重号已改）**
 
@@ -1980,8 +1982,104 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 | dev B | `S-08.01-02` 指标空态与搜索范围 | P0；与 `W-73` 的 `AC-08.01-05` 无依赖，不互相卡 |
 
 - **批前欠账（不占卡容量，必须先进场）**：① 制度 15/16 改号（本轮已落）；② `verify:sign` 脚本与台账（本轮已落，CI 首次接线需一个绿 run 确认）。
-- **随批做的欠账**：dev A 的 `W-59`（`verify:docs` 转 required，先红一次）与 `W-65`（260ms 红路径）列为本批先做项，做完再开三张新卡；BA 的 `W-73` 三项归属收口随下一批 BA 内容页交付一并复核，不阻塞 dev。
+- **随批做的欠账**：`W-59` 已由 dev A 交付（`4838bb2` 红路径 `exit 2`、`ea107f7` 还原）、`W-65` 已交付（`93ba0f3`，260ms 红路径取证后还原 200ms，`R-LAT 223ms`），两张都待本批边界签。BA 的 `W-73` 三项归属收口已由 BA v0.23 收口，随批复核，不阻塞 dev。
 - **不进本批**：`S-03.01-01`、`S-03.03-01`、`S-03.03-03`、`S-08.02-04` 仍在 Blocked/Blocked-AC，先解 Gate A/C，不占开发容量。
+
+#### 4.7.47 台账分主、`S-02.05-01` 陈留备注与 W-75 缺行补齐（2026-11-08）
+
+**一、分主写死（制度第 17 条）**
+
+- `aka-card-gate-log-v0.1.csv` = **TL 写**，BA / dev 只读；`aka-story-completion-ledger-v0.1.md` = **BA 写**，TL / dev 只读。冲突时完成状态与人日以 BA 台账为准，Gate 与签字以 gate-log 为准。
+- 因此 `db0bfa1` 对 `S-02.05-01` 写 `gate_a/b/c`、`gate_c_source`、`sign_commit`、`sign_scope` **合规**，不属越权；BA 指出「BA 不直接写 gate-log」与我此前口头说的「台账只由 BA 写」两句都只对一半，按本条统一。
+- 同次核对发现两处数据问题，已修：① 该行 `sign_scope` 含 `[2,500]` 的逗号未加引号，CSV 被拆成 13 列；② `gate_c_source` 与 `blocker` 错位（来源写进了 `blocker`，`gate_c_source` 留成 `BA c111f5f`）。修正后 `gate_c_source=dev c111f5f + s20501Diag（11/11）`、`blocker` 为空。
+
+**二、`S-02.05-01` 陈留备注**
+
+- 删除「台账待 BA 升已交付（W-38：11→13 张 / 36.5→42.5）」。
+- 改为已结清实际数：`v0.23（2b638fb）已交付 19 张 / 54.5 人日，剩余 55 张 / 153.4 人日（25.7% / 26.2%）；19+7+4+8+10+1+25=74`。
+- `workorder` 补 `W-72;W-77`，`sign_scope` 补 W-72 参数去夹取；`S-02.05-01` 仍是本批唯一有完整 Gate 行的卡。
+- 同类陈留备注 `S-02.08-01` 的「台账待 BA 升已交付（W-38）」一并删除，改为「v0.23 已结清：本卡计入 19 张 / 54.5 人日，不欠账」；全表该短语现为 0 命中。
+
+**三、缺行口径：一卡一行，不按工单级合并**
+
+- 理由：gate-log 的主键是 `card_id`，Gate A/B/C 与 `sign_commit` 都是卡级；工单级一行无法承载多卡 Gate 状态，会让「签了但没有 Gate」的卡藏在 note 里。工单级签字只在**无卡面改动**时保留在审计 §4.7.45 表。
+- `W-75` 实测扫到 **15 张卡**（`S-03.04-01/02/03`、`S-03.05-01`–`08`、`S-03.06-01`–`04`）：已有 3 张已签卡（`S-03.04-02`、`S-03.05-02`、`S-03.05-05`）因 `f547a00` 改卡面重绑 `c111f5f`；`S-03.04-01` 此前未签，只追加备注；缺的 11 行补齐。**这 12 张未签卡一律不写 `sign_commit`/`sign_scope`**，只在 note 记「W-75 工单签 `c111f5f`（仅文字，非卡签字）」，避免把文字单伪装成卡级签字。
+- `W-76` 对应 `S-03.06-04`：补行，`workorder=W-75;W-76`，注明 `AC-03.06-17` 与卡 `L3364`/`L3371`/`L3395` 统一 `E_PARAM_ORDER`。
+- `W-77` 对应 `S-02.05-01`：已在原行更新，不另开。
+- `W-72` 无卡面改动（代码与 `s20501Diag`），不补卡行；签字以 §4.7.45 工单表为准，并在 `S-02.05-01` 的 `sign_scope` 留痕。
+
+**四、BA 交付确认**
+
+- 逐卡台账 v0.23（`2b638fb`）：四单统一 `c111f5f`；`W-73` 三项收口（④ PRD 追溯标注 + index 补行、⑤ 冻结件维持冻结不阻塞、⑥ 五项门禁全 PASS）已收。gate-log 只读该台账，不反向改数。
+
+**五、CI**
+
+- `42420150354@32d238c` success：`sign-ledger` job 首次接线绿，脚本 `--check` 在 CI 生效。
+- `42421317428@4838bb2` failure：W-59 红路径预期（`verify:docs` 转 required 后内容缺失 `exit 2`），不作签字证据。
+- `42421496454@ea107f7`、`42421602469@c338edc` 均被 `42421684077@00b6640` 覆盖（`cancel-in-progress`）；已按第 16 条入台账，note 写明取消原因与覆盖 run，本行非签字。
+
+#### 4.7.48 gate-log 结构门禁与已签卡面拦截（2026-11-08）
+
+**一、结构门禁（`npm run verify:gate-log`）**
+
+- 脚本：`app/scripts/verify_gate_log.mjs`；CI 在 `sign-ledger` job（`fetch-depth: 0`）内执行。
+- 硬校验：
+  - 严格 12 列；按 RFC4180 解析后必须能规范重序列化（未加引号的逗号、坏引号、多余空白都会现形）。
+  - `card_id` 唯一且匹配 `S-xx.xx-xx`；`ledger_status`、Gate A/B/C、`gate_c_source` 前缀（`BA/dev/TL/CI/自动化/合并`）、`owner` 均在枚举内；`card_id`、`ledger_status`、`gate_a`、`owner`、`note` 必填。
+  - `sign_commit` 必须 40 位小写 hex 且 `git cat-file -e` 可解析；非空时 Gate C 必须 `PASS`、`gate_c_source` 与 `sign_scope` 非空。
+  - 与 `verify:sign` 对齐：若 `sign_commit` 是台账任一 `signed_sha` 的后代（即台账时代之后），必须已登记，且 `relation∈{equal,ancestor}`、`ancestor_check=0`、`conclusion=success`。历史签字（早于台账）只告警不阻断。
+- 逗号规则：**允许逗号，但必须在引号内**；选它而不是「禁止逗号」的理由见第三节。
+- 数据修复：12 张「仅文字」行不再写 `sign_commit`/`sign_scope`（`S-03.04-01` 及 11 张新行）；`S-09.01-01` 的 Gate B 签字 `56c576c` 从 `sign_commit` 移入 note（该列只记 Gate C 通过的卡级签字）；11 个历史短 SHA 补全为 40 位。修后 45 行 / 45 张卡，15 张签字行全部 Gate C=`PASS`。
+- 红路径实测：未加引号的逗号 → 列数/规范形式红；Gate 值改成 `OK` → 枚举红；40 位 SHA 改回 7 位 → 红。还原后绿。
+
+**二、已签卡面拦截（`npm run verify:sign-impact`）**
+
+- 口径：已签卡面**只允许 BA 改**；提交必须带 `Sign-Invalidates: <卡号,...>`，与工具实算完全一致；TL 在批次边界重签。
+- 机制：`app/scripts/verify_sign_impact.mjs` 解析故事卡分节，把 `git diff -U0` 的增删行映射到卡号，再叠加 `sign_scope` 里的文件路径命中；不需要维护「已签卡名单」。这与 `verify:constants` 同属一类：**集合由源文件现算，期望值不住进被校验的数据**。
+- 实测：`f547a00^..f547a00` 报出 4 张已签卡（`S-03.04-02`、`S-03.05-02`、`S-03.05-05` 卡面被改；`S-02.08-01` 因 `sign_scope` 含 `WorkbenchPage.tsx` 被同提交改动命中），缺 trailer 即红；`00b6640..59c8f43` 仅动 `docs/qa`，绿。
+- 限制：`sign_scope` 是自由文本，文件命中靠路径 token；新签字应在 `sign_scope` 写明受影响文件，否则只能靠卡面分节兜底。
+
+**三、逗号是否普遍**
+
+- 现状：29 个非空 `sign_scope` 中只有 1 个含 ASCII 逗号（`S-02.05-01` 的 `[2,500]`），属**个例**，不是普遍写法。
+- 仍选「引号内允许」而非「禁止逗号」：禁逗号靠人记，范围写法（`[2,500]`）和文件列表迟早再犯；RFC4180 引号 + 规范重序列化能在 CI 里机械拦截整类问题。代价是编辑器必须按 CSV 规则写引号，`--fix` 可规整。
+
+#### 4.7.49 黄灯清零与 trailer 生成模式（2026-11-08）
+
+**一、`S-01.01-01` 不再只告警**
+
+- 选「补 `gate_c_source`」：该行 Gate C=`PASS` 但不填来源，是唯一一条，且来源就在 note 里（W-74 的 e01 取证）。补为 `dev 8daf2e2 + e01（19/19 render 4/4）`。
+- `verify_gate_log` 同步把「Gate C=PASS 但 `gate_c_source` 为空」从 warning 升为 **error**；现 18 行 Gate C=PASS 全部有来源，无黄灯。
+- 不选棘轮：只剩一条、可一次补齐，加 `expiresOn` 等于给未来留豁免口；升红更干净。
+
+**二、`Sign-Invalidates` 由工具生成**
+
+- `verify_sign_impact` 新增 `--print-trailer`（只打印不校验）与 `--staged`（对 index 与 HEAD 求差，隐含 print）。输出一行：
+  `Sign-Invalidates: S-03.04-02, S-03.05-02`；无命中时输出 `Sign-Invalidates: none`。命中卡与原签 SHA 打到 stderr。
+- `git commit -F` 用法：
+  ```bash
+  { printf 'fix: 改已签卡面\n\n'; npm run --prefix app -s verify:sign-impact -- --staged --print-trailer; } > /tmp/msg
+  git commit -F /tmp/msg
+  ```
+- **判定选集合相等，不选逐字一致**：git 会重排/折行提交信息，逐字比较只会制造无意义红；而集合相等已经杜绝「最小应付集合」——工具算的就是全量，少一个即红，多一个也红。
+- 实测：`--base f547a00^ --head f547a00 --print-trailer` 输出 4 张命中卡；临时改 `S-02.05-01` 卡面并 stage，`--staged` 输出 `Sign-Invalidates: S-02.05-01`，还原后工作区干净。
+
+#### 4.7.50 `S-08.01-02` 基数漂移裁定：A，卡面计数一律运行时派生（2026-11-08）
+
+**事实**：`app/manifest/indicators.json` 实测 `total 105 / planned 60 / 可添加 45（normal 43 + beta 2）`；卡面写 `T=105、M=44`、`61 置灰`。根因是 `a6b93e8 feat(W-54)` 把 `D01 OBV` 由 `planned` 升 `normal`。
+
+**裁定：A（dev B 建议）。**
+- `manifest` 是唯一源，卡面数字只是回抄；回抄值和源不一致时，改回抄，不改源。
+- B 要求回退 `W-54` 已交付的 OBV 实现来保住 `61/44`，等于用已交付功能换两个过期数字，不采纳。
+
+**口径**：
+1. AC 里的计数**允许且必须**改为「运行时派生」：`T = indicators.length`、`M = status ∈ {normal, beta}` 条数；断言取注册表实测值，不比对卡面常量。
+2. 注册表再变时**无人改卡面**——卡面不再持有任何计数。需要可读示例时，只能写在工单/审计并标日期快照，不得写进 AC。
+3. 已落改法：`S-08.01-02` 前置条件 3、字段与口径、异常与边界、`AC-08.01-03`、`AC-08.01-03（补1）` 全部改为 `T/M` 派生（见 W-78）。
+4. `AC-08.01-03（补2）`：**本卡顺手改，不另开卡**。全仓 `app/src` 仅剩 `WorkbenchPage.tsx` 1 处「暂无数据」（桌面骨架未启动态），标题定为「行情未加载」，副行保持「请通过 `npm run tauri dev` 启动桌面骨架」；AC 范围从「两处空态」扩为 `grep -r "暂无数据" app/src` 命中 0。
+5. 本单不改注册表、不改 `constants.json`（已是 60/45）；`S-06.03-01` 与 PRD 正文的同类旧数随下一次 BA 文档批处理，不在本单扩张。
+
+**依据**：与本报告 §4.5「可派生数字不进 `constants.json`、卡面不写死」、`S-09.01-01` 的「AC 两端比对、卡面不写数字」同一原则。
 
 ---
 

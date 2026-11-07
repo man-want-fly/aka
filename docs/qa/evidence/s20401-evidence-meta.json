@@ -1,12 +1,12 @@
 {
   "suite": "",
-  "label": "20261108-025344",
-  "runAt": "2026-11-08T02:53:44+08:00",
-  "commit": "f3037e6c998721f2547613cd4ab8e2783f812e1a",
+  "label": "20261108-070006",
+  "runAt": "2026-11-08T07:00:06+08:00",
+  "commit": "292410e2be187647d3bf16b15e6b107bb878c41e",
   "dirty": false,
   "buildMode": "dev",
   "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"drawer\" target/debug/aka-desktop（NODE_ENV=development vite build 产物）",
-  "fixture": "默认 state.db；取证前清空 localStorage `aka.workbench.subplots.v1`（恢复默认 成交量+M06+M01）。套件先改 MACD 参数为 10/22/8、点满容量第 4 个副图、再恢复默认，随后经目录页跳 999999.XX 验证无标的态",
+  "fixture": "默认 state.db；取证前清空 WebKit localStorage（aka.workbench.subplots.v1 恢复默认 成交量+M06+M01）。套件先改 MACD 参数为 10/22/8、点满容量第 4 个副图、再恢复默认，随后经目录页跳 999999.XX 验证无标的态",
   "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与本次运行时证据不是同一产物。",
   "formatScan": null,
   "result": {
@@ -52,6 +52,6 @@
   "latency": {
     "productCommitmentMs": 200,
     "acceptanceCapMs": 250,
-    "measuredMaxMs": "221"
+    "measuredMaxMs": "223"
   }
 }

@@ -33,6 +33,13 @@ jobs:
           node-version: "22"
       - name: verify:sign --check（台账列与实算不一致即红）
         run: node app/scripts/verify_sign_coverage.mjs --check
+      - name: verify:gate-log（结构 / 枚举 / 40 位 SHA / 与 verify:sign 对齐）
+        run: node app/scripts/verify_gate_log.mjs
+      - name: verify:sign-impact（已签卡面被改必须申报失效）
+        env:
+          BASE: ${{ github.event.before || github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node app/scripts/verify_sign_impact.mjs --base "$BASE" --head "$HEAD_SHA"
 
   build-test:
     name: macOS build / test / golden
@@ -98,13 +105,9 @@ jobs:
       - name: 涨跌幅三态判据负例（W-74，平盘/缺前收必红）
         run: npm run verify:r03
 
-      # 内容库 app/content/indicators/ 由 S-03.03-03 交付；未交付前本步骤预期 red（exit 2）。
-      # 交付触发条件与翻阻断要求见 docs/qa/aka-tech-debt-s0-v0.1.md 的 TD-S3-02。
-      - name: 指标口径页门禁（W-03）——预期失败，不阻断
-        continue-on-error: true
-        run: |
-          echo "EXPECTED RED until S-03.03-03: app/content/indicators/ 未交付，verify:docs 会 exit 2"
-          npm run verify:docs
+      # W-59：内容库已交付，本步骤转 required——内容缺失（exit 2）或不合格（exit 1）一律阻断。
+      - name: 指标口径页门禁（W-03 / W-59，required）
+        run: npm run verify:docs
 
       - name: tsc --noEmit
         run: npx tsc --noEmit
