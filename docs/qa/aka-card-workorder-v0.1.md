@@ -1039,7 +1039,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
   - 中文别名按子串匹配。
   - **用例钉死三条**：`N` 不命中 `NaN`；`k` 不命中 `K`；`senkou` 不命中 `senkouA`。
 - **`V3-01` 改法**：锚点集合 = `abbr ∪ abbrAliases ∪ params(key ∪ aliases) ∪ outputs(key ∪ aliases)`；仍为「至少命中一个」，三者全空才 SKIP。
-- **`V3-02` 改法**：params 用 `key ∪ aliases` 与 `default` 同分句；outputs 改为「任一 output 的 `key ∪ aliases` 出现在 formula 段」。
+- **`V3-02` 改法**：params 用 `key ∪ aliases` 与 `default` 同分句；outputs 改为「每个 output 的 `key ∪ aliases` 必须命中」——见 **W-32**（原「任一命中」已判定过宽，本工单不再适用）。
 - **4 条失败的归因（分开算，不合并）**：
 
   | 失败项 | 归因 | 处置 |
@@ -1074,12 +1074,30 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 - **判不了时（第 10 条）**：`DRIFT_ALLOWLIST` 仍存在 `sector-12` 条目 → 报 STALE 失败；pattern 0 命中不算通过，必须有反向用例。
 - **验收**：① `verify:constants --docs` 报 **白名单 0 条、STALE 0 条、未登记漂移 0 条**；② 反向用例——临时副本写回「MVP 启用 12 个行业板块」→ 必须 FAIL；③ 正确表述「12 个行业板块降级 V1」→ 0 命中。
 
+### W-32｜`V3-02(outputs)` 改为逐项命中（W-30 追补；开发改判据 + BA 补登别名）
+
+- **依据**：W-30 的 outputs 判据是「任一命中」，`T15` 的 `senkouA`/`senkouB` 没有定义，却靠 `chikou` 命中整条通过；与 `viPlus` 误收 `VI−` 同病。
+- **新判据文本（照此实现）**：`V3-02(outputs)`——**每个** `outputs[].key` 的 `key ∪ aliases` 必须在 formula 段至少命中一次；**逐项判定**，未命中项按 `id:output_key` 列出；**不得因其他输出命中而放过**，缺任一 → `FAIL`。
+- **反例用例（必须新增）**：构造一页只命中一个输出、另一个输出未定义 → 必须 `FAIL`（防止实现回退成 any）。
+- **实测变红 3 页，0 条内容缺口**（已逐条核对 formula 原文）：
+
+  | 页 | 未命中项 | formula 中已有定义 | 处置 |
+  |---|---|---|---|
+  | `T24` | `llv` | `LLV_i = min(low[i−N+1 .. i])` | 补别名 `llv: [LLV]` |
+  | `M02` | `j` | `J = 3K − 2D` | 补别名 `j: [J]` |
+  | `M06` | `dea`、`hist` | `DEA = EMA(signal=9, DIF)`；`MACD 柱 = 2 × (DIF − DEA)` | 补别名 `dea: [DEA]`、`hist: [MACD 柱]` |
+
+  `T15` 已因 `senkouA/B` 别名到位而通过，无需补。**先按内容缺处理是错的**：4 个名字都已定义，缺的是登记。
+- **代登记留痕（制度第 11 条）**：登记=开发/BA，复核=BA，审=TL；4 条别名必须出现在 manifest 与本节清单，不得只在对话里。
+- **验收**：① 补登后 13 页复跑 `failed = 0`、`skipped = 0`；② 引用结果必须按制度第 12 条写「v3 判据 0 fail / 0 skip；整体 FAIL 因覆盖 13/44 不足」；③ 反例用例 FAIL；④ 输出逐项打印每个 output 的命中词 / 未命中。
+- **边界**：若复核发现某名字确实写错（不是别名问题），按制度第 11 条改内容，不登记别名。
+
 ---
 
 ## 3. 执行顺序与验收
 
-1. **已完成（BA，2026-11-07）**：W-01、W-02、W-04～W-22。baseline 由 14 条降到 1 条（仅剩 `sector-12`）。
+1. **已完成（BA，2026-11-07）**：W-01、W-02、W-04～W-22。baseline 14 条 → **0 条**（`sector-12` 两条由 W-31 清零）。
 2. **剩余 BA**：W-23（报价头 `≈` 四项 AC）、W-25（5 处日期判定：2 改 3 标注）、W-26（`AC-03.04-11` 落卡）、W-27（44 页重估 12.0）。改完各跑一次 `npm run verify:constants`。
-3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→10）、**W-31**（`sector-12` 白名单清零）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
+3. **开发（非 BA）**：W-03 的 `app/scripts/verify_indicator_docs.mjs` 与 `verify:docs` 接线（验收见 W-03 的 8 项检查 + 4 个 self-test 用例）；**W-28**（判据 v3，6 条，self-test 5→8）、**W-29**（两项派生校验 + 分区口径写死，21→23 项）、**W-30**（别名内嵌 manifest + V3-01/V3-02 改名匹配，13 页复跑 failed/skipped 归零，self-test 8→9）、**W-31**（`sector-12` 白名单清零）、**W-32**（outputs 逐项命中 + 补登 4 条别名）必须一并落地；W-24 的 manifest 同步（验收见 W-24 的 PASS 20 / WARN 0）。
 4. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
-5. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31）须由 TL 按验收判据复核后才能签。
+5. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32）须由 TL 按验收判据复核后才能签。
