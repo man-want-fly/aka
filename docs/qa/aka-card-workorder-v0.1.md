@@ -1024,6 +1024,8 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 
 ### W-30｜符号别名：manifest 内嵌 `aliases` + V3-01/V3-02 改名匹配（开发，非 BA）
 
+- **状态：已闭环**（`d0a052d`，2026-11-07）：13 页实跑 `failed = 0` / `skipped = 0`，self-test **9/9**；`verify:docs` 整体仍打印 FAIL，原因是覆盖 **13/44**（既有 backlog），不是 v3 判据。
+
 - **定位**：`app/manifest/indicators.json`（schema 增字段）+ `app/scripts/verify_indicator_docs.mjs`（`V3-01`/`V3-02`）。
 - **裁定（走法 1）**：建别名表。别名**内嵌进 manifest 对应条目，不另建 `symbol-aliases.json`**——key / label / 别名同属指标口径一个真源；独立文件要按 `id + key` 二次对齐，又是一个漂移面（W-23 的教训）。
 - **schema**：
@@ -1051,11 +1053,17 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 
   **顺带预登记（当前未失败，防下一轮误报）**：`T15` 的 `senkouA`/`senkouB`/`chikou` 与正文「先行带 A / 先行带 B / 迟行线」不一致，一并登记别名；`tenkan`/`kijun` 对应「转换线 / 基准线」。**不得用 `senkou` 前缀兜住**——那正是要防的误中。
 - **不做的事**：不逼内容写「上轨（upper）」；不把判据放宽成「定义即可、不查字面」（那会退回「判不了」）。
-- **验收**：① 13 页复跑 `failed = 0`、`skipped = 0`；② `--self-test` 8 → **10**：新增「别名命中 → 通过」，以及一个反向用例（三条断言：`N`/`NaN`、`k`/`K`、`senkou`/`senkouA` 均不得命中）；③ 反向用例——删掉 `massIndex` 的别名后必须回到 FAIL；④ 输出里打印每个锚点的命中来源（命中词 / 未命中）。
+- **验收**：① 13 页复跑 `failed = 0`、`skipped = 0`；② `--self-test` 8 → **9**（实测 9/9）：新增「别名命中 → 通过」+「删 `massIndex` 别名回 FAIL」，并含三条不命中断言（`N`/`NaN`、`k`/`K`、`senkou`/`senkouA`）；③ 输出里打印每个锚点的命中来源（命中词 / 未命中）。
 - **第 9 条人工检查项**：别名字段只能保证「已登记的别名被认出」，**发现不了内容里新造的名称**。范围：内容页四段内的符号名 vs manifest `key ∪ aliases`；通过条件：无未登记新名（人工走查，不计入 `skipped`）。
 - **第 10 条判不了时**：`aliases` 缺失按空数组处理（不 SKIP）；`indicators.json` 不可解析 → exit 2。
 
+- **代登记复核（制度第 11 条）**：开发在 `d0a052d` 代登记 8 条大小写变体——`RSI`/`DIF`/`SMA`/`WMA`/`Forecast`/`HHV`/`ATR`/`GAPO`，均等于对应 `labelZh` 的大写形式，**全部保留**；登记=开发，复核=BA，审=TL（已签收）。
+  - **须改 1 条**：`M20` 的 `viPlus` 删除 `VI−`（判据文本笔误，`viPlus` 只应 `["VI+"]`；`viMinus` 保留 `["VI−", "VI-"]`），由 BA 改 manifest。
+  - **待补 2 条**：`T15` 的 `senkouA: ["先行带 A"]`、`senkouB: ["先行带 B"]`（当前靠 `chikou` 命中通过，属预登记）。
+
 ### W-31｜`sector-12` 白名单作废 + 正则收窄（开发，非 BA）
+
+- **状态：已闭环**（`c921d6e`，2026-11-07）：白名单 **0 条**；`aka-story-cards-v0.1.md:3647` 与 `:4717` **0 命中**；反向用例写回「MVP 启用 12 个行业板块」→ **exit 1 FAIL**。
 
 - **依据**：审计报告 4.7.8（产品 2026-11-07 确认 12 行业板块降级 V1，MVP 只保留指数）。
 - **改法**：
