@@ -368,8 +368,8 @@ mod tests {
             .iter()
             .filter(|item| item.status != "planned")
             .count();
-        assert_eq!(implemented, 44, "已实现条目数不得被规划项污染");
-        assert_eq!(manifest.indicators.iter().filter(|i| i.status == "planned").count(), 61);
+        assert_eq!(implemented, 45, "已实现条目数不得被规划项污染");
+        assert_eq!(manifest.indicators.iter().filter(|i| i.status == "planned").count(), 60);
     }
 
     #[test]

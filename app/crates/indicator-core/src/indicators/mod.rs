@@ -11,6 +11,7 @@ use crate::Params;
 
 pub mod b2;
 pub mod b3;
+pub mod b4;
 
 pub use b2::{
     T08_ID, T09_ID, T10_ID, T11_ID, T12_ID, T13_ID, T14_ID, T15_ID, T16_ID, T23_ID, T24_ID,
@@ -20,6 +21,7 @@ pub use b3::{
     M01_ID, M02_ID, M04_ID, M05_ID, M08_ID, M09_ID, M10_ID, M19_ID, M20_ID, M21_ID, M24_ID,
     M25_ID, M26_ID,
 };
+pub use b4::D01_ID;
 
 pub const PLANNED_INDICATOR_COUNT: usize = 105;
 
@@ -88,13 +90,14 @@ static T22: LinRegIndicator = LinRegIndicator {
 static E13: Bias = Bias;
 static M06: Macd = Macd;
 
-static ALL: [&dyn Indicator; 44] = [
+static ALL: [&dyn Indicator; 45] = [
     &T01, &T02, &T03, &T04, &T05, &T19, &T20, &T21, &T22, &E13, &M06,
     &b2::T08, &b2::T09, &b2::T10, &b2::T11, &b2::T12, &b2::T13, &b2::T14, &b2::T15,
     &b2::T16, &b2::T23, &b2::T24,
     &b2::V01, &b2::V02, &b2::V03, &b2::V04, &b2::V05, &b2::V07, &b2::V08, &b2::V09, &b2::V10,
     &b3::M01, &b3::M02, &b3::M04, &b3::M05, &b3::M08, &b3::M09, &b3::M10, &b3::M19,
     &b3::M20, &b3::M21, &b3::M24, &b3::M25, &b3::M26,
+    &b4::Obv,
 ];
 
 #[derive(Debug, Clone, Copy)]
@@ -521,14 +524,14 @@ mod tests {
 
     #[test]
     fn registry_ids_and_aliases() {
-        assert_eq!(implemented_count(), 44);
+        assert_eq!(implemented_count(), 45);
         assert_eq!(PLANNED_INDICATOR_COUNT, 105);
         for id in [
             T01_ID, T02_ID, T03_ID, T04_ID, T05_ID, T19_ID, T20_ID, T21_ID, T22_ID, E13_ID, MACD_ID,
             T08_ID, T09_ID, T10_ID, T11_ID, T12_ID, T13_ID, T14_ID, T15_ID, T16_ID, T23_ID, T24_ID,
             V01_ID, V02_ID, V03_ID, V04_ID, V05_ID, V07_ID, V08_ID, V09_ID, V10_ID,
             M01_ID, M02_ID, M04_ID, M05_ID, M08_ID, M09_ID, M10_ID, M19_ID, M20_ID, M21_ID,
-            M24_ID, M25_ID, M26_ID,
+            M24_ID, M25_ID, M26_ID, D01_ID,
         ] {
             assert!(lookup(id).is_some(), "缺少注册指标 {id}");
         }

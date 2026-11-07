@@ -3087,7 +3087,8 @@
       "priority": "P0",
       "category": "volume",
       "inputs": {
-        "close": true
+        "close": true,
+        "volume": true
       },
       "params": [],
       "outputs": [
@@ -3101,9 +3102,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
+      "status": "normal",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 —；手册 §3.2｜A股主口径：同 ChartSchool｜变体：平盘日「加 0」与「沿用」结果一致",
+      "notes": "默认参数 —；手册 §3.2｜A股主口径：同 ChartSchool｜平盘日沿用前值｜停牌/零量根断线(NaN)，复牌后接续累计",
       "formulaSummary": "OBV(t) = OBV(t−1) + V(t)·sign(C(t)−C(t−1))；平盘日沿用前值",
       "warmupBars": 2,
       "completeness": "完整",
