@@ -1,0 +1,27 @@
+{
+  "suite": "s070503",
+  "card": "S-07.05-03",
+  "ok": false,
+  "error": "Attempted to assign to readonly property.",
+  "windowFocused": true,
+  "appActive": true,
+  "finishedAt": "2026-11-08T05:17:27.603Z",
+  "checks": [
+    {
+      "id": "OV-00",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "runtime",
+      "passed": false,
+      "detail": "套件异常中断：Attempted to assign to readonly property."
+    }
+  ],
+  "blocked": [
+    {
+      "ac": "AC-07.05-04",
+      "blocker": "run-s070503",
+      "reason": "套件异常中断：Attempted to assign to readonly property.",
+      "skipped": false
+    }
+  ]
+}

@@ -210,6 +210,7 @@ pub fn run() {
         commands::diag_enabled,
         commands::diag_target,
         commands::diag_build_info,
+        commands::diag_env,
         commands::diag_write,
         commands::diag_write_named,
         commands::telemetry_note,

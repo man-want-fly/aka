@@ -720,7 +720,12 @@ export function CatalogPage({ onNavigate, onOpenWorkbench }: Props) {
           )}
         </aside>
 
-        <main className="catalog-detail" style={{ padding: "20px 24px", overflow: "auto" }}>
+        <main
+          className="catalog-detail"
+          data-catalog-detail="1"
+          data-catalog-active={active?.id ?? ""}
+          style={{ padding: "20px 24px", overflow: "auto" }}
+        >
           {error && <div className="error-box">{error.message}</div>}
           {!manifest && !error && <div className="caption" data-catalog-loading="1">目录加载中…</div>}
           {missingId && (

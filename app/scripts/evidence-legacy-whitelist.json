@@ -1,5 +1,5 @@
 {
-  "note": "W-70 旧格式冻结：权威副本为 verify_evidence.mjs 内 LEGACY_WHITELIST_FILE_SHA256；deadline 为脚本常量 LEGACY_DEADLINE，本字段仅作说明。只缩不扩：LEGACY_MAX_FILES=18。改动本文件任一字节即红。",
+  "note": "W-70 旧格式冻结：权威副本为 verify_evidence.mjs 内 LEGACY_WHITELIST_FILE_SHA256；deadline 为脚本常量 LEGACY_DEADLINE，本字段仅作说明。只缩不扩：LEGACY_MAX_FILES=18。改动本文件任一字节即红（须同步改脚本常量并 TL 单独签字）。",
   "deadline": "2026-11-22",
   "files": {
     "ac020401-cross-page-evidence.json": {
@@ -74,6 +74,59 @@
     "s207-evidence-20261107.json": {
       "sha256": "6a1adba892cfb37a1eda9e4cc0fccfcc767550e91aa0333b88d84d6276e2a7cb",
       "expiresOn": "2026-11-22"
+    }
+  },
+  "envCompat": {
+    "note": "R-EV-02 env 兼容：仅此名单的文件可缺 env/reproduce，且只豁免 R-EV-02（card/ac/归属/meta 断言照跑）。免检资格由「文件名 + 证据 sha256 + meta sha256 + expiresOn」锁定，不由 dump 是否写 env 自证。2026-11-08 一次补录 pre-W-89 已入库证据（TL 签字），此后只减不增：ENV_COMPAT_MAX_FILES=8。到期即失效，证据或 meta 被改动即红。",
+    "files": {
+      "e01-market-evidence.json": {
+        "sha256": "eefa3c3bec03faa77dc4ddfbe3ae4c7d19eb021306070d47975c478f8eabe549",
+        "metaSha256": "b43d442a1e6ceea53a808b2c3273b25b444d76d9b224e808083551b37926ac42",
+        "expiresOn": "2026-11-22",
+        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
+      },
+      "s0102-watchlist-corrupt-evidence.json": {
+        "sha256": "206e5b58c83d20f33270868057975c94866f76c75d334d5f7448a50bfad88581",
+        "metaSha256": "cd1fd9347dba83e7cb0d549598e7149d823afa9263fd0defe20755f26df7c205",
+        "expiresOn": "2026-11-22",
+        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
+      },
+      "s070101-datasource-evidence.json": {
+        "sha256": "a2aeabf7abfbfa1000cd663f864e32d70e19517fce02ac5fb083789d265cb5a5",
+        "metaSha256": "29ae2f5afeb6fe8ba420c4ba6d05ba81c1a16c4a3da1b4f078a16711a9eef2f4",
+        "expiresOn": "2026-11-22",
+        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
+      },
+      "s070401-backfill-evidence.json": {
+        "sha256": "0cdb5717b860424b6213568a29e440baffbbc6b0aa5f2923084125cfbe049a47",
+        "metaSha256": "53c514336c0335b6c9aab84e915775703b1d0a86396fe82c8f2957c36d33862c",
+        "expiresOn": "2026-11-22",
+        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
+      },
+      "s070501-quality-p9-evidence.json": {
+        "sha256": "72f7602650746980b324994768ea418ec76b349aa34b179bfe8b2c41dcd1a2bd",
+        "metaSha256": "81f28e3ee9a3fd2e31f2971b8ac804db579b27c53d667541045d0484336e239d",
+        "expiresOn": "2026-11-22",
+        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
+      },
+      "s080102-search-empty-evidence.json": {
+        "sha256": "956e4a13975b05189516387c7b8ba7b3df8132195b6dce91d97c66405ce35266",
+        "metaSha256": "4f3a21487fe765778073e6c9fb579d1676b959d10f1486ea0052162986ea0e8f",
+        "expiresOn": "2026-11-22",
+        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
+      },
+      "s20401-evidence.json": {
+        "sha256": "00523e4653a3a9f54aec66a17d02031b22e2a35034e5f832d17ef47ff7df409a",
+        "metaSha256": "818bc9e774282a93cd951c2fd80685c6ffc283d624b5ddcc40583dccbe425310",
+        "expiresOn": "2026-11-22",
+        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
+      },
+      "s20601-evidence.json": {
+        "sha256": "c433844136e9ed2fafd9d8f7285c97508b01c2bb5e4674bbae12a8e0ae0d665c",
+        "metaSha256": "566e2edb5c4a05fc97e8374e4e3e3376a145b757032d93ffdcb5ec8bb31c7982",
+        "expiresOn": "2026-11-22",
+        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
+      }
     }
   }
 }

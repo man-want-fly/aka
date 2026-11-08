@@ -1216,7 +1216,40 @@ export function WorkbenchPage({
         );
         (window as unknown as Record<string, unknown>).__AKA_S070503_EVIDENCE__ = report;
       } catch (err) {
-        setDiagStatus(`S-07.05-03 取证失败：${describeError(err).message}`);
+        const message = describeError(err).message;
+        setDiagStatus(`S-07.05-03 取证失败：${message}`);
+        // W-89：套件异常也必须落 dump，否则 240s 只能看到「一个文件都没有」，
+        // 无法区分「没跑完」和「等待路径错」；blocked 原因由 dump 明确写出。
+        const blockedDump = {
+          suite: "s070503",
+          card: "S-07.05-03",
+          ok: false,
+          error: message,
+          windowFocused: document.hasFocus(),
+          appActive: document.visibilityState === "visible" && !document.hidden,
+          finishedAt: new Date().toISOString(),
+          checks: [
+            {
+              id: "OV-00",
+              card: "S-07.05-03",
+              ac: "AC-07.05-04",
+              layer: "runtime" as const,
+              passed: false,
+              detail: `套件异常中断：${message}`,
+            },
+          ],
+          blocked: [
+            {
+              ac: "AC-07.05-04",
+              blocker: "run-s070503",
+              reason: `套件异常中断：${message}`,
+              skipped: false,
+            },
+          ],
+        };
+        await ipc
+          .diagWriteNamed("s070503-evidence.json", JSON.stringify(blockedDump, null, 2))
+          .catch(() => undefined);
       }
     })();
     return () => {

@@ -6,6 +6,18 @@
 > 改完一条，把 `docs/qa/constants-baseline-v0.1.json` 里对应的 `pattern` 删除；再跑 `npm run verify:constants`。
 > **引用纪律（审计报告制度第 13 条）**：凡百分比、行数、计数进入结论，必须带口径。行数须写明是「变更行数（`git diff --numstat`）」还是「显示行数（`git diff | wc -l`）」——两者不等；例：`app/bench` 重生成在 `2ec7385` 上 = **3408 变更行** / **9622 显示行**。
 
+## 0.0 开工单状态表（唯一共享态，制度第 35 条）
+
+> 派单前先读这张表；同一件事已有人在做，只做验收，不重复派。进入执行即标「进行中」，TL 验收后改「已验收」。
+
+| 编号 | 内容 | 执行人 | 状态 | 分支 / 提交 |
+| --- | --- | --- | --- | --- |
+| W-90 | `s070503` 崩溃 + catalog P3 契约 + 顶层聚合 | dev A | 已验收（第 1/3/4 项；第 2 项拆 W-94） | `4f44b08`，签 `26e795f` |
+| W-91 | 取证选择器 ↔ 产品 DOM 契约绑定 | dev A | 已验收 | `91cdc77`，合并 `7cf7d69` |
+| W-92 | 取证窗口只置前一次 + `activateAttempts` | dev A | 已验收 | `2192340`，合并 `7cf7d69` |
+| W-93 | `b2Render` 回切时延单列 `latency` | dev A | 待开工 | — |
+| W-94 | 失败产物自动落盘 `docs/qa/raw/` | dev A | 待开工 | 自 W-90 拆出 |
+
 ## 0.1 双线开发复核口径（2026-11-07 起）
 
 > 配置：新增第二位资深开发（dev B），方向数据层与指标内核；主树 `/Users/sixmillion/Documents/AKA` 仍归 dev A，dev B 在独立 worktree `/Users/sixmillion/Documents/AKA-dev2`、分支 `dev2` 上作业（已初始化到 `8add7ce`）。
@@ -772,6 +784,8 @@ Then 三次均返回同一标的（宁德时代 `300750.SZ`）；性能按 V-07 
 **定位 3**：AC-06.03-01（补1）（L4228）：`84 个已实现` / `已实现指标数为 84` → `44 个已实现` / `44`。
 
 **依据**：常量源；`implemented = normal + beta = 44`。
+
+> **2026-11-08 补记**：本单历史数值（`44 / 105`、`44`）只作当时指令，**已失效**；卡面与 PRD 的 AC 现改为「已实现数 = 目录计数、总量 = 注册表总量」运行时派生（`326fcf5`、`§4.7.65`），不再写死数字。
 
 ---
 
@@ -1796,7 +1810,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 
 ### W-84（dev B / QA）运行层证据补环境块并按第 19 条重取证
 
-1. **`diag.ts` 统一写 `env` 块**：`commit`（构建期 define，不手写）、`dirty`、`runtime{launchMode,node,electron,os,arch}`、`build{entryFile,builtAt,cargoProfile,features,binaryPath,binarySha256}`、`command`、`dump{path,finishedAt}`。所有 `s20xxx` / `s207` 证据共用，禁止各写一套。
+1. **`diag.ts` 统一写 `env` 块**：`commit`（构建期 define，不手写）、`dirty`、`runtime{launchMode,node,os,arch,hostTarget,electron}`、`build{entryFile,builtAt,cargoProfile,features,binaryPath,binarySha256}`、`command`、`dump{path,finishedAt}`。`electron` **必须显式写 `"none"`**（Tauri WebKit 宿主，非 Electron），记 `none` 通过；**字段缺失仍 FAIL**。所有 `s20xxx` / `s207` 证据共用，禁止各写一套。
 2. **`verify:evidence`**：扫描 `docs/qa/evidence/*.json`，`env` 五项任一为空即红；`dirty=true` 直接红。
 3. **重取两份证据并入库**：`s20501`（10 项，非 11）与 `s207`（18 项）在记录环境后重跑，dump 复制到 `docs/qa/evidence/`，提交信息写明 commit 与 `dirty=false`。
 4. **构建路径必须写清**：本终端 `node` 是 Electron 垫片（Electron 39.2.7），`vite build` 因 `@rollup/rollup-darwin-x64.node` 未签名报 `mapped file has no cdhash`；实际可用路径（真实 Node / 预构建 dist / 其他）必须写进证据 `command`，不得只写「真机」。
@@ -1843,13 +1857,108 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 > 依据 §4.7.60 与制度第 23 条。目标：本机不再靠 `open /tmp/*.command`，任何人照抄一条命令即可复现。
 
 1. **入口**：`app/scripts/evidence-run.sh <suite>`；先跑 `--check`（必须输出 `EVIDENCE_OK`：branch=main、dirty=false、真 Node、electron=none）。
-2. **重跑清单与期限**（全部在 `main` 干净 tip 上，dev2 dump 不作依据）：
+2. **重跑清单与期限**（全部在 `main` 干净树 `dirty=false` 上；dump 的 `commit` 需等于或祖先于最终 `sign_commit`，main 后续前移本身不触发重跑——第 25 条）：
    - `S-07.01-01` 13 项、`S-07.04-01` 7 项、`S-07.05-01` 9 项 → 2026-11-09 18:00，TL 签；
    - `S-02.06-01` s2（补齐 `runtime`/`build` 五项）→ 2026-11-09 18:00，签字对象 `2aa8ece` 或包含它的后续 tip；
    - `S-01.01-01` e01 19 项 → 2026-11-10 18:00，TL 签；
    - `S-02.08-01` 证据 → 2026-11-09 18:00，TL 重签；
    - dev B 的 P01–P04 五套 diag 由 BA 重跑 → 2026-11-09 18:00（此前 `telemetry` 停在 09:41 不作证据）。
 3. **留痕**：每次把 meta 的 `commit`、`dump.sha256`、`reproduce` 报给 TL；TL 只在对应绿 run 上签。
-4. **脚本硬化**：`verify:evidence` 增加对 meta `runtime`/`build`/`dump` 三项非空的硬校验（防「脚本只有外壳」），W-88 内完成。
+4. **脚本硬化**：`verify:evidence` 增加对 `env` 的 `commit`/`runtime`/`build`/`command`/`dump` 五项硬校验（缺一 `failed`），`dump` 必含 `finishedAt`；`commit` 由构建期 `define` 注入、禁止手写（第 28 条）。
 5. **P04 文案**：关于页 `44-105` → `45-105`（`M=45` 派生），dev B 本轮改，不涉及签字。
-6. **验收**：连续两次 `--check` 均过；一次完整跑产出 `docs/qa/evidence/raw/<name>-<commit12>-<label>.json`；meta 五项齐全。
+6. **套件入口（已完成 `c365665`）**：`diag-evidence.sh` 补 `s2`（`S-02.06-01`）与 `s070503`（`S-07.05-03`）两个 case；`evidence-run.sh` 增加未知套件硬拒绝（`grep -qE "^  <suite>\)"` 不匹配即 `exit 2`），`--check` 同样走这条。**用法固定为 `evidence-run.sh <suite> [--check]`：套件名第一位，`--check` 必须是第二个参数**；`--check` 只验分支/干净度/真 Node/套件存在，不构建、不取证。误把 `--check` 当套件名会先白烧一次构建（BA 已踩），前置校验就是防这个。
+7. **推送顺序（2026-11-08 定）**：TL 先跑 `verify_sign_impact --base origin/main --head HEAD`（本批 PASS）→ TL 代推 `b5b8e35`/`c365665`/`33d1ec5`（不改写）→ CI 绿 → BA 在干净树跑 `s2` + `s070503`，dump 绑 `7af41c8`。之后 `main` 前移**不要求重跑**；唯一重跑判据是 `git diff --name-only <dump>..<sign>` 与取证文件集求交非空。取证窗口只要求「无并发写同一工作区」，不要求主干冻结。预演红则退回 dev A 本地修，TL 不代改。
+8. **`S-07.05-03` 证据两行**：`AC-07.05-04=PASS`、`补1=BLOCKED`（blocker `S-07.05-01`）；不得合并成一行，不得预填 PASS。
+9. **首次端到端记录（BA 填，制度第 24 条）**：日期 / tip / suite / dump 路径 / dump sha256 / meta 五项是否齐 / dump `commit` 与最终 `sign_commit` 的 relation / 取证文件集在 `commit..sign` 间是否有变动 / 结论。未填此记录前，链路只算「候选」。
+10. **验收**：连续两次 `--check` 均过；一次完整跑产出 `docs/qa/raw/<name>-<commit12>-<label>.json`（**不在证据根下建子目录**）；meta 五项齐全且 `dump.finishedAt` 存在；meta 的 `commit` 对 `sign_commit` 判出 `relation=equal|ancestor`，且取证文件集在 `commit..sign_commit` 间无变动（有变动即重跑）。
+
+### W-89（dev A 修 / BA 唯一执行 / TL 验收）取证链路四处契约修复与 `commit` 注入
+
+> 依据 §4.7.63、制度第 27/28 条。全部改完前，BA 不得重跑；`S-02.06-01` 本轮不签。
+
+1. **归档路径**：归档从 `docs/qa/evidence/raw/` 改到 `docs/qa/raw/`；路径常量单一来源，`evidence-run.sh` 与 `verify_evidence.mjs` 同源引用（第 27 条）。
+2. **`meta.dump`**：补 `finishedAt`（与 dump 内 `finishedAt` 一致），第 19 条第五项可取。
+3. **`env` 块与注入**：`diag.ts` 写 `env`，`commit` 构建期 `define` 注入；`verify:evidence` 校验 env 五项、缺一 failed（第 28 条）。`runtime.electron` 允许显式 `"none"`（Tauri WebKit 必然如此），**缺失才 failed**。**兼容只认冻结名单**：仅 `scripts/evidence-legacy-whitelist.json` 的 `envCompat`（文件名 + 证据 `sha256` + meta `sha256` + `expiresOn`）可缺 `env`/`reproduce`，且只豁免 R-EV-02；**名单外缺 `env` 一律红** —— 不得用「不写 env」自证免检。名单只减不增（`ENV_COMPAT_MAX_FILES=8`），到期失效，改动需 TL 单独签字、不得与本类改动同提交（§4.7.68）。
+4. **`s2` schema 分支**：后处理按 `build/dataset/engine/debounce/cold/warm/batchCompute/timeframes/verification/telemetry` 解析，不再套 `ok/checks[]/blocked`，否则必 `exit 2`。
+5. **`s070503` 超时**：查清是套件未跑完还是等待路径不对；查清前不得重跑。**`--check` 只验前置，不验 240s 内能否写出 dump**，超时结论只认完整跑的结果。
+6. **`S-02.06-01` 现状**：5 项过 2 项、`suite=null`、`checks=0`；`s2` 三项运行时未过（MACD 副图、悬停取值、B2 渲染），先判真 bug / 环境问题。**真 bug 则重签不只是重跑。**
+7. **运行时三项未过（`colorOk` / `macdCount` / `shownSma` / `b2Render`）的判据前置**：
+   - dump 必须记 `windowFocused` / `appActive`（含取值时间）；缺字段即该 check `不可判定=FAIL`，**不得记「环境问题」**。
+   - 三项失败全部出现在「窗口未聚焦」且聚焦后同 check 通过 → 判**取证判据缺陷**，按第 29 条修判据并配反例；修完仍需重跑，**不以「环境问题」免签**。
+   - 聚焦后仍失败 → 判真 bug，走缺陷流程；`S-02.06-01` 维持不签。
+8. **验收判据（TL 验，不采信 dev 自报；BA 执行主路径）**：
+   - **归档路径**：BA 完整跑 `s2`（不是 `--check`）；TL 查 `docs/qa/raw/` 有新产物、`docs/qa/evidence/` 下无子目录、`verify:evidence` failed=0。不过 → 证据作废，W-89 未完成。
+   - **`meta.dump.finishedAt`**：TL 用 `jq -r '.dump.finishedAt'` 验非空且与 dump 内 `finishedAt` 相等；缺失/不等 → 未完成。
+   - **`env` 注入**：TL 查 `vite.config.*` 确为 `define` 注入 + 产物 `commit` 与 `git rev-parse HEAD` 一致；**反例**：手改 `meta.commit` 为上游 commit 后 `verify:evidence` 必须 failed，仍 PASS → 未完成。
+   - **`runtime`**：`node`/`os`/`arch`/`hostTarget` 齐全，`electron` 显式为 `"none"`（记通过；其他值 → `failed`）；任一项**缺失** → `failed`。**不得因「没有 Electron」判红**，也不得为过门禁伪造 electron 版本。
+   - **聚焦字段**：`windowFocused`/`appActive` 缺失或类型错 → `failed`；值为 `false` → 该证据运行时 check 记「不可判定」，**不判证据失败**，按第 29 条复核判据，不得记 PASS、不得签。
+   - **`b2Render` 判定分层**：`ok=assertionsOk`（产品断言，不含聚焦）、`signable=assertionsOk && focusOk`（可签唯一判据）；`verify:evidence` 校验派生一致、`focusOk` 与顶层聚焦同源。`n/a` 不计 failCount、不改 `assertionsOk`；`signable=false` → 不得签，记「不可判定」而非产品失败（§4.7.68 三）。
+   - **`env` 兼容**：`verify:evidence` 汇总行必须给出 `env 兼容 N 份`；名单外缺 `env`/`reproduce` 必须 failed，名单内改动任一字节（证据或 meta）必须 failed。
+   - **`s2` schema 分支**：TL 查 dump 含 10 个 schema 键、后处理 `checks>0` 且 `suite=s2`；仍 `exit 2` 或 `checks=0` → 未完成。
+   - **`s070503` 超时**：240s 内产出 dump，或明确 `blocked` 原因；仍超时且无 dump → 未完成，不得以「大概跑完了」记 PASS。
+   - **通用**：以上任一项不过，`W-89` 退回，BA 停跑，不签任何卡。
+
+### W-90（dev A 修 / BA 唯一执行 / TL 验收）失败产物落盘、`catalog` 采集契约与顶层汇总
+
+> 依据 §4.7.69、制度第 30/31 条。`4190cf5` 的 `s2-evidence` 已判不可签并移出证据根（`catalog` 子块红），`S-02.06-01` 维持「不可判」。
+
+1. **`s070503` 崩溃**：`Attempted to assign to readonly property.` 只跑到 `OV-00`，`env`/`verification` 为 `null`。定位到具体赋值点并说明根因；**不得用 `try/catch` 吞掉后继续跑**，也不得把该套件改成「跳过即通过」。
+2. **失败 dump 落盘（第 31 条，dev A 实现）**：`evidence-run.sh` / `diag-evidence.sh` 的失败分支必须在退出前写出
+   `docs/qa/raw/<suite>-evidence-<commit12>-<stamp>.json` 与同名 `-meta.json`，且：
+   - dump 带 `suite`、`finishedAt`、`error`（非空字符串）或 `blocked: true`，以及 `blocked[].reason`；
+   - meta 带 `commit`（构建期注入值，40 位）与 `dirty=false`；
+   - **不得写进 `docs/qa/evidence/`**（门禁会判红：失败记录不得充作可签证据）。
+3. **`catalog` 采集契约**：按真实 P3 页面取值 —— 根 `[data-catalog-root='p3']`、beta `[data-catalog-status='beta']`、分类全部展开后再计数、选择按钮 `button.catalog-row__select`、以 `[data-catalog-detail][data-catalog-active]` 确认选中切换。禁止再按旧 P4 契约或「点行容器即选中」判定。
+4. **顶层汇总（第 30 条）**：`s2` payload 顶层 `ok = checksOk && verificationOk`，并单列 `checksOk` / `verificationOk` / `catalogOk`；`verification` 四块（`renderLayer`/`b2Render`/`b3Render`/`catalog`）必须齐备且各有布尔 `ok`。新增任何子块必须同时进 `verificationOk`。
+5. **禁区**：不改 `verify_evidence.mjs` 的判据与白名单；不改 `signable`/`focusOk` 口径；不提交 `/tmp` 之外的临时产物。
+6. **验收（TL 验产物，BA 执行主路径）**：
+   - BA 完整重跑 `s2`：dump 必须 `verificationOk=true`、`catalog.ok=true`、`verification.catalog.itemCount` 等于 manifest 已实现数；顶层 `ok` 与子块派生一致；`verify:evidence` failed=0。不满足 → `S-02.06-01` 继续不可判，不得签。
+   - BA 重跑 `s070503`：若仍在 240s 内无 dump，`docs/qa/raw/` 必须出现合规失败记录（`失败记录 N 份` 递增）且门禁 failed=0；若跑通，按正常证据入库。
+   - TL 反例：把一份合规 dump 的 `verification.catalog.ok` 改成 `false` 而顶层 `ok` 保持 `true` → `verify:evidence` 必须 failed；把失败记录复制进 `docs/qa/evidence/` → 必须 failed。
+   - 任一项不过，`W-90` 退回，`S-02.06-01` / `S-07.05-03` 均不签。
+
+**W-90 执行状态（2026-11-08，已结）**：第 1/3/4 项由 `4f44b08` 交付，BA 于 `610d331` / `26e795f` 重跑 `s2` + `s070503` 全绿；`S-02.06-01` 与 `S-07.05-03`（仅 AC-07.05-04）已于 run `42454710780`（`head=26e795f`，relation=equal）签署，W-90 第 1/3/4 项关闭。**第 2 项（失败时自动落盘 `docs/qa/raw/`）未交付，拆出为 W-94**，不随 W-90 关闭；`evidence-run.sh` / `diag-evidence.sh` 失败分支补齐前 W-94 不得关闭。
+
+### W-91（dev A 实现 / TL 验收 / 不进 BA 主路径）取证选择器与产品 DOM 契约绑定 —— **已验收（2026-11-08，`91cdc77` → `7cf7d69`）**
+
+> 依据 §4.7.70 三与制度第 32 条。同类第三次（`[data-hist]` / `[data-readout-host]`、`data-catalog-beta`、点错 `<li>`），本次把「沉默的耦合」改成「会叫的断言」。
+
+1. **清单**：新增 `app/scripts/dom-contracts.json`，逐条登记取证依赖的 DOM 契约：`key`、`selector`（或属性名 + 取值）、`source`（产出该契约的组件源码相对路径）、`markers`（必须在源码中字面出现的标记，如属性名与取值）、`note`。首批至少覆盖：`catalog` 全套（`data-catalog-root='p3'`、`data-catalog-cat-toggle`、`data-catalog-item`、`data-catalog-status='beta'`、`data-catalog-section`、`data-catalog-detail` + `data-catalog-active`、`button.catalog-row__select`）、`s070503` 浮层（`data-provenance='1'`、`data-provenance-date`、`data-prov-field`、`data-provenance-missing`）、以及 `b2Render` 已用到的 `data-hist` / `data-readout-host`。
+2. **检查器**：新增 `app/scripts/verify_dom_contracts.mjs` + `package.json` 脚本 `verify:dom-contracts`，并接入 CI（与既有 `verify:*` 同 job）。校验：
+   - 每条契约的 `markers` 全部在 `source` 中字面出现，缺一即红，报出 `key` 与缺失标记；
+   - `app/src/features/workbench` 下取证代码出现的每个 `data-*` 属性名都已在清单登记，未登记即红（新增选择器 = 静默耦合）；
+   - 禁止在清单外拼接选择器字符串（同目录出现未登记的 `data-` 字面量即红）。
+3. **反例（第 29 条，必须同提交）**：改产品属性名不改清单 → 红；清单删一条 → 红；取证代码新增 `data-*` 不登记 → 红；把选择器挪到清单外拼接 → 红。反例以临时目录/临时副本方式跑，**不得改动真实产品源码**。
+4. **禁区**：不改产品 DOM 以迁就检查（产品契约变更必须改清单，不是反过来）；不改 `verify_evidence.mjs` 判据与白名单；不改变任何取证产物字段。
+5. **验收**：`verify:dom-contracts` 在 CI 上全绿且反例 4/4 判红；清单条目数 ≥ 覆盖首批三组；`verify:evidence` / `verify:evidence:selftest` 数字不变（本工单不加取证件数）。
+6. 任一项不过，`W-91` 退回；本工单不阻塞任何卡签字（但 `S-02.06-01` 的重跑仍须等 W-90 第 2 项与 BA 验收）。
+7. **验收记录（2026-11-08）**：`91cdc77`（`w91/dom-contracts`，基于 `6eb07e6`）交付；清单 110 条契约 / 35 条模板 / 11 个取证文件；四项检查与四条反例同提交，变异验证「退回不检查」后 4/4 变绿；CI 已在 `verify:evidence` 后加门禁。本地复跑：`verify:dom-contracts` 通过（110/35/11）、`verify:dom-contracts:selftest` 4/4。已合并 `7cf7d69`。
+
+### W-92（BA 执行口径 / dev A 实现 / TL 验收）取证窗口只置前一次，dump 记 `activateAttempts` —— **已验收（2026-11-08，`2192340` → `7cf7d69`）**
+
+> 依据 §4.7.71 二与制度第 23 条 `d`。反例：轮询式激活（每 3 秒）导致 240s 超时、零 dump；改为只激活一次后约 40s 正常。
+
+1. `evidence-run.sh` / `diag-evidence.sh` 在取证前只执行一次窗口置前，**删除任何定时/轮询式 `activate` / `set_focus`**。
+2. dump 记录 `focusedAtLaunch` / `focusedAtAssert` / `activateAttempts`（0 或 1）：置前与断言两个时点分开记；**实际实现把硬门禁放在归档前**（`evidence-run.sh` 校验 `activateAttempts===1`、`focusedAtLaunch===true`、`focusedAtAssert===windowFocused`、`windowFocused=false` 拒收），比原计划「`verify_evidence.mjs` WARN」更严；`verify_evidence.mjs` 不新增检查，避免追溯已签证据（第 34 条）。
+3. 置前失败、10 秒内进程未起、置后前台不是 `aka-desktop`：一律 `exit 2`，不进入采集；`windowFocused` 仍是硬条件，未降级为 WARN。
+4. 失败时的超时诊断顺序写进入口提示：先查 `activateAttempts` 与激活方式，再查产品；超时原因必须落 `raw/`（W-94）。
+5. 验收：BA 按第 23 条重跑 `s2`，`activateAttempts=1`；`verify:evidence` 数字不变。
+6. **验收记录（2026-11-08）**：`2192340` 删除 16 次重试循环，改为等进程/窗口就绪后唯一一次置前；`selftest 53/53`；本地 `verify:evidence` 扫描 8/冻结 18/兼容 8/失败记录 1/失败 0。已合并 `7cf7d69`。**注意：已签 `610d331` / `26e795f` 无该字段，按第 34 条不追溯、不重跑。**
+
+### W-93（dev A 实现 / TL 验收）`b2Render` 回切时延单列为可查字段
+
+> 依据 §4.7.71 三。当前 `291ms` 只存在于 `notes` 自由文本，标注 `ok=true` 会把时延问题盖过去。
+
+1. `verification.b2Render` 新增 `latency` 对象：`{ scope: "cutback-sample-90", sample: 90, cacheHit: true, pointwiseEqual: true, maxMs: 291, p95Ms: <有则记，无则 null>, advisory: true }`；`notes` 保留人读文案，不替代结构化字段。
+2. 门禁只校验 `latency` 存在与字段类型，**不设阈值、不参与 `ok` / `signable`**；若将来有时延类 AC，必须自带阈值并显式引用本字段，不得默认它已达标。
+3. 必须区分口径：`s2 §2 P95=31ms`（跨批次 P95）与「回切异常样本 90 的单次 max=291ms」不是同一统计量，不得互相折算或比较。
+4. 验收：BA 重跑 `s2` 后 `latency` 五字段齐备；TL 反例：把 `latency.maxMs` 改成字符串 → 门禁红；`latency` 缺失 → 门禁红。
+
+### W-94（dev A 实现 / BA 验收 / 自 W-90 拆出）失败产物自动落盘 `docs/qa/raw/`
+
+> 自 W-90 第 2 项拆出，**不随 W-90 关闭**。W-90 第 1/3/4 项已于 run `42454710780` 签署关闭。
+
+1. `evidence-run.sh` / `diag-evidence.sh` 的失败分支（崩溃、超时、非零退出、dump `error` 非空）必须自动把产物写入 `docs/qa/raw/<suite>-evidence-<commit12>-<label>.json` 及配对 meta，字段要求同制度第 31 条；**禁止只留 `/tmp`**。
+2. 失败记录 `ok=false`、带 `blocked[]` 或 `error`、`finishedAt`、`suite`；meta `commit` 40 位、`dirty=false`；不得写入证据根。
+3. 验收：人为让套件崩溃一次，`raw/` 自动出现合规记录，`verify:evidence` 汇总 `失败记录 N 份（不可签，不计证据份数）` 且 failed=0；随后清理该人造记录。
+4. 任一项不过，W-94 退回；本条未关闭前，任何「失败留痕」结论只算人工补录（如 `4190cf5` 那次），不算链路能力。

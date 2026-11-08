@@ -544,18 +544,75 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
 18. **已签卡面改动与失效申报（2026-11-08 起）**：已签字卡面**只允许 BA 改**；任何提交若 diff 击中已签卡（故事卡分节或 `sign_scope` 中的文件路径），提交信息必须带 `Sign-Invalidates: S-xx.xx-xx, ...`，且与 `verify:sign-impact` 实算集合**完全一致**；漏报、多报、非法卡号一律红。TL 在批次边界重签，重签前旧签字按规则 8 失效。失效集合由工具现算，不允许维护「哪些卡已签」的人手名单。**trailer 由工具生成**：提交前跑 `npm run verify:sign-impact -- --staged --print-trailer`，把输出原样粘进提交信息（或走 `git commit -F`）；校验按**集合相等**，不要求字节/顺序一致——工具输出就是全量，少一个即红，因此不存在「应付得过去的最小集合」。
 19. **运行层证据最低可核条件（2026-11-08 起，R-EV-02）**：任何「真机 / 运行层」结论必须同时给出下列五项，缺一记 `failed`，**不得用 CI、数据层或渲染层结论代偿**：
     - `commit` + `dirty=false`（工作区干净，证据与所签 commit 同源）；
-    - `runtime`：启动方式（枚举 `tauri-dev` / `tauri-build` / `cargo+custom-protocol` / 其他）、`node` 或 `electron` 版本、`os` / `arch`；
+    - `runtime`：`launchMode`（枚举 `tauri-dev` / `tauri-build` / `cargo+custom-protocol` / 其他）、`node` 版本、`os` / `arch`、`hostTarget`（Tauri WebKit 的 platform / Rust triple）、`electron`。**`electron` 必须显式写 `"none"`**，语义是「非 Electron 宿主，本产品 Tauri WebKit 下必然如此」，**记 `none` 通过**；真实 Node 证据不得因「没有 Electron」被判红，也不得为过门禁伪造 electron 版本。**字段缺失仍 `FAIL`** ——「明示不适用」与「没写」必须分开判；`electron` 只接受 `"none"`，其他值（如 `v33.0.0`）说明跑在 Electron 垫片上，证据无效。聚焦字段 `windowFocused` / `appActive`：**缺失或类型错 → `FAIL`**；值为 `false` 是「实测未聚焦」的真实状态，**不判证据失败**，但该证据的运行时 check 记「不可判定」，按第 29 条复核判据（不得记 PASS，不得签）；
     - `build`：前端入口文件名与构建时间、cargo profile、features、二进制路径 + `sha256`；
     - `command`：完整启动命令与环境变量（`AKA_DIAG`、`AKA_DIAG_TARGET` 等）；
-    - `dump`：原始 JSON 路径 + `finishedAt`，并复制入库 `docs/qa/evidence/`，不得只留在 `~/Library`。
-    - 机器约束：`diag.ts` 统一写 `env` 块，`commit` 由构建期注入（define），禁止手写；`verify:evidence` 校验 `env` 五项非空。
+    - `dump`：原始 JSON 路径 + `finishedAt`，并复制入库：当次落 `docs/qa/evidence/`、归档落 `docs/qa/raw/`（第 27 条单一常量），不得只留在 `~/Library`。
+    - 机器约束：`diag.ts` 统一写 `env` 块，`commit` 由构建期注入（define），禁止手写；`verify:evidence` 校验 `env` 五项非空（`electron` 允许显式 `"none"`，缺失仍 `failed`）。
+    - **`env` 兼容只有一种合法形态（2026-11-08 收紧）**：仅 `scripts/evidence-legacy-whitelist.json` 的 `envCompat` 冻结名单可缺 `env`/`reproduce`，条目必须同时给出**文件名 + 证据 `sha256` + meta `sha256` + `expiresOn`**，且只豁免 `R-EV-02`（`card`/`ac`/归属/`meta` 断言照跑）。**名单外缺 `env` 一律 `FAIL`** —— 免检资格不得由 dump「不写 `env`」自证（与已删除的 `EXCLUDED_DIRS`、`W-70` 同形）。名单**只减不增**（`ENV_COMPAT_MAX_FILES`），到期即失效；白名单 JSON 的摘要硬编码在脚本里，改动必须同步改常量并由 **TL 单独签字**，**不得与制度/实现改动同提交**（一次性补录例外须在审计明示，见 §4.7.68 一）。
 20. **未分配池与自取（2026-11-08 起）**：产品批准的可排池（当前 A 组 22 张，花名册 `aka-dispatch-pool-v0.1.csv`）允许 dev **自行取卡、不等 TL 分配**；取卡须同时满足机械资格——未开始/未分配、AC 不引用 `absent` 页面、上游无 `Blocked`、不与其他 dev 占用冲突。取卡当天只报 `Pxx` 与预计人日，**TL 不写 gate-log**（第 14 条边界前不进场）；批次边界由 TL 一次性追认，每卡一行：`owner=dev X`、`workorder=W-86#Pxx`、`note` 以 `【dev自取|Pxx|取卡 YYYY-MM-DD】` 开头，并记池快照 commit。签字规则不变，仍在合并 tip 一次签。补池归 TL、在边界做；池空或撞缺页由 TL 三选一（换卡 / 降 `Blocked` / 补页面依赖），dev 不得自行扩池或改卡状态。
 21. **签后取证违规、结论不变的处理（2026-11-08 起，替代「一律重签」）**：签字已绑 commit、卡面与 AC 均未变，事后认定取证过程违规（计数错误、以 CI/源码代偿运行层、证据只在 `~/Library` 等），但按原始 dump 独立重核后**结论不变** → **不重签**，维持原 `sign_commit`，在同一行 `note` 追加「更正注记」，至少写四项：① 日期与引用条（如 `§4.7.56`）；② 原表述；③ 更正后表述；④ 重核依据（dump 路径 + `finishedAt`）与复核人；末句固定写「结论不变，不重签」。**只有下列三种情形才重签**：`a` 卡面或 AC 改动；`b` 被测 commit 变化（签字对象本身变了）；`c` 重核结论改变（PASS↔FAIL）。更正注记**只追加、不覆盖**原文。若原签字未绑 commit，或违规已导致结论无法独立重核，则按失效处理，在批次边界重签。
 22. **交付计数双口径（2026-11-08 起，B 案）**：`已交付` 保留「实现成立」口径，但台账与任何对外宣读必须**同时**给出「已交付 N 张，其中 M 张无有效签字；可放行 N−M 张」，**禁止单读已交付数或单读占比**。无有效签字的已交付只计「实现进度」，**不计可放行**，不得作为放行、结项或对外承诺的依据；每张无签卡必须在跟踪表登记「分类 / 缺什么 / 责任人 / 期限」，逾期未签则降 `条件交付` 并同步人日。当前基线：已交付 **21**、无签 **6**、可放行 **15**（详见 §4.7.59）。
 23. **运行层 GUI 取证单一链路（2026-11-08 起）**：
     - `a` **谁跑**：**BA 为唯一取证执行人**；dev 只交「开发自测参考」，不产出可签证据；TL 只复核与签字。BA 缺席时由 TL 指定交叉执行（dev A 跑 dev B 的卡、dev B 跑 dev A 的卡），meta 记 `runner`；**任何 dev 不得给自己的卡取证**。
-    - `b` **在哪跑**：只在 `main` 主树、干净工作区（`git status --porcelain` 为空、`dirty=false`），dump 的 `commit` 必须是被签 commit。**`dev2`/worktree 的 dump 一律只作参考、不计证据**，合并后按第 19 条在 main tip 重跑；未合并的卡不可签。
+    - `b` **在哪跑**：只在 `main` 主树、干净工作区（`git status --porcelain` 为空、`dirty=false`）；**dump 的 `commit` 必须等于 `sign_commit`，或是它的祖先**（不要求等于取证当时的 `main` tip）。**`dev2`/worktree 的 dump 一律只作参考、不计证据**；合并后按第 25 条判是否重跑；未合并的卡不可签。
     - `c` **怎么留痕**：入口固定为 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本必须：自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测到 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项（`runtime`/`build`/`command`/`dump`/`commit`+`dirty=false`）并落固定路径 `docs/qa/evidence/` 与 `raw/<name>-<commit12>-<label>.json`，缺一 `exit 2`。**禁止 `open /tmp/*.command` 之类人工步骤**；meta 必须写 `reproduce` 字段，下一个人照抄即可复现。
+    - `d` **窗口置前只允许一次（2026-11-08 起）**：取证期间把窗口置前**只做一次**，由脚本自己保证并把尝试次数写进 dump（`activateAttempts`，正常应为 1），**禁止轮询式重复激活**（每 N 秒 `activate`/`set_focus` 直到结束）。反例：BA 首次重跑用「每 3 秒重复激活保前台」，240 秒超时、零 dump；改为只激活一次后约 40 秒正常。教训：**为满足条件所做的动作，过量后反过来变成了破坏条件的原因**——置前动作与取证窗口抢焦点/打断套件节奏，触发的是「自伤」而不是产品问题。此类超时先查激活方式，再查产品。
+24. **工具/链路的端到端门槛与归属证据（2026-11-08 起）**：
+    - `a` 脚本、套件入口、取证链路等**工具类改动，必须至少端到端跑通一次并留产物**才算通过；`--check`、`bash -n`、语法检查只算前置，**不算主路径通过**。
+    - `b` 套件名必须能在 `diag-evidence.sh` 找到对应 `case` 分支；`evidence-run.sh` 对未知套件直接 `exit 2`，不得进入构建/取证。
+    - `c` **归属以证据为准**：文件/改动归属必须落到提交、hunk 卡号或作者记录；禁止按口述、印象或「应该是谁」推测。口述与证据冲突时以证据为准，并由记录方更正。
+25. **取证 commit 的祖先关系与重跑判据（2026-11-08 起）**：
+    - `a` dump 的 `commit` 必须**等于** `sign_commit`，或是它的**祖先**；**不要求等于取证当时的 `main` tip**。台账按第 16 条记 `relation=equal|ancestor`，`ancestor_check` 为真即可。
+    - `b` **唯一的重跑判据**：被取证的那组文件在 dump commit 与最终 `sign_commit` 之间发生改动。判定：取 `git diff --name-only <dump>..<sign>` 与取证文件集求交，**非空才重跑**；`main` 前移本身不是重跑理由。
+    - `c` 取证窗口的约束是**不得有并发写同一工作区**（保证 `dirty=false` 快照），**不是「主干冻结」**。dev A 在窗口期不在主树提交、dev B 守 `dev2`，属本轮人工协调；制度只要求快照一致性。
+26. **取证前置：先提交，再取证；验证方不得与被验证对象共用可写工作区（2026-11-08 起）**：
+    - `a` **所有文档与脚本改动必须在开工取证前提交并推送**。任何未提交改动都会让 `dirty=true`，直接挡住取证（`evidence-run.sh` 退出 2）。**签字方/制度维护方不得让验证方等待自己的工作区**。已发生四次同类事故（`evidence-run.sh` 未提交、8 文件归属判错、审计未提交、`evidence-layout.json` 未跟踪），一律按本条追责提交方，不追责 BA。**未跟踪文件同样算 `dirty`**：生成物要么提交为正式配置，要么落 `/tmp`，不得留在仓库里挡取证。
+    - `b` **验证方（BA）在取证期间不得执行写操作**；发现工作区不干净应**直接停手上报**，禁止 `--force`、禁止替签字方提交、禁止在脏树上取证。
+    - `c` 取证前固定顺序：提交并推送 → CI 绿 → `--check` 输出 `EVIDENCE_OK` → 才开始构建取证。缺任一步不得开跑。
+    - `d` **取证窗口内，主树只有执行人一个人写**。窗口从 `--check` 通过开始，到 dump + meta 落盘结束。窗口内任何其他人（含 TL、dev）**不得在主树创建、修改、删除或提交任何文件**；需要改代码的，一律在各自 worktree/分支完成，取证结束后再合并。违反者本轮证据作废并重跑，责任记在写入方，不记 BA。
+27. **证据产物路径单一常量（2026-11-08 起）**：
+    - 证据根、归档目录、`raw/` 子目录、文件名模板**只允许在一处定义**，`evidence-run.sh` 与 `verify_evidence.mjs` 必须引用同一来源（或由脚本导出、被校验方读取），**禁止各写一份**。
+    - 已知事故：`evidence-run.sh` 写 `docs/qa/evidence/raw/`，`verify_evidence.mjs` 的规则是「证据根下不得有子目录」（W-70），写入方与校验方各写一份路径，导致**跑成功也必红**。归档路径定为 `docs/qa/raw/`（与证据根平级，不在证据根下建子目录）。
+    - 任何一方改路径，必须在同一提交里改常量与两侧引用，并在 `W-89` 记录端到端实跑结果。
+28. **`commit` 构建期注入与 `env` 五项硬校验（2026-11-08 起，§4.1(19) 落地）**：
+    - `commit` 必须由构建期 `define` 注入（`diag.ts` 统一写 `env` 块），**禁止手写**；`verify:evidence` 必须校验 `env` 的 `commit`/`runtime`/`build`/`command`/`dump` 五项，缺一 `failed`。
+    - **`dirty=false` 不足以证明快照一致**。现场案例（2026-11-08）：BA 起跑 `HEAD=4948d3d`，脚本结束时 dump 的 `commit=9fb2bd0`（窗口内 dev A 提交）、`dirty=false`，但 dump **没有 `finishedAt`**。三者只能推出「构建与 dump 发生在 `9fb2bd0` 之前」，meta 却声称是 `9fb2bd0` —— 产物已判不可用并移出仓库。结论：只要 `commit` 能手写，它就能声称一个比实际构建更晚的 commit，`dirty=false` 会跟着一起说谎；`finishedAt` 必须与 `commit` 一起构成时间戳证据链。
+    - 本条与第 19 条、第 26 条 `d` 配套：注入 + 五项校验 + 窗口独占写，三者缺一，运行层证据不可签。
+29. **归属/映射/分区/计数类派生逻辑必须配反例（2026-11-08 起）**：
+    - 凡由脚本现算的「归属、映射、分区、计数、范围」类逻辑，必须至少配一条**会让它错的反例**并纳入 CI；反例要能证明「错法会被判红」，不能只证「正例能过」。
+    - 反例与派生逻辑同文件、同提交；缺反例即视为该派生逻辑未交付（不可判定≠通过）。
+    - 已发生两起：G5 分区派生无校验器覆盖（§4.7.59）、`verify_sign_impact.cardMap` 无反向用例导致 `c3dff46` 误报（§4.7.63 八）。
+30. **顶层汇总必须覆盖所有 `verification` 子块，缺一即红（2026-11-08 起）**：
+    - dump 的顶层 `ok` 必须等于「`checks[]` 全过 ∧ 全部 `verification` 子块 `ok`」。子块清单在门禁里显式声明（`s2`：`renderLayer`/`b2Render`/`b3Render`/`catalog`），**缺一个子块、子块缺布尔 `ok`、新增子块未纳入汇总口径，三者任一即 `failed`**；`verificationOk` 必须单列并与现算值一致。
+    - 反例必备（第 29 条）：删子块、把某子块 `ok` 置 `false` 而顶层仍 `true`、`verificationOk` 与现算不一致，三种错法都必须判红。
+    - 已发生两起：`b2Render` 的 `ok` 与 `failCount` 打架（§4.7.68 三）、`catalog` 整块未聚合导致 45 张目录卡全红而顶层 `ok=true`（§4.7.69 二）。同一个病：**汇总口径漏维度，等于给红证据发通行证**。
+31. **失败产物必须留痕；套件崩溃 → 断言「不可判」（2026-11-08 起）**：
+    - 失败的 dump（崩溃、中断、超时无产物、`error` 非空或显式 `blocked:true`）**必须**落到归档根 `docs/qa/raw/`，带失败原因（`blocked[].reason` 或 `error`）、`finishedAt`、`suite` 与配对 meta（`commit`/`dirty=false`）。它**可查、不可签、不判红**，且**单独计数、不得与可签证据混计**。
+    - 失败记录不得放证据根；正常证据允许带 `blocked[]`（被阻塞 AC 及其原因），**不能**据此判为失败记录 —— 判定只看 `blocked:true` 或 `error` 非空。
+    - 套件崩溃/未跑完时，相关 AC 记**「不可判」**：既不记 PASS，也不记 FAIL；对应补记为 `BLOCKED`。不得以「产物不完整」为由丢弃过程记录（丢进 `/tmp` 等于不留痕），也不得把不完整产物充作可签证据——两者是同一个病的两面。
+    - 失败记录**不构成对产品的判定**；修复或重跑后按正常取证重新判定，崩溃期间的「不可判」不得被追认成 PASS。
+32. **取证选择器必须与产品 DOM 契约绑定（2026-11-08 起）**：
+    - 取证采集用到的全部 DOM 契约（`data-*` 属性名与取值、必需的 class、事件 handler 挂载点）集中登记在单一清单 `app/scripts/dom-contracts.json`，每条注明产出该契约的组件源码；`verify:dom-contracts` 静态校验三件事：
+      ① 每条契约的标记字面量必须在声明的组件源码中出现（产品改属性名/改结构 → CI 当场红在契约，而不是跑完取证再红在断言）；
+      ② 取证代码（`app/src/features/workbench/*Diag.ts` 与 `diag.ts`）中出现的每个 `data-*` 属性名必须已登记，新增未登记的选择器判红；
+      ③ 采集代码不得在清单外拼接选择器字符串。
+    - 契约变更必须与产品 DOM 变更同提交：只改产品不改契约、只改契约不改产品，均红。检查器的反例（改名、删登记、新增未登记选择器）必须与检查器同提交（第 29 条）。
+    - 已发生三次：`[data-hist]` / `[data-readout-host]`、`data-catalog-beta`（P4→P3）、点错 `<li>` 行容器（无点击 handler）。教训：**产品改 DOM，证据静默失效，而且失效方向永远是「红」，每次都要人去分辨「产品坏了还是取证坏了」**。本机制与 `verify_card_pages`（卡↔页面锚点）、`verify:constants`（常量派生）同一思路：把沉默的耦合变成会叫的断言。
+33. **一卡多行判定：逐行判、卡级取严（2026-11-08 起）**：
+    - 同一张卡的主 AC 与补记（`补N`）**各自独立判定**，可以出现「主行 PASS / 补记 BLOCKED」：主行有 dump 支撑即判 PASS，补记因依赖的前置未交付判 BLOCKED（记 `blocker` 与 `skipped=false`），二者互不折算。
+    - **卡级状态取最严**：只要还有补记 BLOCKED，卡级必须是 `Blocked-AC`，不得因为主行 PASS 而记 `已交付`；`sign_commit` 只能在这一行的 `sign_scope` 内生效，必须写明「仅 AC-xx（补N 仍 BLOCKED，不计入本签字）」。
+    - 解除条件：补记依赖的前置交付并取得可签证据后重新判定，届时才可把卡级升 `已交付`；不得用主行 PASS 提前顶替。
+    - 首次适用：`S-07.05-03` —— `AC-07.05-04=PASS`（`OV-01…OV-08` 8/8 有 dump 支撑）、`补1=BLOCKED`（blocker `S-07.05-01`，`skipped=false`）、卡级 `Blocked-AC`。
+34. **判据改进不追溯已签证据（2026-11-08 起）**：
+    - 工具或判据升级（新增字段、新增静态检查、新增告警）**从合并后的下一批取证生效**；已按当时判据 `failed=0` 签署的卡不因工具升级而失效，**不搞全量重跑**。
+    - 唯一例外：新检查对某张已签卡的核心断言构成**实质反证**（不是「多了字段」「更严了」），TL 才把该卡标「有条件签」，只重取该卡相关断言，不做批量重取。
+    - 「有条件签」写法：gate-log 的 note 追加 `[条件签] 新判据 <commit12>：<具体条件>`；`sign_commit` / `sign_scope` 不动，条件未满足前卡级不升；条件满足后补记撤销，不重签。
+    - 反例：`610d331` / `26e795f` 签署时没有 `activateAttempts`，`W-92` 合并后新 dump 才有；已签证据保持有效，不得因此重跑 `s2`，硬门禁只作用于合并后的新归档。此条防的是「工具每改进一次就重取全部历史，永远签不完」。
+35. **派单前先查「进行中」，工单只有一个共享状态（2026-11-08 起）**：
+    - 工单文档顶部维护唯一「开工单状态表」（`编号 / 内容 / 执行人 / 状态 / 分支或提交`）。TL 派单前必须先读表查重：同一件事已有人在做，只做验收，不重复派。
+    - 工单进入执行即标「进行中」，交付后由 TL 在验收时改「已验收」；BA / TL / dev 都只认这一张表，不在聊天里各持一份局部状态。
+    - 反例：`W-92` 与 dev A 的 `2192340` 是同一件事，被派了两次。教训：三方各持局部状态、没有共享的「谁在做什么」，重复派单的成本不是多写一遍代码，而是两人的改动互相覆盖。
 
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
@@ -2278,7 +2335,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **三、合并后重新成立的事实**
 - 基线：`verify:constants`（模块 19 + 反例 18、漂移 0）、`verify:index-pd`（74 行 / 207.9 对 207.9）、`verify:evidence`（失败 0）、`verify:r03`、`verify:format`、`verify:docs`（failed=0/skipped=0、74 卡 / 10 页）、`verify:gate-log`（56 行）全绿；共用基线文件未被 dev2 改动，数字保持。
 - CI：合并 tip `d996c6f` 的 run **`42433408456` 为红**（详见七）；后续收口提交 `2accf94` 的 run `42434355191` **success**（macOS build/test/golden + 签字台账两 job 均绿），**新 tip 已转绿**。签名一律以对应 run 的 `head_sha` 为准（第 16 条）。
-- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 19 条，证据 commit 必须是被签 tip 本身，故三卡置 `待签`、`gate_c=FAIL`，由 BA 在合并后的干净 tip 上重跑（13/7/9 项）后 TL 签（执行人按 §4.7.60），**不用旧 dump 凑签**。
+- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 25 条，重跑判据不是「main 前移」，而是**取证文件集在 dump..sign 之间是否变动**——`git diff --name-only <dump>..<sign>` 与取证文件集求交非空，这三张确实命中（`DatasourcePage.tsx`/`app.css`），故必须重跑，三卡置 `待签`、`gate_c=FAIL`，由 BA 在干净树重跑（13/7/9 项）后 TL 签（执行人按 §4.7.60），**不用旧 dump 凑签**。
 
 **四、`S-08.01-02` 的异常（需 BA 判）**
 台账记为 `Blocked`（理由：标的侧 AC 依赖 P7 搜索浮层），但 `dev2` 已实现指标侧空态（`CatalogPage.tsx`，`a60a504`），且 `IndicatorDrawer.tsx` 注释写「搜索无结果空态并入 S-08.01-02」。代码与台账口径冲突：要么拆卡（指标侧可交付、标的侧继续 Blocked），要么整卡继续等 P7。已置池内 `待BA复核`，**不签、不结项**。
@@ -2346,10 +2403,308 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **背景**：CI 用真 Node 所以永远绿；本机 PATH 的 `node` 是 Electron 39.2.7 垫片，`rollup.darwin-x64.node` 无签名导致 `vite build` 失败。结果是运行层证据靠人肉 `open /tmp/aka-batch-evidence.command`：`s20501`、`s207` 手动跑，dev B 的 P01–P04 五套 diag 一条未出、`telemetry` 停在 09:41。这是结构问题。
 
 1. **谁跑**：**BA 为唯一取证执行人**；dev 只交「开发自测参考」，不产出可签证据；TL 只复核与签字。BA 缺席时由 TL 指定交叉执行（dev A 跑 dev B 的卡、dev B 跑 dev A 的卡），meta 记 `runner`；**任何 dev 不得给自己的卡取证**。
-2. **在哪跑**：只在 `main` 主树、干净工作区（`dirty=false`），dump 的 `commit` 必须是被签 commit。**`dev2`/worktree 的 dump 一律只作参考、不计证据**；合并后按第 19 条在 main tip 重跑。未合并的卡不可签。
+2. **在哪跑**：只在 `main` 主树、干净工作区（`dirty=false`），dump 的 `commit` 必须**等于 `sign_commit`，或是它的祖先**（不要求等于取证当时的 `main` tip）。**`dev2`/worktree 的 dump 一律只作参考、不计证据**；合并后按第 25 条判是否重跑（仅当取证文件集在 dump..sign 间变动才重跑）。未合并的卡不可签。
 3. **怎么留痕**：入口固定 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项并落固定路径 `docs/qa/evidence/<name>.json|-meta.json` 与 `raw/<name>-<commit12>-<label>.json|-meta.json`，缺一 `exit 2`；meta 写 `reproduce`。**禁止 `open /tmp/*.command` 之类人工步骤。**
 4. **旧证据处置**：`s20501`、`s207` 已签且卡面未变 → 按第 21 条维持原签，不因合并本身强制重跑；3 张待签与 `S-02.08-01` 必须重跑；`dev2` dump 一律不作签字依据。
 5. **环境固化**：meta 记录 `EVIDENCE_NODE` 绝对路径与 `node -v`；交接时先跑 `--check`（验分支、干净度、真 Node），不构建。
+
+#### 4.7.61 两处更正：`S-07.05-03` 归属与取证链路空壳（2026-11-08）
+
+**一、归属更正（我错）**
+- 事实：主树那 5 个未提交文件 + `core.rs`/`mock.rs` + 新增 `s070503Diag.ts` 共 8 个文件，是 **dev A 的 `S-07.05-03`**，已提交 `b5b8e35`（逐段 hunk 带卡号）。**dev B 无此改动。**
+- 我的错误：上一条按口述把「越过 worktree 边界」记成「dev B 新批」，未先比对 hunk/卡号。更正：归属以提交、hunk 卡号、作者记录为准，**不以口述或推测为准**（制度第 24 条 `c`）。
+- 处置：`b5b8e35` 不改写，按正常提交进入本次推送；台账/工单按 dev A 归位。
+
+**二、取证链路空壳更正**
+- 事实：`diag-evidence.sh` 原先没有 `s2` case，`evidence-run.sh s2` 主路径**从未端到端跑过**；我上一条写「实测 `--check` 在脏树上 `exit 2`」只验了前置，不构成链路通过。
+- dev A 已在 `c365665` 补 `s2`、`s070503` 两个 case（含 fixture 说明）。
+- 本轮把「套件必须存在」做成硬校验：`evidence-run.sh` 用 `grep -qE "^  ${SUITE}\)"` 匹配 `diag-evidence.sh` 的 case，不匹配直接 `exit 2`，`--check` 同样走这条。链路有效性仍以 BA 在推后干净 tip 的**首次完整跑**（dump + meta 五项）为准（制度第 24 条 `a`）。
+
+**三、推送与执行顺序（定）**
+1. TL 先做 sign-impact 预演：`verify_sign_impact --base origin/main --head HEAD`。本批结果 **PASS（未击中已签卡）**；`verify:constants`（含分区反例）、`verify:gate-log`、`verify:sign`、`verify:docs`、`verify:evidence` 本地全绿。
+2. 预演绿 → **TL 代推** `b5b8e35`/`c365665`/`33d1ec5`（不改写、不 rebase、不 squash）；预演红 → 退回 dev A 在本地补 `Sign-Invalidates` 或修正后重推，TL 不代改。
+3. 推送后 CI 在该 tip 绿 → BA 按第 23 条在**干净树**跑 `s2` 与 `s070503`，dump 绑 `7af41c8`；之后 `main` 前移**不要求重跑**，只有取证文件集在 `7af41c8..sign` 间被改动才重跑（第 25 条）；`dev2`/开发期 dump 不作证据。取证窗口只要求「无并发写同一工作区」，不要求主干冻结。
+4. 跑完 TL 才签相关卡。`S-07.05-03` 证据**分两行登记**：`AC-07.05-04=PASS`、`补1=BLOCKED`（blocker `S-07.05-01`），**不得合并成一行，也不得预填 PASS**（PASS 以 BA 的 s070503 dump 为准）。
+
+#### 4.7.62 更正：取证 commit 的祖先规则与重跑判据（2026-11-08，制度第 25 条）
+
+**一、我的错误**
+- 我上一条要求「BA 开跑前 `main` 又动，就必须在新 tip 重跑」。这与第 16 条冲突：第 16 条只要求 `signed_sha` 是 `run.headSha` 的祖先，本身就是为「被取消/后续提交的 run」设计的。
+
+**二、改后的口径（第 25 条）**
+1. `dump.commit` 必须**等于** `sign_commit`，或是它的**祖先**；**不要求等于取证当时的 `main` tip**。台账 `relation` 记 `equal` 或 `ancestor`。
+2. **唯一重跑判据**：取证文件集在 `dump.commit..sign_commit` 之间被改动。判定命令：`git diff --name-only <dump>..<sign>` 与取证文件集求交，非空才重跑。`main` 前移本身不是重跑理由。
+3. **取证窗口的约束**是「不得有并发写同一工作区」（保证快照一致、`dirty=false`），**不是「主干冻结」**。把取证写成全局写锁会瘫痪整条主干。
+
+**三、为什么原规则不可行**
+- 活跃仓库任何提交都会让 `main` 前移；若把「main 前移」当重跑条件，取证永远追不上签，等于给主树加全局写锁。
+- 真正要保证的是「dump 绑的代码 = 被签代码」，这与「main 前进」是两件事，不能混。
+
+**四、本轮人工协调（不是制度）**
+- 取证窗口期已口头约定 dev A 不在主树提交、dev B 守 `dev2`，保证 `dirty=false`；这只是本轮配合，制度落点是第 25 条 `c`（无并发写同一工作区）。
+
+**五、连带更正**
+- §4.7.58 三、§4.7.60 第 2 条、§4.7.61 三.3 已按第 25 条改写；`W-88` 第 2/7/9/10 项同步更新。
+
+#### 4.7.63 取证链路三处硬缺陷、`dirty=false` 失效案例与两处口径裁定（2026-11-08）
+
+**一、审计改动已提交（`4948d3d`）**
+- 第 25/26 条与 §4.7.62 已提交并推送，CI run `42440401845` **success**（`head_sha=4948d3d`）。工作区 `dirty=false`，BA 可由本 tip 起跑。
+- 此前 BA 两次因主树 `M` 被 `EVIDENCE_FAIL: 工作区不干净` 挡住：第一次是我未提交 `evidence-run.sh`，第二次是我未提交审计与工单。第三次同类事故后补第 26 条（先提交再取证 + 窗口独占写）。
+
+**二、取证链路三处硬缺陷（dev A 查出，我认）**
+1. **归档路径与门禁冲突**：`evidence-run.sh` 归档到 `docs/qa/evidence/raw/`，而 `verify_evidence.mjs`（W-70）规定「证据根下出现子目录即红」——**跑成功也必红**。归档路径改 `docs/qa/raw/`，且由单一常量同源引用（第 27 条）。
+2. **`meta.dump` 缺 `finishedAt`**：只有 `archived` + `sha256`，第 19 条第五项取不到。
+3. **无 `env` 块、无五项校验**：§4.1(19)「`commit` 构建期 `define` 注入、禁止手写」尚未落地；`verify:evidence` 也没有 `env` 五项校验（第 28 条）。
+
+**三、`dirty=false` 证明不了快照一致（制度级案例，已写入第 28 条）**
+- 现场：BA 起跑 `HEAD=4948d3d`；脚本结束时 dump 的 `commit=9fb2bd0`（窗口内 dev A 提交）、`dirty=false`；dump **无 `finishedAt`**。三者合起来只能推出「构建与 dump 发生在 `9fb2bd0` 之前」，meta 却声称是该 commit。产物已判不可用、移出仓库。
+- 结论：`commit` 一旦能手写，它就能声称一个比实际构建更晚的 commit，`dirty=false` 会跟着一起说谎。**`commit` 必须构建期注入，`finishedAt` 必须落盘**，二者共同构成时间戳证据链。
+
+**四、其余两处契约问题（dev A 修，BA 仍唯一执行人）**
+- `diag-evidence.sh` 后处理按 `ok/checks[]/blocked` 解析，而 `s2` 的 dump schema 是 `build/dataset/engine/debounce/cold/warm/batchCompute/timeframes/verification/telemetry`，两边对不上，`s2` 必 `exit 2`；按 schema 分支修。
+- `s070503` 240 秒超时、启动后无 dump；先判「套件未跑完」还是「等待路径不对」，未查明前不得重跑。
+
+**五、`S-02.06-01` 本轮不签**
+- 实测 5 项过 2 项，`suite=null`、`checks=0`；`s2` 有三项运行时未通过（MACD 副图、悬停取值、B2 渲染）。已让 dev A 判真 bug 还是环境问题——**若为真 bug，重签不只是重跑**。本轮维持 `gate_c=FAIL`，不预填 PASS。
+
+**六、`S-06.03-02`（P05）口径裁定：改卡面，不作待解阻**
+- 现状：未接原生保存对话框，固定落 `~/Downloads`；「选择保存位置 / 已取消」两态不存在；补 `tauri-plugin-dialog` 在当前离线环境装不了。
+- **裁定 A（改卡面口径）**，理由三条：① 五个 AC（zip 生成、隐私 grep、磁盘不足、无日志、0 网络）全部不依赖原生对话框，取消态无 AC 承载；② 原生对话框需要人工点击，直接违背第 23 条「单一脚本链路、禁止人肉步骤」，会让运行层取证不可自动化；③ 固定路径 + 「在 Finder 中显示」可复现、可截图、可 grep。
+- 卡面改动：主流程第 1 步改为「直接生成到固定目录 `~/Downloads`」；删「用户取消保存对话框」边界；UI 状态删「已取消」（四态：导出中/成功/磁盘不足/日志缺失）；补 `AC-06.03-02（补5）` 锁定固定路径与「在 Finder 中显示」、不弹保存对话框。引入 `tauri-plugin-dialog` 后作为 V1.1 增补，不进本期 AC。
+- 不列「待解阻」：依赖缺失不阻断本期验收，列 Blocked 会把 2.5 人日的卡错误地卡死。
+
+**七、`S-03.03-03` 的「44 页」改 45（派生）**
+- 位置：故事卡 §10.2 估算边界第 2 条（L5861）「44 个口径页内容…当前 44 页」。已实现计数统一为 45，`verify:indicator-docs` 实测覆盖 45/45（已实现 ∩ P0 = 45），故改为 **45 页**，并保留「分母由集合派生」表述、**禁止再写死数字**。
+- `S-03.03-03` 当前 `sign_commit` 为空（`Blocked-AC`），本次为估算边界文案，不触发 `Sign-Invalidates`；note 记明「内容库 44/44 已签 `56c576c` 为历史页级签字，不回写」。
+- 另：关于页「44 / 105」已由 `6e89abd` 改为「45 / 105」，随后 `326fcf5` 改为**运行时派生表述**（`已实现数 = 目录计数、总量 = 注册表总量`），卡面不再出现写死数字；PRD `AC-06.03-01` 同步改为派生（§4.7.65）。剩余 `44`/`61` 为业务值（冷算 `count: 44` = 50−6、`warmupBars === 61`），**不动**。
+
+**八、`c3dff46` CI 红：`verify:sign-impact` 把文末章节错算到最后一张卡（工具缺陷，已修）**
+- 现象：run `42442046438` 红，报「本次 diff 击中 1 张已签卡：S-08.02-04（台账已交付，未绑 commit）」。实际 diff 只改了 `S-06.03-02` 卡面与 §10.2 估算边界，**没有动 `S-08.02-04` 的任何一行**。
+- 根因：`verify_sign_impact.mjs` 的 `cardMap` 只认卡标题、不认「部分/章节」标题，导致最后一个卡标题之后的所有行（§10 估算边界等）都归到文件里最后一张卡 `S-08.02-04`。
+- 处置：`cardMap` 遇一级/二级标题（`# 第…部分`、`## 10.2 …`）重置归属为 `null`；卡内 `### S-xx` 归属不变。修复后 `--base 4948d3d --head c3dff46` 复算 **none**。
+- 原则：**不改写 `c3dff46`、不加假 `Sign-Invalidates`**；失败 run 只作事故记录，工具修复单独提交，新 tip CI 绿后放行 BA。卡面映射类改动须同时验「卡内行仍归属本卡」与「章节行归属为 null」，防止修得过头把保护关掉。
+
+#### 4.7.64 归属派生的反例通则与 `W-89` 验收判据（2026-11-08）
+
+**一、`cardMap` 反例已补（制度第 29 条）**
+- `verify_sign_impact.mjs` 启动即跑两组自检：
+  1. **合成 fixture**：`# 部分` → `### 卡甲` → `## 10.2` → `### 卡乙`，断言「卡内行属本卡」「§10.2 及其正文归属 `null`」「后续卡恢复归属」；任一不满足 `exit 2`。
+  2. **真实文件断言**：故事卡文件中所有一级/二级非卡标题、以及 §10.2 正文行，映射必须为 `null`；漏映射即红。
+- 反例有效性已用旧逻辑（不重置）做变异验证：旧逻辑把 §10.2 归到 `S-01.01-01`，自检必红。**这条反例不是装饰，能抓住原 bug。**
+- 通则落为**制度第 29 条**：归属/映射/分区/计数类派生逻辑必须配「会让它错」的反例，与逻辑同文件同提交，缺反例即视为未交付。
+
+**二、`W-89` 验收判据（写入工单第 8 项）**
+- **谁验**：BA 跑主路径（唯一执行人），TL 验产物；**不采信 dev 自报的「跑通了」**。
+- **怎么验**：归档路径看 `docs/qa/raw/` 新产物且证据根无子目录 + `verify:evidence` failed=0；`finishedAt` 与 dump 内值相等；`commit` 来自构建期 `define` 且与 `git rev-parse HEAD` 一致，并用「手改 meta.commit → `verify:evidence` 必须 failed」作反例；`s2` dump 含 10 个 schema 键且 `checks>0`；`s070503` 240s 内有 dump 或明确 `blocked` 原因。
+- **验不过怎么判**：任一项不过 → `W-89` 退回、BA 停跑、所有相关卡不签；证据作废重跑，不以「大概跑完了」「环境问题」记 PASS。
+
+**三、运行时三项的判据前置**
+- `colorOk`/`macdCount`/`shownSma`/`b2Render` 先判「窗口未聚焦是否导致误判」：dump 必须记 `windowFocused`/`appActive`，缺字段该 check 记 `不可判定=FAIL`。
+- 全部失败都在未聚焦、聚焦后通过 → 判**取证判据缺陷**，按第 29 条修判据并配反例，修完仍须重跑；聚焦后仍失败 → 判真 bug。**两种情形都不免签。**
+
+#### 4.7.65 路径常量落地与指标计数派生统一（2026-11-08）
+
+**一、`app/scripts/evidence-layout.json`：判为有意配置，已提交并接线**
+- 内容：`evidenceRoot=docs/qa/evidence`、`archiveRoot=docs/qa/raw`。这正是第 27 条要的单一常量，**不是中间产物**。
+- 三处同源读取，删除各自硬编码：
+  - `evidence-run.sh`：同时取 `evidenceRoot`（当次 dump）与 `archiveRoot`（归档），并把归档根传给后处理；
+  - `diag-evidence.sh`：只取 `evidenceRoot`（当次 dump 落点）；
+  - `verify_evidence.mjs`：默认证据根取 `evidenceRoot`（`--dir=` 仍保留给负例自测）。
+- 守卫：配置缺失/解析失败/字段为空 → `exit 2`；路径含 `..` → `exit 2`；归档仍在证据根外，证据根下不得出现子目录（W-70）。
+
+**二、指标计数统一为派生（不再是 `44` 或 `45`）**
+- 卡面已由 `326fcf5` 改为「已实现数 = 目录计数、总量 = 注册表总量（运行时派生、不写死）」；本次把 PRD `AC-06.03-01` 同步为同一表述，避免「一张卡两套口径」。
+- 理由：该数字已两次过期（`44` → `45`，因 `D01 OBV` 从 planned 升 normal）；只要写死，下次指标状态一变就是第三个过期断言。
+- `W-13` 的历史指令（`44/105`、`44`）加「已失效」补记，不改写原始指令；业务值 `count: 44`（= 50−6）与 `warmupBars === 61` 不动。
+- 与 `AC-08.01-03` 的 `T/M 运行时派生` 口径一致：数字只出现在运行时，文档只写表达式。
+
+**三、第四次「未跟踪/未提交挡取证」**
+- 本次 `evidence-layout.json` 未跟踪即 `dirty=true`，BA 一步未动。已补进第 26 条 `a`：未跟踪文件同样算脏，生成物必须提交为配置或落 `/tmp`。
+
+#### 4.7.66 更正：`electron=none` 是合法值，不是缺失（2026-11-08）
+
+**一、BA 提的判据矛盾（我错，BA 对）**
+- 本产品是 Tauri（WebKit WebView），从不跑在 Electron 里；此前出现 Electron 只是终端 `node` 被换成 Trae 垫片，那正是要挡的。
+- 原 `W-89` 写「`runtime` 含 `node` + `electron` + `os/arch`」配「缺字段 FAIL」，会让**真实 Node 的合法证据因「没有 Electron」永久判不过**，还会逼执行人伪造 electron 版本——规则在惩罚正确行为。
+
+**二、改后的口径（第 19 条 `runtime`）**
+- `runtime` 记：`launchMode`、`node`、`os`/`arch`、`hostTarget`（Tauri WebKit 的 platform / Rust triple）、`electron`。
+- `electron` 必须**显式**写 `"none"`，语义「非 Electron 宿主，不适用」，**记 `none` 通过**；字段**缺失仍 FAIL**。「明示不适用」与「没写」必须分开判。
+- `evidence-run.sh` 已同步：`electron: "none"`，`hostTarget: tauri-webkit (<rustc host triple>)`，五项判据改为「`node`/`os`/`hostTarget` 非空 + `electron` 键存在且非 null」；`verify:evidence` 另收紧为 **只接受 `"none"`**，其他值按 Electron 宿主判 `failed`（§4.7.67 一）。聚焦字段 `false` 记「不可判定」，不判证据失败。
+
+**三、`--check` 的边界**
+- BA 说得对：`s070503 --check` 只验分支/干净度/真 Node/套件存在，**不验 240s 内能否写出 dump**；超时结论只认完整跑，仍归 `W-89` 第 5 项。
+
+#### 4.7.67 `W-89` 验收记录与运行时四项定性复核（2026-11-08）
+
+**一、`W-89` 验收（`4530438`，CI run `42444999157` success，未跑取证）**
+- 我按验收表独立反向验证（不复用 dev A 的 selftest，自建 fixture 于 `/tmp`），8 例全符合预期：
+
+| 负例 | 结果 |
+|---|---|
+| 基线（合法新格式） | exit 0 |
+| 手改 `meta.commit` | **exit 1** |
+| 缺 `meta.dump.finishedAt` | **exit 1** |
+| 缺 `windowFocused` | **exit 1** |
+| `windowFocused=false` | exit 0 + 「不可判定」WARN |
+| 缺 `env.runtime.electron` | **exit 1** |
+| `electron=v33.0.0` | **exit 1** |
+| `env.commit` 为空 | **exit 1** |
+
+- 另跑 dev A 的 17 条 selftest，全过。
+- **收紧一处**：原 selftest 把「electron 非空字符串」预期为通过（`v33.0.0` → exit 0），这与「electron 只允许 none」矛盾——非 none 说明跑在 Electron 垫片上，证据无效。已改为 `failed`，并把负例名写清。
+
+**二、`false` 的口径（BA 提得对，采纳建议）**
+- 字段缺失/类型错 → `FAIL`；`false` → 证据本身不失败，但运行时 check 记「不可判定」。
+- 理由：`false` 是实测状态，判 FAIL 会逼执行人「保证窗口聚焦」——那是执行要求，不是数据要求；而「不可判定」已足以阻止记 PASS / 签字，且触发第 29 条判据复核（未聚焦导致误判 → 判据缺陷）。
+- 实现：`verify_evidence` 对 `false` 输出 `WARN …不可判定`，汇总行增加「未聚焦 N 份」。
+
+**三、运行时四项「证据链路缺陷而非产品渲染缺陷」——成立，采纳**
+- dump 实测（`raw/s2-evidence-s20601-2aa8ece-20261108.json`）：`statisticalReadoutCount=4`、`units=4`、`t21TwoDecimals=true`，K 线三重编码通过——**图表本体在正常渲染**。
+- 代码核对：`[data-hist]`、`[data-readout-host]` 在 `app/src` **不存在**；真实契约是 `[data-readout="1"]`、`[data-macd="hist"] rect`、`data-sub-zero="V08"`。`shownSma` 全空、`macdCount=3`、`colorOk=false` 均可用采集选择器解释。
+- 定性：**采集侧缺陷**（副图基线缺 M06、选择器写错、T13 容量截断、V08 找错属性），不是产品渲染 bug。修复方向（归一化基线 `T01+T09`/`M06+M01`、对齐真实 DOM 契约）合理。
+- 纪律：修采集前**不得**据此判产品 bug，也不得据此签；修完必须重跑，四项转绿才算证据成立。此案例作为「按真 bug 去修一个本来正确的图表」的反例入审计。
+
+#### 4.7.68 收紧 `env` 兼容分支；`finishedAt` / `b2Render` 两处口径裁定（2026-11-08）
+
+**一、`env` 兼容分支：从「自证免检」改为「冻结名单免检」（用户指出，当场收紧）**
+- 原实现（`64a5005`）：R-EV-02 以 `meta.reproduce` 非空为开关，dev A 的说法是「旧套件 dump 没有 `env` 块，走兼容分支」。这等于**任何一份 dump 只要不写 `env` 就自动免检** —— 免检资格由被检方自己声明，与已删除的 `EXCLUDED_DIRS` 同一个形状（`W-70` 已栽过一次）。
+- 改法：兼容只对 `scripts/evidence-legacy-whitelist.json` 的 `envCompat` 冻结名单生效，条目 = **文件名 + 证据 `sha256` + meta `sha256` + `expiresOn`**；名单外缺 `env`/`reproduce` **一律红**（`R-EV-02` 对所有非冻结证据无条件生效）。
+- 只豁免 `R-EV-02`：`card`/`ac`/归属/`meta` 结构断言对名单内文件**照跑**（不是整份冻结），避免借兼容把弱化扩散到别的断言。
+- 棘轮与失效：`ENV_COMPAT_MAX_FILES=8`（超出即红）、`expiresOn` 不得晚于 `LEGACY_DEADLINE=2026-11-22`、到期即失效；白名单 JSON 摘要硬编码在脚本常量里，改名单必须同步改常量并由 TL 单独签字，**不得与本类实现/制度改动同提交**。
+- **本次例外的如实记录**：为让 CI 不出现红 tip，实现收紧与 8 份补录落在同一提交 `27c3cc2`（TL 签字），属一次性例外，不做历史改写（沿用「不改写已推送历史」规则）。**自本条之后，名单任何改动必须独立提交、TL 签字**；再出现「实现 + 名单同提交」即视为违规，门禁按不通过处理。
+- **一次补录（TL 签字）**：8 份 pre-W-89 已入库证据此前能过是因为「缺 `env` 即放行」，收紧后会转红。它们被 docs 引用、原始取证窗口不可复现、删除会断链，故按「补录冻结、非新增豁免」一次性入名单：`e01-market`、`s0102-watchlist-corrupt`、`s070101-datasource`、`s070401-backfill`、`s070501-quality-p9`、`s080102-search-empty`、`s20401`、`s20601`。**此后只减不增**；到期后仍存活的条目必须重取证或删除。
+- 独立反向验证（不复用 dev A selftest）：
+
+| 用例 | 结果 |
+|---|---|
+| 门禁自测（含新增：缺 `reproduce`、`reproduce` 空、名单外缺 `env`、`b2Render` 派生不一致等） | 36/36 exit 符合预期 |
+| 名单内证据改一个字节 | **exit 1**（hash 不符） |
+| 名单内 meta 改 `commit` | **exit 1**（meta hash 不符） |
+| 名单内、未改动 | exit 0（汇总行 `env 兼容 8 份`） |
+
+**二、口径①：`finishedAt` 删掉 mtime 回退、缺失即 `exit 2` —— 批准**
+- `evidence-run.sh` 只认 dump 顶层 `finishedAt`；有 `env` 的 dump 缺失即 `abort`，不再回退 mtime。理由与第 28 条现场案例一致：mtime 是文件系统时间，可被复制/触碰改写，且会与 `commit` 各说一套。旧套件（名单内、无 `env`）仍保留 mtime 兜底，属于冻结口径，随名单到期一并消失。
+
+**三、口径②：`b2Render` 的 `status=n/a` 与「未聚焦」——方向采纳，但 dev A 的表述不准确，已改**
+- dev A 原话「`n/a` 不计 failCount、也不让 `ok=false`，窗口未聚焦只体现在 `focusOk`」：**后半句与代码不符**。`collectB2RenderChecks` 原返回 `ok: assertionsOk && focusOk`，即未聚焦时 `ok` 已经是 `false`。后果不是「能签」，而是**把「不可判定」记成了「产品失败」**，违反第 10 条对三态的区分（`n/a` 不计 fail 是对的，方向没问题）。
+- 改法（与「未聚焦 → 不可判定 → 不得签」对齐）：
+  - `ok = assertionsOk`：产品断言结论，不含聚焦；
+  - `focusOk = windowFocused && appActive`：运行时前置条件；
+  - `signable = assertionsOk && focusOk`：**可签的唯一判据**；
+  - `verify:evidence` 对 `s2` dump 校验 `ok === assertionsOk`、`signable === (assertionsOk && focusOk)`、`focusOk` 与顶层 `windowFocused`/`appActive` 同源；派生不一致即红；`focusOk=false` 只输出「不可判定」WARN，不判证据失败。
+- 结论：兼容两处说法——**未聚焦确实不得签（`signable=false`），但不得记成产品失败**；把「不得签」放在 `signable` 上，`ok` 只回答产品问题，两者不再互相冒充。
+
+**四、落盘与 CI**：`64a5005`（dev A 六项修复，此前仅本地）+ `27c3cc2`（本条收紧与裁定）已推送；CI run `42449042673` **success**（macOS build/test/golden 双 job 绿，`head_sha=27c3cc2`）。`verify:evidence` 汇总：扫描 8 份、冻结 18 份、env 兼容 8 份、未聚焦 0 份、失败 0 项；门禁自测 36/36。工作区 `dirty=false`，BA 可开窗跑 `s2` + `s070503`（dump commit 只需等于或祖先于最终 `sign_commit`，第 25 条）。
+
+#### 4.7.69 失败产物留痕、`catalog` 汇总漏洞与「崩溃 → 不可判」（2026-11-08）
+
+**一、失败 dump 必须留痕（用户指出：这次方向反了）**
+- 现场：`s070503` 在 `OV-00` 崩溃（`Attempted to assign to readonly property.`），`env`/`verification` 均 `null`。该 dump 因「不完整」被排除在证据根外，只活在 `/tmp` 与聊天记录里 —— 有效的过程记录因为不完整而不留痕，与「拿失效东西冒充有效」是同一个病的两面。
+- 口径（已落为第 31 条）：失败 dump 入 `docs/qa/raw/`，必须带 `suite`、`finishedAt`、失败原因（`blocked[].reason` 或 `error`）、配对 meta（`commit`/`dirty=false`）；门禁**识别但不判红、不可签、单独计数**（汇总行 `失败记录 N 份`），且**不得进证据根**。
+- 判定只认 `blocked:true` 或 `error` 非空：正常证据允许带 `blocked[]`（被阻塞 AC 及原因，如 `s080102-search-empty`），不得误杀。
+- 实现归属：**门禁识别与反例由 TL 本次落地；崩溃时落盘由 dev A 在 `evidence-run.sh` / `diag-evidence.sh` 失败分支实现**（与 `s070503` 修复同批，实跑即端到端证据，第 24 条）。
+- 首次落库：把仍留在 `/tmp` 的本次崩溃产物原样入库为 `docs/qa/raw/s070503-evidence-4190cf5a1ccd-20261108-131722.json`（+ meta，`commit=4190cf5`、`dirty=false`），审计链由此接上；未改一字。
+
+**二、`catalog` 汇总漏洞（第二个「漏维度」事故）**
+- 现场：`s2` dump 顶层 `ok=true`，但 `verification.catalog` 全红（`rootPresent=false`、`itemCount=24`、45 个目标中大量缺失、`betaCount=0/2`），整份证据显示通过。
+- 根因：顶层 `ok` 只聚合 `checks[]`，不聚合 `verification` 子块；`catalog` 采集还停留在旧 P4 契约（`data-catalog-root='p4'`、`data-catalog-beta`、未展开懒挂载分类），真实页面是 P3（`data-catalog-root='p3'`、`data-catalog-status='beta'`、分类懒挂载、行内 `button.catalog-row__select`）。**先按采集契约过期判，不得据此判产品 bug**（同 §4.7.67 的四项定性）。
+- 修法（第 30 条）：`diag.ts` 顶层 `ok = checksOk && verificationOk`，并单列 `checksOk`/`verificationOk`/`catalogOk`；`verify:evidence` 对 `s2` 校验子块齐备、`verificationOk` 与现算一致、顶层 `ok` 等于「checks ∧ 全部子块」；缺子块、缺布尔 `ok`、新增子块未纳入，三者任一即红。
+- 旧证据处置：`4190cf5` 入库的 `s2-evidence` 在新口径下**不可签**（其 `catalog` 为红），证据根副本移除，`docs/qa/raw/s2-evidence-7dd88d6b34c3-20261108-131001.json` 保留作过程记录。**`S-02.06-01` 维持「不可判」，不签**；待 dev A 修完 catalog 采集后由 BA 重跑 `s2`（W-90）。
+- 反例：删 `catalog` 子块 / `catalog.ok=false` 而顶层仍 `true` / `verificationOk` 与现算不一致 / 未知子块无布尔 `ok` —— 四例均纳入 `verify_evidence_selftest`。
+
+**三、BA 处置核准**
+- `AC-07.05-04` 记**「不可判」**（不记 PASS、不记 FAIL）——核准；补1 维持 `BLOCKED`——核准；失败产物未进证据根——核准（按本条一，此后应进 `raw/`，已由本次首次落库补上）。
+- 「套件崩溃 → 断言不可判」写入第 31 条，不再逐次临时议；崩溃期间的不可判**不得被追认成 PASS**。
+
+**四、落盘与自测**：`verify_evidence_selftest` **53/53**（新增：汇总口径 5 例、失败记录 6 例、`blocked[]` 误杀 1 例）；`verify:evidence` 汇总：扫描 8 份、冻结 18 份、env 兼容 8 份、失败记录 1 份、失败 0 项。**本提交只含门禁与文档**：`diag.ts` 的 catalog 重写与顶层聚合由 dev A 在 W-90 批次提交（其在途文件 `s070503Diag.ts` / `ipc.ts` / `CatalogPage.tsx` 未被本提交触碰），避免同一工作树两方混写。
+
+#### 4.7.70 dev A `4f44b08` 复核、DOM 契约绑定与「崩溃修复」的可签边界（2026-11-08）
+
+**一、`4f44b08` 已推送、CI 绿（`0953036` / run `42451805731`）**
+- `4f44b08` 六个文件：`s070503` 只读赋值崩溃修复、`catalog` 采集契约对齐 P3、顶层聚合补目录维度；`0953036` 在其上补失败记录入库、s2 旧证据移出证据根与两份文档。
+- **同树混写如实记录**：`4f44b08` 的实际内容还包含 TL 已暂存的门禁与自测改动（`verify_evidence.mjs` / `verify_evidence_selftest.mjs`）——dev A 提交时索引里已有这两份暂存。文件内容正确、测试全绿，但提交边界与作者归属被混在一起。这是第 26 条「取证窗口无并发写」的邻近风险：**同一工作树两方提交，必须按索引快照核对 `git show --stat`，不能只看提交说明**。后续批次仍按 §4.7.69 四执行：一方在途文件，另一方不 stage。
+- 远端 `main=0953036`，CI run `42451805731`（`head_sha=0953036`）：签字覆盖台账 success、macOS build / test / golden success。
+
+**二、`catalog` 定性复核：证据契约过期，不是产品 bug（维持 §4.7.69 二）**
+- 路由通、dump 读到 24 行 `data-catalog-item`：24 是 P3 重写后的默认分组（只展开 `trend`），不是产品少渲染。
+- `betaCount=0`：旧检查找 P4 的 `data-catalog-beta`，P3 用 `data-catalog-status`；`data-catalog-completeness` 是「口径完整度」，与 status 不同维度，不得混用。
+- 参数/预热 12 项失败：旧代码 `click()` 行容器 `<li data-catalog-item>`，该容器无 handler，detail 一直停在默认 T01；真正的选择按钮是 `button.catalog-row__select`，选中后以 `[data-catalog-detail][data-catalog-active]` 确认。
+- 结论：修复方向正确，**不得据此改产品**；`S-02.06-01` 仍「不可判」，等 BA 用新采集重跑。
+
+**三、DOM 契约绑定：做，落第 32 条，派 W-91（dev A 实现 / TL 验收）**
+- 三次同类：`[data-hist]` / `[data-readout-host]`、`data-catalog-beta`、点错 `<li>`。共同点不是「谁写错了」，而是**采集选择器与产品 DOM 之间没有绑定，失效只能等取证跑完才在断言里暴露**。
+- 机制（第 32 条）：`app/scripts/dom-contracts.json` 单一清单 + `verify:dom-contracts` 静态检查；产品改属性名/结构 → CI 红在「契约」；取证代码新增未登记 `data-*` → 红；契约与产品必须同提交。
+- 归属：**W-91，dev A 实现、TL 验收、不进 BA 主路径**（纯静态检查，不改变取证产物）。不新开卡、不调人日；触发卡记 `S-02.06`，覆盖范围含既有采集点 `S-07.05-03` / `S-02.08` / `S-02.05` / `S-02.02`。
+- 反例（第 29 条）：改产品属性名不改清单 → 红；清单删一条 → 红；取证代码新增 `data-*` 不登记 → 红；把选择器字符串挪到清单外拼接 → 红。
+
+**四、`s070503` 修复复核：不削弱 `OV-02`，但其可签上限只到「命令集」**
+- 根因确认：Tauri 用 `Object.defineProperty(writable=false)` 注入 `__TAURI_INTERNALS__.invoke`，旧代码在严格模式下给它赋值，**必抛** `Attempted to assign to readonly property.`，且发生在 `OV-00` 之后、`OV-01` 之前。
+- 修法确认：不碰注入对象，改在唯一 IPC 出口 `lib/ipc.ts` 挂只读 `setInvokeAudit` 旁路，`finally` 里复位；业务代码不得使用，默认 `null` 零开销。
+- 复核结论：**不削弱**。`OV-02` 的断言原文是 `commands.length === 1 && commands[0] === "bar_provenance"`，本来就只证命令名；旧 monkey-patch 记录的也只是 `String(args[0])`。两者证据强度相同。
+- 边界写清：`OV-02` 证的是「点击窗口内只调了一条 `bar_provenance`」，**不证参数正确**；参数正确性由 `OV-01` / `OV-06` 的浮层渲染结果（日期、`qualityFlags`、五段元数据）间接覆盖。若将来某条 AC 要求参数级证据，必须新立断言并记录脱敏入参摘要（命令 + 参数键/摘要），**不得默认 `OV-02` 已覆盖**。
+- 安全方向：若将来有代码绕过 `ipc` 直接 import `invoke`，`OV-02` 会读成 0 次而判红，不会假通过。
+
+**五、落盘**：本条与 W-91 随下一提交入库；`W-90` 第 1/3/4 项已由 `4f44b08` 交付、待 BA 重跑验收，**第 2 项（失败自动落盘到 `raw/`）仍未交付**，仍归 dev A。
+
+#### 4.7.71 `s2` / `s070503` 双签、一卡两行、取证窗口与 `291ms` 留档（2026-11-08）
+
+**一、双签（run `42454710780`，`head=26e795f`，relation=equal）**
+- `s2`：dump `6eb07e6`（`relation=equal`、`finishedAt=2026-11-08T06:13:45.695Z`），顶层 `ok=true`、`verification` 三块全 `true`、`blocked=[]`、`checks` 全 pass；`catalog` 105/105、45 卡、`beta` 2/2；`verify:evidence` failed=0。签 `S-02.06-01`，原 `W-81` 留白收口。
+- `s070503`：dump `610d331`（`relation=equal`），`OV-01…OV-08` 8/8、约 40 秒、`ok=true`。签 `S-07.05-03`，**scope 仅 `AC-07.05-04`**。
+- 两个提交 `610d331` / `26e795f` 已推 `main`；签字台账新增 run `42454710780` 一行（`equal`、`ancestor_check=0`、`success`）。
+
+**二、一卡两行：落制度第 33 条**
+- `S-07.05-03`：`AC-07.05-04=PASS`（8/8 有 dump 支撑），`补1=BLOCKED`（blocker `S-07.05-01`，`skipped=false`），卡级 `Blocked-AC`。
+- 口径：主行与补记逐行独立判定，**卡级取最严**；`sign_commit` 只在 `sign_scope` 内生效，必须写明「仅 AC-xx（补N 仍 BLOCKED，不计入本签字）」。不得因主行 PASS 升 `已交付`，也不得把补记折算成 PASS 或跳过。
+- 由此产生一项台账同步（BA 执行，见 §4.7.71 六）：`S-07.05-03` 在完成台账里仍记 `未开始`，与 gate-log 的 `Blocked-AC` 不一致；应转 `Blocked-AC`，总账 `未开始 21→20`、`Blocked-AC 1→2`。
+
+**三、取证窗口：落制度第 23 条 `d`，派 W-92**
+- 反例：BA 首次用「每 3 秒重复激活保前台」→ 240s 超时、零 dump；改为**只激活一次** → 约 40 秒正常。
+- 口径：取证期间只置前一次，脚本自己保证并记录 `activateAttempts`（正常 1），**禁止轮询式激活**；超时诊断先查激活方式再查产品。
+- 教训成文：**为满足条件所做的动作，过量后反过来变成了破坏条件的原因**。这不是产品缺陷，不能按产品 bug 立案。
+
+**四、`b2Render` 291ms：单列为可查字段，派 W-93**
+- 现状：`291ms` 只写在 `notes` 自由文本（「回切异常：样本 90 / cacheHit true / 逐点一致 true / max 291ms」），`ok=true` 是缓存命中 + 逐点一致的结论，**不等于时延达标**。
+- 口径：`ok=true` 只否定「回切渲染错误」，不评价时延；`291ms` 与早期 `P95=31ms`（跨批次 P95）**不是同一统计量**，不得互相比较或折算。
+- 处置：`verification.b2Render.latency` 单列 `{scope,sample,cacheHit,pointwiseEqual,maxMs,p95Ms,advisory}`；门禁只校验字段存在与类型，**不设阈值、不参与 `ok`/`signable`**；将来时延类 AC 必须自带阈值并显式引用该字段。
+
+**五、`W-90` 拆分**
+- 第 1/3/4 项关闭（`4f44b08` 交付 + BA 重跑 + run `42454710780` 签署）。
+- 第 2 项「失败自动落盘 `raw/`」**未交付**，拆为 **W-94**，不随 W-90 关闭；在 W-94 关闭前，失败留痕只算人工补录（如 `4190cf5` 那次），不算链路能力。
+
+**六、落盘与门禁**
+- 本提交：审计 §4.7.71、制度第 23 条 `d` 与第 33 条、gate-log 两行签字、签字台账一行、W-90 结项说明与 W-92/W-93/W-94。
+- 自测：`verify:gate-log`（签字 40 位 + 台账对齐）、`verify:sign`（run 与 `head_sha`）、`verify:evidence`（扫描 8 / 冻结 18 / 兼容 8 / 失败记录 1 / 失败 0）、`verify:docs`、`tsc --noEmit` 全绿后提交。
+- BA 待办（不属本提交）：完成台账同步 `S-07.05-03` 状态与两处总数；W-94 交付前失败记录继续人工补录。
+
+#### 4.7.72 `W-91` / `W-92` 验收合并、判据不追溯与派单共享态（2026-11-08）
+
+**一、验收合并（`91cdc77` + `2192340` → 合并 `7cf7d69`）**
+- `W-91`（`91cdc77`，基于 `6eb07e6`）：`dom-contracts.json` 110 条契约 / 35 条模板 / 11 个取证文件；三项检查 + 四条反例同提交，变异验证「退回不检查」后 4/4 变绿；CI 在 `verify:evidence` 之后新增 `verify:dom-contracts`。本地复跑通过。
+- `W-92`（`2192340`）：删除 16 次重试激活；先等进程与窗口就绪（只等不激活），随后唯一一次置前；置前失败、进程 10 秒未起、置后前台非 `aka-desktop` 一律 `exit 2`；dump 增记 `focusedAtLaunch` / `focusedAtAssert` / `activateAttempts`；`evidence-run.sh` 归档前硬门禁 `activateAttempts===1`、`focusedAtLaunch===true`、`focusedAtAssert===windowFocused`、`windowFocused=false` 拒收；`windowFocused` 未降为 WARN。
+- **实现偏差如实记录**：原 W-92 计划在 `verify_evidence.mjs` 做 WARN，实际改为归档前硬门禁（更严），`verify_evidence.mjs` 不加检查。理由见本节二：避免让新判据追溯已签证据。
+- 本地复核：`verify:dom-contracts` 110/35/11、selftest 4/4；`verify_evidence_selftest` 53/53；`verify:evidence` 扫描 10（新入库的 `s2` / `s070503`）/ 冻结 18 / 兼容 8 / 失败记录 1 / 失败 0；`verify:gate-log` 56 行 / 56 卡；`verify:cards-pages` 74 卡 / 10 页。
+
+**二、判据改进不追溯已签证据：落制度第 34 条**
+- 新字段、新静态检查、新告警从合并后的下一批取证生效；`26e795f` / `610d331` 在签署时判据下 `failed=0`，保持有效，不重跑。
+- 唯一例外是实质反证：只有新检查直接推翻某张已签卡的核心断言，才该卡「有条件签」并只重取相关断言；「多了字段」「更严了」不构成反证。
+- 这条不是宽容，是可持续性：工具每改进一次就全量重取，审计链会被自己的改进拖死，最后没人敢改工具。
+
+**三、派单共享态：落制度第 35 条**
+- 工单文档顶部新增「开工单状态表」（`编号 / 内容 / 执行人 / 状态 / 分支或提交`），作为 TL / BA / dev 唯一共享态；派单前先查重，进行中只验收不重派。
+- 复盘：`W-92` 与 dev A 的 `2192340` 是同一件事，被派了两次。根因不是谁记性差，而是三方各持局部状态；重复派单的真实成本是两个人的改动互相覆盖，不是多写一遍代码。
+- 本次按新表回填：`W-90` 已验收（第 1/3/4 项，第 2 项拆 W-94）、`W-91` 已验收、`W-92` 已验收、`W-93` / `W-94` 待开工。
+
+**四、落盘与门禁**
+- 本提交：审计 §4.7.72、制度第 34/35 条、工单状态表与 W-91/W-92 验收记录、合并提交 `7cf7d69`。
+- 签字不动：`S-02.06-01` / `S-07.05-03`（仅 AC-07.05-04）的 `sign_commit=26e795f` 继续有效；`W-92` 的新字段只对新归档生效。
+- BA 待办不变：完成台账 `S-07.05-03` 状态同步；W-93 / W-94 未交付前，时延与失败留痕仍按人工口径记录。
+
+
+
+
 
 ---
 

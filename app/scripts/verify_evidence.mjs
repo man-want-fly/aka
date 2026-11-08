@@ -52,9 +52,13 @@ const LEGACY_DEADLINE = "2026-11-22";
 // 只缩不扩的棘轮：前两轮教训是「靠有人会看」的约束都没被看住；
 // 新增冻结项必须付出「减一份或改本常量」的显式代价。
 const LEGACY_MAX_FILES = 18;
+// R-EV-02 env 兼容名单：只允许「pre-W-89 已入库、无 env 块」的历史证据缺 env/reproduce。
+// 免检资格只能由「文件名 + sha256 + expiresOn」锁定，不得由 dump 自己「不写 env」声明。
+// 棘轮只减不增：当前 8（2026-11-08 一次补录，TL 签字），新增必须同时减一份。
+const ENV_COMPAT_MAX_FILES = 8;
 // 冻结白名单 JSON 的 sha256：改动该 JSON 必须同步改本常量并单独过审。
 const LEGACY_WHITELIST_FILE_SHA256 =
-  "d3152a90cd9757b3db806e1a8a89db45bcf9b28387a95d3940f331f158c77cfe";
+  "6209c183bd37e9c4e4a6769baa7d754985444faf1c14b55aeac434dc8e26bac4";
 // 层名受控，防自建层（缺字段 / "undefined" / "runtime2" 一律红）。
 const ALLOWED_LAYERS = new Set(["data", "render", "runtime"]);
 const AC_TOKEN_RE = /^AC-\d{2}\.\d{2}-\d{2}(（补\d+）)?$/;
@@ -71,12 +75,52 @@ const EXPLICIT_AUX_EXTENSIONS = new Set([".txt", ".jsonl", ".log"]);
 
 const argv = process.argv.slice(2);
 const dirArg = argv.find((item) => item.startsWith("--dir="));
+const rawDirArg = argv.find((item) => item.startsWith("--raw-dir="));
+// 证据根由 scripts/evidence-layout.json 单一提供（制度第 27 条）：写入方与校验方不得各写一份。
+const LAYOUT_PATH = path.join(HERE, "evidence-layout.json");
+function layoutDir(key) {
+  try {
+    const layout = JSON.parse(fs.readFileSync(LAYOUT_PATH, "utf8"));
+    if (typeof layout[key] === "string" && layout[key]) return path.resolve(ROOT, layout[key]);
+  } catch {
+    // fallthrough 到报错
+  }
+  console.error(`::error::${path.relative(ROOT, LAYOUT_PATH)} 缺失或无法解析（第 27 条路径常量真源）`);
+  process.exit(2);
+}
 const EVIDENCE_DIR = dirArg
   ? path.resolve(dirArg.slice("--dir=".length))
-  : path.join(ROOT, "docs", "qa", "evidence");
+  : layoutDir("evidenceRoot");
+// 归档根同源读取：子目录报错文案与归档路径断言都不得再硬编码 docs/qa/raw。
+const ARCHIVE_REL = path
+  .relative(ROOT, layoutDir("archiveRoot"))
+  .split(path.sep)
+  .join("/");
+// 失败/blocked 记录的扫描根：真实运行时用归档根；单测用 --raw-dir 指向临时目录（不得扫到真实 raw）。
+const ARCHIVE_DIR = rawDirArg
+  ? path.resolve(rawDirArg.slice("--raw-dir=".length))
+  : dirArg
+    ? null
+    : layoutDir("archiveRoot");
+// 第 30 条：s2 dump 顶层汇总必须覆盖的 verification 子块（缺一即红，新增子块必须并进来）。
+const S2_VERIFICATION_BLOCKS = ["renderLayer", "b2Render", "b3Render", "catalog"];
+// R-EV-02：s2 dump 的 schema 键（缺键说明是旧构建产物，不许静默通过）。
+const S2_SCHEMA_KEYS = [
+  "build",
+  "dataset",
+  "engine",
+  "debounce",
+  "cold",
+  "warm",
+  "batchCompute",
+  "timeframes",
+  "verification",
+  "telemetry",
+];
 
 const failures = [];
 const warnings = [];
+const focusNotes = [];
 
 const cardText = fs.readFileSync(CARD_DOC, "utf8");
 const HEADING = /^#{2,4}\s+(S-\d{2}\.\d{2}-\d{2})/gm;
@@ -144,6 +188,7 @@ const stable = (layers) =>
 
 // 旧格式冻结：白名单 JSON 必须与脚本常量摘要一致才可信。
 let freezeMap = {};
+let envCompatMap = {};
 let whitelistUsable = false;
 try {
   const raw = fs.readFileSync(WHITELIST_PATH);
@@ -185,6 +230,42 @@ try {
       }
     }
     if (entriesValid) {
+      // env 兼容名单：同一份 JSON、同一把摘要锁；只允许缺 env/reproduce，其余断言照跑。
+      const envCompatEntries = Object.entries(parsed.envCompat?.files ?? {});
+      if (envCompatEntries.length > ENV_COMPAT_MAX_FILES) {
+        failures.push(
+          `env 兼容名单 ${envCompatEntries.length} > ENV_COMPAT_MAX_FILES=${ENV_COMPAT_MAX_FILES}（只减不增）`,
+        );
+      } else {
+        let envCompatValid = true;
+        for (const [name, entry] of envCompatEntries) {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+            failures.push(`${name}: env 兼容条目必须是 {sha256, expiresOn} 对象`);
+            envCompatValid = false;
+            continue;
+          }
+          if (typeof entry.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(entry.sha256)) {
+            failures.push(`${name}: env 兼容条目缺合法 sha256`);
+            envCompatValid = false;
+          }
+          // meta 也要锁：否则可以只改 meta 借壳（R-EV-02 已被豁免，没人再看它）。
+          if (typeof entry.metaSha256 !== "string" || !/^[0-9a-f]{64}$/.test(entry.metaSha256)) {
+            failures.push(`${name}: env 兼容条目缺合法 metaSha256`);
+            envCompatValid = false;
+          }
+          if (
+            typeof entry.expiresOn !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn)
+          ) {
+            failures.push(`${name}: env 兼容条目缺 expiresOn（必填，YYYY-MM-DD）`);
+            envCompatValid = false;
+          } else if (entry.expiresOn > LEGACY_DEADLINE) {
+            failures.push(`${name}: env 兼容 expiresOn=${entry.expiresOn} 超过 ${LEGACY_DEADLINE}（不许续期）`);
+            envCompatValid = false;
+          }
+        }
+        if (envCompatValid) envCompatMap = parsed.envCompat.files;
+      }
       freezeMap = parsed.files ?? {};
       whitelistUsable = true;
     }
@@ -239,6 +320,7 @@ const anchorLineMatches = (section, ac) => {
 
 let scanned = 0;
 let frozen = 0;
+let envCompatCount = 0;
 const evidenceFiles = [];
 
 // W-71：删除 EXCLUDED_DIRS。证据根只允许平铺；出现子目录即红——
@@ -252,7 +334,7 @@ const walk = (dir) => {
     const rel = path.relative(EVIDENCE_DIR, full).split(path.sep).join("/");
     if (entry.isDirectory()) {
       failures.push(
-        `${rel}: 证据根下出现子目录（跳过机制已删除；证据必须平铺，归档请移 docs/qa/raw/）`,
+        `${rel}: 证据根下出现子目录（跳过机制已删除；证据必须平铺，归档请移 ${ARCHIVE_REL}/）`,
       );
       continue;
     }
@@ -285,6 +367,16 @@ for (const { full, rel } of evidenceFiles) {
     continue;
   }
 
+  // 第 31 条：失败记录（崩溃/中断）不得充作可签证据——它必须入归档根，单独计数。
+  // 注意：正常证据也会有 `blocked[]`（被阻塞的 AC 及原因），所以不能用 blocked 数组判失败；
+  // 判定只看「显式 blocked:true」或「error 非空」。
+  if (evidence.blocked === true || (typeof evidence.error === "string" && evidence.error.trim() !== "")) {
+    failures.push(
+      `${file}: 失败记录不得放证据根（应入 ${ARCHIVE_REL}/ 作过程记录，不计证据份数）`,
+    );
+    continue;
+  }
+
   // 旧格式冻结：白名单命中则按 hash 锁死，截止日后一律红。
   const freezeEntry = whitelistUsable ? freezeMap[path.basename(file)] : undefined;
   if (freezeEntry) {
@@ -299,6 +391,33 @@ for (const { full, rel } of evidenceFiles) {
     frozen += 1;
     warnings.push(`${file}: 旧格式冻结（白名单命中，expiresOn ${freezeEntry.expiresOn}）`);
     continue;
+  }
+
+  // pre-W-89 env 兼容：只豁免 R-EV-02（env/reproduce/dump/聚焦），其余断言照跑。
+  // 名单外缺 env 一律红——「不写 env」不再构成免检资格。
+  let envCompatHit = false;
+  const envCompatEntry = whitelistUsable ? envCompatMap[path.basename(file)] : undefined;
+  if (envCompatEntry) {
+    if (!legacyAllowed) {
+      failures.push(`${file}: env 兼容名单已于 ${LEGACY_DEADLINE} 截止，必须重新由 evidence-run 取证`);
+      continue;
+    }
+    if (sha256(full) !== envCompatEntry.sha256) {
+      failures.push(`${file}: env 兼容名单 hash 不符（文件被改动，不得借壳续免检）`);
+      continue;
+    }
+    const compatMeta = full.replace(/\.json$/i, "-meta.json");
+    if (!fs.existsSync(compatMeta)) {
+      failures.push(`${file}: env 兼容名单命中但缺 meta（名单与证据集不同步）`);
+      continue;
+    }
+    if (sha256(compatMeta) !== envCompatEntry.metaSha256) {
+      failures.push(`${file}: env 兼容名单 meta hash 不符（meta 被改动，不得借壳续免检）`);
+      continue;
+    }
+    envCompatHit = true;
+    envCompatCount += 1;
+    warnings.push(`${file}: env 兼容（冻结名单命中，expiresOn ${envCompatEntry.expiresOn}，仅豁免 R-EV-02）`);
   }
 
   // 非冻结文件：坏 JSON 直接红，不许静默跳过。
@@ -400,6 +519,307 @@ for (const { full, rel } of evidenceFiles) {
     failures.push(`${file}-meta: JSON 解析失败（${error.message}）`);
     continue;
   }
+  // R-EV-02 运行层五项 + dump 完整性 + 聚焦可判定性。
+  // 对所有「非冻结」证据强制生效：兼容只能由 evidence-legacy-whitelist.json
+  // （文件名 + sha256 + expiresOn + 棘轮）声明；不再由 meta.reproduce 是否存在自证。
+  // 冻结白名单命中已在上面 continue，走到这里的任何文件缺 env/reproduce 一律红。
+  // 唯一的例外是上一步的 envCompatHit：它只对冻结名单内、sha256 锁定的历史文件生效。
+  if (!envCompatHit) {
+    const problems = [];
+    if (typeof meta.reproduce !== "string" || meta.reproduce.trim() === "") {
+      problems.push(
+        "meta.reproduce 缺失/为空（非冻结证据必须由 evidence-run 产出，不得自免 R-EV-02）",
+      );
+    }
+    const env = evidence.env;
+    if (!env || typeof env !== "object" || Array.isArray(env)) {
+      problems.push("缺 env 块（R-EV-02 五项：commit/runtime/build/command/dirty）");
+    } else {
+      // 1) commit：必须构建期 define 注入，且与 meta.commit 相等（手改任一侧都要红）。
+      const envCommit = String(env.commit ?? "").trim();
+      if (!envCommit) {
+        problems.push("env.commit 为空（必须由构建期 define 注入）");
+      } else if (envCommit !== meta.commit) {
+        problems.push(
+          `env.commit=${envCommit} 与 meta.commit=${meta.commit} 不一致（commit 不得手写）`,
+        );
+      }
+      // 2) dirty：取证必须是干净树；且 meta.dirty 与 env.dirty 必须同源同值（W-89 第 1 项）。
+      //    落盘后各自现算会得到两个答案（meta=false / env=true），必须在门禁处直接判红。
+      if (env.dirty !== false) {
+        problems.push(`env.dirty=${JSON.stringify(env.dirty)} 不是 false`);
+      }
+      if (typeof meta.dirty !== "boolean") {
+        problems.push(
+          `meta.dirty=${JSON.stringify(meta.dirty)} 不是布尔（必须是 PRE 快照的 false）`,
+        );
+      } else {
+        if (meta.dirty !== false) {
+          problems.push("meta.dirty=true（取证必须在干净树上跑）");
+        }
+        if (typeof env.dirty === "boolean" && env.dirty !== meta.dirty) {
+          problems.push(
+            `meta.dirty=${meta.dirty} 与 env.dirty=${env.dirty} 不一致（必须同源同值）`,
+          );
+        }
+      }
+      // 3) runtime：launchMode/node/os/arch/hostTarget 非空 + electron 键存在且非 null。
+      // 本产品是 Tauri WebKit 宿主，electron 显式 "none" 记通过；缺失/undefined 仍 FAIL。
+      const runtime = env.runtime;
+      if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
+        problems.push("env.runtime 缺失");
+      } else {
+        for (const key of ["launchMode", "node", "os", "arch", "hostTarget"]) {
+          if (!String(runtime[key] ?? "").trim()) problems.push(`env.runtime.${key} 为空`);
+        }
+        if (!("electron" in runtime)) {
+          problems.push("env.runtime 缺键 electron（非 Electron 宿主须显式写 \"none\"）");
+        } else if (runtime.electron === null || runtime.electron === undefined) {
+          problems.push("env.runtime.electron 为 null（须显式写 \"none\"）");
+        } else if (!String(runtime.electron).trim()) {
+          problems.push("env.runtime.electron 为空（须显式写 \"none\"）");
+        } else if (String(runtime.electron).trim().toLowerCase() !== "none") {
+          problems.push(
+            `env.runtime.electron=${JSON.stringify(runtime.electron)} 不是 "none"（Electron 宿主证据无效）`,
+          );
+        }
+      }
+      // 4) build：入口/构建时刻/profile/features/二进制摘要。
+      const build = env.build;
+      if (!build || typeof build !== "object" || Array.isArray(build)) {
+        problems.push("env.build 缺失");
+      } else {
+        for (const key of ["entry", "builtAt", "cargoProfile"]) {
+          if (!String(build[key] ?? "").trim()) problems.push(`env.build.${key} 为空`);
+        }
+        if (!Array.isArray(build.features) || build.features.length === 0) {
+          problems.push("env.build.features 必须是非空数组");
+        }
+        const bin = build.binary;
+        if (!bin || typeof bin !== "object" || Array.isArray(bin)) {
+          problems.push("env.build.binary 缺失");
+        } else {
+          if (!String(bin.path ?? "").trim()) problems.push("env.build.binary.path 为空");
+          if (!/^[0-9a-f]{64}$/.test(String(bin.sha256 ?? ""))) {
+            problems.push("env.build.binary.sha256 不是 64 位小写 hex");
+          }
+        }
+      }
+      // 5) command：可复现命令。
+      if (!String(env.command ?? "").trim()) problems.push("env.command 为空");
+    }
+
+    // 3b/4b/5b) 同一事实只允许一处真源：meta.runtime / meta.build / meta.command 必须逐字段
+    // 等于 dump.env 的副本（W-89 第 3 项）；不一致即红，不许一处写 null、一处写 "none"。
+    if (env && typeof env === "object" && !Array.isArray(env)) {
+      const same = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+      const metaRuntime = meta.runtime;
+      if (!metaRuntime || typeof metaRuntime !== "object" || Array.isArray(metaRuntime)) {
+        problems.push("meta.runtime 缺失（必须由 evidence-run 从 dump.env.runtime 回填）");
+      } else {
+        for (const key of ["launchMode", "node", "os", "arch", "hostTarget", "electron"]) {
+          const actual = metaRuntime[key] ?? null;
+          const expected = (env.runtime && env.runtime[key]) ?? null;
+          if (!same(actual, expected)) {
+            problems.push(
+              `meta.runtime.${key}=${JSON.stringify(actual)} 与 env.runtime.${key}=${JSON.stringify(expected)} 不一致`,
+            );
+          }
+        }
+      }
+      // 顶层 meta.electron 若被写出，必须与 runtime.electron 同值；null 是「两个答案」的一种。
+      if ("electron" in meta) {
+        const expected = (metaRuntime && metaRuntime.electron) ?? (env.runtime && env.runtime.electron) ?? null;
+        if (meta.electron === null || meta.electron === undefined) {
+          problems.push("meta.electron=null（同一事实两处不一致；electron 只保留 env.runtime 一处）");
+        } else if (!same(meta.electron, expected)) {
+          problems.push(
+            `meta.electron=${JSON.stringify(meta.electron)} 与 runtime.electron=${JSON.stringify(expected)} 不一致`,
+          );
+        }
+      }
+
+      const metaBuild = meta.build;
+      if (!metaBuild || typeof metaBuild !== "object" || Array.isArray(metaBuild)) {
+        problems.push("meta.build 缺失（必须由 evidence-run 从 dump.env.build 回填）");
+      } else {
+        for (const key of ["entry", "builtAt", "cargoProfile", "features"]) {
+          const actual = metaBuild[key] ?? null;
+          const expected = (env.build && env.build[key]) ?? null;
+          if (!same(actual, expected)) {
+            problems.push(
+              `meta.build.${key}=${JSON.stringify(actual)} 与 env.build.${key}=${JSON.stringify(expected)} 不一致`,
+            );
+          }
+        }
+        for (const key of ["path", "sha256"]) {
+          const actual = (metaBuild.binary && metaBuild.binary[key]) ?? null;
+          const expected = (env.build && env.build.binary && env.build.binary[key]) ?? null;
+          if (!same(actual, expected)) {
+            problems.push(
+              `meta.build.binary.${key}=${JSON.stringify(actual)} 与 env.build.binary.${key}=${JSON.stringify(expected)} 不一致`,
+            );
+          }
+        }
+      }
+
+      const metaCommand = String(meta.command ?? "").trim();
+      if (!metaCommand) {
+        problems.push("meta.command 为空（必须由 evidence-run 从 dump.env.command 回填）");
+      } else if (metaCommand !== String(env.command ?? "").trim()) {
+        problems.push(
+          `meta.command=${JSON.stringify(metaCommand)} 与 env.command=${JSON.stringify(String(env.command ?? "").trim())} 不一致`,
+        );
+      }
+    }
+
+    // dump：归档落在归档根、摘要合法、finishedAt 与 dump 内值相等（禁止手写另一个时刻）。
+    const dump = meta.dump;
+    if (!dump || typeof dump !== "object" || Array.isArray(dump)) {
+      problems.push("meta.dump 缺失");
+    } else {
+      const archived = String(dump.archived ?? "").replace(/\\/g, "/");
+      if (!archived.startsWith(`${ARCHIVE_REL}/`)) {
+        problems.push(`meta.dump.archived=${JSON.stringify(archived)} 不在归档根 ${ARCHIVE_REL}/`);
+      }
+      if (!/^[0-9a-f]{64}$/.test(String(dump.sha256 ?? ""))) {
+        problems.push("meta.dump.sha256 不是 64 位小写 hex");
+      }
+      // 口径写死：finishedAt 的唯一来源是 dump 顶层 finishedAt；meta.dump.finishedAt 只是副本。
+      // 缺失/不等即红，不允许回退 mtime，也不许一处读顶层、一处读子层。
+      const dumpFinished = String(dump.finishedAt ?? "");
+      const evidenceFinished = evidence.finishedAt;
+      if (typeof evidenceFinished !== "string" || !evidenceFinished.trim()) {
+        problems.push("dump 顶层缺 finishedAt（唯一来源，缺失即红）");
+      }
+      if (!dumpFinished.trim()) {
+        problems.push("meta.dump.finishedAt 为空（必须从 dump 顶层 finishedAt 回填）");
+      } else if (evidenceFinished !== dumpFinished) {
+        problems.push(
+          `meta.dump.finishedAt=${dumpFinished} 与 dump 顶层 finishedAt=${evidenceFinished} 不一致`,
+        );
+      }
+    }
+
+    // 聚焦：缺失/类型错 = 不可判定 = FAIL；false 是「实测未聚焦」的真实状态，
+    // 不判证据失败，但该证据的运行时 check 记「不可判定」，按第 29 条复核判据（第 19 条）。
+    let unfocused = false;
+    for (const key of ["windowFocused", "appActive"]) {
+      if (typeof evidence[key] !== "boolean") {
+        problems.push(`dump 缺 ${key}（聚焦状态不可判定 = FAIL）`);
+      } else if (evidence[key] !== true) {
+        unfocused = true;
+      }
+    }
+    if (unfocused) {
+      focusNotes.push(`${file}: windowFocused/appActive=false → 运行时 check 记不可判定（非证据失败；按第 29 条判据复核）`);
+    }
+
+    // s2 schema：10 个键 + checks > 0（checks 数组已在上面统一断言）+ suite=s2。
+    if (evidence.kind === "aka-s2-evidence") {
+      const missingKeys = S2_SCHEMA_KEYS.filter((key) => !(key in evidence));
+      if (missingKeys.length > 0) {
+        problems.push(`s2 dump 缺 schema 键 [${missingKeys.join(", ")}]`);
+      }
+      if (evidence.suite !== "s2") {
+        problems.push(`s2 dump suite=${JSON.stringify(evidence.suite)} 不是 "s2"`);
+      }
+      // b2Render 判定分层（第 10 条 / 第 19 条）：
+      //   ok       = assertionsOk            —— 产品断言结论，不含聚焦；
+      //   signable = assertionsOk && focusOk —— 可签的唯一判据；
+      // n/a（dataLimited）不算 fail、不改 assertionsOk；未聚焦不得签，但记「不可判定」而非产品失败。
+      const b2 = evidence.verification && evidence.verification.b2Render;
+      if (!b2 || typeof b2 !== "object" || Array.isArray(b2)) {
+        problems.push("s2 dump 缺 verification.b2Render（判定分层不可省）");
+      } else {
+        for (const key of ["assertionsOk", "focusOk", "signable", "ok"]) {
+          if (typeof b2[key] !== "boolean") {
+            problems.push(`b2Render.${key} 不是布尔（缺键 = 不可判定 = FAIL）`);
+          }
+        }
+        if (typeof b2.assertionsOk === "boolean" && typeof b2.focusOk === "boolean") {
+          if (b2.ok !== b2.assertionsOk) {
+            problems.push("b2Render.ok 必须等于 assertionsOk（产品断言，不得混入聚焦）");
+          }
+          if (b2.signable !== (b2.assertionsOk && b2.focusOk)) {
+            problems.push("b2Render.signable 必须等于 assertionsOk && focusOk（派生不一致）");
+          }
+        }
+        if (
+          typeof b2.focusOk === "boolean" &&
+          b2.focusOk !== (evidence.windowFocused === true && evidence.appActive === true)
+        ) {
+          problems.push("b2Render.focusOk 与 dump 顶层 windowFocused/appActive 不一致");
+        }
+        if (b2.focusOk === false) {
+          focusNotes.push(`${file}: b2Render.focusOk=false → 不可判定，不得据此签（第 10 条）`);
+        }
+      }
+
+      // 第 30 条：顶层 ok 必须覆盖全部 verification 子块——漏一个维度就等于让红证据显示通过。
+      const verification = evidence.verification;
+      const blockOks = [];
+      if (!verification || typeof verification !== "object" || Array.isArray(verification)) {
+        problems.push("s2 dump 缺 verification（顶层 ok 无法覆盖子块）");
+      } else {
+        for (const key of S2_VERIFICATION_BLOCKS) {
+          const block = verification[key];
+          if (!block || typeof block !== "object" || Array.isArray(block)) {
+            problems.push(`verification.${key} 缺失（顶层汇总必须覆盖全部子块，缺一即红）`);
+            continue;
+          }
+          if (typeof block.ok !== "boolean") {
+            problems.push(`verification.${key}.ok 不是布尔（缺键 = 汇总漏维度）`);
+            continue;
+          }
+          blockOks.push(block.ok === true);
+        }
+        for (const key of Object.keys(verification)) {
+          if (S2_VERIFICATION_BLOCKS.includes(key)) continue;
+          const block = verification[key];
+          if (!block || typeof block !== "object" || typeof block.ok !== "boolean") {
+            problems.push(`verification.${key} 不是带布尔 ok 的子块（新增子块必须纳入汇总口径）`);
+          }
+        }
+        const checksAllPassed =
+          Array.isArray(evidence.checks) && evidence.checks.every((check) => check.passed === true);
+        const allBlocksOk =
+          blockOks.length === S2_VERIFICATION_BLOCKS.length && blockOks.every(Boolean);
+        if (typeof evidence.verificationOk !== "boolean") {
+          problems.push("s2 dump 缺布尔 verificationOk（子块汇总结果必须单列）");
+        } else if (evidence.verificationOk !== allBlocksOk) {
+          problems.push(
+            `verificationOk=${evidence.verificationOk} 与现算「全部子块 ok=${allBlocksOk}」不一致`,
+          );
+        }
+        // 目录维度单列，门禁直接判读：catalog 红不得藏在顶层 ok=true / verificationOk 下。
+        if (typeof evidence.catalogOk !== "boolean") {
+          problems.push("s2 dump 缺布尔 catalogOk（目录维度必须单列）");
+        } else if (
+          verification.catalog &&
+          typeof verification.catalog.ok === "boolean" &&
+          evidence.catalogOk !== verification.catalog.ok
+        ) {
+          problems.push(
+            `catalogOk=${evidence.catalogOk} 与 verification.catalog.ok=${verification.catalog.ok} 不一致`,
+          );
+        }
+        if (typeof evidence.checksOk !== "boolean") {
+          problems.push("s2 dump 缺布尔 checksOk（checks 聚合结果必须单列）");
+        } else if (evidence.checksOk !== checksAllPassed) {
+          problems.push(`checksOk=${evidence.checksOk} 与现算「checks 全过=${checksAllPassed}」不一致`);
+        }
+        if (evidence.ok !== (checksAllPassed && allBlocksOk)) {
+          problems.push(
+            `顶层 ok=${evidence.ok} 必须等于「checks 全过=${checksAllPassed} ∧ 全部子块 ok=${allBlocksOk}」`,
+          );
+        }
+      }
+    }
+
+    for (const problem of problems) failures.push(`${file}: ${problem}`);
+  }
+
   const result = meta.result && typeof meta.result === "object" ? meta.result : {};
   if (!result.card) {
     failures.push(`${file}-meta: 缺 result.card，无法闭合归属`);
@@ -481,15 +901,78 @@ for (const { full, rel } of evidenceFiles) {
   }
 }
 
+// 第 31 条：失败/blocked 记录入归档根留痕——可查、可追、不可签；
+// 与可签证据分开计数，不判红（否则真实过程记录又会因为「不完整」被挤回 /tmp）。
+let blockedRecords = 0;
+if (ARCHIVE_DIR && fs.existsSync(ARCHIVE_DIR)) {
+  const rawNames = fs
+    .readdirSync(ARCHIVE_DIR)
+    .filter((name) => /\.json$/i.test(name) && !/-meta\.json$/.test(name))
+    .sort();
+  for (const name of rawNames) {
+    const full = path.join(ARCHIVE_DIR, name);
+    const rel = `${ARCHIVE_REL}/${name}`;
+    let dump;
+    try {
+      dump = JSON.parse(fs.readFileSync(full, "utf8"));
+    } catch (error) {
+      failures.push(`${rel}: JSON 解析失败（${error.message}）`);
+      continue;
+    }
+    const blocked = Array.isArray(dump.blocked) ? dump.blocked : [];
+    const hasError = typeof dump.error === "string" && dump.error.trim() !== "";
+    const isFailure = dump.blocked === true || hasError;
+    if (!isFailure) continue; // 成功 dump 的归档副本：不充证据、不计数
+
+    blockedRecords += 1;
+    if (dump.ok !== false) {
+      failures.push(`${rel}: 失败记录必须 ok=false`);
+    }
+    if (typeof dump.suite !== "string" || dump.suite.trim() === "") {
+      failures.push(`${rel}: 失败记录缺 suite`);
+    }
+    if (typeof dump.finishedAt !== "string" || dump.finishedAt.trim() === "") {
+      failures.push(`${rel}: 失败记录缺 finishedAt（崩溃时间必须可追）`);
+    }
+    const reasons = blocked
+      .map((item) => (item && typeof item.reason === "string" ? item.reason.trim() : ""))
+      .filter(Boolean);
+    if (reasons.length === 0 && !hasError) {
+      failures.push(`${rel}: 失败记录缺失败原因（blocked[].reason 或 error 至少一项）`);
+    }
+    const rawMeta = full.replace(/\.json$/i, "-meta.json");
+    if (!fs.existsSync(rawMeta)) {
+      failures.push(`${rel}: 失败记录缺 meta（suite/commit/dirty 必须可追）`);
+    } else {
+      try {
+        const m = JSON.parse(fs.readFileSync(rawMeta, "utf8"));
+        if (!/^[0-9a-f]{40}$/.test(String(m.commit ?? ""))) {
+          failures.push(`${rel}: 失败记录 meta.commit 非法`);
+        }
+        if (m.dirty !== false) {
+          failures.push(`${rel}: 失败记录 meta.dirty 必须为 false（失败产物也要有干净基线）`);
+        }
+      } catch (error) {
+        failures.push(`${rel}: 失败记录 meta 解析失败（${error.message}）`);
+      }
+    }
+    warnings.push(
+      `${rel}: 失败记录（suite=${dump.suite}，${reasons.length + (hasError ? 1 : 0)} 条原因）——不可签，不计证据份数`,
+    );
+  }
+}
+
 if (scanned === 0) {
   failures.push(`未在 ${EVIDENCE_DIR} 扫描到任何证据（拒绝空转）`);
 }
 
 for (const warning of warnings) console.warn(`WARN ${warning}`);
+for (const note of focusNotes) console.warn(`WARN ${note}`);
 for (const failure of failures) console.error(`FAIL ${failure}`);
 console.log(
   `证据归属门禁：卡集 ${CARD_SET.size} 张，扫描 ${scanned} 份证据（全部平铺），` +
-    `冻结 ${frozen} 份，失败 ${failures.length} 项` +
-    `（白名单上限 ${LEGACY_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
+    `冻结 ${frozen} 份，env 兼容 ${envCompatCount} 份，未聚焦 ${focusNotes.length} 份，` +
+    `失败记录 ${blockedRecords} 份（不可签，不计证据份数），失败 ${failures.length} 项` +
+    `（白名单上限 ${LEGACY_MAX_FILES} / env 兼容上限 ${ENV_COMPAT_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
 );
 process.exit(failures.length === 0 ? 0 : 1);

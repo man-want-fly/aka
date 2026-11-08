@@ -9,7 +9,10 @@ APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP_BIN="$APP_DIR/target/debug/aka-desktop"
 DIAG_DIR="$HOME/Library/Application Support/aka/diag"
 TELEMETRY="$HOME/Library/Application Support/aka/logs/telemetry.jsonl"
-OUT="$APP_DIR/../docs/qa/evidence"
+# 证据根由 scripts/evidence-layout.json 单一提供（制度第 27 条）。
+LAYOUT="$APP_DIR/scripts/evidence-layout.json"
+EVIDENCE_REL="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1],encoding="utf-8"))["evidenceRoot"])' "$LAYOUT")"
+OUT="$APP_DIR/../$EVIDENCE_REL"
 DB="$HOME/Library/Application Support/aka/state.db"
 SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market}"
 LABEL="$(date +%Y%m%d-%H%M%S)"
@@ -148,42 +151,27 @@ conn.commit()
 print(f"fixture 已注入 {len(rows)} 条 SEED 标的")
 PY
     ;;
-  s030104)
-    TARGET="s030104"
-    JSON="$DIAG_DIR/s030104-evidence.json"
-    NAME="s030104-evidence"
-    FIXTURE="默认 state.db；App 清空 aka.last.code 后验证无标的引导，再按「副图满仓 / 留出空位」两阶段验证容量、去重与规划项；只改 localStorage，不改库"
-    BAK=""
-    ;;
-  s030201)
-    TARGET="s030201"
-    JSON="$DIAG_DIR/s030201-favorites-evidence.json"
-    NAME="s030201-favorites-evidence"
-    FIXTURE="默认 state.db；收藏套件自行增删并验证首装 8 项、顺序、幂等与「清空后不重播」；取证后 sqlite3 .backup 还原"
-    BAK="/tmp/aka-state-s030201-$LABEL.db"
+  s0602)
+    TARGET="s0602"
+    JSON="$DIAG_DIR/s0602-display-evidence.json"
+    NAME="s0602-display-evidence"
+    FIXTURE="默认 state.db；自选为空时直插 1 条 600519.SH 供自选行高取证；取证后 sqlite3 .backup 还原，产品代码未改动"
+    BAK="/tmp/aka-state-s0602-$LABEL.db"
     sqlite3 "$DB" ".backup '$BAK'"
-    ;;
-  s030302-catalog)
-    TARGET="s030302-catalog"
-    JSON="$DIAG_DIR/s030302-catalog-evidence.json"
-    NAME="s030302-catalog-evidence"
-    FIXTURE="默认 state.db；目录行进 P4 后 Esc 返回，验证展开/滚动/筛选还原；只读，不改库"
-    BAK=""
-    ;;
-  s030302)
-    TARGET="s030302"
-    JSON="$DIAG_DIR/s030302-evidence.json"
-    NAME="s030302-evidence"
-    FIXTURE="默认 state.db；工作台图例「?」与抽屉「查看口径」进 P4 后返回，验证副图/视口保持与抽屉恢复；只读，不改库"
-    BAK=""
-    ;;
-  s060301)
-    TARGET="s060301"
-    JSON="$DIAG_DIR/s060301-about-evidence.json"
-    NAME="s060301-about-evidence"
-    FLAGS="--empty-dataset"
-    FIXTURE="默认 state.db；--empty-dataset 让数据源不可用，验证关于页数据目录「目录不存在」+「重建样本包」入口，同时核对版本/计数/通道；只读，不改库"
-    BAK=""
+    python3 - "$DB" <<'PY'
+import sqlite3, sys
+conn = sqlite3.connect(sys.argv[1])
+count = conn.execute("SELECT COUNT(*) FROM watchlist_items").fetchone()[0]
+if count == 0:
+    conn.execute(
+        "INSERT OR REPLACE INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?,?,?,?)",
+        ("600519.SH", None, 0, 1700000000),
+    )
+    conn.commit()
+    print("fixture 已注入 1 条 600519.SH")
+else:
+    print(f"自选已有 {count} 条，无需注入")
+PY
     ;;
   s060302)
     TARGET="s060302"
@@ -207,40 +195,10 @@ else:
     print(f"自选已有 {count} 条，无需注入")
 PY
     ;;
-  s0602)
-    TARGET="s0602"
-    JSON="$DIAG_DIR/s0602-display-evidence.json"
-    FIXTURE="默认 state.db；自选为空时直插 1 条 600519.SH 供自选行高取证；取证后 sqlite3 .backup 还原，产品代码未改动"
-    BAK="/tmp/aka-state-s0602-$LABEL.db"
-    sqlite3 "$DB" ".backup '$BAK'"
-    python3 - "$DB" <<'PY'
-import sqlite3, sys
-conn = sqlite3.connect(sys.argv[1])
-count = conn.execute("SELECT COUNT(*) FROM watchlist_items").fetchone()[0]
-if count == 0:
-    conn.execute(
-        "INSERT OR REPLACE INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?,?,?,?)",
-        ("600519.SH", None, 0, 1700000000),
-    )
-    conn.commit()
-    print("fixture 已注入 1 条 600519.SH")
-else:
-    print(f"自选已有 {count} 条，无需注入")
-PY
-    ;;
-  s080202)
-    TARGET="s080202"
-    JSON="$DIAG_DIR/s080202-evidence.json"
-    NAME="s080202-evidence"
-    FLAGS=""
-    FIXTURE="默认 state.db；工作台真实计算 + diag_set_inject 注入（panic×3 / data / timeout 8s），关闭注入后恢复；不改库"
-    BAK=""
-    ;;
   s070102)
     TARGET="s070102"
     JSON="$DIAG_DIR/s070102-evidence.json"
     NAME="s070102-evidence"
-    FLAGS=""
     FIXTURE="默认 state.db；P9 健康检查全 PASS 路径 + tushare 0/4 禁用卡；只读，不改库"
     BAK=""
     ;;
@@ -250,6 +208,13 @@ PY
     NAME="s070102-corrupt-evidence"
     FLAGS="--corrupt-manifest"
     FIXTURE="默认 state.db；--corrupt-manifest 注入 manifest 不可解析，验证 ②FAIL → ③~⑥SKIP（1/6）与「重建样本包」入口；只读"
+    BAK=""
+    ;;
+  s080202)
+    TARGET="s080202"
+    JSON="$DIAG_DIR/s080202-evidence.json"
+    NAME="s080202-evidence"
+    FIXTURE="默认 state.db；工作台真实计算 + diag_set_inject 注入（panic×3 / data / timeout 8s），关闭注入后恢复；不改库"
     BAK=""
     ;;
   *)
@@ -264,6 +229,35 @@ if [ -f "$JSON" ]; then before=$(stat -f %m "$JSON"); fi
 AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" env $EXTRA_ENV "$APP_BIN" $FLAGS &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true; sleep 1; restore_db' EXIT
+
+# W-89：前置聚焦。窗口未聚焦时运行层判「不可判定 = FAIL」，取证链路必须先真正把窗口拉到前台。
+# 硬约束（BA 现场带回）：置前只做**一次**。实测「每 3 秒重复激活」会打断采集 → 240 秒超时、零 dump；
+# 改成单次激活后约 40 秒正常。因此这里只等待进程/窗口就绪（不激活），随后一次性置前，
+# 失败或置后前台不是 aka-desktop 就 exit 2，不进入采集（禁止轮询式/重复激活）。
+ACTIVATE_ATTEMPTS=0
+FOCUSED_AT_LAUNCH=""
+for _ in $(seq 1 20); do
+  if pgrep -x aka-desktop >/dev/null 2>&1; then break; fi
+  sleep 0.5
+done
+if ! pgrep -x aka-desktop >/dev/null 2>&1; then
+  echo "置前失败：10 秒内 aka-desktop 进程未启动（activateAttempts=0），中止取证" >&2
+  exit 2
+fi
+# 只等待窗口创建，不做任何激活；固定等待 2 秒后再执行唯一一次置前。
+sleep 2
+ACTIVATE_ATTEMPTS=1
+if ! osascript -e 'tell application "System Events" to set frontmost of process "aka-desktop" to true' >/dev/null 2>&1; then
+  echo "置前失败：单次激活未成功（activateAttempts=1），中止取证" >&2
+  exit 2
+fi
+sleep 1
+FRONTMOST="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null || true)"
+if [ "$FRONTMOST" != "aka-desktop" ]; then
+  echo "置前失败：前台进程=${FRONTMOST:-未知}（activateAttempts=1），中止取证" >&2
+  exit 2
+fi
+FOCUSED_AT_LAUNCH=1
 
 ARCHIVED=0
 for _ in $(seq 1 240); do
@@ -424,18 +418,60 @@ if [ "$SUITE" = "s0602" ]; then
   cat "$SCAN_FILE"
 fi
 
-python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" "$EXTRA_ENV" <<'PY'
-import json, subprocess, sys, datetime, os, platform, hashlib
-evidence_path, meta_path, label, target, fixture, scan_file, scan_rc, flags, extra_env = sys.argv[1:10]
+python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" "$EXTRA_ENV" "$ACTIVATE_ATTEMPTS" "$FOCUSED_AT_LAUNCH" <<'PY'
+import json, os, subprocess, sys, datetime
+(
+    evidence_path, meta_path, label, target, fixture, scan_file, scan_rc,
+    flags, extra_env, attempts_raw, launch_focus_raw,
+) = sys.argv[1:12]
 d = json.load(open(evidence_path))
+# W-89 补：置前/断言分离记录。activateAttempts 只可能是 0/1（置前只做一次），
+# focusedAtLaunch 由脚本在唯一一次置前之后实测（前台进程 = aka-desktop），
+# focusedAtAssert 直接取 dump 顶层 windowFocused（它本就在断言点采样）。
+d["activateAttempts"] = int(attempts_raw)
+d["focusedAtLaunch"] = launch_focus_raw == "1"
+d["focusedAtAssert"] = d.get("windowFocused") if isinstance(d.get("windowFocused"), bool) else None
+focus_bad = d["focusedAtAssert"] is False
+if focus_bad:
+    print(
+        "::error::置前后断言时 windowFocused 仍为 false"
+        f"（focusedAtLaunch={d['focusedAtLaunch']}, activateAttempts={d['activateAttempts']}）"
+        " → 不可判定，不得签",
+        file=sys.stderr,
+    )
+json.dump(d, open(evidence_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 commit = subprocess.check_output(["git", "-C", root, "rev-parse", "HEAD"], text=True).strip()
-status = subprocess.check_output(
-    ["git", "-C", root, "status", "--porcelain", "--", "app"], text=True
-)
-dirty = bool(status.strip())
+# W-89 第 1 项：dirty 只认 evidence-run.sh 落盘前导出的 PRE 快照；
+# 单独跑本脚本时才回退到现场 git status（此时产物还没写，不存在自污染）。
+pre_dirty = os.environ.get("AKA_EVIDENCE_DIRTY")
+if pre_dirty is None:
+    status = subprocess.check_output(
+        ["git", "-C", root, "status", "--porcelain", "--", "app"], text=True
+    )
+    dirty = bool(status.strip())
+else:
+    dirty = pre_dirty == "1"
 now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).isoformat(timespec="seconds")
-checks = d.get("checks", [])
+# W-89：按 schema 分支。s2 dump 是 build/dataset/engine/... 的专用 schema，
+# 只有新构建的 diag.ts 才会额外产出统一的 suite/ok/checks 外层；
+# 缺 checks 时给出精确原因并 exit 2，不许把旧产物当成「大概跑完了」。
+checks = d.get("checks")
+if not isinstance(checks, list) or not checks:
+    if d.get("kind") == "aka-s2-evidence" or d.get("suite") == "s2":
+        schema = ",".join(sorted(d.keys()))
+        print(
+            f"::error::s2 dump 缺 checks[]（实际 schema=[{schema}]）；"
+            "该产物来自 W-89 之前的 diag.ts，必须重新构建后再取证",
+            file=sys.stderr,
+        )
+    else:
+        print("::error::dump 缺 checks[]，无法聚合归属", file=sys.stderr)
+    sys.exit(2)
+bad = [i for i, c in enumerate(checks) if not isinstance(c, dict) or not c.get("card")]
+if bad:
+    print(f"::error::dump checks[{bad[0]}] 不是含 card 的对象", file=sys.stderr)
+    sys.exit(2)
 card_order = []
 card_stats = {}
 for check in checks:
@@ -480,37 +516,7 @@ meta = {
     "runAt": now,
     "commit": commit,
     "dirty": dirty,
-    "command": {
-        "line": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" {extra_env} target/debug/aka-desktop {flags}".replace("  ", " ").strip(),
-        "env": {
-            "AKA_DIAG": "1",
-            "AKA_DIAG_TARGET": target,
-            **dict(part.split("=", 1) for part in extra_env.split() if "=" in part),
-        },
-    },
-    "runtime": {
-        "launch": "target/debug/aka-desktop 直接启动（AKA_DIAG=1，非 CI 代偿）",
-        "node": subprocess.run(["node", "-v"], text=True, capture_output=True).stdout.strip() or "unknown",
-        "electron": "N/A（Tauri v2 / WKWebView）",
-        "os": platform.platform(),
-        "arch": platform.machine(),
-    },
-    "build": {
-        "entry": "app/src-tauri",
-        "profile": "dev (debug)",
-        "features": "tauri/custom-protocol",
-        "binary": "app/target/debug/aka-desktop",
-        "sha256": (
-            hashlib.sha256(open(os.path.join(root, "app/target/debug/aka-desktop"), "rb").read()).hexdigest()
-            if os.path.exists(os.path.join(root, "app/target/debug/aka-desktop"))
-            else "missing"
-        ),
-    },
-    "dump": {
-        "path": evidence_path,
-        "finishedAt": d.get("finishedAt", ""),
-        "copiedIntoRepo": True,
-    },
+    "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" {extra_env} target/debug/aka-desktop {flags}".replace("  ", " ").strip(),
     "fixture": fixture,
     "buildMode": "dev",
     "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
@@ -529,5 +535,8 @@ json.dump(meta, open(meta_path, "w", encoding="utf-8"), ensure_ascii=False, inde
 print(f"已归档：{evidence_path}")
 print(f"已归档：{meta_path}")
 print(f"ok={d.get('ok')} layers={d.get('layers')} blocked={len(d.get('blocked', []))} commit={commit} dirty={dirty}")
-sys.exit(0 if d.get("ok") and not dirty and (not scan_rc or int(scan_rc) == 0) else 2)
+# W-89 第 2 项：把本次 meta 的绝对路径显式交接给 evidence-run.sh；
+# 禁止调用方按 `ls -t` 猜（会挑中历史套件的 meta，混进旧格式）。
+print(f"EVIDENCE_META={meta_path}")
+sys.exit(0 if d.get("ok") and (not scan_rc or int(scan_rc) == 0) and not focus_bad else 2)
 PY

@@ -84,10 +84,56 @@ function cardMap(text) {
   for (let i = 0; i < lines.length; i += 1) {
     const m = lines[i].match(/^#{2,4}\s*(S-\d{2}\.\d{2}-\d{2})/);
     if (m) current = m[1];
+    // 一级/二级标题（部分、10.x 估算边界等）不是卡面：重置归属，
+    // 否则文末章节的改动会被错算到最后一张卡上。
+    else if (/^#{1,2}\s/.test(lines[i])) current = null;
     map[i + 1] = current;
   }
   return map;
 }
+
+// 反例自检（制度第 29 条）：归属逻辑必须能证明「非卡小节归不到任何卡」。
+// 归属/映射/分区类派生逻辑若没有会让它错的反例，就是等下一次同类 bug（G5 同病）。
+function selfTestCardMap() {
+  const fixture = [
+    "# 第一部分 总览",
+    "### S-01.01-01 甲卡",
+    "卡内正文",
+    "## 10.2 估算边界",
+    "章节正文",
+    "### S-01.01-02 乙卡",
+    "卡内正文 2",
+  ].join("\n");
+  const m = cardMap(fixture);
+  const bad = [];
+  if (m[2] !== "S-01.01-01" || m[3] !== "S-01.01-01") bad.push("卡内行未归属本卡");
+  if (m[4] !== null || m[5] !== null) bad.push(`非卡小节被归属到 ${m[4] ?? m[5]}`);
+  if (m[6] !== "S-01.01-02") bad.push("后续卡未恢复归属");
+  if (bad.length) {
+    console.error(`::error::cardMap 反例未通过：${bad.join("；")}`);
+    process.exit(2);
+  }
+}
+
+function assertNonCardSectionsUnmapped(text) {
+  const lines = text.split("\n");
+  const map = cardMap(text);
+  const leaks = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const isHeading = /^#{1,2}\s/.test(lines[i]);
+    const isCard = /^#{2,4}\s*S-\d{2}\.\d{2}-\d{2}/.test(lines[i]);
+    if (isHeading && !isCard && map[i + 1] !== null) leaks.push(`${i + 1}: ${lines[i].trim()}`);
+  }
+  const anchor = lines.findIndex((l) => /^##\s+10\.2\s/.test(l));
+  if (anchor >= 0 && map[anchor + 2] !== null) leaks.push(`${anchor + 2}: §10.2 正文被归属到 ${map[anchor + 2]}`);
+  if (leaks.length) {
+    console.error(`::error::非卡小节被归属到卡：${leaks.join("；")}`);
+    process.exit(2);
+  }
+}
+
+selfTestCardMap();
+assertNonCardSectionsUnmapped(readFileSync(join(ROOT, CARDS), "utf8"));
 
 if (!base || /^0+$/.test(base)) {
   console.log("verify:sign-impact 跳过：无可用 base（新分支/首推）");
