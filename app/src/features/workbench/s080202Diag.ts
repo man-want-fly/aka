@@ -66,7 +66,14 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
   const push = (id: string, ac: string, passed: boolean, detail: string) => {
     report.checks.push({ id, ac, passed, detail });
   };
-  const fail = async (code: "E_ENGINE_PANIC" | "E_DATA_UNAVAILABLE" | "E_TIMEOUT", previous = "") => {
+  const fail = async (
+    code: "E_ENGINE_PANIC" | "E_DATA_UNAVAILABLE" | "E_TIMEOUT",
+    inject: "panic" | "data" | "timeout",
+    previous = "",
+  ) => {
+    // commands.rs 的 take_inject() 每个请求消费一次即回落 none：连续重试必须在每次
+    // 触发前重新注入，否则第 2 次重试变成正常计算、错误卡消失，套件会卡在 waitFor 超时。
+    await options.setInject(inject);
     options.trigger();
     const node = await waitFor(() => {
       const current = errorNode(code);
@@ -77,8 +84,7 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
   };
 
   // ① 引擎异常：标题/错误码/trace id/动作，且不出现「查看数据源状态」。
-  await options.setInject("panic");
-  const panic = await fail("E_ENGINE_PANIC");
+  const panic = await fail("E_ENGINE_PANIC", "panic");
   const panicActions = Array.from(panic.querySelectorAll("[data-calc-error] button"));
   const panicText = textOf(panic);
   push(
@@ -115,10 +121,9 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
 
   // ③ 连续 3 次失败才出现「导出诊断包」，且每次 panic 都落 calc.panic。
   const panicBefore = (await ipc.telemetryDump(200)).counts["calc.panic"] ?? 0;
-  await options.setInject("panic");
-  let node = await fail("E_ENGINE_PANIC");
-  node = await fail("E_ENGINE_PANIC", traceOf(node));
-  node = await fail("E_ENGINE_PANIC", traceOf(node));
+  let node = await fail("E_ENGINE_PANIC", "panic");
+  node = await fail("E_ENGINE_PANIC", "panic", traceOf(node));
+  node = await fail("E_ENGINE_PANIC", "panic", traceOf(node));
   const panicAfter = (await ipc.telemetryDump(200)).counts["calc.panic"] ?? 0;
   const exportButton = node.querySelector("[data-calc-export]");
   push(
@@ -129,8 +134,7 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
   );
 
   // ④ 数据不可用：标题与「查看数据源状态」入口。
-  await options.setInject("data");
-  const data = await fail("E_DATA_UNAVAILABLE", traceOf(node));
+  const data = await fail("E_DATA_UNAVAILABLE", "data", traceOf(node));
   push(
     "P06-R4",
     "AC-08.02-02",
@@ -141,9 +145,8 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
 
   // ⑤ 超时：真实等待 8s，页面显示 E_TIMEOUT 与耗时，并落 calc.timeout。
   const timeoutBefore = (await ipc.telemetryDump(200)).counts["calc.timeout"] ?? 0;
-  await options.setInject("timeout");
   const started = performance.now();
-  const timeout = await fail("E_TIMEOUT", traceOf(data));
+  const timeout = await fail("E_TIMEOUT", "timeout", traceOf(data));
   const wallMs = Math.round(performance.now() - started);
   const timeoutAfter = (await ipc.telemetryDump(200)).counts["calc.timeout"] ?? 0;
   const elapsed = Number(timeout.querySelector("[data-calc-error-elapsed]")?.textContent?.match(/\d+/)?.[0] ?? 0);
