@@ -1868,4 +1868,14 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 4. **`s2` schema 分支**：后处理按 `build/dataset/engine/debounce/cold/warm/batchCompute/timeframes/verification/telemetry` 解析，不再套 `ok/checks[]/blocked`，否则必 `exit 2`。
 5. **`s070503` 超时**：查清是套件未跑完还是等待路径不对；查清前不得重跑。
 6. **`S-02.06-01` 现状**：5 项过 2 项、`suite=null`、`checks=0`；`s2` 三项运行时未过（MACD 副图、悬停取值、B2 渲染），先判真 bug / 环境问题。**真 bug 则重签不只是重跑。**
-7. **验收**：`s2` 与 `s070503` 各完整跑通一次，产物落 `docs/qa/raw/`，meta 五项 + `finishedAt` 齐；端到端记录按 W-88 第 9 项填。
+7. **运行时三项未过（`colorOk` / `macdCount` / `shownSma` / `b2Render`）的判据前置**：
+   - dump 必须记 `windowFocused` / `appActive`（含取值时间）；缺字段即该 check `不可判定=FAIL`，**不得记「环境问题」**。
+   - 三项失败全部出现在「窗口未聚焦」且聚焦后同 check 通过 → 判**取证判据缺陷**，按第 29 条修判据并配反例；修完仍需重跑，**不以「环境问题」免签**。
+   - 聚焦后仍失败 → 判真 bug，走缺陷流程；`S-02.06-01` 维持不签。
+8. **验收判据（TL 验，不采信 dev 自报；BA 执行主路径）**：
+   - **归档路径**：BA 完整跑 `s2`（不是 `--check`）；TL 查 `docs/qa/raw/` 有新产物、`docs/qa/evidence/` 下无子目录、`verify:evidence` failed=0。不过 → 证据作废，W-89 未完成。
+   - **`meta.dump.finishedAt`**：TL 用 `jq -r '.dump.finishedAt'` 验非空且与 dump 内 `finishedAt` 相等；缺失/不等 → 未完成。
+   - **`env` 注入**：TL 查 `vite.config.*` 确为 `define` 注入 + 产物 `commit` 与 `git rev-parse HEAD` 一致；**反例**：手改 `meta.commit` 为上游 commit 后 `verify:evidence` 必须 failed，仍 PASS → 未完成。
+   - **`s2` schema 分支**：TL 查 dump 含 10 个 schema 键、后处理 `checks>0` 且 `suite=s2`；仍 `exit 2` 或 `checks=0` → 未完成。
+   - **`s070503` 超时**：240s 内产出 dump，或明确 `blocked` 原因；仍超时且无 dump → 未完成，不得以「大概跑完了」记 PASS。
+   - **通用**：以上任一项不过，`W-89` 退回，BA 停跑，不签任何卡。
