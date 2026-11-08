@@ -102,6 +102,8 @@
 
 运行层 GUI 取证只能由 BA 走 `evidence-run.sh`（第 23 条）。dev 可以跑单测/组件测试，但**不得自己出 dump、不得把本地截图当证据**。
 
+- **`--check` 同归 BA**：`evidence-run.sh` 的任何模式（含 `--check` 预检）都只能由 BA 执行；dev 不得以「只验环境」为由运行。dev B 在下达禁令前的一次 `s080202 --check` 按「边界内例外、无产物」记录，不作违规，也不作自测结论（审计 §4.7.83）。
+
 - **判定人与时点**：TL，签字前。依据三样：`meta.command` / `buildMode` / `runAt`、`evidence-run.sh` 的终端记录、BA 在 §0.0 该行的「取证执行人：BA」回执。
 - **机器边界**：`verify:evidence` 不判断执行人身份（身份不可从 dump 自证，强判会制造假阳性）；它只保证 dump 与 meta 同源、路径与 env 合法。执行人是否合规由 TL 在签字时核对，核对结论写进 `aka-ci-sign-ledger` 的 `note`（`executor=BA`）。
 - **不合格判定**：三样依据缺一、或实现者与取证执行人同一人 → 拒签；已签的按 §6 作废，证据退回 `docs/qa/raw/`，不算证据份数。

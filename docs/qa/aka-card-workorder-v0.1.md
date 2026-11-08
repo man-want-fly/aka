@@ -22,7 +22,7 @@
 | W-96 | P06 `S-08.02-02` + P07 `S-07.01-02`（并入批次 B1） | dev B | 待验收（并入 W-97 批次） | `main`（批次 B1，签 tip 取窗口 HEAD） | 2026-11-08 |
 | W-97 | 批次 B1：P06/P07 一次取证、一次签 | dev B / BA / TL | 阻塞（11-09 10:00 窗口取消：判据与实现不一致 + dump 缺必需字段） | `main`（下一窗口 tip 待定，≥ `774ec69`） | 2026-11-08 |
 | W-98 | P10 `S-01.03-01` 持仓成本与浮盈 | dev B | 待验收（并入批次 B2，见 W-104） | `dev2`（`61fb175`） | 2026-11-08 |
-| W-99 | 页面 P6 指数与板块页（仅骨架；承载 S-04.01-01/02、S-04.02-01/02） | dev B | 待验收 | `dev2`（`eb1d5b6`） | 2026-11-08 |
+| W-99 | 页面 P6 指数与板块页（仅骨架；承载 S-04.01-01/02、S-04.02-01/02） | dev B | 已验收 | `dev2`（`eb1d5b6`，待 B1 后合入） | 2026-11-08 |
 | W-100 | 页面 P7 搜索浮层（承载 S-05.01-01/02） | dev B | 待开工 | — | 2026-11-08 |
 | W-101 | P16 `S-07.03-01` 首装 5 步生成器（页面 P10 + `index_members` 256） | dev B | 待开工 | — | 2026-11-08 |
 | W-102 | P09/P10 取证脚本独立 oracle 改造（`--expect-code` 先比对、R5–R8 恒等式+手算、R7 口径不等、R9 主题值） | dev B | 待验收（已复核，符合第 38 条） | `dev2`（`61fb175`） | 2026-11-08 |
@@ -2141,7 +2141,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **状态**：不影响当前窗口，排 W-109 之后。
 
 ### W-112（dev A 修复 / BA 复核）`evidence-run.sh` 分支失败路径 unbound variable
-1. **问题**：`set -u` + macOS bash 3.2 下，`app/scripts/evidence-run.sh` 第 36 行分支失败分支的 `"...（当前 $branch）；..."` 会把全角「）」并入变量名，报 `branch�: unbound variable`，而不是预期的 `EVIDENCE_FAIL`。只在「分支≠main」时触发，所以 BA 在 main 上从未撞到。
+1. **问题**：`set -u` + macOS bash 3.2 下，`app/scripts/evidence-run.sh` 第 36 行的 `fail "...（当前 $branch）；..."` 会把 `$branch）；` 连全角右括号一起当成变量名；分支≠main 时输出 `branch�: unbound variable` 并 exit 2，而不是 `EVIDENCE_FAIL`。只在「分支≠main」时触发，所以 BA 在 main 上从未撞到。
 2. **修复**：变量加花括号（`${branch}`），并全脚本扫描同类「`$变量` 后紧跟中文/全角字符」写法；不得只改这一处。
 3. **测试**：在非 `main` 分支上跑 `evidence-run.sh`，必须输出 `EVIDENCE_FAIL`（含「只允许在 main 取证」），**不得出现 `unbound variable`**；记录命令、分支名、输出到工单。修完后该脚本才算被真跑过（第 39 条同一机理）。
 4. **owner**：dev A；BA 复核。不与 W-105/W-106 合并提交，避免把取证脚本变更混进批次 tip。
