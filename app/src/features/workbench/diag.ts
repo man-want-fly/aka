@@ -1688,6 +1688,8 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     schemaVersion: 1,
     kind: "aka-s2-evidence",
     generatedAt: new Date().toISOString(),
+    // R-EV-02：dump 自带 finishedAt，供 evidence-run 回填到 meta.dump（禁止手写）
+    finishedAt: new Date().toISOString(),
     // 口径 R-S0-07-01 的构建类型留档：P 线必须是 release/opt-level 3，dev 数字不作性能结论。
     build: await ipc.diagBuildInfo().catch(() => null),
     // 请求形状固定：形状变化视为新口径（R-S0-07-01 §2.3）
