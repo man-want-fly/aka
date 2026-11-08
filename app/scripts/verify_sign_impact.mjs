@@ -4,11 +4,13 @@
 //
 // 规则：
 // 1. 已签卡（gate-log 中 sign_commit 非空）的卡面被 diff 击中 ⇒ 签字失效。
-// 2. 失效集合由工具从「故事卡分节 + diff 行号」现算，不维护任何卡名单。
-// 3. 提交信息必须用 trailer 精确申报：
+// 2. 保护集合 = gate-log 已签卡 ∪ BA 台账中已交付/条件交付/渲染层已具备/数值层已具备的卡。
+//    后者即使没有 sign_commit 也受保护——「不在 gate-log 里」不等于「可以随便改」。
+// 3. 失效集合由工具从「故事卡分节 + diff 行号」现算，不维护任何卡名单。
+// 4. 提交信息必须用 trailer 精确申报：
 //      Sign-Invalidates: S-02.05-01, S-03.06-04
 //    没有失效卡时不要求 trailer；申报多了或少了都红。
-// 4. sign_scope 里的文件路径也参与匹配；命中即视为该卡签字范围被改。
+// 5. sign_scope 里的文件路径也参与匹配；命中即视为该卡签字范围被改。
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -18,7 +20,9 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CARDS = "docs/story-cards/aka-story-cards-v0.1.md";
 const GATE_LOG = join(ROOT, "docs", "qa", "aka-card-gate-log-v0.1.csv");
+const LEDGER = join(ROOT, "docs", "qa", "aka-story-completion-ledger-v0.1.md");
 const CARD_ID = /^S-\d{2}\.\d{2}-\d{2}$/;
+const CLAIMED = new Set(["已交付", "条件交付", "渲染层已具备", "数值层已具备"]);
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -93,6 +97,24 @@ if (!base || /^0+$/.test(base)) {
 const rows = parseCsv(readFileSync(GATE_LOG, "utf8")).slice(1);
 const signed = new Map(rows.filter((r) => (r[10] ?? "").trim()).map((r) => [r[0], r[10].trim()]));
 
+// BA 台账里已交付/条件交付的卡同样受保护：gate-log 缺行是台账缺陷，不是改卡许可。
+function claimedCards(text) {
+  const set = new Set();
+  for (const line of text.split("\n")) {
+    if (!line.startsWith("|")) continue;
+    const cells = line.split("|").map((s) => s.trim());
+    const card = cells[1] ?? "";
+    if (!CARD_ID.test(card)) continue;
+    if (CLAIMED.has(cells[4] ?? "")) set.add(card);
+  }
+  return set;
+}
+const protectedCards = new Set([...signed.keys(), ...claimedCards(readFileSync(LEDGER, "utf8"))]);
+const label = (card) =>
+  signed.has(card)
+    ? `${card}（原签 ${signed.get(card).slice(0, 7)}）`
+    : `${card}（台账已交付，未绑 commit）`;
+
 const oldMap = cardMap(gitFile(base));
 const newMap = cardMap(STAGED ? gitIndexFile() : gitFile(head));
 
@@ -134,15 +156,13 @@ for (const r of rows) {
   }
 }
 
-const invalidated = [...hit].filter((card) => signed.has(card)).sort();
+const invalidated = [...hit].filter((card) => protectedCards.has(card)).sort();
 
 // --print-trailer：只打印，供人粘贴或 git commit -F。--staged 隐含此模式。
 if (PRINT || STAGED) {
   console.log(`Sign-Invalidates: ${invalidated.length > 0 ? invalidated.join(", ") : "none"}`);
   if (invalidated.length > 0) {
-    console.error(
-      `已签卡命中：${invalidated.map((c) => `${c}（原签 ${signed.get(c).slice(0, 7)}）`).join("、")}`,
-    );
+    console.error(`已签卡命中：${invalidated.map((c) => label(c)).join("、")}`);
   }
   process.exit(0);
 }
@@ -165,7 +185,7 @@ const missing = invalidated.filter((c) => !declared.has(c));
 const extra = [...declared].filter((c) => !invalidated.includes(c) && CARD_ID.test(c));
 const bad = [...declared].filter((c) => !CARD_ID.test(c));
 
-const lines = invalidated.map((c) => `${c}（原签 ${signed.get(c).slice(0, 7)}）`);
+const lines = invalidated.map((c) => label(c));
 if (missing.length || extra.length || bad.length) {
   console.error(`::error::本次 diff 击中 ${invalidated.length} 张已签卡：${lines.join("、")}`);
   if (missing.length) console.error(`::error::提交信息缺少 Sign-Invalidates：${missing.join(", ")}`);
