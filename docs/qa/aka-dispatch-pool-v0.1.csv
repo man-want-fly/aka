@@ -1,9 +1,9 @@
 pool_seq,card_id,priority,estimate_pd,take_by,eligibility,note,layer,last_check
-P01,S-03.01-04,P0,1.5,dev A,已交付,代码已在 main（adef5b7）；原判定「未开始」是旧快照；s030104 case 缺失另见 W-113,card,adef5b7
-P02,S-03.02-01,P0,2.0,—,已交付,代码已在 main（adef5b7）；原「可取」为旧快照，已关闭,card,adef5b7
-P03,S-03.03-02,P0,2.0,—,已交付,代码已在 main（adef5b7）；原「可取」为旧快照，已关闭,card,adef5b7
-P04,S-06.03-01,P0,1.5,—,已交付,代码已在 main（adef5b7）；原「可取」为旧快照，已关闭,card,adef5b7
-P05,S-06.03-02,P0,2.5,—,已交付,代码已在 main（adef5b7）；签字待 W-83 按 tip 重跑,card,adef5b7
+P01,S-03.01-04,P0,1.5,dev A,未开始,实现已在 main（adef5b7）；s030104 入口已补（c76540d），待取证后转待验收,card,c76540d
+P02,S-03.02-01,P0,2.0,—,未开始,实现已在 main（adef5b7）；s030201 入口已补（c76540d），待取证,card,c76540d
+P03,S-03.03-02,P0,2.0,—,未开始,实现已在 main（adef5b7）；s030302 / s030302-catalog 入口已补（c76540d），待取证,card,c76540d
+P04,S-06.03-01,P0,1.5,dev A,未开始,实现已在 main（adef5b7）；s060301 入口已补（c76540d）；P04-R3 死 AC，W-115（--missing-dataset-manifest）前不得签字,card,c76540d
+P05,S-06.03-02,P0,2.5,dev B,待开工,last_check 过期；先重核 main 实际代码；【2026-11-08 最新指派 dev B】先前 dev A 承接作废，防重复派单,card,
 P06,S-08.02-02,P0,3.0,dev B,在制,证据已采（8 条：render 6 + runtime 2，dirty=false）；BA 逐卡验证中，验过即合；不并批、不排窗口,card,0ed37d6
 P07,S-07.01-02,P0,2.0,dev B,在制,证据已采（7 条：render 5 + runtime 2，dirty=false）；BA 逐卡验证中，验过即合；不并批、不排窗口,card,0ed37d6
 P08,S-07.05-01,P0,3.5,—,已交付待签,代码已在 main（689528a/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
@@ -21,5 +21,6 @@ P19,S-04.02-02,V1,3.0,—,不可排,V1 不排期；恢复须先补 sector_member
 P20,S-09.01-01,P0,5.0,BA,非 dev,架构图集为文档交付物，不进 dev 编码线,card,0ed37d6
 P21,S-07.01-01,P0,2.5,—,已交付待签,代码已在 main（7b4f87e/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
 P22,S-07.04-01,P0,1.0,—,已交付待签,代码已在 main（048f16b/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
+P23,S-02.06-02,P0,2.0,dev B,在制,性能修复（W-114）：回切时延 291ms → ≤120ms；口径 warm.criterion / maxTotalMs，90 次样本，allCacheHit 与 allPointwiseMatch 不得退化；验收 s20602 红转绿且 indicator.compute 无新增；反例=改回旧实现必红,card,6654a51
 PG-P6,PAGE-P6,P0,—,dev B,已交付待签,页面层（W-99）骨架 eb1d5b6：与路由+布局空态+7 条 DOM 契约锚点，不含数据；逐卡验证，验过即合；骨架不得作任何数据 AC 证据,page,eb1d5b6
 PG-P7,PAGE-P7,P0,—,dev B,已交付待签,页面层（W-100）9df6957 后端 + af36f9e 前端：承载 S-05.01-01/02；逐卡验证，验过即合；合入后解阻 P14/P15/P18,page,af36f9e

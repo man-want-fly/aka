@@ -16,11 +16,14 @@ S-01.01-02,已交付,N/A,,,,待 Gate B/C 签字,BA,W-22,4 可见分区 + .BJ 只
 S-01.02-02,未开始,N/A,,PASS,dev b7cb33b + s0102/readonly,,开发,W-45/W-46/W-47,2026-11-07 收口：WL-10 归位 AC-01.02-03、WL-15 归位补2；正常态 21 项全绿（data 7/7、render 14/14）、readonly 3 项（WL-20/21/24）全绿，blocked 0。签后 W-47 改 lib.rs/commands.rs/state_db.rs、W-48 改 error.rs/core.rs，按签字规则重绑 7abf3b8（取证同提交复跑一致）。W-47 已签 1292eb9，发布门禁解除。见 4.7.19/4.7.20,7abf3b8184fad28c43185cfd4bf2bd4d78b89769,卡 §S-01.02-02（AC-01.02-02 及补1–补4 + AC-01.02-03）
 S-01.02-03,未开始,N/A,,PASS,dev e92a151 + s20401-evidence（dirty=false）,,开发,W-45/W-46/W-47/W-48,2026-11-07 收口：空态 WL-22、损坏库页 WL-23（trace id TR-…）、移出失败 WL-24 逐字实现并转绿；empty 1/1、corrupt 2/2（含 WL-23-log）、readonly render 2/2。W-48 已签 7abf3b8：页面 id 与 telemetry.jsonl 同串；W-47 已签 1292eb9：release strings 全 0。按签字规则重绑 7abf3b8。见 4.7.19/4.7.20 W-49 已签 4af99f4：release 无注入符号进 CI（绿/红/漏项三份取证）；corrupt 证据未在其上复跑。 【2026-11-08 合并后复核】干净证据 2/2（data 1/1 + render 1/1），原签 7abf3b8 不撤。,7abf3b8184fad28c43185cfd4bf2bd4d78b89769,卡 §S-01.02-03（AC-01.02-04 及补1–补7）
 S-03.04-01,条件交付,N/A,,,,待 Gate B/C 签字,BA,W-04;W-75,已改（T03 补全口径已转正、周期 2–500、T03 边界说明） 【2026-11-08 §4.7.47】W-75 错误码文字统一（E_PARAM_RANGE→E_PARAM_OUT_OF_RANGE / E_PARAM_ORDER）；工单签 c111f5f，仅文字、不改 Gate 状态。本卡此前未签，本行只登记 W-75 文字，不构成卡交付。,,
+S-03.01-04,未开始,N/A,,FAIL,,卡在 main 但 s030104 入口缺失（180879d 批次合并被吞）；补入口后转待验收,dev A,W-113,【2026-11-08 §4.7.95】实现已在 `adef5b7`；`s030104` + 4 条反例只补取证入口，不动功能；补齐后转待验收,,
+S-03.02-01,未开始,N/A,,FAIL,,卡在 main 但 s030201 入口缺失（180879d 批次合并被吞）；补入口后转待验收,dev A,W-113,【2026-11-08 §4.7.95】实现已在 `adef5b7`；只补入口，核出功能缺失另开卡,,
+S-03.03-02,未开始,N/A,,FAIL,,卡在 main 但 s030302 / s030302-catalog 两个入口缺失；补入口后转待验收,dev A,W-113,【2026-11-08 §4.7.95】实现已在 `adef5b7`；两套件入口均缺，只补入口,,
 S-04.01-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-10/W-25,前置改 8×32=256 成分映射，缺失判不合格；指数不进广度已写明；W-25 页头 2024-04-30 标「示例」保留，非断言,,
 S-04.02-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-08,广度分母改 112、指数不进桶、涨跌停 4 卡→3 卡、ST 六处删除/标 V1,,
 S-04.02-02,未开始,N/A,,,,待 Gate B/C 签字,BA,W-09,标题/优先级/卡首状态注改为 V1 延后待确认；生成器不写 sector_members,,
 S-05.01-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-11,pinyin 预计算 + SEARCH_PINYIN_MISSING；AC 改 300750.SZ + V-07 性能协议,,
-S-06.03-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-13,关于页改 45 / 105 + 副行「P0 目标 84」（`6e89abd`）,,
+S-06.03-01,未开始,N/A,,,,卡在 main 但 s060301 入口缺失（180879d 批次合并被吞）；补入口后转待验收,BA,W-113,关于页改 45 / 105 + 副行「P0 目标 84」（`6e89abd`）。【2026-11-08 §4.7.95】实现已在 `adef5b7`；取证入口补齐后转待验收，不得记已交付,,
 S-07.03-01,未开始,N/A,,,,待 Gate B/C 签字,BA,W-15,row_count 62400、覆盖区间 2023-01-02~2024-12-27,,
 S-07.05-02,未开始,N/A,,,,待 Gate B/C 签字,BA,W-16,BarRow 增 batch_id/ingested_at 缺失处理与 MISSING_BATCH_META dev2 `49009b4` 分支初版不签（4.7.24）：无证据包，溯源浮层与 E_PROVENANCE_MISSING 未实现；APPROXIMATED/MISSING 仅词表预留。,,
 S-07.05-03,Blocked-AC,N/A,,PASS,dev 610d331 + s070503-evidence（OV-01…OV-08 8/8，约 40s；dump=610d331，relation=equal）,S-07.05-01（P9 页面/质量报告未合入 main；补1 依赖未交付）,dev A,W-80,AC-07.05-04 判 PASS（8/8 有 dump 支撑，ok=true）；补1 仍 BLOCKED、skipped=false；卡级取严记 Blocked-AC，按制度第 33 条，不因主行 PASS 升已交付。见审计 §4.7.71。,26e795f7a873de0ce6af398101ad5a17fb339ee8,仅 AC-07.05-04（补1 仍 BLOCKED，不计入本签字）
