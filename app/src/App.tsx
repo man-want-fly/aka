@@ -249,6 +249,7 @@ export default function App() {
           target === "s203" ||
           target === "s20202" ||
           target === "s20101" ||
+          target === "s010301" ||
           target.startsWith("watchlist")
         ) {
           sessionStorage.setItem("aka.s2.diag.once", "1");

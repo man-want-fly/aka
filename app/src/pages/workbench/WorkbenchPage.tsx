@@ -338,6 +338,8 @@ export function WorkbenchPage({
     } catch {
       /* 存储不可用不阻塞主流程 */
     }
+    // S-01.03-01：同窗口不会触发 storage 事件，用自定义事件通知自选面板重算持仓口径
+    window.dispatchEvent(new CustomEvent("aka:adj-change", { detail: adj }));
   }, [adj]);
   useEffect(() => {
     try {

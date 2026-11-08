@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 取证并归档：当次 evidence JSON + meta 一起落到 docs/qa/evidence/（W-41 第 2 项）。
-# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market|s2|s070503
+# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market|s2|s070503|s080202|s080203|s080203-readonly|s010301
 # 前置：app/ 根目录执行 npm run build 与 cargo build -p aka-desktop --features tauri/custom-protocol
 # 取证必须用 debug 构建：QA 注入开关在 release 里已整体编译掉（W-47）。
 set -euo pipefail
@@ -14,7 +14,7 @@ LAYOUT="$APP_DIR/scripts/evidence-layout.json"
 EVIDENCE_REL="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1],encoding="utf-8"))["evidenceRoot"])' "$LAYOUT")"
 OUT="$APP_DIR/../$EVIDENCE_REL"
 DB="$HOME/Library/Application Support/aka/state.db"
-SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market}"
+SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market|s070503|s080202|s080203|s080203-readonly|s010301}"
 LABEL="$(date +%Y%m%d-%H%M%S)"
 # 本次取证运行的起始时刻（epoch ms）：文件断言只认此时间窗之后落盘的文件，排除历史残档。
 RUN_STARTED_MS="$(python3 -c 'import time; print(int(time.time()*1000))')"
@@ -232,6 +232,13 @@ PY
     FLAGS="--dataset-fault=sha"
     FIXTURE="默认 state.db；--dataset-fault=sha 让启动校验返回 SHA256_MISMATCH，验证只读浏览红条、K 线可看/计算禁用、自选与主题写入被拒（自选数不变）；不改库"
     BAK=""
+    ;;
+  s010301)
+    TARGET="s010301"
+    JSON="$DIAG_DIR/s010301-positions-evidence.json"
+    NAME="s010301-positions-evidence"
+    FIXTURE="默认 state.db 备份后由套件自建 5 只自选与持仓（600519.SH 等），并追加 AKA_DIAG=1 的停牌样本 DIAGQSUP.SZ；取证结束还原 state.db"
+    BAK="/tmp/aka-state-s010301-$LABEL.db"
     ;;
   *)
     echo "未知套件：$SUITE" >&2
