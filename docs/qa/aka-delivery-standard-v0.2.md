@@ -112,6 +112,9 @@
 - 唯一入口 `app/scripts/evidence-run.sh <suite>`；路径只从 `evidence-layout.json` 读（第 27 条）。
 - 窗口只置前一次，dump 记 `activateAttempts`（第 23 条 d）；失败/超时产物必须落 `docs/qa/raw/`（第 31 条 / W-94）。
 - **不合格判定**：`verify:evidence` 校验路径、env 五项、meta 同源、`activateAttempts`、失败记录字段；缺一红。人工步骤取证（`open /tmp/*.command`）一律不认。
+- **触发类必须声明**：证据说明写 `trigger=real`（真实磁盘/目录/文件/数据触发）或 `trigger=injected`（`--dataset-fault=` / `--corrupt-*` 注入）。`injected` 只支撑「给定错误类时的 UI、动作可用性、写禁、无堆栈、恢复流程」类 AC；AC 的 Given 明确要求真实触发（如「删除 `data/sim` 目录」「篡改真实文件 sha256」）时，`injected` 不算该 AC 通过。
+  - 分卡判法：真实触发类 AC 记 `Blocked-AC`，`blocker=磁盘数据集未接入`；行为类 AC 可签，但 gate-log 记 `条件交付`、note 写 `[条件签] trigger=injected`，`sign_scope` 不含真实触发类 AC。
+  - **解除条件**：磁盘数据集接入后补真实触发证据，条件签才可升 `已交付`；只重取真实触发类 AC，既有注入类证据按第 34 条不追溯（实现被改动触碰的除外）。
 
 ---
 
@@ -178,11 +181,12 @@
 
 ## 7. 状态同步义务
 
+- **查表与派单只读 `origin/main`**：查状态表、派单、贴单前必须先 `git fetch origin`，再读 `git show origin/main:docs/qa/aka-card-workorder-v0.1.md`；不得以本地工作区副本为准（这是 W-92 的同一机理：写了但没同步，三份副本三张表）。本地副本只作编辑缓冲，提交推送后以 `origin/main` 为准。
 - `docs/qa/aka-card-workorder-v0.1.md` §0.0 是唯一共享状态表。**取卡、开工、报完成、停线当天写入**；别人贴单前先看它。
 - 每行必须带 `更新日`（`YYYY-MM-DD`）。进行中必须写分支/worktree；停线必须写原因与恢复条件。
 - **「当天」怎么判**：判定人 TL；时点 = 派单前看一次、贴单前看一次、批次边界复核一次。机器只保证日期自洽：格式合法、不晚于今天、行内有 commit 时 `更新日` 不得早于该 commit 的提交日。机器证不了「事件发生在当天」，倒填由 TL 发现即该行状态作废，按未开工处理。
 - 每天至少一次由 TL 对表；批次边界统一复核（第 14 条）。
-- **不合格判定**：`verify:delivery` 校验状态表（重复编号、非法状态、进行中缺分支、表内编号无对应工单标题、`更新日` 缺失/格式错/早于 commit 日）；缺一项红。人工判定：聊天里说「在做了」但表里没有 → 视为未开工；倒填日期 → 该行作废。
+- **不合格判定**：`verify:delivery` 校验状态表（重复编号、非法状态、进行中缺分支、表内编号无对应工单标题、`更新日` 缺失/格式错/早于 commit 日），并校验本地 HEAD 不得落后 `origin/main`（落后即红，提示先 fetch/rebase 再查表）；缺一项红。人工判定：聊天里说「在做了」但表里没有 → 视为未开工；倒填日期 → 该行作废。
 
 ---
 

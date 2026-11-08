@@ -70,6 +70,19 @@ const commitDate = (sha) => {
   }
 };
 
+// 本地 HEAD 严格落后 origin/main 时，工作区里的状态表可能不是最新真源（W-92 同机理）。
+const behindOrigin = () => {
+  try {
+    const head = git(["rev-parse", "HEAD"]);
+    const remote = git(["rev-parse", "--verify", "origin/main"]);
+    if (!remote || head === remote) return false;
+    git(["merge-base", "--is-ancestor", head, remote]);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 function parseCsv(text) {
   const rows = [];
   let row = [];
@@ -142,6 +155,9 @@ if (ENABLED.rules) {
 
 // 3. 工单 §0.0 状态表
 if (ENABLED.state) {
+  if (behindOrigin()) {
+    fail("本地 HEAD 落后 origin/main：查表/派单前先 git fetch，并读 origin/main 上的 §0.0（工作区副本不是唯一真源）");
+  }
   const workorder = read(WORKORDER);
   const start = workorder.indexOf("## 0.0");
   const end = workorder.indexOf("## 0.1");

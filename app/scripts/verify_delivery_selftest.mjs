@@ -181,6 +181,29 @@ const cases = [
     reason: "早于 commit",
   },
   {
+    name: "behind-origin-main",
+    label: "本地状态表落后 origin/main",
+    mutate: () => {},
+    after: (root) => {
+      const env = { ...process.env, GIT_AUTHOR_DATE: "2026-11-08T12:00:00+0800", GIT_COMMITTER_DATE: "2026-11-08T12:00:00+0800" };
+      const opts = { cwd: root, env };
+      const commit = (message, extra = []) =>
+        execFileSync(
+          "git",
+          ["-c", "user.name=fixture", "-c", "user.email=fixture@example.com", "commit", "-q", ...extra, "-m", message],
+          opts,
+        );
+      execFileSync("git", ["init", "-q"], opts);
+      execFileSync("git", ["add", "-A"], opts);
+      commit("base");
+      commit("remote ahead", ["--allow-empty"]);
+      const ahead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+      execFileSync("git", ["reset", "--hard", "HEAD~1"], opts);
+      execFileSync("git", ["update-ref", "refs/remotes/origin/main", ahead], opts);
+    },
+    reason: "落后 origin/main",
+  },
+  {
     name: "missing-section",
     label: "规范缺 §8",
     mutate: (draft) => {
