@@ -1,0 +1,13 @@
+diff --git a/app/crates/app-core/src/core.rs b/app/crates/app-core/src/core.rs
+index 4574a85..84e264e 100644
+--- a/app/crates/app-core/src/core.rs
++++ b/app/crates/app-core/src/core.rs
+@@ -1098,7 +1098,7 @@ impl AppCore {
+         let skip = |key: &str, label: &str| DataHealthItemDto {
+             key: key.to_string(),
+             label_zh: label.to_string(),
+-            status: "SKIP",
++            status: "PASS",
+             duration_ms: 0,
+             error_code: None,
+             detail: Some("前置检查未通过，已跳过".to_string()),

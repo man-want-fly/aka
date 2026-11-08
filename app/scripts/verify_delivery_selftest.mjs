@@ -12,7 +12,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CHECKER = join(HERE, "verify_delivery.mjs");
 const TMP = mkdtempSync(join(tmpdir(), "delivery-"));
 
-const RULES = Array.from({ length: 37 }, (_, i) => i + 1).join("、");
+const RULES = Array.from({ length: 38 }, (_, i) => i + 1).join("、");
 const LEGACY = [
   ["S-01.01-01", "历史交付，W-74 已补证", "补签"],
   ["S-01.01-02", "文档口径卡，无运行层 dump", "降级为文档卡"],

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// 代码交付规范门禁（`docs/qa/aka-delivery-standard-v0.2.md`，制度第 36/37 条）。
+// 代码交付规范门禁（`docs/qa/aka-delivery-standard-v0.2.md`，制度第 36/37/38 条）。
 //   node scripts/verify_delivery.mjs
 //   node scripts/verify_delivery.mjs --root <fixture> --message <file> --changed <file> --today 2026-11-08
 //
 // 机器能卡的七件事：
-// 1. 规范 §1–§10 结构齐备，且 §9 收敛表覆盖制度第 1–37 条（不跳号、不引用不存在的条）。
+// 1. 规范 §1–§10 结构齐备，且 §9 收敛表覆盖制度第 1–38 条（不跳号、不引用不存在的条）。
 // 2. 工单 §0.0 状态表：编号唯一、状态词表内、进行中/待验收必须写分支或提交、表内工单有正文、
 //    每行 `更新日` 格式合法且不晚于今天、有 commit 时不早于该 commit 的提交日。
 // 3. gate-log：`已交付/条件交付/已结项` 必须有 40 位 sign_commit（存量白名单只减不增，2026-11-22 到期）。
@@ -37,7 +37,7 @@ const SELFTEST = join(ROOT, "app", "scripts", "verify_delivery_selftest.mjs");
 // 变异锚点：selftest 把它们全部置 false，所有反例必须变绿。
 const ENABLED = { standard: true, rules: true, state: true, deliver: true, commit: true, self: true };
 
-const RULE_COUNT = 37;
+const RULE_COUNT = 38;
 const STATUS_ENUM = ["未开始", "待开工", "进行中", "待验收", "已验收", "停线", "阻塞"];
 const DELIVERED = new Set(["已交付", "条件交付", "已结项"]);
 const LEGACY_DEADLINE = "2026-11-22";
@@ -127,7 +127,7 @@ if (ENABLED.standard) {
   }
 }
 
-// 2. §9 制度收敛覆盖第 1–37 条
+// 2. §9 制度收敛覆盖第 1–38 条
 if (ENABLED.rules) {
   const standard = read(STANDARD);
   const start = standard.indexOf("## 9.");

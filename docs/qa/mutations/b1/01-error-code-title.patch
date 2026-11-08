@@ -1,0 +1,13 @@
+diff --git a/app/src/pages/workbench/WorkbenchPage.tsx b/app/src/pages/workbench/WorkbenchPage.tsx
+index 27cae35..95c9ead 100644
+--- a/app/src/pages/workbench/WorkbenchPage.tsx
++++ b/app/src/pages/workbench/WorkbenchPage.tsx
+@@ -142,7 +142,7 @@ const REQUEST_DEBOUNCE_MS = 120;
+ /** S-08.02-02：错误标题只认三类，其余归「计算失败」。 */
+ const CALC_ERROR_TITLES: Record<string, string> = {
+   E_TIMEOUT: "计算超时",
+-  E_ENGINE_PANIC: "引擎异常",
++  E_ENGINE_PANIC: "引擎故障",
+   E_DATA_UNAVAILABLE: "数据不可用",
+ };
+ 
