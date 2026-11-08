@@ -6,6 +6,18 @@
 > 改完一条，把 `docs/qa/constants-baseline-v0.1.json` 里对应的 `pattern` 删除；再跑 `npm run verify:constants`。
 > **引用纪律（审计报告制度第 13 条）**：凡百分比、行数、计数进入结论，必须带口径。行数须写明是「变更行数（`git diff --numstat`）」还是「显示行数（`git diff | wc -l`）」——两者不等；例：`app/bench` 重生成在 `2ec7385` 上 = **3408 变更行** / **9622 显示行**。
 
+## 0.0 开工单状态表（唯一共享态，制度第 35 条）
+
+> 派单前先读这张表；同一件事已有人在做，只做验收，不重复派。进入执行即标「进行中」，TL 验收后改「已验收」。
+
+| 编号 | 内容 | 执行人 | 状态 | 分支 / 提交 |
+| --- | --- | --- | --- | --- |
+| W-90 | `s070503` 崩溃 + catalog P3 契约 + 顶层聚合 | dev A | 已验收（第 1/3/4 项；第 2 项拆 W-94） | `4f44b08`，签 `26e795f` |
+| W-91 | 取证选择器 ↔ 产品 DOM 契约绑定 | dev A | 已验收 | `91cdc77`，合并 `7cf7d69` |
+| W-92 | 取证窗口只置前一次 + `activateAttempts` | dev A | 已验收 | `2192340`，合并 `7cf7d69` |
+| W-93 | `b2Render` 回切时延单列 `latency` | dev A | 待开工 | — |
+| W-94 | 失败产物自动落盘 `docs/qa/raw/` | dev A | 待开工 | 自 W-90 拆出 |
+
 ## 0.1 双线开发复核口径（2026-11-07 起）
 
 > 配置：新增第二位资深开发（dev B），方向数据层与指标内核；主树 `/Users/sixmillion/Documents/AKA` 仍归 dev A，dev B 在独立 worktree `/Users/sixmillion/Documents/AKA-dev2`、分支 `dev2` 上作业（已初始化到 `8add7ce`）。
@@ -1907,7 +1919,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 
 **W-90 执行状态（2026-11-08，已结）**：第 1/3/4 项由 `4f44b08` 交付，BA 于 `610d331` / `26e795f` 重跑 `s2` + `s070503` 全绿；`S-02.06-01` 与 `S-07.05-03`（仅 AC-07.05-04）已于 run `42454710780`（`head=26e795f`，relation=equal）签署，W-90 第 1/3/4 项关闭。**第 2 项（失败时自动落盘 `docs/qa/raw/`）未交付，拆出为 W-94**，不随 W-90 关闭；`evidence-run.sh` / `diag-evidence.sh` 失败分支补齐前 W-94 不得关闭。
 
-### W-91（dev A 实现 / TL 验收 / 不进 BA 主路径）取证选择器与产品 DOM 契约绑定
+### W-91（dev A 实现 / TL 验收 / 不进 BA 主路径）取证选择器与产品 DOM 契约绑定 —— **已验收（2026-11-08，`91cdc77` → `7cf7d69`）**
 
 > 依据 §4.7.70 三与制度第 32 条。同类第三次（`[data-hist]` / `[data-readout-host]`、`data-catalog-beta`、点错 `<li>`），本次把「沉默的耦合」改成「会叫的断言」。
 
@@ -1920,16 +1932,18 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 4. **禁区**：不改产品 DOM 以迁就检查（产品契约变更必须改清单，不是反过来）；不改 `verify_evidence.mjs` 判据与白名单；不改变任何取证产物字段。
 5. **验收**：`verify:dom-contracts` 在 CI 上全绿且反例 4/4 判红；清单条目数 ≥ 覆盖首批三组；`verify:evidence` / `verify:evidence:selftest` 数字不变（本工单不加取证件数）。
 6. 任一项不过，`W-91` 退回；本工单不阻塞任何卡签字（但 `S-02.06-01` 的重跑仍须等 W-90 第 2 项与 BA 验收）。
+7. **验收记录（2026-11-08）**：`91cdc77`（`w91/dom-contracts`，基于 `6eb07e6`）交付；清单 110 条契约 / 35 条模板 / 11 个取证文件；四项检查与四条反例同提交，变异验证「退回不检查」后 4/4 变绿；CI 已在 `verify:evidence` 后加门禁。本地复跑：`verify:dom-contracts` 通过（110/35/11）、`verify:dom-contracts:selftest` 4/4。已合并 `7cf7d69`。
 
-### W-92（BA 执行口径 / dev A 实现 / TL 验收）取证窗口只置前一次，dump 记 `activateAttempts`
+### W-92（BA 执行口径 / dev A 实现 / TL 验收）取证窗口只置前一次，dump 记 `activateAttempts` —— **已验收（2026-11-08，`2192340` → `7cf7d69`）**
 
 > 依据 §4.7.71 二与制度第 23 条 `d`。反例：轮询式激活（每 3 秒）导致 240s 超时、零 dump；改为只激活一次后约 40s 正常。
 
 1. `evidence-run.sh` / `diag-evidence.sh` 在取证前只执行一次窗口置前，**删除任何定时/轮询式 `activate` / `set_focus`**。
-2. dump 顶层新增 `activateAttempts`（整数，正常为 `1`）；`verify_evidence.mjs` 校验其存在且为整数，`> 3` 记 WARN（不判红），缺失按失败记录处理。
-3. 失败时的超时诊断顺序写进入口提示：先查 `activateAttempts` 与激活方式，再查产品；超时原因必须落 `raw/`（W-94）。
-4. 反例：轮询式脚本 → 代码审查判红；`activateAttempts=12` 的 dump → WARN 可查。
+2. dump 记录 `focusedAtLaunch` / `focusedAtAssert` / `activateAttempts`（0 或 1）：置前与断言两个时点分开记；**实际实现把硬门禁放在归档前**（`evidence-run.sh` 校验 `activateAttempts===1`、`focusedAtLaunch===true`、`focusedAtAssert===windowFocused`、`windowFocused=false` 拒收），比原计划「`verify_evidence.mjs` WARN」更严；`verify_evidence.mjs` 不新增检查，避免追溯已签证据（第 34 条）。
+3. 置前失败、10 秒内进程未起、置后前台不是 `aka-desktop`：一律 `exit 2`，不进入采集；`windowFocused` 仍是硬条件，未降级为 WARN。
+4. 失败时的超时诊断顺序写进入口提示：先查 `activateAttempts` 与激活方式，再查产品；超时原因必须落 `raw/`（W-94）。
 5. 验收：BA 按第 23 条重跑 `s2`，`activateAttempts=1`；`verify:evidence` 数字不变。
+6. **验收记录（2026-11-08）**：`2192340` 删除 16 次重试循环，改为等进程/窗口就绪后唯一一次置前；`selftest 53/53`；本地 `verify:evidence` 扫描 8/冻结 18/兼容 8/失败记录 1/失败 0。已合并 `7cf7d69`。**注意：已签 `610d331` / `26e795f` 无该字段，按第 34 条不追溯、不重跑。**
 
 ### W-93（dev A 实现 / TL 验收）`b2Render` 回切时延单列为可查字段
 
