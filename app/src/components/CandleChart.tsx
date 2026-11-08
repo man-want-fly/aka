@@ -40,6 +40,8 @@ interface Props {
   units: Record<string, string>;
   /** 当前复权口径：除权日 tooltip 的措辞按它区分（AC-02.07-03 补3） */
   adjMode: "none" | "qfq" | "hfq";
+  /** S-07.05-03：主图单根 K 线点击（位移 ≤4px 视为点击），入参为 bars 绝对下标 */
+  onCandleClick?: (index: number) => void;
 }
 
 const W = 1000;
@@ -190,6 +192,7 @@ export function CandleChart({
   subLabels,
   units,
   adjMode,
+  onCandleClick,
 }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const [cursor, setCursor] = useState<{
@@ -210,6 +213,7 @@ export function CandleChart({
   const rafRef = useRef<number | null>(null);
   const dragRef = useRef<{
     x0: number;
+    y0: number;
     start: number;
     end: number;
   } | null>(null);
@@ -594,7 +598,7 @@ export function CandleChart({
     const x = (event.clientX - geo.rect.left - geo.offsetX) / geo.scale;
     const y = (event.clientY - geo.rect.top - geo.offsetY) / geo.scale;
     if (x < LEFT || x > RIGHT || y < PRICE_TOP || y > view.chartBottom) return;
-    dragRef.current = { x0: event.clientX, start: view.startAbs, end: view.endAbs };
+    dragRef.current = { x0: event.clientX, y0: event.clientY, start: view.startAbs, end: view.endAbs };
     setDragging(true);
     setHover(null);
     setCursor(null);
@@ -606,7 +610,8 @@ export function CandleChart({
   };
 
   const handlePointerUp = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!dragRef.current) return;
+    const drag = dragRef.current;
+    if (!drag) return;
     dragRef.current = null;
     setDragging(false);
     try {
@@ -615,6 +620,19 @@ export function CandleChart({
       }
     } catch {
       // 同上：合成事件可能没有可释放的捕获
+    }
+    if (onCandleClick && view) {
+      // S-07.05-03：主图内位移 ≤4px 视为点击（拖拽/回弹不触发），取点击处所在 bar
+      const still = Math.abs(event.clientX - drag.x0) <= 4 && Math.abs(event.clientY - drag.y0) <= 4;
+      const geo = still ? geometry() : null;
+      if (geo) {
+        const x = (event.clientX - geo.rect.left - geo.offsetX) / geo.scale;
+        const y = (event.clientY - geo.rect.top - geo.offsetY) / geo.scale;
+        if (x >= LEFT && x <= RIGHT && y >= PRICE_TOP && y <= layout.priceBottom) {
+          const index = clamp(Math.floor((x - LEFT) / view.step), 0, view.count - 1);
+          onCandleClick(view.startAbs + index);
+        }
+      }
     }
     if (overdragRef.current !== 0) {
       // 橡皮筋回弹：120ms 内把越界位移收回 0（S-02.07-01 补2）

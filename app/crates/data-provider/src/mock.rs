@@ -142,6 +142,37 @@ impl MockProvider {
         self.push_diag_suspended("DIAGSUSP.SZ", "诊断停牌序列", count, start, len)
     }
 
+    /// 取证专用：缺失溯源字段样本（S-07.05-03 AC-07.05-04）。
+    /// mock 日线全部自带 batch_id/ingested_at，真实数据里不存在「缺失」根；
+    /// 指定根清空两项元数据，用于浮层「缺失」与 E_PROVENANCE_MISSING 的实机取证。
+    pub fn with_diag_missing_provenance(self, count: usize, missing_index: usize) -> Self {
+        self.push_diag_missing_provenance("DIAGPROV.SZ", "诊断溯源缺失", count, missing_index)
+    }
+
+    fn push_diag_missing_provenance(
+        mut self,
+        code: &str,
+        name: &str,
+        count: usize,
+        missing_index: usize,
+    ) -> Self {
+        if count == 0 || self.find_security(code).is_some() {
+            return self;
+        }
+        let security = make_security(code, name, Board::SzMain, false, 10.0);
+        let mut bars = generate_bars(&security, &self.calendar);
+        bars.truncate(count);
+        if missing_index < bars.len() {
+            bars[missing_index].batch_id = None;
+            bars[missing_index].ingested_at = None;
+        }
+        self.securities.push(security);
+        if let Ok(mut cache) = self.raw_cache.lock() {
+            cache.insert(code.to_string(), std::sync::Arc::new(bars));
+        }
+        self
+    }
+
     fn push_diag_suspended(
         mut self,
         code: &str,
