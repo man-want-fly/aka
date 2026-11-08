@@ -71,9 +71,21 @@ const EXPLICIT_AUX_EXTENSIONS = new Set([".txt", ".jsonl", ".log"]);
 
 const argv = process.argv.slice(2);
 const dirArg = argv.find((item) => item.startsWith("--dir="));
+// 证据根由 scripts/evidence-layout.json 单一提供（制度第 27 条）：写入方与校验方不得各写一份。
+const LAYOUT_PATH = path.join(HERE, "evidence-layout.json");
+function layoutDir(key) {
+  try {
+    const layout = JSON.parse(fs.readFileSync(LAYOUT_PATH, "utf8"));
+    if (typeof layout[key] === "string" && layout[key]) return path.resolve(ROOT, layout[key]);
+  } catch {
+    // fallthrough 到报错
+  }
+  console.error(`::error::${path.relative(ROOT, LAYOUT_PATH)} 缺失或无法解析（第 27 条路径常量真源）`);
+  process.exit(2);
+}
 const EVIDENCE_DIR = dirArg
   ? path.resolve(dirArg.slice("--dir=".length))
-  : path.join(ROOT, "docs", "qa", "evidence");
+  : layoutDir("evidenceRoot");
 
 const failures = [];
 const warnings = [];

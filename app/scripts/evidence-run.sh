@@ -4,23 +4,34 @@
 #   <suite> 必须是 diag-evidence.sh 的 case 名（如 s2 / s070503 / watchlist）；
 #   --check 必须是**第二个参数**，只验前置（分支 / 干净度 / 真 Node / 套件存在），不构建、不取证。
 # 约束：只在 main 主树的干净工作区跑；dev2/worktree 的 dump 只作参考、不计证据。
-# 产物（固定路径）：docs/qa/evidence/<name>.json + <name>-meta.json
-#                   docs/qa/evidence/raw/<name>-<commit12>-<label>.json（+ -meta.json）
+# 产物路径由 scripts/evidence-layout.json 单一提供（制度第 27 条，禁止各写一份）：
+#   evidenceRoot = docs/qa/evidence（当次 dump）；archiveRoot = docs/qa/raw（归档，证据根下不得建子目录）
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$APP_DIR/.." && pwd)"
 SUITE="${1:?用法: scripts/evidence-run.sh <suite> [--check]}"
 MODE="${2:-run}"
-OUT="$ROOT/docs/qa/evidence"
-RAW="$OUT/raw"
 
 fail() {
   echo "EVIDENCE_FAIL: $*" >&2
   exit 2
 }
 
-# 1) 位置与干净度：dump 的 commit 必须就是被签 commit，且 dirty=false。
+LAYOUT="$APP_DIR/scripts/evidence-layout.json"
+[ -f "$LAYOUT" ] || fail "缺 scripts/evidence-layout.json（第 27 条路径常量真源）"
+IFS=$'\t' read -r EVIDENCE_REL ARCHIVE_REL < <(python3 - "$LAYOUT" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8"))
+print(d["evidenceRoot"], d["archiveRoot"], sep="\t")
+PY
+) || fail "解析 evidence-layout.json 失败"
+[ -n "${EVIDENCE_REL:-}" ] && [ -n "${ARCHIVE_REL:-}" ] || fail "evidence-layout.json 缺 evidenceRoot/archiveRoot"
+case "$EVIDENCE_REL$ARCHIVE_REL" in *..*) fail "路径常量不得含 ..";; esac
+OUT="$ROOT/$EVIDENCE_REL"
+RAW="$ROOT/$ARCHIVE_REL"
+
+# 1) 位置与干净度：只在 main 干净树取证；dump 的 commit 允许等于或祖先于最终 sign_commit（第 25 条）。
 branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
 [ "$branch" = "main" ] || fail "只允许在 main 取证（当前 $branch）；分支 dump 仅作参考"
 [ -z "$(git -C "$ROOT" status --porcelain)" ] || fail "工作区不干净（dirty=true），先提交或清理"
@@ -54,15 +65,14 @@ fi
 
 # 5) 补齐第 19 条五项并落固定产物；缺一即失败。
 META="$(ls -t "$OUT"/*-meta.json | head -1)"
-python3 - "$ROOT" "$APP_DIR" "$META" "$NODE_BIN" "$SUITE" "$commit" <<'PY'
+python3 - "$ROOT" "$APP_DIR" "$META" "$NODE_BIN" "$SUITE" "$commit" "$RAW" <<'PY'
 import datetime, hashlib, json, os, platform, shutil, subprocess, sys
 
-root, app_dir, meta_path, node_bin, suite, commit = sys.argv[1:7]
+root, app_dir, meta_path, node_bin, suite, commit, raw_dir = sys.argv[1:8]
 meta = json.load(open(meta_path, encoding="utf-8"))
 label = meta.get("label") or datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 name = os.path.basename(meta_path)[: -len("-meta.json")]
 evidence_path = meta_path[: -len("-meta.json")] + ".json"
-raw_dir = os.path.join(os.path.dirname(meta_path), "raw")
 os.makedirs(raw_dir, exist_ok=True)
 
 
