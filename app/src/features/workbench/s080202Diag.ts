@@ -17,6 +17,7 @@ export interface S080202Options {
 
 export interface S080202Check {
   id: string;
+  card: string;
   ac: string;
   passed: boolean;
   detail: string;
@@ -71,7 +72,7 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
     checks: [],
   };
   const push = (id: string, ac: string, passed: boolean, detail: string) => {
-    report.checks.push({ id, ac, passed, detail });
+    report.checks.push({ id, card: "S-08.02-02", ac, passed, detail });
   };
   const fail = async (
     code: "E_ENGINE_PANIC" | "E_DATA_UNAVAILABLE" | "E_TIMEOUT",
