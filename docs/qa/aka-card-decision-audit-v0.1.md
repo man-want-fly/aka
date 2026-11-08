@@ -3032,6 +3032,9 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - 处置：本轮改动一次性提交并推送；此后批次进入「待取证」后 `main` 必须干净（规范新增 §5.6），改动走分支或 worktree，禁止边改边跑。
 - `evidence-run.sh` 第 36 行在 `set -u` + macOS bash 3.2 下把全角「）」并入变量名，非 `main` 分支报 `branch�: unbound variable` 并 exit 2，而不是 `EVIDENCE_FAIL`。派 **W-112 / dev A** 修复并要求配「分支≠main 必须输出 `EVIDENCE_FAIL`、不得出现 unbound variable」的测试；修完才算该脚本被真跑过（与第 39 条同一机理）。
 - **边界事件（按记录、不按违规）**：dev B 在「dev 不得跑 `evidence-run.sh`」下达前，跑过一次 `s080202 --check`——只验分支/干净度/Node，不构建、不取证、不落产物，影响为零，且正是这次撞出上述 bash bug。**无产物落到证据目录，也未把它当自测结论**。诚实上报记为正例；此后规则收紧：连 `--check` 也归 BA（规范 §3.2）。
+- **合入执行（严格分批）**：`ab1622c`、`73c1428`、`abb604d`、`246d129` 已入 `main`；其中 `s080203Diag.ts`、`s010301Diag.ts` 属 B2（main 尚无该文件），相关 hunk 留待 B2 合并时随文件带入。`e406e76` 仅改 `s010301Diag.ts`，同样整体留 B2。`eb1d5b6`（P6 页）不早于 B1 签字完成；`61fb175`/`2671bbe`（P09/P10 oracle 与附录）属 B2，均按令扣住，不进签 tip。
+- **`W-99` 状态**：DoD 已定为「骨架」，`eb1d5b6` 符合，改「已验收」；dev B 可接 `W-101`，合入仍等 B1 之后。
+- **CI 挂载**：新增独立 job `ac-token`（`verify_ac_token.mjs --selftest` + 全仓扫描），失败阻断合并。
 
 **十一、`ac` 字段语义进规范**
 - 规范新增 §3.4：`ac` 只承载卡面 AC token（全角补号可选），限定语进 `detail`；一个 check 只对应一个 token，多补号拆成多条 check；**禁止扩正则**允许 `W/M`、`/ UI 无障碍` 等后缀。

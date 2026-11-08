@@ -45,6 +45,22 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node app/scripts/verify_sign_impact.mjs --base "$BASE" --head "$HEAD_SHA"
 
+  # W-107：AC token 只允许卡面全角写法。字段一旦允许自由文本，
+  # 「卡面 AC → check 覆盖闭合」的集合比较就失效，故独立 job 阻断合并。
+  ac-token:
+    name: AC token 格式（W-107）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: verify:ac-token:selftest（半角反例必须红）
+        run: node app/scripts/verify_ac_token.mjs --selftest
+      - name: verify:ac-token（全仓 *Diag.ts 逐个校验）
+        run: node app/scripts/verify_ac_token.mjs
+
   build-test:
     name: macOS build / test / golden
     runs-on: macos-latest

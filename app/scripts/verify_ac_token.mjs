@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AC token 静态门禁（W-105 预置，挂载方式待 TL 定）。
+ * AC token 静态门禁（W-107，独立 CI job，失败阻断合并）。
  *
  * 规则：app/src/features 下所有 *Diag.ts 里的 AC 字面量必须匹配卡面口径：
  *   ^AC-\d{2}\.\d{2}-\d{2}(（补\d+）)?$

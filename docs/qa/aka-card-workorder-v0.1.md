@@ -28,9 +28,9 @@
 | W-102 | P09/P10 取证脚本独立 oracle 改造（`--expect-code` 先比对、R5–R8 恒等式+手算、R7 口径不等、R9 主题值） | dev B | 待验收（已复核，符合第 38 条） | `dev2`（`61fb175`） | 2026-11-08 |
 | W-103 | P07-R3 汇总正则校验分子（`^\d\/6` 改为按场景断言 6/6 或 1/6） | dev B | 待开工 | `dev2` | 2026-11-08 |
 | W-104 | 批次 B2：P09/P10 一次取证、一次签 | dev B / BA / TL | 待验收（并入批次 B2，窗口重排） | `dev2`（`61fb175` + `e406e76` 待合） | 2026-11-08 |
-| W-105 | P06 `s080202` 注入语义：每次重试前重新注入 | dev B | 待验收 | `dev2`（`ab1622c`） | 2026-11-08 |
-| W-106 | P06/P07 dump envelope 补齐（`env` 五项、`meta.dump`/`meta.reproduce`、`windowFocused`/`appActive`） | dev B | 待开工 | `dev2` | 2026-11-08 |
-| W-107 | 全仓 `*Diag.ts` AC token 全角化 + `verify:ac-token` 静态检查（含反例） | dev B | 进行中 | `dev2`（`ab1622c` + 工作区扫描） | 2026-11-08 |
+| W-105 | P06 `s080202` 注入语义：每次重试前重新注入 | dev B | 待验收 | `main`（`7b36994`） | 2026-11-08 |
+| W-106 | P06/P07 dump envelope 补齐（`env` 五项、`meta.dump`/`meta.reproduce`、`windowFocused`/`appActive`） | dev B | 待验收 | `main`（`7d4d6a6`；`s080203Diag`/`s010301Diag` 属 B2，留 B2 带入） | 2026-11-08 |
+| W-107 | 全仓 `*Diag.ts` AC token 全角化 + `verify:ac-token` 静态检查（含反例） | dev B | 待验收 | `main`（`27fa6fa`+`dfdbec0`，CI 独立 job） | 2026-11-08 |
 | W-108 | 补签批次 B0-R（11-09 三张重签）/ B0-S（11-10 `S-01.01-01`） | BA / TL | 待开工 | `main`（窗口启动 tip） | 2026-11-08 |
 | W-109 | `S-02.06-01` Gate C 降「不可签」、AC 覆盖与 `compute.discard` 实现 | dev B / BA / TL | 阻塞（`Blocked-AC`，W-110 落地后重签） | `main`（`11e62cb` 签字作废） | 2026-11-08 |
 | W-110 | Gate C 通用检查：AC 覆盖闭合 + 证据 `card` 匹配（各配反例） | dev A | 待开工 | `main` | 2026-11-08 |
