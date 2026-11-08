@@ -2054,6 +2054,9 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 1. **范围**：按页面注册表 P7（现 `absent`）实现搜索浮层；承载 `S-05.01-01/02` 的展示与交互骨架。
 2. **解除依赖**：P7 存在后，P14/P15 与 `S-08.01-02` 标的侧解除「页面 absent」阻塞。
 3. **验收**：浮层可开合、键盘可达、DOM 契约锚点齐；不替下游卡签 AC。
+4. **`recent_views` 归口（卡面已写）**：本单建 `state.db` migration 005（`recent_views(code, viewed_at)`，含回滚）并接入工作台打开写入、浮层读取；`S-02.01-01` 只复用，不另建表/不另编 migration。**migration 号从 005 起，先到先得由本单占用。**
+5. **指数入口（卡面已写）**：读 `listSecurities` 过滤指数（`market="INDEX"`，样本序）前 4 条，不读 manifest `indices[]`（manifest 无此字段）。
+6. **拼音口径（卡面已写）**：拼音为预置子集，仅覆盖有中文名标的；缺失记 `SEARCH_PINYIN_MISSING` 并跳过，不记 `Blocked-AC`。
 
 ### W-101（dev B 实现 / TL 验收）P16 `S-07.03-01` 首装 5 步生成器（页面 P10 + `index_members`）
 
