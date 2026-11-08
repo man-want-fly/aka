@@ -3,3 +3,6 @@
 
 # Python 本地缓存（脚本运行产物，不入库）
 __pycache__/
+
+# dev2 worktree 的 app/node_modules 是指向主树的软链；`node_modules/` 的尾斜杠只匹配真实目录
+/app/node_modules
