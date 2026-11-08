@@ -1,5 +1,6 @@
 import { ipc } from "../../lib/ipc";
 import type { ManifestResponse } from "../../lib/types";
+import { collectEvidenceEnv, collectFocus } from "../workbench/diag";
 
 /**
  * P01–P04 本批取证：
@@ -83,6 +84,29 @@ const baseReport = (suite: string) => ({
   finishedAt: "",
   checks: [] as Check[],
 });
+
+/**
+ * R-EV-02：env 与聚焦状态由 diag.ts 统一产出；env 采集失败也照常落 dump（由 verify 判 failed）。
+ * meta.dump / meta.reproduce 由 evidence-run.sh 写入，套件出口只负责顶层 env / windowFocused / appActive。
+ */
+const writeBatchReport = async (
+  name: string,
+  hint: string,
+  report: ReturnType<typeof baseReport> & Record<string, unknown>,
+) => {
+  const env = await collectEvidenceEnv(hint).catch(() => null);
+  const focus = collectFocus();
+  report.ok = report.checks.every((check) => check.passed);
+  report.finishedAt = new Date().toISOString();
+  await ipc.diagWriteNamed(
+    name,
+    JSON.stringify(
+      { ...report, env, windowFocused: focus.windowFocused, appActive: focus.appActive },
+      null,
+      2,
+    ),
+  );
+};
 
 /** P01：目录行「加入图表」容量、去重、规划项与无标的引导。 */
 export async function runS030104Diagnostics(manifest: ManifestResponse) {
@@ -171,9 +195,7 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
 
   // 复原默认副图，避免影响后续套件
   writeSubPlots(["VOL", "M06", "M01"]);
-  report.ok = report.checks.every((check) => check.passed);
-  report.finishedAt = new Date().toISOString();
-  await ipc.diagWriteNamed("s030104-evidence.json", JSON.stringify(report, null, 2));
+  await writeBatchReport("s030104-evidence.json", "s030104", report);
   return report;
 }
 
@@ -293,9 +315,7 @@ export async function runS030201Diagnostics() {
     `全部移除后 ${emptied.favorites.length} 项；再次读取 ${again.favorites.length} 项（未重新播种）`,
   );
 
-  report.ok = report.checks.every((check) => check.passed);
-  report.finishedAt = new Date().toISOString();
-  await ipc.diagWriteNamed("s030201-favorites-evidence.json", JSON.stringify(report, null, 2));
+  await writeBatchReport("s030201-favorites-evidence.json", "s030201", report);
   return report;
 }
 
@@ -338,9 +358,7 @@ export async function runS030302CatalogDiagnostics() {
     `Esc 返回后 hash ${window.location.hash || "(空)"} / trend 展开=${trendToggle?.getAttribute("aria-expanded")} / DOM ${rows} 行`,
   );
 
-  report.ok = report.checks.every((check) => check.passed);
-  report.finishedAt = new Date().toISOString();
-  await ipc.diagWriteNamed("s030302-catalog-evidence.json", JSON.stringify(report, null, 2));
+  await writeBatchReport("s030302-catalog-evidence.json", "s030302-catalog", report);
   return report;
 }
 
@@ -413,9 +431,7 @@ export async function runS030302WorkbenchDiagnostics() {
   );
   q<HTMLElement>("[data-drawer-close]")?.click();
 
-  report.ok = report.checks.every((check) => check.passed);
-  report.finishedAt = new Date().toISOString();
-  await ipc.diagWriteNamed("s030302-evidence.json", JSON.stringify(report, null, 2));
+  await writeBatchReport("s030302-evidence.json", "s030302", report);
   return report;
 }
 
@@ -484,9 +500,7 @@ export async function runS060301Diagnostics() {
     `关于页渲染期外部 http(s) 资源 ${external.length} 个${external.length ? `：${external.join(",")}` : ""}`,
   );
 
-  report.ok = report.checks.every((check) => check.passed);
-  report.finishedAt = new Date().toISOString();
-  await ipc.diagWriteNamed("s060301-about-evidence.json", JSON.stringify(report, null, 2));
+  await writeBatchReport("s060301-about-evidence.json", "s060301", report);
   return report;
 }
 
@@ -562,9 +576,7 @@ export async function runS060302Diagnostics() {
     `导出期间外部 http(s) 资源 ${after - before} 个`,
   );
 
-  report.ok = report.checks.every((check) => check.passed);
-  report.finishedAt = new Date().toISOString();
-  await ipc.diagWriteNamed("s060302-evidence.json", JSON.stringify(report, null, 2));
+  await writeBatchReport("s060302-evidence.json", "s060302", report);
   return report;
 }
 
@@ -674,8 +686,6 @@ export async function runS070102Diagnostics() {
     `检查期间外部 http(s) 资源 ${externalAfter - externalBefore} 个`,
   );
 
-  report.ok = report.checks.every((check) => check.passed);
-  report.finishedAt = new Date().toISOString();
-  await ipc.diagWriteNamed("s070102-evidence.json", JSON.stringify(report, null, 2));
+  await writeBatchReport("s070102-evidence.json", "s070102", report);
   return report;
 }

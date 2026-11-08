@@ -8,6 +8,7 @@ import {
   type AdjMode,
 } from "./positions";
 import type { PositionDto } from "../../lib/types";
+import { collectEvidenceEnv, collectFocus, type EvidenceEnv } from "../workbench/diag";
 
 type Layer = "data" | "render";
 
@@ -24,6 +25,9 @@ export interface S010301DiagReport {
   startedAt: string;
   finishedAt: string;
   ok: boolean;
+  env: EvidenceEnv | null;
+  windowFocused: boolean;
+  appActive: boolean;
   writtenTo?: string;
   error?: string;
   checks: Check[];
@@ -349,11 +353,19 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
     push("RUN", "-", "render", false, `${failure.code}: ${failure.message}`);
   }
 
+  // R-EV-02：env 与聚焦状态由 diag.ts 统一产出；env 采集失败也照常落 dump（由 verify 判 failed）。
+  // meta.dump / meta.reproduce 由 evidence-run.sh 写入，套件出口只负责顶层 env / windowFocused / appActive。
+  const env = await collectEvidenceEnv("s010301").catch(() => null);
+  const focus = collectFocus();
+
   const report: S010301DiagReport = {
     suite: "S-01.03-01 positions",
     startedAt,
     finishedAt: new Date().toISOString(),
     ok: checks.every((check) => check.passed),
+    env,
+    windowFocused: focus.windowFocused,
+    appActive: focus.appActive,
     checks,
   };
 

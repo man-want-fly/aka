@@ -3,6 +3,7 @@
 
 import { describeError, ipc } from "../../lib/ipc";
 import type { DatasetIntegrityDto } from "../../lib/types";
+import { collectEvidenceEnv, collectFocus, type EvidenceEnv } from "../workbench/diag";
 
 export interface S080203Check {
   id: string;
@@ -20,6 +21,9 @@ export interface S080203Report {
   startedAt: string;
   finishedAt: string;
   ok: boolean;
+  env: EvidenceEnv | null;
+  windowFocused: boolean;
+  appActive: boolean;
   checks: S080203Check[];
 }
 
@@ -78,6 +82,9 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     startedAt: new Date().toISOString(),
     finishedAt: "",
     ok: false,
+    env: null,
+    windowFocused: false,
+    appActive: false,
     checks: [],
   };
   const push = (id: string, ac: string, passed: boolean, detail: string) => {
@@ -234,6 +241,13 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     push("P09-R10", "AC-08.02-03", externalRequests().length === 0, "外部请求 0 条");
   }
 
+  // R-EV-02：env 与聚焦状态由 diag.ts 统一产出；env 采集失败也照常落 dump（由 verify 判 failed）。
+  // meta.dump / meta.reproduce 由 evidence-run.sh 写入，套件出口只负责顶层 env / windowFocused / appActive。
+  const env = await collectEvidenceEnv("s080203").catch(() => null);
+  const focus = collectFocus();
+  report.env = env;
+  report.windowFocused = focus.windowFocused;
+  report.appActive = focus.appActive;
   report.ok = report.checks.every((check) => check.passed);
   report.finishedAt = new Date().toISOString();
   await ipc.diagWriteNamed("s080203-evidence.json", JSON.stringify(report, null, 2));
