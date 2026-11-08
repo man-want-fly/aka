@@ -1,0 +1,1154 @@
+{
+  "version": 1,
+  "rule": "制度第 32 条：取证选择器与产品 DOM 契约绑定",
+  "evidenceFiles": [
+    "src/features/workbench/diag.ts",
+    "src/features/workbench/drawerDiag.ts",
+    "src/features/workbench/restartDiag.ts",
+    "src/features/workbench/s070503Diag.ts",
+    "src/features/workbench/s20101Diag.ts",
+    "src/features/workbench/s20202Diag.ts",
+    "src/features/workbench/s203Diag.ts",
+    "src/features/workbench/s20501Diag.ts",
+    "src/features/workbench/s205Diag.ts",
+    "src/features/workbench/s207Diag.ts",
+    "src/features/workbench/s20801Diag.ts"
+  ],
+  "contracts": [
+    {
+      "key": "catalog.root",
+      "selector": "[data-catalog-root='p3']",
+      "source": "src/pages/catalog/CatalogPage.tsx",
+      "markers": [
+        "data-catalog-root=\"p3\""
+      ],
+      "note": "目录页根；P4→P3 迁移后取证必须用 p3，不得回退 p4"
+    },
+    {
+      "key": "catalog.categoryToggle",
+      "selector": "[data-catalog-cat-toggle]",
+      "source": "src/pages/catalog/CatalogPage.tsx",
+      "markers": [
+        "data-catalog-cat-toggle"
+      ],
+      "note": "分类懒挂载开关；取证须先全部展开，否则只有 trend 24 行"
+    },
+    {
+      "key": "catalog.item",
+      "selector": "[data-catalog-item='<id>']",
+      "source": "src/pages/catalog/CatalogPage.tsx",
+      "markers": [
+        "data-catalog-item"
+      ],
+      "note": "行容器是 <li>，本身无点击 handler；选择必须点内部按钮"
+    },
+    {
+      "key": "catalog.status",
+      "selector": "[data-catalog-item][data-catalog-status='beta']",
+      "source": "src/pages/catalog/CatalogPage.tsx",
+      "markers": [
+        "data-catalog-status"
+      ],
+      "note": "beta 只看 status；data-catalog-completeness 是口径完整度，另一维度"
+    },
+    {
+      "key": "catalog.section",
+      "selector": "[data-catalog-section='formula|params|warmup|boundary']",
+      "source": "src/pages/catalog/CatalogPage.tsx",
+      "markers": [
+        "data-catalog-section=\"formula\""
+      ],
+      "note": "右侧四段口径；期望值必须来自 manifest，不是 registry 快照"
+    },
+    {
+      "key": "catalog.detail",
+      "selector": "[data-catalog-detail][data-catalog-active='<id>']",
+      "source": "src/pages/catalog/CatalogPage.tsx",
+      "markers": [
+        "data-catalog-detail=\"1\"",
+        "data-catalog-active"
+      ],
+      "note": "选中态唯一可观测钩子：点击后必须等 active 落到该项再读四段"
+    },
+    {
+      "selector": "button.catalog-row__select",
+      "source": "src/pages/catalog/CatalogPage.tsx",
+      "markers": [
+        "catalog-row__select"
+      ],
+      "note": "行内真正的选择按钮（P3 只有它有 onClick）",
+      "key": "catalog.selectButton"
+    },
+    {
+      "key": "s070503.overlay",
+      "selector": "[data-provenance='1']",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-provenance=\"1\""
+      ],
+      "note": "溯源浮层根；关闭/缺失断言均以此为准"
+    },
+    {
+      "key": "s070503.overlayDate",
+      "selector": "[data-provenance='1'][data-provenance-date]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-provenance-date"
+      ],
+      "note": "浮层对应 bar 日期"
+    },
+    {
+      "key": "s070503.field",
+      "selector": "[data-prov-field='provider|batchId|ingestedAt|datasetId|adjMode|qualityFlags']",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-prov-field=\"provider\""
+      ],
+      "note": "六字段逐一渲染；缺失样本判「缺失」文案"
+    },
+    {
+      "key": "s070503.missingBadge",
+      "selector": "[data-provenance-missing='1']",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-provenance-missing=\"1\""
+      ],
+      "note": "缺失字段徽标（E_PROVENANCE_MISSING）"
+    },
+    {
+      "key": "b2Render.readoutHost",
+      "selector": "[data-readout='1']",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-readout=\"1\""
+      ],
+      "note": "读数宿主是 data-readout='1'；历史上的 data-readout-host 已废弃（仅注释残留）"
+    },
+    {
+      "key": "b2Render.macd",
+      "selector": "[data-macd='hist']",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-macd"
+      ],
+      "note": "MACD 柱挂在 data-macd 下；历史上的 data-hist='pos|neg' 已废弃"
+    },
+    {
+      "key": "auto.data-adj-badge",
+      "selector": "[data-adj-badge]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-adj-badge"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-adj-mode",
+      "selector": "[data-adj-mode]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-adj-mode"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-b2-overlay-select",
+      "selector": "[data-b2-overlay-select]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-b2-overlay-select"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-b2-sub-select",
+      "selector": "[data-b2-sub-select]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-b2-sub-select"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-bar-count",
+      "selector": "[data-bar-count]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-bar-count"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-candle",
+      "selector": "[data-candle]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-candle"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-catalog-active",
+      "selector": "[data-catalog-active]",
+      "source": "src/pages/catalog/CatalogPage.tsx",
+      "markers": [
+        "data-catalog-active"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-chart",
+      "selector": "[data-chart]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-chart"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-chart-tooltip",
+      "selector": "[data-chart-tooltip]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-chart-tooltip"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-close",
+      "selector": "[data-close]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-close"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-cloud",
+      "selector": "[data-cloud]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-cloud"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-cloud-sign",
+      "selector": "[data-cloud-sign]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-cloud-sign"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-crosshair-h",
+      "selector": "[data-crosshair-h]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-crosshair-h"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-crosshair-v",
+      "selector": "[data-crosshair-v]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-crosshair-v"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-crosshair-x",
+      "selector": "[data-crosshair-x]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-crosshair-x"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-dataset-overview",
+      "selector": "[data-dataset-overview]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-dataset-overview"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-dataset-seg",
+      "selector": "[data-dataset-seg]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-dataset-seg"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-date",
+      "selector": "[data-date]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-date"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-abbr",
+      "selector": "[data-drawer-abbr]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-abbr"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-add",
+      "selector": "[data-drawer-add]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-add"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-added",
+      "selector": "[data-drawer-added]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-added"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-capacity",
+      "selector": "[data-drawer-capacity]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-capacity"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-cat",
+      "selector": "[data-drawer-cat]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-cat"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "absent.data-drawer-clear",
+      "selector": "[data-drawer-clear]",
+      "source": "src",
+      "markers": [
+        "data-drawer-clear"
+      ],
+      "expect": "absent",
+      "note": "取证用于断言「不存在」的负向探针；产品源码不得出现该标记"
+    },
+    {
+      "key": "auto.data-drawer-close",
+      "selector": "[data-drawer-close]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-close"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-empty",
+      "selector": "[data-drawer-empty]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-empty"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-full",
+      "selector": "[data-drawer-full]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-full"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-go-market",
+      "selector": "[data-drawer-go-market]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-go-market"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-hint",
+      "selector": "[data-drawer-hint]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-hint"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-no-target",
+      "selector": "[data-drawer-no-target]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-no-target"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-row",
+      "selector": "[data-drawer-row]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-row"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-search",
+      "selector": "[data-drawer-search]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-search"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-status",
+      "selector": "[data-drawer-status]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-status"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-drawer-trigger",
+      "selector": "[data-drawer-trigger]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-drawer-trigger"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-flip",
+      "selector": "[data-flip]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-flip"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-flip-dir",
+      "selector": "[data-flip-dir]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-flip-dir"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-hover-index",
+      "selector": "[data-hover-index]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-hover-index"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-index",
+      "selector": "[data-index]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-index"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-indicator-drawer",
+      "selector": "[data-indicator-drawer]",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-indicator-drawer"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-legend-line",
+      "selector": "[data-legend-line]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-legend-line"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-limit-approx",
+      "selector": "[data-limit-approx]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-limit-approx"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-limit-price",
+      "selector": "[data-limit-price]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-limit-price"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-limit-row",
+      "selector": "[data-limit-row]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-limit-row"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-nan-dot",
+      "selector": "[data-nan-dot]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-nan-dot"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-overdrag",
+      "selector": "[data-overdrag]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-overdrag"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-overlay",
+      "selector": "[data-overlay]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-overlay"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-overlay-count",
+      "selector": "[data-overlay-count]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-overlay-count"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-overlay-key",
+      "selector": "[data-overlay-key]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-overlay-key"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-overlay-legend",
+      "selector": "[data-overlay-legend]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-overlay-legend"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-overlay-notice",
+      "selector": "[data-overlay-notice]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-overlay-notice"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "absent.data-p9-example",
+      "selector": "[data-p9-example]",
+      "source": "src",
+      "markers": [
+        "data-p9-example"
+      ],
+      "expect": "absent",
+      "note": "取证用于断言「不存在」的负向探针；产品源码不得出现该标记"
+    },
+    {
+      "key": "auto.data-panel-drag",
+      "selector": "[data-panel-drag]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-panel-drag"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-panel-insert",
+      "selector": "[data-panel-insert]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-panel-insert"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-panel-preview-height",
+      "selector": "[data-panel-preview-height]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-panel-preview-height"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-panel-remove",
+      "selector": "[data-panel-remove]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-panel-remove"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-panel-resize",
+      "selector": "[data-panel-resize]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-panel-resize"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-input",
+      "selector": "[data-param-input]",
+      "source": "src/components/ParamPanel.tsx",
+      "markers": [
+        "data-param-input"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-invalid",
+      "selector": "[data-param-invalid]",
+      "source": "src/components/ParamPanel.tsx",
+      "markers": [
+        "data-param-invalid"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-invalid-badge",
+      "selector": "[data-param-invalid-badge]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-param-invalid-badge"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-key",
+      "selector": "[data-param-key]",
+      "source": "src/components/ParamPanel.tsx",
+      "markers": [
+        "data-param-key"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-minus",
+      "selector": "[data-param-minus]",
+      "source": "src/components/ParamPanel.tsx",
+      "markers": [
+        "data-param-minus"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-plus",
+      "selector": "[data-param-plus]",
+      "source": "src/components/ParamPanel.tsx",
+      "markers": [
+        "data-param-plus"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-restore",
+      "selector": "[data-param-restore]",
+      "source": "src/components/ParamPanel.tsx",
+      "markers": [
+        "data-param-restore"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-restored",
+      "selector": "[data-param-restored]",
+      "source": "src/components/ParamPanel.tsx",
+      "markers": [
+        "data-param-restored"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-param-timeout",
+      "selector": "[data-param-timeout]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-param-timeout"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-quality-section",
+      "selector": "[data-quality-section]",
+      "source": "src/pages/datasource/QualitySection.tsx",
+      "markers": [
+        "data-quality-section"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-quote-prev-close",
+      "selector": "[data-quote-prev-close]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-quote-prev-close"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-quote-suspended",
+      "selector": "[data-quote-suspended]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-quote-suspended"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-region",
+      "selector": "[data-region]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-region"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sha-copied",
+      "selector": "[data-sha-copied]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-sha-copied"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sign",
+      "selector": "[data-sign]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sign"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-split-factor",
+      "selector": "[data-split-factor]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-split-factor"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-split-marker",
+      "selector": "[data-split-marker]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-split-marker"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub",
+      "selector": "[data-sub]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-empty",
+      "selector": "[data-sub-empty]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-empty"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-height",
+      "selector": "[data-sub-height]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-height"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-index",
+      "selector": "[data-sub-index]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-index"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-key",
+      "selector": "[data-sub-key]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-key"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-notice",
+      "selector": "[data-sub-notice]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-notice"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-panel",
+      "selector": "[data-sub-panel]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-panel"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-sign",
+      "selector": "[data-sub-sign]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-sign"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-title",
+      "selector": "[data-sub-title]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-title"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-sub-zero",
+      "selector": "[data-sub-zero]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-sub-zero"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-suspended",
+      "selector": "[data-suspended]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-suspended"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-suspended-readout",
+      "selector": "[data-suspended-readout]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-suspended-readout"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-timeframe",
+      "selector": "[data-timeframe]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-timeframe"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-tooltip-split",
+      "selector": "[data-tooltip-split]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-tooltip-split"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-tooltip-suspended",
+      "selector": "[data-tooltip-suspended]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-tooltip-suspended"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-unit",
+      "selector": "[data-unit]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-unit"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-valid-from",
+      "selector": "[data-valid-from]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-valid-from"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-value",
+      "selector": "[data-value]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-value"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-view-end",
+      "selector": "[data-view-end]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-view-end"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-view-start",
+      "selector": "[data-view-start]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-view-start"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-vol-suspended",
+      "selector": "[data-vol-suspended]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-vol-suspended"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-warmup",
+      "selector": "[data-warmup]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-warmup"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-wb-name",
+      "selector": "[data-wb-name]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-wb-name"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-wl-item",
+      "selector": "[data-wl-item]",
+      "source": "src/components/Watchlist.tsx",
+      "markers": [
+        "data-wl-item"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    }
+  ],
+  "templates": [
+    {
+      "pattern": "`[data-overlay='${}'][data-overlay-key='${}']`",
+      "source": "src/features/workbench/diag.ts"
+    },
+    {
+      "pattern": "`[data-overlay='${}'][data-overlay-key]`",
+      "source": "src/features/workbench/diag.ts"
+    },
+    {
+      "pattern": "`[data-legend-line^='${}.']`",
+      "source": "src/features/workbench/diag.ts"
+    },
+    {
+      "pattern": "`[data-sub='${}']`",
+      "source": "src/features/workbench/diag.ts"
+    },
+    {
+      "pattern": "`[data-readout^='${}']`",
+      "source": "src/features/workbench/diag.ts"
+    },
+    {
+      "pattern": "`[data-readout^='b2-sub-${}-']`",
+      "source": "src/features/workbench/diag.ts"
+    },
+    {
+      "pattern": "`[data-catalog-section='${}']`",
+      "source": "src/features/workbench/diag.ts"
+    },
+    {
+      "pattern": "`[data-catalog-item='${}']`",
+      "source": "src/features/workbench/diag.ts"
+    },
+    {
+      "pattern": "`[data-drawer-cat=\"${}\"]`",
+      "source": "src/features/workbench/drawerDiag.ts"
+    },
+    {
+      "pattern": "`搜索 md → ${}`",
+      "source": "src/features/workbench/drawerDiag.ts"
+    },
+    {
+      "pattern": "`无结果空态=${} / 清除后行数=${}`",
+      "source": "src/features/workbench/drawerDiag.ts"
+    },
+    {
+      "pattern": "`M06 按钮已添加态=${} / 文案「${}」/ 重击后副图 ${} 面板 / 提示「${}」`",
+      "source": "src/features/workbench/drawerDiag.ts"
+    },
+    {
+      "pattern": "`[data-param-input=\"${}\"]`",
+      "source": "src/features/workbench/drawerDiag.ts"
+    },
+    {
+      "pattern": "`第 4 个副图按钮 disabled=${} / full=${} / 容量「${}」/ tooltip「${}」/ 副图 ${} 个 / 实例 ${} → ${} / MACD 标题「${}」`",
+      "source": "src/features/workbench/drawerDiag.ts"
+    },
+    {
+      "pattern": "`移除 M01 后 RSI 可添加=${} / 加回后副图 ${} 个 / M01 面板=${}`",
+      "source": "src/features/workbench/drawerDiag.ts"
+    },
+    {
+      "pattern": "`[data-sub-title=\"${}\"]`",
+      "source": "src/features/workbench/restartDiag.ts"
+    },
+    {
+      "pattern": "`[data-wl-item=\"${}\"]`",
+      "source": "src/features/workbench/restartDiag.ts"
+    },
+    {
+      "pattern": "`[data-prov-field=\"${}\"]`",
+      "source": "src/features/workbench/s070503Diag.ts"
+    },
+    {
+      "pattern": "`[data-candle][data-date=\"${}\"]`",
+      "source": "src/features/workbench/s20202Diag.ts"
+    },
+    {
+      "pattern": "`[data-overlay=\"${}\"][data-overlay-key=\"${}\"]`",
+      "source": "src/features/workbench/s20202Diag.ts"
+    },
+    {
+      "pattern": "`[data-adj-mode=\"${}\"]`",
+      "source": "src/features/workbench/s20202Diag.ts"
+    },
+    {
+      "pattern": "`[data-timeframe=\"${}\"]`",
+      "source": "src/features/workbench/s20202Diag.ts"
+    },
+    {
+      "pattern": "`T08 full=${} aria-disabled=${} title「${}」点击提示「${}」叠加数 ${}·T08 未上图=${}`",
+      "source": "src/features/workbench/s20202Diag.ts"
+    },
+    {
+      "pattern": "`[data-sub-panel=\"${}\"]`",
+      "source": "src/features/workbench/s203Diag.ts"
+    },
+    {
+      "pattern": "`[data-panel-drag=\"${}\"]`",
+      "source": "src/features/workbench/s203Diag.ts"
+    },
+    {
+      "pattern": "`[data-panel-resize=\"${}\"]`",
+      "source": "src/features/workbench/s203Diag.ts"
+    },
+    {
+      "pattern": "`区间 ${}~${} · 总数 ${} 根 · warmup ${} · data-sub-empty=${} · 提示「${}」· 仍绘制的 MACD 线段 ${}`",
+      "source": "src/features/workbench/s203Diag.ts"
+    },
+    {
+      "pattern": "`清范围后 ${} 根 · M06 data-sub-empty=${} · MACD 线段 ${}`",
+      "source": "src/features/workbench/s203Diag.ts"
+    },
+    {
+      "pattern": "`换序前 ${} → 后 ${} · data-sub-index ${} · 拖动中插入线 target=${} · localStorage ${}`",
+      "source": "src/features/workbench/s203Diag.ts"
+    },
+    {
+      "pattern": "`[data-param-key=\"${}\"]`",
+      "source": "src/features/workbench/s20501Diag.ts"
+    },
+    {
+      "pattern": "`[data-param-invalid=\"${}\"]`",
+      "source": "src/features/workbench/s20501Diag.ts"
+    },
+    {
+      "pattern": "` : \"空\"\n    } · 提示=${}`",
+      "source": "src/features/workbench/s205Diag.ts"
+    },
+    {
+      "pattern": "`全历史视口 start=${} · 越界拖拽位移 ${}px · 松手后位移 ${} · start=${} · 根数 ${}/${}`",
+      "source": "src/features/workbench/s207Diag.ts"
+    },
+    {
+      "pattern": "`月线 ${} 根 · 整段不画线提示 ${} 条（${}）· T01 有效点 ${} · T09 已绘制=${} · M06 副图 empty=${} 文案「${}」· 副图路径长度 ${}`",
+      "source": "src/features/workbench/s207Diag.ts"
+    },
+    {
+      "pattern": "`视口 ${}~${} · 停牌组 ${} 个（行情层 ${}）· 量柱 ${} 根 · K 线实体 ${} 根 · hover=${} · 读数 ${} · tooltip 停牌区=${} · 「${}」不含 OHLC=${}`",
+      "source": "src/features/workbench/s207Diag.ts"
+    }
+  ]
+}
