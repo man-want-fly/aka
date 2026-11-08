@@ -4,6 +4,7 @@ import { CatalogPage } from "./pages/catalog/CatalogPage";
 import { WorkbenchPage } from "./pages/workbench/WorkbenchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { DatasourcePage } from "./pages/datasource/DatasourcePage";
+import { SearchOverlay } from "./components/SearchOverlay";
 import { ipc, isTauriRuntime } from "./lib/ipc";
 import { loadDisplaySettings } from "./lib/settings";
 import {
@@ -266,32 +267,41 @@ export default function App() {
     }, 50);
   };
 
-  if (location.route === "catalog") {
-    return <CatalogPage onNavigate={navigate} onOpenWorkbench={openSecurity} />;
-  }
+  const renderPage = () => {
+    if (location.route === "catalog") {
+      return <CatalogPage onNavigate={navigate} onOpenWorkbench={openSecurity} />;
+    }
 
-  if (location.route === "settings") {
-    return <SettingsPage onNavigate={navigate} />;
-  }
+    if (location.route === "settings") {
+      return <SettingsPage onNavigate={navigate} />;
+    }
 
-  if (location.route === "datasource") {
-    return <DatasourcePage onNavigate={navigate} />;
-  }
+    if (location.route === "datasource") {
+      return <DatasourcePage onNavigate={navigate} />;
+    }
 
-  if (location.route === "market") {
+    if (location.route === "market") {
+      return (
+        <MarketPage onNavigate={navigate} onOpenSecurity={openSecurity} />
+      );
+    }
+
     return (
-      <MarketPage onNavigate={navigate} onOpenSecurity={openSecurity} />
+      <WorkbenchPage
+        initialCode={location.code}
+        themeMode={themeMode}
+        onThemeMode={setThemeMode}
+        colorMode={colorMode}
+        onColorMode={setColorMode}
+        onNavigate={navigate}
+      />
     );
-  }
+  };
 
   return (
-    <WorkbenchPage
-      initialCode={location.code}
-      themeMode={themeMode}
-      onThemeMode={setThemeMode}
-      colorMode={colorMode}
-      onColorMode={setColorMode}
-      onNavigate={navigate}
-    />
+    <>
+      {renderPage()}
+      <SearchOverlay onOpenSecurity={openSecurity} onNavigate={navigate} />
+    </>
   );
 }

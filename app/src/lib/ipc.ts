@@ -20,6 +20,7 @@ import type {
   MarketSnapshotDto,
   PositionDto,
   QualityReportDto,
+  RecentViewDto,
   RegistryResponse,
   SecurityDto,
   TelemetrySummary,
@@ -98,6 +99,13 @@ export const ipc = {
       indicatorId,
       favorited,
     }),
+
+  /** S-05.01-02：最近查看（最多 5 条）；读取时清理数据集里已不存在的记录。 */
+  recentViews: (): Promise<RecentViewDto[]> => invoke<RecentViewDto[]>("recent_views"),
+
+  /** S-05.01-02：工作台打开标的时写入/刷新，返回裁剪后的最新 5 条。 */
+  touchRecentView: (code: string): Promise<RecentViewDto[]> =>
+    invoke<RecentViewDto[]>("touch_recent_view", { code }),
 
   /** S-02.08-01：数据集 manifest；provider 不提供时返回 null。 */
   datasetManifest: (): Promise<DatasetManifestDto | null> =>

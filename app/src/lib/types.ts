@@ -149,6 +149,15 @@ export interface IndicatorFavoritesResponse {
   favorites: IndicatorFavoriteDto[];
 }
 
+/** S-05.01-02：最近查看，最多 5 条，名称/板块由数据集补齐。 */
+export interface RecentViewDto {
+  code: string;
+  name: string;
+  board: string;
+  isIndex: boolean;
+  viewedAt: number;
+}
+
 /** 指标目录的单一事实来源；前端指标列表一律由它生成。 */
 export interface ManifestResponse {
   schemaVersion: number;
