@@ -1852,7 +1852,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. **留痕**：每次把 meta 的 `commit`、`dump.sha256`、`reproduce` 报给 TL；TL 只在对应绿 run 上签。
 4. **脚本硬化**：`verify:evidence` 增加对 meta `runtime`/`build`/`dump` 三项非空的硬校验（防「脚本只有外壳」），W-88 内完成。
 5. **P04 文案**：关于页 `44-105` → `45-105`（`M=45` 派生），dev B 本轮改，不涉及签字。
-6. **套件入口（已完成 `c365665`）**：`diag-evidence.sh` 补 `s2`（`S-02.06-01`）与 `s070503`（`S-07.05-03`）两个 case；`evidence-run.sh` 增加未知套件硬拒绝（`grep -qE "^  <suite>\)"` 不匹配即 `exit 2`），`--check` 同样走这条。
+6. **套件入口（已完成 `c365665`）**：`diag-evidence.sh` 补 `s2`（`S-02.06-01`）与 `s070503`（`S-07.05-03`）两个 case；`evidence-run.sh` 增加未知套件硬拒绝（`grep -qE "^  <suite>\)"` 不匹配即 `exit 2`），`--check` 同样走这条。**用法固定为 `evidence-run.sh <suite> [--check]`：套件名第一位，`--check` 必须是第二个参数**；`--check` 只验分支/干净度/真 Node/套件存在，不构建、不取证。误把 `--check` 当套件名会先白烧一次构建（BA 已踩），前置校验就是防这个。
 7. **推送顺序（2026-11-08 定）**：TL 先跑 `verify_sign_impact --base origin/main --head HEAD`（本批 PASS）→ TL 代推 `b5b8e35`/`c365665`/`33d1ec5`（不改写）→ CI 绿 → BA 在同一 tip 跑 `s2` + `s070503`。预演红则退回 dev A 本地修，TL 不代改。
 8. **`S-07.05-03` 证据两行**：`AC-07.05-04=PASS`、`补1=BLOCKED`（blocker `S-07.05-01`）；不得合并成一行，不得预填 PASS。
 9. **首次端到端记录（BA 填，制度第 24 条）**：日期 / tip / suite / dump 路径 / dump sha256 / meta 五项是否齐 / 结论。未填此记录前，链路只算「候选」。

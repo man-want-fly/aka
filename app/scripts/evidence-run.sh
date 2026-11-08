@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # 运行层 GUI 证据统一入口（制度第 23 条）。
 # 用法：scripts/evidence-run.sh <suite> [--check]
+#   <suite> 必须是 diag-evidence.sh 的 case 名（如 s2 / s070503 / watchlist）；
+#   --check 必须是**第二个参数**，只验前置（分支 / 干净度 / 真 Node / 套件存在），不构建、不取证。
 # 约束：只在 main 主树的干净工作区跑；dev2/worktree 的 dump 只作参考、不计证据。
 # 产物（固定路径）：docs/qa/evidence/<name>.json + <name>-meta.json
 #                   docs/qa/evidence/raw/<name>-<commit12>-<label>.json（+ -meta.json）
