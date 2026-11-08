@@ -449,9 +449,24 @@ for (const { full, rel } of evidenceFiles) {
           `env.commit=${envCommit} 与 meta.commit=${meta.commit} 不一致（commit 不得手写）`,
         );
       }
-      // 2) dirty：取证必须是干净树。
+      // 2) dirty：取证必须是干净树；且 meta.dirty 与 env.dirty 必须同源同值（W-89 第 1 项）。
+      //    落盘后各自现算会得到两个答案（meta=false / env=true），必须在门禁处直接判红。
       if (env.dirty !== false) {
         problems.push(`env.dirty=${JSON.stringify(env.dirty)} 不是 false`);
+      }
+      if (typeof meta.dirty !== "boolean") {
+        problems.push(
+          `meta.dirty=${JSON.stringify(meta.dirty)} 不是布尔（必须是 PRE 快照的 false）`,
+        );
+      } else {
+        if (meta.dirty !== false) {
+          problems.push("meta.dirty=true（取证必须在干净树上跑）");
+        }
+        if (typeof env.dirty === "boolean" && env.dirty !== meta.dirty) {
+          problems.push(
+            `meta.dirty=${meta.dirty} 与 env.dirty=${env.dirty} 不一致（必须同源同值）`,
+          );
+        }
       }
       // 3) runtime：launchMode/node/os/arch/hostTarget 非空 + electron 键存在且非 null。
       // 本产品是 Tauri WebKit 宿主，electron 显式 "none" 记通过；缺失/undefined 仍 FAIL。
@@ -499,6 +514,70 @@ for (const { full, rel } of evidenceFiles) {
       if (!String(env.command ?? "").trim()) problems.push("env.command 为空");
     }
 
+    // 3b/4b/5b) 同一事实只允许一处真源：meta.runtime / meta.build / meta.command 必须逐字段
+    // 等于 dump.env 的副本（W-89 第 3 项）；不一致即红，不许一处写 null、一处写 "none"。
+    if (env && typeof env === "object" && !Array.isArray(env)) {
+      const same = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+      const metaRuntime = meta.runtime;
+      if (!metaRuntime || typeof metaRuntime !== "object" || Array.isArray(metaRuntime)) {
+        problems.push("meta.runtime 缺失（必须由 evidence-run 从 dump.env.runtime 回填）");
+      } else {
+        for (const key of ["launchMode", "node", "os", "arch", "hostTarget", "electron"]) {
+          const actual = metaRuntime[key] ?? null;
+          const expected = (env.runtime && env.runtime[key]) ?? null;
+          if (!same(actual, expected)) {
+            problems.push(
+              `meta.runtime.${key}=${JSON.stringify(actual)} 与 env.runtime.${key}=${JSON.stringify(expected)} 不一致`,
+            );
+          }
+        }
+      }
+      // 顶层 meta.electron 若被写出，必须与 runtime.electron 同值；null 是「两个答案」的一种。
+      if ("electron" in meta) {
+        const expected = (metaRuntime && metaRuntime.electron) ?? (env.runtime && env.runtime.electron) ?? null;
+        if (meta.electron === null || meta.electron === undefined) {
+          problems.push("meta.electron=null（同一事实两处不一致；electron 只保留 env.runtime 一处）");
+        } else if (!same(meta.electron, expected)) {
+          problems.push(
+            `meta.electron=${JSON.stringify(meta.electron)} 与 runtime.electron=${JSON.stringify(expected)} 不一致`,
+          );
+        }
+      }
+
+      const metaBuild = meta.build;
+      if (!metaBuild || typeof metaBuild !== "object" || Array.isArray(metaBuild)) {
+        problems.push("meta.build 缺失（必须由 evidence-run 从 dump.env.build 回填）");
+      } else {
+        for (const key of ["entry", "builtAt", "cargoProfile", "features"]) {
+          const actual = metaBuild[key] ?? null;
+          const expected = (env.build && env.build[key]) ?? null;
+          if (!same(actual, expected)) {
+            problems.push(
+              `meta.build.${key}=${JSON.stringify(actual)} 与 env.build.${key}=${JSON.stringify(expected)} 不一致`,
+            );
+          }
+        }
+        for (const key of ["path", "sha256"]) {
+          const actual = (metaBuild.binary && metaBuild.binary[key]) ?? null;
+          const expected = (env.build && env.build.binary && env.build.binary[key]) ?? null;
+          if (!same(actual, expected)) {
+            problems.push(
+              `meta.build.binary.${key}=${JSON.stringify(actual)} 与 env.build.binary.${key}=${JSON.stringify(expected)} 不一致`,
+            );
+          }
+        }
+      }
+
+      const metaCommand = String(meta.command ?? "").trim();
+      if (!metaCommand) {
+        problems.push("meta.command 为空（必须由 evidence-run 从 dump.env.command 回填）");
+      } else if (metaCommand !== String(env.command ?? "").trim()) {
+        problems.push(
+          `meta.command=${JSON.stringify(metaCommand)} 与 env.command=${JSON.stringify(String(env.command ?? "").trim())} 不一致`,
+        );
+      }
+    }
+
     // dump：归档落在归档根、摘要合法、finishedAt 与 dump 内值相等（禁止手写另一个时刻）。
     const dump = meta.dump;
     if (!dump || typeof dump !== "object" || Array.isArray(dump)) {
@@ -511,12 +590,18 @@ for (const { full, rel } of evidenceFiles) {
       if (!/^[0-9a-f]{64}$/.test(String(dump.sha256 ?? ""))) {
         problems.push("meta.dump.sha256 不是 64 位小写 hex");
       }
-      const finishedAt = String(dump.finishedAt ?? "");
-      if (!finishedAt.trim()) {
-        problems.push("meta.dump.finishedAt 为空");
-      } else if (finishedAt !== evidence.finishedAt) {
+      // 口径写死：finishedAt 的唯一来源是 dump 顶层 finishedAt；meta.dump.finishedAt 只是副本。
+      // 缺失/不等即红，不允许回退 mtime，也不许一处读顶层、一处读子层。
+      const dumpFinished = String(dump.finishedAt ?? "");
+      const evidenceFinished = evidence.finishedAt;
+      if (typeof evidenceFinished !== "string" || !evidenceFinished.trim()) {
+        problems.push("dump 顶层缺 finishedAt（唯一来源，缺失即红）");
+      }
+      if (!dumpFinished.trim()) {
+        problems.push("meta.dump.finishedAt 为空（必须从 dump 顶层 finishedAt 回填）");
+      } else if (evidenceFinished !== dumpFinished) {
         problems.push(
-          `meta.dump.finishedAt=${finishedAt} 与 dump 内 finishedAt=${evidence.finishedAt} 不一致`,
+          `meta.dump.finishedAt=${dumpFinished} 与 dump 顶层 finishedAt=${evidenceFinished} 不一致`,
         );
       }
     }

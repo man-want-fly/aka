@@ -11,8 +11,17 @@ const git = (command: string): string => {
     return "";
   }
 };
-const BUILD_COMMIT = git("git rev-parse HEAD");
-const BUILD_DIRTY = git("git status --porcelain") !== "";
+/**
+ * dirty 只认 evidence-run.sh 在任何输出落盘之前取的 PRE 快照（AKA_EVIDENCE_DIRTY=0/1）。
+ * 构建期自己 git status 会把「上一次取证的归档产物」算进来，干净树上也会得到 true
+ * （BA 实测 meta.dirty=false 而 env.dirty=true）。独立构建时才回退到现场 git status。
+ */
+const ENV_DIRTY = process.env.AKA_EVIDENCE_DIRTY;
+const BUILD_DIRTY =
+  ENV_DIRTY === undefined ? git("git status --porcelain") !== "" : ENV_DIRTY === "1";
+// commit 同口径：走取证入口时继承 PRE 快照，独立构建才现场取 HEAD。
+const ENV_COMMIT = process.env.AKA_EVIDENCE_COMMIT;
+const BUILD_COMMIT = ENV_COMMIT && ENV_COMMIT.trim() !== "" ? ENV_COMMIT.trim() : git("git rev-parse HEAD");
 const BUILD_AT = new Date().toISOString();
 
 // Tauri 2 约定：固定 1420 端口，构建产物给 src-tauri 的 frontendDist 使用。

@@ -5,12 +5,14 @@
  *   - 合法基线 → exit 0（electron="none" 记通过）；
  *   - 手改 meta.commit → exit 1；
  *   - 缺 env.runtime → exit 1；
- *   - 缺 meta.dump.finishedAt → exit 1；
- *   - 缺 windowFocused / appActive=false → exit 1；
+ *   - 缺 meta.dump.finishedAt / 与 dump 顶层不等 → exit 1；
+ *   - 缺 windowFocused / appActive=false → exit 1 / 0；
  *   - binary.sha256 非法 → exit 1；
- *   - electron=null / 缺键 → exit 1；
+ *   - electron=null / 缺键 / 非 none → exit 1；
  *   - dump.archived 不在归档根 → exit 1；
- *   - s2 dump 缺 schema 键 → exit 1。
+ *   - s2 dump 缺 schema 键 → exit 1；
+ *   - meta.dirty 与 env.dirty 不一致 / 非布尔 / true → exit 1；
+ *   - meta.runtime / meta.build / meta.command 与 dump.env 不一致 → exit 1。
  *
  * 用法：node scripts/verify_evidence_selftest.mjs
  * 退出码：0 = 所有用例符合预期；1 = 有用例不符合。
@@ -104,13 +106,22 @@ const baseEvidence = () => ({
   telemetry: {},
 });
 
-const baseMeta = () => ({
-  commit: "a".repeat(40),
-  dirty: false,
-  reproduce: "app/scripts/evidence-run.sh s2",
-  result: { card: "S-02.06-01", layers: { runtime: "4/4" }, otherCards: [] },
-  dump: { archived: "docs/qa/raw/s2-evidence.json", sha256: ZERO64, finishedAt: FINISHED },
-});
+const clone = (value) => JSON.parse(JSON.stringify(value));
+
+// meta 的 runtime/build/command 必须是 dump.env 的副本（W-89 第 3 项），基线按同一对象生成。
+const baseMeta = () => {
+  const evidence = baseEvidence();
+  return {
+    commit: evidence.env.commit,
+    dirty: evidence.env.dirty,
+    runtime: clone(evidence.env.runtime),
+    build: clone(evidence.env.build),
+    command: evidence.env.command,
+    reproduce: "app/scripts/evidence-run.sh s2",
+    result: { card: "S-02.06-01", layers: { runtime: "4/4" }, otherCards: [] },
+    dump: { archived: "docs/qa/raw/s2-evidence.json", sha256: ZERO64, finishedAt: FINISHED },
+  };
+};
 
 const writeCase = (dir, evidence, meta) => {
   fs.mkdirSync(dir, { recursive: true });
@@ -156,6 +167,19 @@ const cases = [
   ["env.commit 为空", (evidence) => { evidence.env.commit = ""; }, 1],
   ["command 为空", (evidence) => { evidence.env.command = ""; }, 1],
   ["hostTarget 为空", (evidence) => { evidence.env.runtime.hostTarget = ""; }, 1],
+  // W-89 第 1 项：meta.dirty 与 env.dirty 必须同源同值且为 false。
+  ["meta.dirty=true（自污染）", (evidence, meta) => { meta.dirty = true; }, 1],
+  ["meta.dirty 非布尔", (evidence, meta) => { meta.dirty = "false"; }, 1],
+  // W-89 第 3 项：meta.runtime / meta.build / meta.command 必须是 dump.env 的副本。
+  ["缺 meta.runtime", (evidence, meta) => { delete meta.runtime; }, 1],
+  ["meta.runtime.electron=null（env=none）", (evidence, meta) => { meta.runtime.electron = null; }, 1],
+  ["meta.runtime.node 漂移", (evidence, meta) => { meta.runtime.node = "v20.0.0"; }, 1],
+  ["顶层 meta.electron=null", (evidence, meta) => { meta.electron = null; }, 1],
+  ["顶层 meta.electron 与 runtime 冲突", (evidence, meta) => { meta.electron = "v33.0.0"; }, 1],
+  ["缺 meta.build", (evidence, meta) => { delete meta.build; }, 1],
+  ["meta.build.binary.sha256 漂移", (evidence, meta) => { meta.build.binary.sha256 = "1".repeat(64); }, 1],
+  ["meta.command 为空", (evidence, meta) => { meta.command = ""; }, 1],
+  ["meta.command 与 env.command 不等", (evidence, meta) => { meta.command = "AKA_DIAG=1 something-else"; }, 1],
 ];
 
 let failed = 0;

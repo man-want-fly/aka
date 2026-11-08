@@ -63,6 +63,7 @@ export async function collectEvidenceEnv(targetHint = "s2"): Promise<EvidenceEnv
       // Tauri WebKit 的 platform / Rust host triple；与 evidence-run.sh 的 meta 同口径。
       hostTarget: `tauri-webkit(${buildInfo.targetTriple})`,
       // 非 Electron 宿主：显式 none 记通过，字段缺失才 FAIL（第 19 条）。
+      // runtime 的唯一真源在本函数：evidence-run.sh 的 meta.runtime 直接回填本对象，不得另写一份。
       electron: "none",
     },
     build: {
@@ -395,29 +396,52 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
     };
     const first = centerOf(0);
     const second = centerOf(1);
-    const bandPx = first && second && Math.abs(second.x - first.x) > 0 ? Math.abs(second.x - first.x) : 1;
-    const hoverIndexNow = () =>
-      Number(document.querySelector("[data-readout='1']")?.getAttribute("data-hover-index") ?? "-1");
+    let perBar =
+      first && second && Math.abs(second.x - first.x) > 0 ? Math.abs(second.x - first.x) : 1;
+    const hoverIndexNow = () => {
+      const raw =
+        document.querySelector("[data-readout='1']")?.getAttribute("data-hover-index") ?? "";
+      const value = Number(raw);
+      return raw.trim() === "" || !Number.isFinite(value) ? -1 : value;
+    };
     const rows: Array<Record<string, unknown>> = [];
+    // W-89 第 4 项：采样点必须推进到目标根，不能停在上一根（BA 实测 105→105 重复）。
+    // 用上一次实际观测 (`x`, `hoverIndex`) 自校准「一根 = 多少像素」，
+    // 再由反馈闭环推进；前 4 次整格、末 2 次半格细化，避免在 band 边界来回振荡。
+    let previous: { x: number; index: number } | null = null;
     for (const visible of picks) {
       const center = centerOf(visible);
       if (!center) continue;
       const absolute = offset + visible;
-      // 最多校正两次，第二次仍不中就按实际 hoverIndex 记录失败（不伪造）
       let shownAt = -1;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        const currentHover = hoverIndexNow();
-        const shift = attempt === 0 || currentHover < 0 ? 0 : visible - currentHover;
+      let clicks = 0;
+      let x = center.x;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        clicks += 1;
         svg.dispatchEvent(
-          new MouseEvent("mousemove", {
-            bubbles: true,
-            clientX: center.x + shift * bandPx,
-            clientY: center.y,
-          }),
+          new MouseEvent("mousemove", { bubbles: true, clientX: x, clientY: center.y }),
         );
         await sleep(attempt === 0 ? 50 : 25);
         shownAt = hoverIndexNow();
-        if (shownAt === visible) break;
+        if (shownAt === visible) {
+          previous = { x, index: shownAt };
+          break;
+        }
+        if (shownAt < 0) break;
+        // 两次反馈的 |Δx / Δindex| 就是真实的每根像素宽度（含取整误差）。
+        if (previous && shownAt !== previous.index && Math.abs(x - previous.x) > 0) {
+          const candidate = (x - previous.x) / (shownAt - previous.index);
+          if (Number.isFinite(candidate) && candidate > 0.2 && candidate < 1000) {
+            perBar = Math.abs(candidate);
+          }
+        }
+        previous = { x, index: shownAt };
+        const delta = visible - shownAt;
+        const step =
+          attempt >= 4
+            ? Math.min(Math.abs(delta) * perBar, perBar / 2)
+            : Math.abs(delta) * perBar;
+        x += (delta > 0 ? 1 : -1) * Math.max(step, 0.5);
       }
       const shownSma =
         document.querySelector("[data-readout='ma-T01']")?.getAttribute("data-value") ?? "";
@@ -425,11 +449,19 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
         document.querySelector("[data-readout='sub-M06-dif']")?.getAttribute("data-value") ?? "";
       const engineSma = sma[absolute] ?? null;
       const engineDif = dif[absolute] ?? null;
-      const smaOk = engineSma === null ? shownSma === "" : Number(shownSma) === engineSma;
-      const difOk = engineDif === null ? shownDif === "" : Number(shownDif) === engineDif;
+      const smaOk =
+        engineSma === null
+          ? shownSma.trim() === ""
+          : shownSma.trim() !== "" && Number(shownSma) === engineSma;
+      const difOk =
+        engineDif === null
+          ? shownDif.trim() === ""
+          : shownDif.trim() !== "" && Number(shownDif) === engineDif;
       rows.push({
         bar: absolute,
+        targetIndex: visible,
         hoverIndex: shownAt,
+        clicks,
         engineSma,
         shownSma,
         engineDif,
@@ -437,13 +469,20 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
         ok: smaOk && difOk,
       });
     }
+    const outOfSync = rows.filter((row) => row.hoverIndex !== row.targetIndex).map((row) => row.bar);
     tooltipParity = {
       tolerance: 0,
       enginePoints: sma.length,
       sampled: rows.length,
       samples: rows,
-      mismatches: rows.filter((row) => row.ok !== true).map((row) => row.bar),
-      ok: rows.length === count && rows.every((row) => row.ok === true),
+      // 采样点没推进到目标根 = 必须失败（不许把上一根的值当成目标根的值）。
+      mismatches: rows
+        .filter((row) => row.ok !== true || row.hoverIndex !== row.targetIndex)
+        .map((row) => row.bar),
+      unresolvedHover: outOfSync,
+      ok:
+        rows.length === count &&
+        rows.every((row) => row.ok === true && row.hoverIndex === row.targetIndex),
     };
     svg.dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
     await sleep(60);
@@ -460,20 +499,127 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
   const histCount = document.querySelectorAll("[data-macd='hist'] rect").length;
   const posColor = colorSamples.posToken;
   const negColor = colorSamples.negToken;
+  // 负号是 formatPct 输出的 U+2212「−」，不是 ASCII "-"；只认 ASCII 会让 colorOk 假红。
+  const POS_TEXT_RE = /^▲\s*\+/;
+  const NEG_TEXT_RE = /^▼\s*[-\u2212]/;
   const chgEncoded = (sample: { sign: string; text: string; color: string }, direction: "pos" | "neg") =>
     sample.sign === direction &&
     sample.color === (direction === "pos" ? posColor : negColor) &&
-    (direction === "pos" ? /^▲\s*\+/.test(sample.text) : /^▼\s*-/.test(sample.text));
-  const colorOk =
-    posColor !== "" &&
-    negColor !== "" &&
-    colorSamples.upCandleStroke === posColor &&
-    colorSamples.downCandleStroke === negColor &&
-    colorSamples.histPosFill === posColor &&
-    colorSamples.histNegFill === negColor &&
-    (chgEncoded(chgFirst, "pos") || chgEncoded(chgSecond, "pos") || chgEncoded(chgPos, "pos")) &&
-    (chgEncoded(chgFirst, "neg") || chgEncoded(chgSecond, "neg") || chgEncoded(chgPos, "neg"));
+    (direction === "pos" ? POS_TEXT_RE : NEG_TEXT_RE).test(sample.text);
+  const posSample = [chgFirst, chgSecond, chgPos].find((sample) => chgEncoded(sample, "pos"));
+  const negSample = [chgFirst, chgSecond, chgPos].find((sample) => chgEncoded(sample, "neg"));
+  const describeChg = (sample: { sign: string; text: string; color: string } | undefined) =>
+    sample ? `sign=${sample.sign} color=${sample.color} text=${JSON.stringify(sample.text)}` : "无匹配样本";
+  // W-89 第 5 项：复合判据逐子项留痕——只报 colorOk=false 等于不可审计。
+  const colorParts = [
+    { item: "posToken", pass: posColor !== "", actual: posColor, expected: "非空 CSS 颜色" },
+    { item: "negToken", pass: negColor !== "", actual: negColor, expected: "非空 CSS 颜色" },
+    {
+      item: "upCandleStroke",
+      pass: colorSamples.upCandleStroke === posColor,
+      actual: colorSamples.upCandleStroke,
+      expected: posColor,
+    },
+    {
+      item: "downCandleStroke",
+      pass: colorSamples.downCandleStroke === negColor,
+      actual: colorSamples.downCandleStroke,
+      expected: negColor,
+    },
+    {
+      item: "histPosFill",
+      pass: colorSamples.histPosFill === posColor,
+      actual: colorSamples.histPosFill,
+      expected: posColor,
+    },
+    {
+      item: "histNegFill",
+      pass: colorSamples.histNegFill === negColor,
+      actual: colorSamples.histNegFill,
+      expected: negColor,
+    },
+    {
+      item: "chgPos",
+      pass: Boolean(posSample),
+      actual: describeChg(posSample),
+      expected: `sign=pos color=${posColor} text=${POS_TEXT_RE}`,
+    },
+    {
+      item: "chgNeg",
+      pass: Boolean(negSample),
+      actual: describeChg(negSample),
+      expected: `sign=neg color=${negColor} text=${NEG_TEXT_RE}`,
+    },
+  ];
+  const colorFailures = colorParts
+    .filter((part) => !part.pass)
+    .map((part) => `${part.item}: actual=${JSON.stringify(part.actual)} expected=${JSON.stringify(part.expected)}`);
+  const colorOk = colorFailures.length === 0;
   const statisticalCount = statistical.length;
+  // 每个子项都带 item/actual/expected；失败时逐条打印，不接受只有一个 false。
+  type Subcheck = { item: string; pass: boolean; actual: unknown; expected: unknown };
+  const subchecks: Subcheck[] = [
+    { item: "chartPresent", pass: Boolean(svg), actual: Boolean(svg), expected: true },
+    { item: "baselineApplied", pass: baselineApplied, actual: baselineApplied, expected: true },
+    { item: "windowFocused", pass: focus.windowFocused, actual: focus.windowFocused, expected: true },
+    { item: "appActive", pass: focus.appActive, actual: focus.appActive, expected: true },
+    { item: "overlayCount", pass: overlayCount >= 4, actual: overlayCount, expected: ">= 4" },
+    { item: "macdCount", pass: macdCount === 3, actual: macdCount, expected: 3 },
+    { item: "macdHistCount", pass: histCount >= 2, actual: histCount, expected: ">= 2" },
+    {
+      item: "color",
+      pass: colorOk,
+      actual: colorOk ? colorParts : colorFailures,
+      expected: "8 个配色子项全部通过",
+    },
+    {
+      item: "statisticalReadoutCount",
+      pass: statisticalCount >= 4,
+      actual: statisticalCount,
+      expected: ">= 4",
+    },
+    {
+      item: "statisticalUnitCount",
+      pass: unitLabels.length >= 4,
+      actual: unitLabels.length,
+      expected: ">= 4",
+    },
+    { item: "t21TwoDecimals", pass: t21TwoDecimals, actual: t21Text, expected: "R² 保留两位小数" },
+    { item: "maTooltipCount", pass: tooltipBefore >= 4, actual: tooltipBefore, expected: ">= 4" },
+    {
+      item: "hoverIndexPresent",
+      pass: hoverIndex !== "",
+      actual: hoverIndex,
+      expected: "非空 data-hover-index",
+    },
+    {
+      item: "decimalsOk",
+      pass: decimalsOk,
+      actual: maEntries.filter((entry) => !/\d[.,]\d{2}/.test(entry.text)).map((entry) => entry.text),
+      expected: "每条读数含两位小数",
+    },
+    {
+      item: "tooltipParity",
+      pass: tooltipParity.ok === true,
+      actual: {
+        sampled: tooltipParity.sampled,
+        mismatches: tooltipParity.mismatches,
+        unresolvedHover: tooltipParity.unresolvedHover,
+      },
+      expected: "每一根 hoverIndex===targetIndex 且读数与引擎逐点等值",
+    },
+    {
+      item: "maFields",
+      pass: maEntries.every((entry) => entry.value !== "" && entry.unit !== ""),
+      actual: maEntries
+        .filter((entry) => entry.value === "" || entry.unit === "")
+        .map((entry) => entry.id),
+      expected: "所有 ma-*/ov-* 的 data-value / data-unit 非空",
+    },
+  ];
+  const failures = subchecks
+    .filter((part) => !part.pass)
+    .map((part) => `${part.item}: actual=${JSON.stringify(part.actual)} expected=${JSON.stringify(part.expected)}`);
   return {
     chartPresent: Boolean(svg),
     overlays,
@@ -483,6 +629,8 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
     macdHistCount: histCount,
     colorSamples,
     colorOk,
+    colorParts,
+    colorFailures,
     statisticalReadouts: statistical,
     statisticalReadoutCount: statisticalCount,
     statisticalUnits: unitLabels,
@@ -497,24 +645,10 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
     hoverError,
     baselineApplied,
     focus,
-    ok:
-      Boolean(svg) &&
-      baselineApplied &&
-      focus.windowFocused &&
-      focus.appActive &&
-      // S-02.02-02 起主图叠加容量 2（默认 SMA20 + BOLL，共 4 条输出线），不再是固定 8 线
-      overlayCount >= 4 &&
-      macdCount === 3 &&
-      histCount >= 2 &&
-      colorOk &&
-      statisticalCount >= 4 &&
-      unitLabels.length >= 4 &&
-      t21TwoDecimals &&
-      tooltipBefore >= 4 &&
-      hoverIndex !== "" &&
-      decimalsOk &&
-      tooltipParity.ok === true &&
-      maEntries.every((entry) => entry.value !== "" && entry.unit !== ""),
+    focusOk: focus.windowFocused && focus.appActive,
+    subchecks,
+    failures,
+    ok: failures.length === 0,
   };
 }
 
@@ -1350,19 +1484,29 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     (total, card) => total + Number(card.dataLimited ?? 0),
     0,
   );
+  // W-89 第 6 项：ok 与 failCount 的算法摊开并写明。
+  // - assertionsOk：8 张卡齐全且没有任何 status="fail" 的 clause；
+  // - dataLimited（status="n/a"，如 V05 零带宽段）不算 fail、也不改 ok，只在卡片里单列；
+  // - focusOk 是运行时前置条件，与 clause 断言分开报，不允许混进 failCount。
+  const assertionsOk =
+    cards.length === 8 && failCount === 0 && cards.every((item) => Boolean(item.ok));
+  const focusOk = focus.windowFocused && focus.appActive;
   return {
     cardCount: cards.length,
     clauseCount,
     failCount,
     dataLimitedCount,
+    assertionsOk,
+    focusOk,
+    failedCards: cards.filter((item) => !item.ok).map((item) => item.card),
+    dataLimitedCards: cards
+      .filter((item) => Number(item.dataLimited ?? 0) > 0)
+      .map((item) => item.card),
+    okRule:
+      "ok = assertionsOk && focusOk；status=n/a（dataLimited）不计入 failCount、也不让 ok=false；windowFocused/appActive 单列在 focusOk",
     cards,
     focus,
-    ok:
-      cards.length === 8 &&
-      failCount === 0 &&
-      cards.every((item) => Boolean(item.ok)) &&
-      focus.windowFocused &&
-      focus.appActive,
+    ok: assertionsOk && focusOk,
   };
 }
 

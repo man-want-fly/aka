@@ -37,6 +37,13 @@ branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
 [ -z "$(git -C "$ROOT" status --porcelain)" ] || fail "工作区不干净（dirty=true），先提交或清理"
 commit="$(git -C "$ROOT" rev-parse HEAD)"
 
+# W-89 第 1 项：dirty/commit 只在这里取一次（PRE 快照，任何产物落盘之前）。
+# 取证会往 docs/qa/evidence、docs/qa/raw 写文件；落盘之后再算 git status 必然为 true，
+# 于是同一事实出现两个答案（meta.dirty=false / env.dirty=true）。构建期与 meta 一律继承下面的值。
+export AKA_EVIDENCE_DIRTY=0
+export AKA_EVIDENCE_COMMIT="$commit"
+PRE_DIRTY="$AKA_EVIDENCE_DIRTY"
+
 # 2) 真 Node：本机 PATH 上的 node 是 Electron 垫片，未签名 rollup native 会导致 vite build 失败。
 NODE_BIN="${EVIDENCE_NODE:-}"
 if [ -z "$NODE_BIN" ]; then
@@ -61,14 +68,22 @@ fi
 (cd "$APP_DIR" && cargo build -p aka-desktop --features tauri/custom-protocol)
 
 # 4) 取证并归档（脚本固定，禁止 open /tmp/xxx.command 之类的人工步骤）。
-"$APP_DIR/scripts/diag-evidence.sh" "$SUITE"
+# W-89 第 2/3 项：meta 路径由 diag-evidence.sh 用 EVIDENCE_META= 显式交接，
+# 禁止 `ls -t` 猜最新——那会挑中历史套件的 meta（dump 是字符串、没有 env），
+# 把旧格式混进本次证据（BA 实测 meta.dump.finishedAt=null、meta.electron=null）。
+DIAG_LOG="$(mktemp)"
+"$APP_DIR/scripts/diag-evidence.sh" "$SUITE" 2>&1 | tee "$DIAG_LOG"
+META="$(sed -n 's/^EVIDENCE_META=//p' "$DIAG_LOG" | tail -1)"
+rm -f "$DIAG_LOG"
+[ -n "$META" ] && [ -f "$META" ] \
+  || fail "diag-evidence.sh 未输出有效的 EVIDENCE_META=（拒绝按 mtime 猜 meta）"
 
 # 5) 补齐第 19 条五项并落固定产物；缺一即失败。
-META="$(ls -t "$OUT"/*-meta.json | head -1)"
-python3 - "$ROOT" "$APP_DIR" "$META" "$NODE_BIN" "$SUITE" "$commit" "$RAW" <<'PY'
-import datetime, hashlib, json, os, platform, shutil, subprocess, sys
+python3 - "$ROOT" "$APP_DIR" "$META" "$SUITE" "$commit" "$RAW" "$PRE_DIRTY" <<'PY'
+import datetime, hashlib, json, os, shutil, sys
 
-root, app_dir, meta_path, node_bin, suite, commit, raw_dir = sys.argv[1:8]
+root, app_dir, meta_path, suite, commit, raw_dir, pre_dirty_raw = sys.argv[1:8]
+pre_dirty = pre_dirty_raw == "1"
 meta = json.load(open(meta_path, encoding="utf-8"))
 label = meta.get("label") or datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 name = os.path.basename(meta_path)[: -len("-meta.json")]
@@ -84,96 +99,76 @@ def sha256(path):
     return h.hexdigest()
 
 
-def mtime_iso(path):
-    return datetime.datetime.fromtimestamp(os.path.getmtime(path)).astimezone().isoformat(
-        timespec="seconds"
-    )
+def abort(message):
+    print(f"EVIDENCE_FAIL: {message}", file=sys.stderr)
+    sys.exit(2)
 
 
 binary = os.path.join(app_dir, "target", "debug", "aka-desktop")
 dist_index = os.path.join(app_dir, "dist", "index.html")
 for path in (binary, dist_index, evidence_path):
     if not os.path.exists(path):
-        print(f"EVIDENCE_FAIL: 缺产物 {path}", file=sys.stderr)
-        sys.exit(2)
+        abort(f"缺产物 {path}")
 
-# R-EV-02：finishedAt 只从 dump 内读，缺失回退落盘时刻；不允许在 meta 里手写。
+# W-89 第 2 项：finishedAt 的唯一口径是 dump 顶层 finishedAt；有 env 的运行层 dump
+# 缺失即失败，不回退 mtime（回退会让 dump 与 meta 各说一套）。
+# 旧套件 dump 没有 env（纯渲染层证据），沿用 mtime 兜底，不享受运行层口径。
 try:
     dump = json.load(open(evidence_path, encoding="utf-8"))
-except (OSError, ValueError):
-    dump = {}
-finished_at = dump.get("finishedAt") if isinstance(dump.get("finishedAt"), str) else ""
-if not finished_at.strip():
-    finished_at = mtime_iso(evidence_path)
+except (OSError, ValueError) as error:
+    abort(f"dump 不可解析（{error}）")
+if not isinstance(dump, dict):
+    abort("dump 顶层不是对象")
+env = dump.get("env")
+strict = isinstance(env, dict)
+finished_at = dump.get("finishedAt")
+if not isinstance(finished_at, str) or not finished_at.strip():
+    if strict:
+        abort("dump 顶层缺 finishedAt（不得回退 mtime，须重新取证）")
+    finished_at = datetime.datetime.fromtimestamp(os.path.getmtime(evidence_path)).astimezone().isoformat(
+        timespec="seconds"
+    )
+
+if strict:
+    # W-89 第 1/3 项：dump.env 是运行层唯一真源，meta 只做副本；缺一项或与 PRE 不一致即失败。
+    if not isinstance(env.get("dirty"), bool):
+        abort(f"env.dirty={env.get('dirty')!r} 不是布尔")
+    if env["dirty"] != pre_dirty:
+        abort(f"env.dirty={env['dirty']} 与 PRE 快照 dirty={pre_dirty} 不一致（构建期不得另行现算）")
+    if str(env.get("commit") or "") != commit:
+        abort(f"env.commit={env.get('commit')!r} 与 PRE commit={commit} 不一致")
+    if not isinstance(env.get("runtime"), dict):
+        abort("env.runtime 缺失")
+    if not isinstance(env.get("build"), dict):
+        abort("env.build 缺失")
+    if not str(env.get("command") or "").strip():
+        abort("env.command 为空")
 
 stamp = commit[:12]
 raw_json = os.path.join(raw_dir, f"{name}-{stamp}-{label}.json")
 raw_meta = os.path.join(raw_dir, f"{name}-{stamp}-{label}-meta.json")
 shutil.copy2(evidence_path, raw_json)
 
-try:
-    rustv = subprocess.check_output(["rustc", "-vV"], text=True)
-    host_target = next(
-        (line.split(":", 1)[1].strip() for line in rustv.splitlines() if line.startswith("host:")),
-        "unknown",
-    )
-except Exception:
-    host_target = "unknown"
-
-meta["runtime"] = {
-    "os": platform.system(),
-    "arch": platform.machine(),
-    "node": subprocess.check_output([node_bin, "-v"], text=True).strip(),
-    # 本产品是 Tauri（WebKit WebView）宿主，从不跑在 Electron 里；
-    # 显式写 "none" 表示「不适用」，与「字段缺失」是两回事（第 19 条）。
-    "electron": "none",
-    "hostTarget": f"tauri-webkit ({host_target})",
-    "launch": "target/debug/aka-desktop --features tauri/custom-protocol（AKA_DIAG=1）",
-}
-meta["build"] = {
-    "frontend": "tsc --noEmit + NODE_ENV=development vite build（mode=dev）",
-    "frontendAt": mtime_iso(dist_index),
-    "distIndexSha256": sha256(dist_index),
-    "cargoProfile": "debug",
-    "features": "tauri/custom-protocol",
-    "binary": "app/target/debug/aka-desktop",
-    "binaryAt": mtime_iso(binary),
-    "binarySha256": sha256(binary),
-}
+# runtime/build/command/commit/dirty 全部从 dump.env 回填：同一事实只留一处真源。
+# 没有 env 的旧套件不写 runtime/build/command/reproduce，避免被 R-EV-02 新格式判红。
+meta["commit"] = commit
+meta["dirty"] = pre_dirty
 meta["dump"] = {
     "archived": os.path.relpath(raw_json, root),
     "sha256": sha256(raw_json),
     "finishedAt": finished_at,
 }
-meta["command"] = meta.get("command", "")
-meta["reproduce"] = f"app/scripts/evidence-run.sh {suite}"
-meta["commit"] = commit
-meta["dirty"] = False
+if strict:
+    meta["runtime"] = dict(env["runtime"])
+    meta["build"] = dict(env["build"])
+    meta["command"] = env["command"]
+    meta["reproduce"] = f"app/scripts/evidence-run.sh {suite}"
+else:
+    meta.pop("reproduce", None)
 
 json.dump(meta, open(raw_meta, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 json.dump(meta, open(meta_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
-missing = [
-    key
-    for key, value in {
-        "commit": meta.get("commit"),
-        "dirty=false": meta.get("dirty") is False,
-        "runtime": (
-            meta["runtime"].get("node")
-            and meta["runtime"].get("os")
-            and meta["runtime"].get("hostTarget")
-            and "electron" in meta["runtime"]
-            and meta["runtime"]["electron"] is not None
-        ),
-        "build": meta["build"].get("binarySha256") and meta["build"].get("distIndexSha256"),
-        "command": meta["command"],
-        "dump": meta["dump"].get("sha256") and meta["dump"].get("finishedAt"),
-    }.items()
-    if not value
-]
-if missing:
-    print(f"EVIDENCE_FAIL: 第 19 条五项缺失 {missing}", file=sys.stderr)
-    sys.exit(2)
 print(f"EVIDENCE_OK: {meta['dump']['archived']}")
-print(f"meta: {os.path.relpath(raw_meta, root)}")
+print(f"meta: {os.path.relpath(raw_meta, root)} dirty={pre_dirty} commit={stamp} runLayer={'env' if strict else 'legacy'}")
 PY

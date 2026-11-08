@@ -355,15 +355,21 @@ if [ "$SUITE" = "s0602" ]; then
 fi
 
 python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" "$EXTRA_ENV" <<'PY'
-import json, subprocess, sys, datetime
+import json, os, subprocess, sys, datetime
 evidence_path, meta_path, label, target, fixture, scan_file, scan_rc, flags, extra_env = sys.argv[1:10]
 d = json.load(open(evidence_path))
 root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 commit = subprocess.check_output(["git", "-C", root, "rev-parse", "HEAD"], text=True).strip()
-status = subprocess.check_output(
-    ["git", "-C", root, "status", "--porcelain", "--", "app"], text=True
-)
-dirty = bool(status.strip())
+# W-89 第 1 项：dirty 只认 evidence-run.sh 落盘前导出的 PRE 快照；
+# 单独跑本脚本时才回退到现场 git status（此时产物还没写，不存在自污染）。
+pre_dirty = os.environ.get("AKA_EVIDENCE_DIRTY")
+if pre_dirty is None:
+    status = subprocess.check_output(
+        ["git", "-C", root, "status", "--porcelain", "--", "app"], text=True
+    )
+    dirty = bool(status.strip())
+else:
+    dirty = pre_dirty == "1"
 now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).isoformat(timespec="seconds")
 # W-89：按 schema 分支。s2 dump 是 build/dataset/engine/... 的专用 schema，
 # 只有新构建的 diag.ts 才会额外产出统一的 suite/ok/checks 外层；
@@ -447,5 +453,8 @@ json.dump(meta, open(meta_path, "w", encoding="utf-8"), ensure_ascii=False, inde
 print(f"已归档：{evidence_path}")
 print(f"已归档：{meta_path}")
 print(f"ok={d.get('ok')} layers={d.get('layers')} blocked={len(d.get('blocked', []))} commit={commit} dirty={dirty}")
+# W-89 第 2 项：把本次 meta 的绝对路径显式交接给 evidence-run.sh；
+# 禁止调用方按 `ls -t` 猜（会挑中历史套件的 meta，混进旧格式）。
+print(f"EVIDENCE_META={meta_path}")
 sys.exit(0 if d.get("ok") and (not scan_rc or int(scan_rc) == 0) else 2)
 PY
