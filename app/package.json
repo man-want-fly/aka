@@ -9,6 +9,7 @@
     "verify:constants": "node scripts/verify_constants.mjs --docs",
     "verify:evidence": "node scripts/verify_evidence.mjs",
     "verify:evidence:selftest": "node scripts/verify_evidence_selftest.mjs",
+    "verify:evidence-case:selftest": "node scripts/evidence_case_selftest.mjs",
     "verify:dom-contracts": "node scripts/verify_dom_contracts.mjs",
     "verify:dom-contracts:selftest": "node scripts/verify_dom_contracts_selftest.mjs",
     "verify:ac-token": "node scripts/verify_ac_token.mjs",

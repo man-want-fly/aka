@@ -151,6 +151,13 @@ conn.commit()
 print(f"fixture 已注入 {len(rows)} 条 SEED 标的")
 PY
     ;;
+  s030104)
+    TARGET="s030104"
+    JSON="$DIAG_DIR/s030104-evidence.json"
+    NAME="s030104-evidence"
+    FIXTURE="默认 state.db；App 清空 aka.last.code 后验证无标的引导，再按「副图满仓 / 留出空位」两阶段验证容量、去重与规划项；只改 localStorage，不改库"
+    BAK=""
+    ;;
   s0602)
     TARGET="s0602"
     JSON="$DIAG_DIR/s0602-display-evidence.json"
