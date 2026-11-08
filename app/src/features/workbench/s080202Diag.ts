@@ -111,12 +111,12 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
     ).catch(() => false);
     push(
       "P06-R2",
-      "AC-08.02-02(补2)",
+      "AC-08.02-02（补2）",
       before && gone === true,
       `切到 ${codes[1]} 后错误卡消失=${gone === true}`,
     );
   } else {
-    push("P06-R2", "AC-08.02-02(补2)", false, "标的不足 2 个，无法验证切标的清理");
+    push("P06-R2", "AC-08.02-02（补2）", false, "标的不足 2 个，无法验证切标的清理");
   }
 
   // ③ 连续 3 次失败才出现「导出诊断包」，且每次 panic 都落 calc.panic。

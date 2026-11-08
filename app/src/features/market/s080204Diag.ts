@@ -74,7 +74,7 @@ export async function runIndefiniteDiagnostics(): Promise<IndefiniteDiagReport> 
     const suspended = rows.find((row) => row.security === "DIAGQSUP.SZ");
     push(
       "D-01",
-      "AC-08.02-04(补1)",
+      "AC-08.02-04（补1）",
       "data",
       Boolean(suspended) &&
         suspended!.volume === 0 &&
@@ -105,7 +105,7 @@ export async function runIndefiniteDiagnostics(): Promise<IndefiniteDiagReport> 
     );
     push(
       "D-02",
-      "AC-08.02-04(补3)",
+      "AC-08.02-04（补3）",
       "data",
       nonFinite.length === 0,
       `非有限值 ${nonFinite.length} 个${nonFinite.length ? `：${nonFinite.slice(0, 6).join(",")}` : ""}`,
@@ -137,7 +137,7 @@ export async function runIndefiniteDiagnostics(): Promise<IndefiniteDiagReport> 
     const ratioTitle = ratioCell?.title ?? "";
     push(
       "R-01",
-      "AC-08.02-04(补1)",
+      "AC-08.02-04（补1）",
       "render",
       ratioText === "—" && changeText === "—" && amplitudeText === "0.00%" && row.dataset.suspended === "1",
       `停牌行 ${row.dataset.code}: 量比「${ratioText}」涨跌幅「${changeText}」振幅「${amplitudeText}」suspended=${row.dataset.suspended}`,
@@ -155,7 +155,7 @@ export async function runIndefiniteDiagnostics(): Promise<IndefiniteDiagReport> 
 
   // ---- 渲染层：全站字面扫描（行情 / 指标目录 / 工作台）----
   const marketScan = scanText("market");
-  push("R-03", "AC-08.02-04(补2)", "render", marketScan.passed, `行情页命中 ${marketScan.hits.join(",") || "无"}`);
+  push("R-03", "AC-08.02-04（补2）", "render", marketScan.passed, `行情页命中 ${marketScan.hits.join(",") || "无"}`);
 
   window.location.hash = "#/catalog";
   try {
@@ -165,7 +165,7 @@ export async function runIndefiniteDiagnostics(): Promise<IndefiniteDiagReport> 
     /* 页面未就绪时由扫描失败兜底 */
   }
   const catalogScan = scanText("catalog");
-  push("R-04", "AC-08.02-04(补2)", "render", catalogScan.passed, `目录页命中 ${catalogScan.hits.join(",") || "无"}`);
+  push("R-04", "AC-08.02-04（补2）", "render", catalogScan.passed, `目录页命中 ${catalogScan.hits.join(",") || "无"}`);
 
   window.location.hash = "#/workbench/600519.SH";
   try {
@@ -178,7 +178,7 @@ export async function runIndefiniteDiagnostics(): Promise<IndefiniteDiagReport> 
     /* 同上 */
   }
   const workbenchScan = scanText("workbench");
-  push("R-05", "AC-08.02-04(补2)", "render", workbenchScan.passed, `工作台命中 ${workbenchScan.hits.join(",") || "无"}`);
+  push("R-05", "AC-08.02-04（补2）", "render", workbenchScan.passed, `工作台命中 ${workbenchScan.hits.join(",") || "无"}`);
 
   // ---- 补3：AKA_DIAG_INF=1 把首实例末值注入 +∞，界面该点显示「—」，日志记 E_INDEFINITE ----
   const candles = Array.from(
@@ -214,7 +214,7 @@ export async function runIndefiniteDiagnostics(): Promise<IndefiniteDiagReport> 
   }
   push(
     "R-06",
-    "AC-08.02-04(补3)",
+    "AC-08.02-04（补3）",
     "render",
     injectedDash,
     `末根 T01 读数 ${injectedDetail || "无读数节点"}`,
@@ -226,7 +226,7 @@ export async function runIndefiniteDiagnostics(): Promise<IndefiniteDiagReport> 
   );
   push(
     "T-01",
-    "AC-08.02-04(补3)",
+    "AC-08.02-04（补3）",
     "runtime",
     Boolean(indefiniteEvent),
     indefiniteEvent
