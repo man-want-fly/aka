@@ -33,7 +33,9 @@ RAW="$ROOT/$ARCHIVE_REL"
 
 # 1) 位置与干净度：只在 main 干净树取证；dump 的 commit 允许等于或祖先于最终 sign_commit（第 25 条）。
 branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
-[ "$branch" = "main" ] || fail "只允许在 main 取证（当前 $branch）；分支 dump 仅作参考"
+# W-112：macOS 自带 bash 3.2 会把紧跟变量的全角字符吞进变量名（`$branch）` → unbound variable）。
+# 一律写成 ${branch}，保证分支≠main 时走 EVIDENCE_FAIL，而不是解释器崩在 set -u 上。
+[ "$branch" = "main" ] || fail "只允许在 main 取证（当前 ${branch}）；分支 dump 仅作参考"
 [ -z "$(git -C "$ROOT" status --porcelain)" ] || fail "工作区不干净（dirty=true），先提交或清理"
 commit="$(git -C "$ROOT" rev-parse HEAD)"
 
