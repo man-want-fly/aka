@@ -1878,7 +1878,8 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
    - **归档路径**：BA 完整跑 `s2`（不是 `--check`）；TL 查 `docs/qa/raw/` 有新产物、`docs/qa/evidence/` 下无子目录、`verify:evidence` failed=0。不过 → 证据作废，W-89 未完成。
    - **`meta.dump.finishedAt`**：TL 用 `jq -r '.dump.finishedAt'` 验非空且与 dump 内 `finishedAt` 相等；缺失/不等 → 未完成。
    - **`env` 注入**：TL 查 `vite.config.*` 确为 `define` 注入 + 产物 `commit` 与 `git rev-parse HEAD` 一致；**反例**：手改 `meta.commit` 为上游 commit 后 `verify:evidence` 必须 failed，仍 PASS → 未完成。
-   - **`runtime`**：`node`/`os`/`arch`/`hostTarget` 齐全，`electron` 显式为 `"none"`（记通过）；任一项**缺失** → `failed`。**不得因「没有 Electron」判红**，也不得为过门禁伪造 electron 版本。
+   - **`runtime`**：`node`/`os`/`arch`/`hostTarget` 齐全，`electron` 显式为 `"none"`（记通过；其他值 → `failed`）；任一项**缺失** → `failed`。**不得因「没有 Electron」判红**，也不得为过门禁伪造 electron 版本。
+   - **聚焦字段**：`windowFocused`/`appActive` 缺失或类型错 → `failed`；值为 `false` → 该证据运行时 check 记「不可判定」，**不判证据失败**，按第 29 条复核判据，不得记 PASS、不得签。
    - **`s2` schema 分支**：TL 查 dump 含 10 个 schema 键、后处理 `checks>0` 且 `suite=s2`；仍 `exit 2` 或 `checks=0` → 未完成。
    - **`s070503` 超时**：240s 内产出 dump，或明确 `blocked` 原因；仍超时且无 dump → 未完成，不得以「大概跑完了」记 PASS。
    - **通用**：以上任一项不过，`W-89` 退回，BA 停跑，不签任何卡。

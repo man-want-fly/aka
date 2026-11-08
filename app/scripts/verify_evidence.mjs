@@ -107,6 +107,7 @@ const S2_SCHEMA_KEYS = [
 
 const failures = [];
 const warnings = [];
+const focusNotes = [];
 
 const cardText = fs.readFileSync(CARD_DOC, "utf8");
 const HEADING = /^#{2,4}\s+(S-\d{2}\.\d{2}-\d{2})/gm;
@@ -467,6 +468,10 @@ for (const { full, rel } of evidenceFiles) {
           problems.push("env.runtime.electron 为 null（须显式写 \"none\"）");
         } else if (!String(runtime.electron).trim()) {
           problems.push("env.runtime.electron 为空（须显式写 \"none\"）");
+        } else if (String(runtime.electron).trim().toLowerCase() !== "none") {
+          problems.push(
+            `env.runtime.electron=${JSON.stringify(runtime.electron)} 不是 "none"（Electron 宿主证据无效）`,
+          );
         }
       }
       // 4) build：入口/构建时刻/profile/features/二进制摘要。
@@ -516,13 +521,18 @@ for (const { full, rel } of evidenceFiles) {
       }
     }
 
-    // 聚焦：缺字段 = 不可判定 = FAIL；false 也不放行（不许写成「环境问题」）。
+    // 聚焦：缺失/类型错 = 不可判定 = FAIL；false 是「实测未聚焦」的真实状态，
+    // 不判证据失败，但该证据的运行时 check 记「不可判定」，按第 29 条复核判据（第 19 条）。
+    let unfocused = false;
     for (const key of ["windowFocused", "appActive"]) {
       if (typeof evidence[key] !== "boolean") {
         problems.push(`dump 缺 ${key}（聚焦状态不可判定 = FAIL）`);
       } else if (evidence[key] !== true) {
-        problems.push(`dump ${key}=false（窗口未聚焦/应用未激活，运行层不可判定 = FAIL）`);
+        unfocused = true;
       }
+    }
+    if (unfocused) {
+      focusNotes.push(`${file}: windowFocused/appActive=false → 运行时 check 记不可判定（非证据失败；按第 29 条判据复核）`);
     }
 
     // s2 schema：10 个键 + checks > 0（checks 数组已在上面统一断言）+ suite=s2。
@@ -625,10 +635,11 @@ if (scanned === 0) {
 }
 
 for (const warning of warnings) console.warn(`WARN ${warning}`);
+for (const note of focusNotes) console.warn(`WARN ${note}`);
 for (const failure of failures) console.error(`FAIL ${failure}`);
 console.log(
   `证据归属门禁：卡集 ${CARD_SET.size} 张，扫描 ${scanned} 份证据（全部平铺），` +
-    `冻结 ${frozen} 份，失败 ${failures.length} 项` +
+    `冻结 ${frozen} 份，未聚焦 ${focusNotes.length} 份，失败 ${failures.length} 项` +
     `（白名单上限 ${LEGACY_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
 );
 process.exit(failures.length === 0 ? 0 : 1);

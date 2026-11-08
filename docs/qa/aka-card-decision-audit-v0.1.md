@@ -544,7 +544,7 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
 18. **已签卡面改动与失效申报（2026-11-08 起）**：已签字卡面**只允许 BA 改**；任何提交若 diff 击中已签卡（故事卡分节或 `sign_scope` 中的文件路径），提交信息必须带 `Sign-Invalidates: S-xx.xx-xx, ...`，且与 `verify:sign-impact` 实算集合**完全一致**；漏报、多报、非法卡号一律红。TL 在批次边界重签，重签前旧签字按规则 8 失效。失效集合由工具现算，不允许维护「哪些卡已签」的人手名单。**trailer 由工具生成**：提交前跑 `npm run verify:sign-impact -- --staged --print-trailer`，把输出原样粘进提交信息（或走 `git commit -F`）；校验按**集合相等**，不要求字节/顺序一致——工具输出就是全量，少一个即红，因此不存在「应付得过去的最小集合」。
 19. **运行层证据最低可核条件（2026-11-08 起，R-EV-02）**：任何「真机 / 运行层」结论必须同时给出下列五项，缺一记 `failed`，**不得用 CI、数据层或渲染层结论代偿**：
     - `commit` + `dirty=false`（工作区干净，证据与所签 commit 同源）；
-    - `runtime`：`launchMode`（枚举 `tauri-dev` / `tauri-build` / `cargo+custom-protocol` / 其他）、`node` 版本、`os` / `arch`、`hostTarget`（Tauri WebKit 的 platform / Rust triple）、`electron`。**`electron` 必须显式写 `"none"`**，语义是「非 Electron 宿主，本产品 Tauri WebKit 下必然如此」，**记 `none` 通过**；真实 Node 证据不得因「没有 Electron」被判红，也不得为过门禁伪造 electron 版本。**字段缺失仍 `FAIL`** ——「明示不适用」与「没写」必须分开判；
+    - `runtime`：`launchMode`（枚举 `tauri-dev` / `tauri-build` / `cargo+custom-protocol` / 其他）、`node` 版本、`os` / `arch`、`hostTarget`（Tauri WebKit 的 platform / Rust triple）、`electron`。**`electron` 必须显式写 `"none"`**，语义是「非 Electron 宿主，本产品 Tauri WebKit 下必然如此」，**记 `none` 通过**；真实 Node 证据不得因「没有 Electron」被判红，也不得为过门禁伪造 electron 版本。**字段缺失仍 `FAIL`** ——「明示不适用」与「没写」必须分开判；`electron` 只接受 `"none"`，其他值（如 `v33.0.0`）说明跑在 Electron 垫片上，证据无效。聚焦字段 `windowFocused` / `appActive`：**缺失或类型错 → `FAIL`**；值为 `false` 是「实测未聚焦」的真实状态，**不判证据失败**，但该证据的运行时 check 记「不可判定」，按第 29 条复核判据（不得记 PASS，不得签）；
     - `build`：前端入口文件名与构建时间、cargo profile、features、二进制路径 + `sha256`；
     - `command`：完整启动命令与环境变量（`AKA_DIAG`、`AKA_DIAG_TARGET` 等）；
     - `dump`：原始 JSON 路径 + `finishedAt`，并复制入库：当次落 `docs/qa/evidence/`、归档落 `docs/qa/raw/`（第 27 条单一常量），不得只留在 `~/Library`。
@@ -2499,10 +2499,40 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **二、改后的口径（第 19 条 `runtime`）**
 - `runtime` 记：`launchMode`、`node`、`os`/`arch`、`hostTarget`（Tauri WebKit 的 platform / Rust triple）、`electron`。
 - `electron` 必须**显式**写 `"none"`，语义「非 Electron 宿主，不适用」，**记 `none` 通过**；字段**缺失仍 FAIL**。「明示不适用」与「没写」必须分开判。
-- `evidence-run.sh` 已同步：`electron: "none"`，`hostTarget: tauri-webkit (<rustc host triple>)`，五项判据改为「`node`/`os`/`hostTarget` 非空 + `electron` 键存在且非 null」。
+- `evidence-run.sh` 已同步：`electron: "none"`，`hostTarget: tauri-webkit (<rustc host triple>)`，五项判据改为「`node`/`os`/`hostTarget` 非空 + `electron` 键存在且非 null」；`verify:evidence` 另收紧为 **只接受 `"none"`**，其他值按 Electron 宿主判 `failed`（§4.7.67 一）。聚焦字段 `false` 记「不可判定」，不判证据失败。
 
 **三、`--check` 的边界**
 - BA 说得对：`s070503 --check` 只验分支/干净度/真 Node/套件存在，**不验 240s 内能否写出 dump**；超时结论只认完整跑，仍归 `W-89` 第 5 项。
+
+#### 4.7.67 `W-89` 验收记录与运行时四项定性复核（2026-11-08）
+
+**一、`W-89` 验收（`4530438`，CI run `42444999157` success，未跑取证）**
+- 我按验收表独立反向验证（不复用 dev A 的 selftest，自建 fixture 于 `/tmp`），8 例全符合预期：
+
+| 负例 | 结果 |
+|---|---|
+| 基线（合法新格式） | exit 0 |
+| 手改 `meta.commit` | **exit 1** |
+| 缺 `meta.dump.finishedAt` | **exit 1** |
+| 缺 `windowFocused` | **exit 1** |
+| `windowFocused=false` | exit 0 + 「不可判定」WARN |
+| 缺 `env.runtime.electron` | **exit 1** |
+| `electron=v33.0.0` | **exit 1** |
+| `env.commit` 为空 | **exit 1** |
+
+- 另跑 dev A 的 17 条 selftest，全过。
+- **收紧一处**：原 selftest 把「electron 非空字符串」预期为通过（`v33.0.0` → exit 0），这与「electron 只允许 none」矛盾——非 none 说明跑在 Electron 垫片上，证据无效。已改为 `failed`，并把负例名写清。
+
+**二、`false` 的口径（BA 提得对，采纳建议）**
+- 字段缺失/类型错 → `FAIL`；`false` → 证据本身不失败，但运行时 check 记「不可判定」。
+- 理由：`false` 是实测状态，判 FAIL 会逼执行人「保证窗口聚焦」——那是执行要求，不是数据要求；而「不可判定」已足以阻止记 PASS / 签字，且触发第 29 条判据复核（未聚焦导致误判 → 判据缺陷）。
+- 实现：`verify_evidence` 对 `false` 输出 `WARN …不可判定`，汇总行增加「未聚焦 N 份」。
+
+**三、运行时四项「证据链路缺陷而非产品渲染缺陷」——成立，采纳**
+- dump 实测（`raw/s2-evidence-s20601-2aa8ece-20261108.json`）：`statisticalReadoutCount=4`、`units=4`、`t21TwoDecimals=true`，K 线三重编码通过——**图表本体在正常渲染**。
+- 代码核对：`[data-hist]`、`[data-readout-host]` 在 `app/src` **不存在**；真实契约是 `[data-readout="1"]`、`[data-macd="hist"] rect`、`data-sub-zero="V08"`。`shownSma` 全空、`macdCount=3`、`colorOk=false` 均可用采集选择器解释。
+- 定性：**采集侧缺陷**（副图基线缺 M06、选择器写错、T13 容量截断、V08 找错属性），不是产品渲染 bug。修复方向（归一化基线 `T01+T09`/`M06+M01`、对齐真实 DOM 契约）合理。
+- 纪律：修采集前**不得**据此判产品 bug，也不得据此签；修完必须重跑，四项转绿才算证据成立。此案例作为「按真 bug 去修一个本来正确的图表」的反例入审计。
 
 ---
 
