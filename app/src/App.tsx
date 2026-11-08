@@ -142,6 +142,17 @@ export default function App() {
           setLocation({ route: "settings", code: null });
           return;
         }
+        // S-08.02-02 计算错误态取证：直接进工作台。
+        if (target === "s080202") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          sessionStorage.setItem("aka.s0602.diag.done", "1");
+          if (window.location.hash.startsWith("#/workbench")) return;
+          window.location.hash = "#/workbench";
+          setLocation({ route: "workbench", code: null });
+          return;
+        }
         // S-07.01-02 数据源健康检查取证：直接进数据源页。
         if (target === "s070102") {
           sessionStorage.setItem("aka.s2.diag.once", "1");

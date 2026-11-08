@@ -40,6 +40,10 @@ pub const EVENT_QUALITY_SCAN: &str = "quality.scan";
 pub const EVENT_DATASOURCE_PROBE: &str = "datasource.probe";
 /// S-07.01-02：健康检查事件（通过数 / 总耗时）。
 pub const EVENT_HEALTH_CHECK: &str = "health.check";
+/// S-08.02-02：计算超时（trace id / 指标 / 参数哈希）。
+pub const EVENT_CALC_TIMEOUT: &str = "calc.timeout";
+/// S-08.02-02：引擎异常（trace id / 指标）。
+pub const EVENT_CALC_PANIC: &str = "calc.panic";
 
 /// 自选上限（跨分组按标的去重计数）
 pub const WATCHLIST_LIMIT: i64 = 500;

@@ -1129,6 +1129,68 @@ select {
   word-break: break-word;
 }
 
+/* ---------------- S-08.02-02 计算错误卡 ---------------- */
+.calc-error {
+  margin: 8px 0;
+  padding: 9px 11px;
+  border: 1px solid var(--up-line);
+  border-left: 2px solid var(--up);
+  border-radius: 0 var(--r2) var(--r2) 0;
+  background: var(--up-soft);
+  color: var(--up);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.calc-error-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.calc-error-head strong {
+  font-size: 11.5px;
+}
+
+.calc-error-trace,
+.calc-error-elapsed {
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 9.5px;
+}
+
+.calc-error-message {
+  margin: 4px 0 6px;
+}
+
+.calc-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.calc-error-actions button {
+  padding: 2px 9px;
+  border: 1px solid var(--up-line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--up);
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.calc-error-actions button:hover {
+  background: var(--up-soft);
+}
+
+.calc-error-hint {
+  margin: 6px 0 0;
+  color: var(--faint);
+  font-size: 9.5px;
+  word-break: break-all;
+}
+
 .side-note {
   margin-top: 10px;
   padding-top: 9px;

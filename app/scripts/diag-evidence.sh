@@ -228,6 +228,14 @@ else:
     print(f"自选已有 {count} 条，无需注入")
 PY
     ;;
+  s080202)
+    TARGET="s080202"
+    JSON="$DIAG_DIR/s080202-evidence.json"
+    NAME="s080202-evidence"
+    FLAGS=""
+    FIXTURE="默认 state.db；工作台真实计算 + diag_set_inject 注入（panic×3 / data / timeout 8s），关闭注入后恢复；不改库"
+    BAK=""
+    ;;
   s070102)
     TARGET="s070102"
     JSON="$DIAG_DIR/s070102-evidence.json"

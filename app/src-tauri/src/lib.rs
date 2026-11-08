@@ -7,7 +7,7 @@ use tauri::Manager;
 use app_core::{AppCore, Telemetry};
 use data_store::state_db::StateDb;
 
-use crate::state::{AppState, DiagFaults};
+use crate::state::{AppState, DiagFaults, InjectKind};
 
 /// 与架构图一致：`~/Library/Application Support/aka/state.db`。
 fn state_db_path(app: &tauri::App) -> Option<std::path::PathBuf> {
@@ -45,6 +45,15 @@ fn faults_from_args(args: &[String]) -> DiagFaults {
         corrupt_db: diag_flag(args, "--corrupt-db"),
         read_only_db: diag_flag(args, "--readonly-db"),
         manifest_corrupt: diag_flag(args, "--corrupt-manifest"),
+        // S-08.02-02：`--inject=timeout|panic|data`；生效一次后自动回落 none。
+        inject: if diag_enabled() {
+            args.iter()
+                .find_map(|arg| arg.strip_prefix("--inject="))
+                .map(InjectKind::parse)
+                .unwrap_or_default()
+        } else {
+            InjectKind::None
+        },
     }
 }
 
@@ -192,6 +201,7 @@ pub fn run() {
         commands::dataset_regenerate,
         commands::storage_rebuild,
         commands::diag_faults,
+        commands::diag_set_inject,
         commands::view_state_get,
         commands::view_state_set,
         commands::positions_read,

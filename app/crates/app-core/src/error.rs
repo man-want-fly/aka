@@ -52,6 +52,12 @@ pub enum ErrorCode {
     ParamOutOfRange,
     ParamOrder,
     InsufficientData,
+    /// S-08.02-02：单次指标计算超过 8s。
+    Timeout,
+    /// S-08.02-02：引擎异常（不向用户暴露堆栈）。
+    EnginePanic,
+    /// S-08.02-02：数据层不可用。
+    DataUnavailable,
     Internal,
 }
 
@@ -67,6 +73,9 @@ impl ErrorCode {
             ErrorCode::ParamOutOfRange => "E_PARAM_OUT_OF_RANGE",
             ErrorCode::ParamOrder => "E_PARAM_ORDER",
             ErrorCode::InsufficientData => "E_INSUFFICIENT_DATA",
+            ErrorCode::Timeout => "E_TIMEOUT",
+            ErrorCode::EnginePanic => "E_ENGINE_PANIC",
+            ErrorCode::DataUnavailable => "E_DATA_UNAVAILABLE",
             ErrorCode::Internal => "E_INTERNAL",
         }
     }
@@ -131,6 +140,41 @@ impl AppError {
     pub fn storage_corrupt(message: impl Into<String>) -> Self {
         let id = trace_id();
         Self::new(ErrorCode::Internal, message)
+            .with_details(json!({ "traceId": id }))
+    }
+
+    /// S-08.02-02：计算超时；trace id 同时用于页面与 `calc.timeout` 日志对齐。
+    pub fn timeout(elapsed_ms: u64, threshold_ms: u64, indicator: Option<&str>) -> Self {
+        let id = trace_id();
+        Self::new(
+            ErrorCode::Timeout,
+            format!(
+                "已等待 {} 秒未完成，可重试或降低计算量",
+                (threshold_ms as f64 / 1000.0).round() as u64
+            ),
+        )
+        .retryable(true)
+        .with_details(json!({
+            "traceId": id,
+            "elapsedMs": elapsed_ms,
+            "thresholdMs": threshold_ms,
+            "indicator": indicator,
+        }))
+    }
+
+    /// S-08.02-02：引擎异常；堆栈只进日志，不进 IPC。
+    pub fn engine_panic(indicator: Option<&str>) -> Self {
+        let id = trace_id();
+        Self::new(ErrorCode::EnginePanic, "引擎异常，已记录")
+            .retryable(true)
+            .with_details(json!({ "traceId": id, "indicator": indicator }))
+    }
+
+    /// S-08.02-02：数据层不可用，给「查看数据源状态」。
+    pub fn data_unavailable(detail: impl Into<String>) -> Self {
+        let id = trace_id();
+        Self::new(ErrorCode::DataUnavailable, detail)
+            .retryable(true)
             .with_details(json!({ "traceId": id }))
     }
 

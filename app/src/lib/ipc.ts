@@ -133,6 +133,10 @@ export const ipc = {
   exportDiagnostics: (config: DiagnosticsConfigSnapshot): Promise<DiagnosticsExportDto> =>
     invoke<DiagnosticsExportDto>("export_diagnostics", { config }),
 
+  /** S-08.02-02：设置下一次计算的故障注入（仅 debug + AKA_DIAG=1）。 */
+  diagSetInject: (kind: string): Promise<string> =>
+    invoke<string>("diag_set_inject", { kind }),
+
   revealDiagnostics: (path: string): Promise<void> =>
     invoke<void>("reveal_diagnostics", { path }),
 

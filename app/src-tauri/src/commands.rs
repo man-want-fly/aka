@@ -1,9 +1,10 @@
 //! IPC 命令层：只做「反序列化 → 调 AppCore → 错误映射」，不写业务逻辑。
 //! 新增命令必须保持在这个形状，超过 15 行说明业务该下沉到 app-core。
 
+use app_core::core::{EVENT_CALC_PANIC, EVENT_CALC_TIMEOUT};
 use app_core::{
     AppError, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
-    DatasetManifest, DatasourceStatusDto, DataHealthDto, GetBarsRequest,
+    DatasetManifest, DatasourceStatusDto, DataHealthDto, ErrorCode, GetBarsRequest,
     IndicatorFavoritesResponse,
     ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto, QualityReportDto,
     RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
@@ -11,7 +12,7 @@ use app_core::{
 use serde_json::Value;
 use tauri::State;
 
-use crate::state::AppState;
+use crate::state::{AppState, InjectKind};
 
 /// S-06.03-02：IPC 命令统一记账（只记命令名/耗时/结果码，入参一律不落盘）。
 macro_rules! tracked {
@@ -148,13 +149,79 @@ pub async fn data_health_check(
     })
 }
 
+/// S-08.02-02：单次指标计算超时阈值（与错误态规范一致）。
+const CALC_TIMEOUT_MS: u64 = 8_000;
+
+/// 参数指纹：只记 16 位哈希，不把参数原文写进日志。
+fn params_hash(req: &CalcRequest) -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in format!("{:?}", req.instances).bytes() {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(0x100_0000_01b3);
+    }
+    format!("{hash:016x}")
+}
+
 #[tauri::command]
 pub async fn calc_indicators(
     state: State<'_, AppState>,
     req: CalcRequest,
 ) -> Result<CalcResponse, AppError> {
     tracked!(state, "calc_indicators", {
-        state.core.calc_indicators(&req).await
+        let started = std::time::Instant::now();
+        let indicator = req.instances.first().map(|item| item.indicator_id.clone());
+        // S-08.02-02：注入生效一次即回落；timeout 真实等待，不伪造错误。
+        let inject = state.take_inject();
+        let task = async {
+            match inject {
+                InjectKind::Timeout => {
+                    tokio::time::sleep(std::time::Duration::from_millis(CALC_TIMEOUT_MS + 1_000))
+                        .await;
+                    state.core.calc_indicators(&req).await
+                }
+                InjectKind::Panic => Err(AppError::engine_panic(indicator.as_deref())),
+                InjectKind::Data => Err(AppError::data_unavailable(
+                    "数据源不可用，请查看数据源状态",
+                )),
+                InjectKind::None => state.core.calc_indicators(&req).await,
+            }
+        };
+        let result = match tokio::time::timeout(
+            std::time::Duration::from_millis(CALC_TIMEOUT_MS),
+            task,
+        )
+        .await
+        {
+            Ok(value) => value,
+            Err(_) => Err(AppError::timeout(
+                started.elapsed().as_millis() as u64,
+                CALC_TIMEOUT_MS,
+                indicator.as_deref(),
+            )),
+        };
+        match &result {
+            Err(err) if err.code == ErrorCode::Timeout => {
+                state.core.telemetry().emit(
+                    EVENT_CALC_TIMEOUT,
+                    vec![
+                        ("traceId", Value::from(err.trace_id())),
+                        ("indicator", Value::from(indicator.clone())),
+                        ("paramsHash", Value::from(params_hash(&req))),
+                    ],
+                );
+            }
+            Err(err) if err.code == ErrorCode::EnginePanic => {
+                state.core.telemetry().emit(
+                    EVENT_CALC_PANIC,
+                    vec![
+                        ("traceId", Value::from(err.trace_id())),
+                        ("indicator", Value::from(indicator.clone())),
+                    ],
+                );
+            }
+            _ => {}
+        }
+        result
     })
 }
 
@@ -252,6 +319,22 @@ pub async fn diag_faults(state: State<'_, AppState>) -> Result<crate::state::Dia
             state.faults()
         } else {
             crate::state::DiagFaults::default()
+        })
+    })
+}
+
+#[cfg(debug_assertions)]
+#[tauri::command]
+pub async fn diag_set_inject(
+    state: State<'_, AppState>,
+    kind: String,
+) -> Result<String, AppError> {
+    let enabled = diag_env_enabled();
+    tracked!(state, "diag_set_inject", {
+        Ok(if enabled {
+            state.set_inject(InjectKind::parse(&kind)).as_str().to_string()
+        } else {
+            InjectKind::None.as_str().to_string()
         })
     })
 }

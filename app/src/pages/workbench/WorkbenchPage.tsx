@@ -59,6 +59,7 @@ import { runS20202Diagnostics } from "../../features/workbench/s20202Diag";
 import { runS20101Diagnostics } from "../../features/workbench/s20101Diag";
 import { runS207Diagnostics } from "../../features/workbench/s207Diag";
 import { runS070503Diagnostics } from "../../features/workbench/s070503Diag";
+import { runS080202Diagnostics } from "../../features/workbench/s080202Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
 import { runRestartDiagnostics, restartDiagStage } from "../../features/workbench/restartDiag";
 import { runWatchlistDiagnostics, watchlistDiagStage } from "../../features/watchlist/watchlistDiag";
@@ -137,6 +138,21 @@ const RANGES = [
 
 /** 输入静默 120ms 后才发请求：连续输入（典型间隔 40ms）只保留最后一次，避免抖动请求 */
 const REQUEST_DEBOUNCE_MS = 120;
+
+/** S-08.02-02：错误标题只认三类，其余归「计算失败」。 */
+const CALC_ERROR_TITLES: Record<string, string> = {
+  E_TIMEOUT: "计算超时",
+  E_ENGINE_PANIC: "引擎异常",
+  E_DATA_UNAVAILABLE: "数据不可用",
+};
+
+function calcErrorMeta(failure: AppError): { traceId: string | null; elapsedMs: number | null } {
+  const details = (failure.details ?? {}) as Record<string, unknown>;
+  return {
+    traceId: typeof details.traceId === "string" ? details.traceId : null,
+    elapsedMs: typeof details.elapsedMs === "number" ? details.elapsedMs : null,
+  };
+}
 
 /** AC-02.05-04 补3：把后端 E_INSUFFICIENT_DATA 的 details 转成副图内联文案 */
 function noticesFrom(error: AppError, manifest: ManifestResponse | null) {
@@ -481,6 +497,11 @@ export function WorkbenchPage({
       .catch(() => undefined);
   }, [loading]);
   const [error, setError] = useState<AppError | null>(null);
+  // S-08.02-02：错误态独立于数据不足内联提示；连续失败 3 次才出「导出诊断包」。
+  const [retryNonce, setRetryNonce] = useState(0);
+  const [failureStreak, setFailureStreak] = useState(0);
+  const failureStreakRef = useRef(0);
+  const [exportHint, setExportHint] = useState<string | null>(null);
   // S-01.02-01：报价头星标与自选同源；写库失败必须回滚并给出错误条。
   const [watched, setWatched] = useState(false);
   const [watchBusy, setWatchBusy] = useState(false);
@@ -743,6 +764,14 @@ export function WorkbenchPage({
     return () => window.removeEventListener("keydown", onKey);
   }, [initialCode, onNavigate]);
 
+  // S-08.02-02 补2：切标的后旧错误立即消失，不等下一次请求回来。
+  useEffect(() => {
+    setError(null);
+    setExportHint(null);
+    failureStreakRef.current = 0;
+    setFailureStreak(0);
+  }, [activeCode]);
+
   useEffect(() => {
     if (!isTauriRuntime()) return;
     let cancelled = false;
@@ -820,6 +849,8 @@ export function WorkbenchPage({
             calcRef.current = calcResult.value;
             setCalcNotices(noticesForBars(nextBars.bars.length, subIds, manifest));
             setError(null);
+            failureStreakRef.current = 0;
+            setFailureStreak(0);
           } else {
             setCalc(null);
             calcRef.current = null;
@@ -833,6 +864,8 @@ export function WorkbenchPage({
             } else {
               setCalcNotices(null);
               setError(failure);
+              failureStreakRef.current += 1;
+              setFailureStreak(failureStreakRef.current);
             }
           }
 
@@ -900,7 +933,59 @@ export function WorkbenchPage({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeCode, adj, appliedParams, dateFrom, dateTo, timeframe]);
+  }, [activeCode, adj, appliedParams, dateFrom, dateTo, retryNonce, timeframe]);
+
+  /** S-08.02-02：重试 / 降低参数 / 导出诊断包（连续失败 3 次后可见）。 */
+  const retryCalc = useCallback(() => {
+    setExportHint(null);
+    setRetryNonce((value) => value + 1);
+  }, []);
+
+  const reduceCalcParams = useCallback(() => {
+    setParams(DEFAULT_PARAMS);
+    setAppliedParams(DEFAULT_PARAMS);
+    writeSessionParams(DEFAULT_PARAMS);
+    setParamTimeout(false);
+    setRetryNonce((value) => value + 1);
+  }, []);
+
+  const exportCalcDiagnostics = useCallback(async () => {
+    try {
+      const result = await ipc.exportDiagnostics({});
+      setExportHint(`诊断包已导出：${result.path}`);
+    } catch (err) {
+      const info = describeError(err);
+      setExportHint(`导出失败：${info.code} · ${info.message}`);
+    }
+  }, []);
+
+  // S-08.02-02 取证：AKA_DIAG_TARGET=s080202 时在真实工作台跑错误态。
+  useEffect(() => {
+    if (!isTauriRuntime() || securities.length < 2 || !activeCode) return;
+    if (window.sessionStorage.getItem("aka.s080202.diag.done") === "1") return;
+    let alive = true;
+    (async () => {
+      const enabled = await ipc.diagEnabled();
+      const target = await ipc.diagTarget();
+      if (!enabled || !alive || target !== "s080202") return;
+      window.sessionStorage.setItem("aka.s080202.diag.done", "1");
+      try {
+        await runS080202Diagnostics({
+          codes: securities.map((item) => item.code),
+          setInject: async (kind) => {
+            await ipc.diagSetInject(kind);
+          },
+          trigger: () => setRetryNonce((value) => value + 1),
+          setCode: setActiveCode,
+        });
+      } catch (err) {
+        console.error("[s080202.diag]", describeError(err).message);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [activeCode, securities]);
 
   // S2 实机取证：仅 AKA_DIAG=1 且已有标的列表时自跑一次
   useEffect(() => {
@@ -2020,7 +2105,52 @@ export function WorkbenchPage({
               </span>
             </div>
 
-            {error && <div className="error-box">{error.message}</div>}
+            {error && (
+              <div className="calc-error" data-calc-error={error.code} role="alert">
+                <div className="calc-error-head">
+                  <strong data-calc-error-title>
+                    {CALC_ERROR_TITLES[error.code] ?? "计算失败"}
+                  </strong>
+                  <code className="qa-code" data-calc-error-code>
+                    {error.code}
+                  </code>
+                  {calcErrorMeta(error).traceId && (
+                    <span className="calc-error-trace" data-calc-error-trace>
+                      trace {calcErrorMeta(error).traceId}
+                    </span>
+                  )}
+                  {calcErrorMeta(error).elapsedMs !== null && (
+                    <span className="calc-error-elapsed" data-calc-error-elapsed>
+                      耗时 {calcErrorMeta(error).elapsedMs} ms
+                    </span>
+                  )}
+                </div>
+                <p className="calc-error-message">{error.message}</p>
+                <div className="calc-error-actions">
+                  <button type="button" data-calc-retry onClick={retryCalc}>
+                    重试
+                  </button>
+                  <button type="button" data-calc-reduce onClick={reduceCalcParams}>
+                    降低参数
+                  </button>
+                  {error.code === "E_DATA_UNAVAILABLE" && (
+                    <button type="button" data-calc-goto-ds onClick={() => onNavigate("datasource")}>
+                      查看数据源状态
+                    </button>
+                  )}
+                  {failureStreak >= 3 && (
+                    <button type="button" data-calc-export onClick={() => void exportCalcDiagnostics()}>
+                      导出诊断包
+                    </button>
+                  )}
+                </div>
+                {exportHint && (
+                  <p className="calc-error-hint" data-calc-export-hint>
+                    {exportHint}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="chart-card">
               {paramsIssue && (
