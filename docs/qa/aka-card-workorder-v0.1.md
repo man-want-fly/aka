@@ -35,7 +35,7 @@
 | W-109 | `S-02.06-01` Gate C 降「不可签」、AC 覆盖与 `compute.discard` 实现 | dev B / BA / TL | 阻塞（`Blocked-AC`，W-110 落地后重签） | `main`（`11e62cb` 签字作废） | 2026-11-08 |
 | W-110 | Gate C 通用检查：AC 覆盖闭合 + 证据 `card` 匹配（各配反例） | dev A | 待开工 | `main` | 2026-11-08 |
 | W-111 | `S-02.06-02` 立独立 `s20602`：291ms 无判红出口，断言 `maxTotalMs<=120` | dev B | 待开工（dev B 认领，立即开工；`S-02.06-02` 记不可签） | `dev2` | 2026-11-08 |
-| W-112 | `evidence-run.sh` 非 main 分支报 `unbound variable`，改为 `EVIDENCE_FAIL` + 测试 | dev A | 已完成待合（`9272167`；**不计 dev A 新工作量**，只等合并） | `main`（`9272167`） | 2026-11-08 |
+| W-112 | `evidence-run.sh` 非 main 分支报 `unbound variable`，改为 `EVIDENCE_FAIL` + 测试 | dev A | 待验收（`9272167` 已完成，只等合并；**不计 dev A 新工作量**） | `main`（`9272167`） | 2026-11-08 |
 | W-113 | 卡 ↔ 套件 case 集合比对（卡在 main 但缺 diag case → 红） | dev A | 待开工（dev A 立即开工；**唯一工具卡**，W-112 已完成） | — | 2026-11-08 |
 | P01 | `S-03.01-04` 加入图表、替换与无标的引导 | dev A | 已交付（`adef5b7`；**P01 曾重复派单，已切开**；dev A 停止重复实现，仅核证） | `main`（`adef5b7`） | 2026-11-08 |
 | P02 | `S-03.02-01` 收藏与 8 项默认收藏 | dev B | 已交付（`adef5b7`；**P01 曾重复派单，已切开：P01=dev A、P02=dev B**；原派单作废） | `main`（`adef5b7`） | 2026-11-08 |
