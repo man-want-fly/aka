@@ -319,7 +319,7 @@ export async function runS203Diagnostics(hooks: S203Hooks) {
       };
     });
 
-    await attempt("R-07", "AC-02.03-03 补1", "render", async () => {
+    await attempt("R-07", "AC-02.03-03（补1）", "render", async () => {
       const beforePanels = panelIds();
       const beforeTop = num(q(`[data-panel-drag="${beforePanels[0]}"]`), "y");
       const remove = q('[data-panel-remove="M06"]');
@@ -347,7 +347,7 @@ export async function runS203Diagnostics(hooks: S203Hooks) {
       };
     });
 
-    await attempt("R-08", "AC-02.03-03 补3", "render", async () => {
+    await attempt("R-08", "AC-02.03-03（补3）", "render", async () => {
       // 补回 MACD（副图 2/3，可添加）
       const add = q<HTMLButtonElement>('[data-drawer-add="M06:sub"]');
       if (!add) throw new Error("抽屉 MACD 添加按钮不存在");
@@ -382,7 +382,7 @@ export async function runS203Diagnostics(hooks: S203Hooks) {
       };
     });
 
-    await attempt("R-09", "AC-02.03-03 补3", "render", async () => {
+    await attempt("R-09", "AC-02.03-03（补3）", "render", async () => {
       hooks.clearDateRange();
       await hooks.waitReady("清范围");
       const total = num(svg(), "data-bar-count");
@@ -503,7 +503,7 @@ export async function runS203Diagnostics(hooks: S203Hooks) {
     };
   });
 
-  await attempt("R-05", "AC-02.03-03 补2", "render", async () => {
+  await attempt("R-05", "AC-02.03-03（补2）", "render", async () => {
     const result = hooks.calc()?.series.find((item) => item.indicatorId === "M06");
     if (!result) throw new Error("M06 序列缺失");
     const dif = result.outputs.find((output) => output.key === "dif")?.values;

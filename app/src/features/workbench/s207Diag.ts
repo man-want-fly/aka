@@ -550,7 +550,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     };
   });
 
-  await attempt("R-03", "AC-02.07-01 补1", "render", async () => {
+  await attempt("R-03", "AC-02.07-01（补1）", "render", async () => {
     await zoomInUntil(20);
     const atMin = viewInfo().count;
     for (let i = 0; i < 3; i += 1) await wheelAt(3, -120);
@@ -566,7 +566,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     };
   });
 
-  await attempt("R-04", "AC-02.07-01 补3", "render", async () => {
+  await attempt("R-04", "AC-02.07-01（补3）", "render", async () => {
     svg().dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
     await sleep(160);
     const view = viewInfo();
@@ -577,7 +577,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     };
   });
 
-  await attempt("R-05", "AC-02.07-01 补2", "render", async () => {
+  await attempt("R-05", "AC-02.07-01（补2）", "render", async () => {
     const allButton = qa<HTMLButtonElement>(".seg button").find(
       (button) => button.textContent?.trim() === "全部",
     );
@@ -604,7 +604,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     };
   });
 
-  await attempt("R-06", "AC-02.07-01 补4", "render", async () => {
+  await attempt("R-06", "AC-02.07-01（补4）", "render", async () => {
     const zoomed = await zoomInUntil(40);
     const remembered = { start: zoomed.start, end: zoomed.end, count: zoomed.count };
     hooks.setCode("300750.SZ");
@@ -668,7 +668,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     };
   });
 
-  await attempt("R-08", "AC-02.07-03 补5", "render", async () => {
+  await attempt("R-08", "AC-02.07-03（补5）", "render", async () => {
     // 补足数据：清掉日期范围（同参数下自动重算，无需手动刷新）
     hooks.clearDateRange();
     await hooks.waitReady("补足数据");
@@ -684,7 +684,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
   });
 
   // 月线：不足预热如何呈现（一次定清）
-  await attempt("R-09", "AC-02.07-03 W/M", "render", async () => {
+  await attempt("R-09", "AC-02.07-03", "render", async () => {
     hooks.setParams({ maPeriod: 20, maType: "sma", fast: 12, slow: 26, signal: 9, bollPeriod: 20, bollMult: 2 });
     hooks.setTimeframe("M");
     await hooks.waitReady("月线");
@@ -709,14 +709,14 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
       view.total === 24;
     return {
       passed: empty,
-      detail: `月线 ${view.total} 根 · 整段不画线提示 ${overlayNotices.length} 条（${overlayNotices
+      detail: `周线/月线：月线 ${view.total} 根 · 整段不画线提示 ${overlayNotices.length} 条（${overlayNotices
         .join(" | ")}）· T01 有效点 ${points} · T09 已绘制=${t09Drawn} · M06 副图 empty=${subPanel?.getAttribute(
         "data-sub-empty",
       )} 文案「${subNotice}」· 副图路径长度 ${subD.length}`,
     };
   });
 
-  await attempt("R-10", "AC-02.07-01 W", "render", async () => {
+  await attempt("R-10", "AC-02.07-01", "render", async () => {
     hooks.setTimeframe("W");
     await hooks.waitReady("周线");
     const view = viewInfo();
@@ -734,7 +734,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     };
   });
 
-  await attempt("R-11", "AC-02.07-01 W/M", "render", async () => {
+  await attempt("R-11", "AC-02.07-01", "render", async () => {
     // 数据不足导致副图 NaN 时，十字光标在副图读数为「—」，主图读数照常
     hooks.setTimeframe("M");
     await hooks.waitReady("月线读数");
@@ -749,12 +749,13 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
         subReadout.textContent?.includes("—") === true &&
         priceReadout !== null &&
         tipText.includes("—"),
-      detail: `月线第 3 根：副图读数「${subReadout?.textContent ?? "无"}」· 主图读数「${priceReadout?.textContent ?? "无"}」· tooltip 含「—」=${tipText.includes("—")}`,
+      detail: `周线/月线：月线第 3 根：副图读数「${subReadout?.textContent ?? "无"}」· 主图读数「${priceReadout?.textContent ?? "无"}」· tooltip 含「—」=${tipText.includes("—")}`,
     };
   });
 
-  // 停牌：DIAGSUSP.SZ 第 80~99 根
-  await attempt("R-12", "AC-02.07-03 补2/补4", "render", async () => {
+  // 停牌：DIAGSUSP.SZ 第 80~99 根。同一场景验两个补号：
+  // 补2 = 停牌位无 K 线柱、量柱为 0；补4 = tooltip 显示停牌、不显示上一交易日 OHLC。
+  try {
     hooks.setTimeframe("D");
     hooks.setCode("DIAGSUSP.SZ");
     await hooks.waitReady("停牌样本");
@@ -774,22 +775,32 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
     const tooltip = q('[data-chart-tooltip="1"]');
     const tipText = tooltip?.textContent ?? "";
     const noOhlc = !tipText.includes("开 ") && !tipText.includes("高 ");
-    return {
-      passed:
-        suspended === 20 &&
+    const tooltipSuspended = q('[data-tooltip-suspended="1"]') !== null;
+    push(
+      "R-12",
+      "AC-02.07-03（补2）",
+      "render",
+      suspended === 20 &&
         volSuspended === 20 &&
         candles === visible - 20 &&
-        suspendedFromBars === 20 &&
-        hoverIndex === 90 &&
-        readout !== null &&
-        q('[data-tooltip-suspended="1"]') !== null &&
-        noOhlc,
-      detail: `视口 ${view.start}~${view.end} · 停牌组 ${suspended} 个（行情层 ${suspendedFromBars}）· 量柱 ${volSuspended} 根 · K 线实体 ${candles} 根 · hover=${hoverIndex} · 读数 ${readout ? "有" : "无"} · tooltip 停牌区=${q('[data-tooltip-suspended="1"]') ? "有" : "无"} · 「${tipText.replace(/\s+/g, " ").slice(0, 50)}」不含 OHLC=${noOhlc}`,
-    };
-  });
+        suspendedFromBars === 20,
+      `视口 ${view.start}~${view.end} · 停牌组 ${suspended} 个（行情层 ${suspendedFromBars}）· 量柱 ${volSuspended} 根 · K 线实体 ${candles} 根（可视 ${visible} 根，应少 20）`,
+    );
+    push(
+      "R-12b",
+      "AC-02.07-03（补4）",
+      "render",
+      hoverIndex === 90 && readout !== null && tooltipSuspended && noOhlc,
+      `hover=${hoverIndex} · 读数 ${readout ? "有" : "无"} · tooltip 停牌区=${tooltipSuspended ? "有" : "无"} · 「${tipText.replace(/\s+/g, " ").slice(0, 50)}」不含 OHLC=${noOhlc}`,
+    );
+  } catch (error) {
+    const message = `异常：${error instanceof Error ? error.message : String(error)}`;
+    push("R-12", "AC-02.07-03（补2）", "render", false, message);
+    push("R-12b", "AC-02.07-03（补4）", "render", false, message);
+  }
 
   // 除权：mock 里带拆分的样本（seed%5==0），601012.SH 第 260 根 = 2024-01-01
-  await attempt("R-13", "AC-02.07-03 补3", "render", async () => {
+  await attempt("R-13", "AC-02.07-03（补3）", "render", async () => {
     hooks.setTimeframe("D");
     hooks.setCode("601012.SH");
     hooks.setDateRange("2023-12-01", "2024-02-29");
@@ -831,7 +842,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
 
   // 中间 NaN：M04 威廉 %R 在停牌合成行（高低差为 0）的窗口里为 NaN，左右两侧都有有效值
   // → 断线 + 空心点。（V08 Gapo 的 ATR=0 在真实数据上不可复现，故改用 M04）
-  await attempt("R-14", "AC-02.07-03 补1", "render", async () => {
+  await attempt("R-14", "AC-02.07-03（补1）", "render", async () => {
     hooks.setAdj("none");
     hooks.clearDateRange();
     hooks.setSubIds(["M04"]);

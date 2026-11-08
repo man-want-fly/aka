@@ -384,7 +384,7 @@ export async function runS20202Diagnostics(hooks: S20202Hooks) {
     };
   });
 
-  await attempt("D-04", "AC-02.02-03 补1", "data", async () => {
+  await attempt("D-04", "AC-02.02-03（补1）", "data", async () => {
     const qfqFull = await barsOf("qfq");
     const noneFull = await barsOf("none");
     const anchorQfq = qfqFull.bars[qfqFull.bars.length - 1];
@@ -410,7 +410,7 @@ export async function runS20202Diagnostics(hooks: S20202Hooks) {
     };
   });
 
-  await attempt("D-05", "AC-02.02-03 补2", "data", async () => {
+  await attempt("D-05", "AC-02.02-03（补2）", "data", async () => {
     const qfqVol = volumeByDate(qfqApril);
     const hfqVol = volumeByDate(hfqApril);
     const diffs = noneApril.bars.filter(
@@ -515,7 +515,7 @@ export async function runS20202Diagnostics(hooks: S20202Hooks) {
 
     push(
       "R-02",
-      "AC-02.02-03 补2",
+      "AC-02.02-03（补2）",
       "render",
       Boolean(qfqSnapshot && noneSnapshot) &&
         qfqSnapshot!.volume === noneSnapshot!.volume &&
@@ -530,7 +530,7 @@ export async function runS20202Diagnostics(hooks: S20202Hooks) {
 
     push(
       "R-03",
-      "AC-02.02-04 补2",
+      "AC-02.02-04（补2）",
       "render",
       Boolean(qfqSnapshot && noneSnapshot) &&
         qfqSnapshot!.t01 !== null &&
@@ -665,7 +665,7 @@ export async function runS20202Diagnostics(hooks: S20202Hooks) {
     }
     push(
       "R-07",
-      "AC-02.02-04 补1",
+      "AC-02.02-04（补1）",
       "render",
       beforeRemove.legend &&
         beforeRemove.t01 &&
