@@ -54,6 +54,15 @@ fn faults_from_args(args: &[String]) -> DiagFaults {
         } else {
             InjectKind::None
         },
+        // S-08.02-03：`--dataset-fault=missing|manifest|table|sha|db`。
+        dataset_fault: if diag_enabled() {
+            args.iter()
+                .find_map(|arg| arg.strip_prefix("--dataset-fault="))
+                .map(app_core::DatasetFault::parse)
+                .unwrap_or_default()
+        } else {
+            app_core::DatasetFault::None
+        },
     }
 }
 
@@ -190,6 +199,8 @@ pub fn run() {
         commands::dataset_manifest,
         commands::datasource_status,
         commands::data_health_check,
+        commands::dataset_integrity,
+        commands::dataset_set_readonly,
         commands::calc_indicators,
         commands::telemetry_dump,
         commands::market_snapshot,
@@ -231,6 +242,8 @@ pub fn run() {
         commands::dataset_manifest,
         commands::datasource_status,
         commands::data_health_check,
+        commands::dataset_integrity,
+        commands::dataset_set_readonly,
         commands::calc_indicators,
         commands::telemetry_dump,
         commands::market_snapshot,

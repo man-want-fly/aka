@@ -167,9 +167,11 @@ const SELECTED_KEY = "aka.market.selected";
 interface Props {
   onNavigate: (key: "workbench" | "catalog" | "market" | "settings" | "datasource") => void;
   onOpenSecurity: (security: string) => void;
+  /** S-08.02-03：只读浏览下不落盘视图状态，避免无谓的“设置未保存”提示 */
+  readOnly?: boolean;
 }
 
-export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
+export function MarketPage({ onNavigate, onOpenSecurity, readOnly = false }: Props) {
   const [snapshot, setSnapshot] = useState<MarketSnapshotDto | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistDto | null>(null);
   const [view, setView] = useState<MarketViewState>(DEFAULT_VIEW);
@@ -223,11 +225,11 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!viewLoaded) return;
+    if (!viewLoaded || readOnly) return;
     void ipc.viewStateSet(VIEW_SCOPE, view).catch((err) => {
       setToast(`设置未保存：${describeError(err).message}`);
     });
-  }, [view, viewLoaded]);
+  }, [view, viewLoaded, readOnly]);
 
   useEffect(() => {
     if (!snapshot || loading) return;

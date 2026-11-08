@@ -541,3 +541,49 @@ pub struct DataHealthDto {
     pub checked_at: i64,
     pub dataset_id: Option<String>,
 }
+
+// ---------- E-08 启动数据集校验与只读兜底（S-08.02-03） ----------
+
+/// 数据集故障注入（QA 用；正常运行恒为 `None`）。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DatasetFault {
+    #[default]
+    None,
+    Missing,
+    Manifest,
+    Table,
+    Sha,
+    Db,
+}
+
+impl DatasetFault {
+    pub fn parse(raw: &str) -> Self {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "missing" => Self::Missing,
+            "manifest" => Self::Manifest,
+            "table" => Self::Table,
+            "sha" => Self::Sha,
+            "db" => Self::Db,
+            _ => Self::None,
+        }
+    }
+}
+
+/// 启动校验结果。`state == "blocked"` 时前端只渲染全屏错误卡。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasetIntegrityDto {
+    /// ok / blocked
+    pub state: &'static str,
+    /// MISSING_DIR / MANIFEST_INVALID / REQUIRED_TABLE_MISSING / SHA256_MISMATCH / DB_CORRUPT
+    pub error_code: Option<&'static str>,
+    pub title: Option<&'static str>,
+    pub detail: Option<String>,
+    pub trace_id: String,
+    pub dataset_path: String,
+    /// 是否允许「只读浏览」
+    pub readable: bool,
+    pub checked_at: i64,
+    pub dataset_id: Option<String>,
+}

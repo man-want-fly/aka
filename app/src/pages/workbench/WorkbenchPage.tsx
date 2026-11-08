@@ -94,6 +94,8 @@ interface Props {
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
   onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
+  /** S-08.02-03：只读浏览下禁用指标计算，K 线/行情表照常可看 */
+  readOnly?: boolean;
 }
 
 /**
@@ -214,6 +216,7 @@ export function WorkbenchPage({
   colorMode,
   onColorMode,
   onNavigate,
+  readOnly = false,
 }: Props) {
   const [securities, setSecurities] = useState<SecurityDto[]>([]);
   /** 区分「代码表加载中」与真实的 0 只数据集 */
@@ -813,16 +816,21 @@ export function WorkbenchPage({
         return value;
       });
       // 指标重算失败不连坐行情：K 线照常渲染，数据不足在副图内联提示（AC-02.05-04 补3）
-      const calcPromise = ipc
-        .calcIndicators(request)
-        .then((value) => {
-          calcMs = performance.now() - startedAt;
-          return { ok: true as const, value };
-        })
-        .catch((err) => {
-          calcMs = performance.now() - startedAt;
-          return { ok: false as const, failure: describeError(err) };
-        });
+      // S-08.02-03：只读浏览下不发计算请求，K 线/行情表照常展示。
+      const calcPromise: Promise<
+        { ok: true; value: CalcResponse } | { ok: false; failure: AppError | null }
+      > = readOnly
+        ? Promise.resolve({ ok: false as const, failure: null })
+        : ipc
+            .calcIndicators(request)
+            .then((value) => {
+              calcMs = performance.now() - startedAt;
+              return { ok: true as const, value };
+            })
+            .catch((err) => {
+              calcMs = performance.now() - startedAt;
+              return { ok: false as const, failure: describeError(err) };
+            });
 
       Promise.all([barsPromise, calcPromise])
         .then(([nextBars, calcResult]) => {
@@ -855,7 +863,11 @@ export function WorkbenchPage({
             setCalc(null);
             calcRef.current = null;
             const failure = calcResult.failure;
-            if (failure.code === "E_INSUFFICIENT_DATA") {
+            if (!failure) {
+              // 只读浏览：不渲染错误卡，由页内只读提示说明原因。
+              setCalcNotices(null);
+              setError(null);
+            } else if (failure.code === "E_INSUFFICIENT_DATA") {
               setCalcNotices(
                 noticesForBars(nextBars.bars.length, subIds, manifest) ??
                   noticesFrom(failure, manifest),
@@ -907,6 +919,8 @@ export function WorkbenchPage({
             if (waiter) waiter(sample);
             return;
           }
+          // 只读浏览没有真实计算请求，不进样本池。
+          if (!calcResult.failure) return;
           // 失败也算一次真实请求：既进样本池，也唤醒等待中的诊断步骤
           const sample: DiagSample = {
             phase: phaseAtIssue,
@@ -933,7 +947,7 @@ export function WorkbenchPage({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeCode, adj, appliedParams, dateFrom, dateTo, retryNonce, timeframe]);
+  }, [activeCode, adj, appliedParams, dateFrom, dateTo, retryNonce, timeframe, readOnly]);
 
   /** S-08.02-02：重试 / 降低参数 / 导出诊断包（连续失败 3 次后可见）。 */
   const retryCalc = useCallback(() => {
@@ -2137,6 +2151,12 @@ export function WorkbenchPage({
                 <b>{calc ? formatComputedMs(calc.computedMs) : "—"} ms</b>
               </span>
             </div>
+
+            {readOnly && (
+              <div className="calc-readonly" data-calc-readonly role="status">
+                数据集校验失败，已禁用计算
+              </div>
+            )}
 
             {error && (
               <div className="calc-error" data-calc-error={error.code} role="alert">

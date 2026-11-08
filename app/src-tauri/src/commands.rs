@@ -90,6 +90,7 @@ pub async fn set_indicator_favorite(
     favorited: bool,
 ) -> Result<IndicatorFavoritesResponse, AppError> {
     tracked!(state, "set_indicator_favorite", {
+        state.ensure_writable()?;
         state.core.set_indicator_favorite(&indicator_id, favorited)
     })
 }
@@ -149,6 +150,28 @@ pub async fn data_health_check(
     })
 }
 
+/// S-08.02-03：启动数据集校验；失败时前端只渲染全屏错误卡。
+#[tauri::command]
+pub async fn dataset_integrity(
+    state: State<'_, AppState>,
+) -> Result<app_core::DatasetIntegrityDto, AppError> {
+    tracked!(state, "dataset_integrity", {
+        Ok(state.core.dataset_integrity(state.faults().dataset_fault))
+    })
+}
+
+/// S-08.02-03：进入/退出只读浏览（内存态，不写 state.db）。
+#[tauri::command]
+pub async fn dataset_set_readonly(
+    state: State<'_, AppState>,
+    read_only: bool,
+) -> Result<bool, AppError> {
+    tracked!(state, "dataset_set_readonly", {
+        state.set_read_only(read_only);
+        Ok(read_only)
+    })
+}
+
 /// S-08.02-02：单次指标计算超时阈值（与错误态规范一致）。
 const CALC_TIMEOUT_MS: u64 = 8_000;
 
@@ -168,6 +191,8 @@ pub async fn calc_indicators(
     req: CalcRequest,
 ) -> Result<CalcResponse, AppError> {
     tracked!(state, "calc_indicators", {
+        // S-08.02-03：只读浏览下禁用指标计算（页面同时置灰，这里兜底）。
+        state.ensure_writable()?;
         let started = std::time::Instant::now();
         let indicator = req.instances.first().map(|item| item.indicator_id.clone());
         // S-08.02-02：注入生效一次即回落；timeout 真实等待，不伪造错误。
@@ -255,13 +280,17 @@ pub async fn watch_toggle(
     group: Option<String>,
 ) -> Result<WatchToggleResult, AppError> {
     tracked!(state, "watch_toggle", {
+        state.ensure_writable()?;
         state.core.toggle_watch(&security, group.as_deref())
     })
 }
 
 #[tauri::command]
 pub async fn watch_group_create(state: State<'_, AppState>, name: String) -> Result<(), AppError> {
-    tracked!(state, "watch_group_create", { state.core.create_watch_group(&name) })
+    tracked!(state, "watch_group_create", {
+        state.ensure_writable()?;
+        state.core.create_watch_group(&name)
+    })
 }
 
 #[tauri::command]
@@ -271,6 +300,7 @@ pub async fn watch_group_rename(
     new: String,
 ) -> Result<(), AppError> {
     tracked!(state, "watch_group_rename", {
+        state.ensure_writable()?;
         state.core.rename_watch_group(&old, &new)
     })
 }
@@ -278,6 +308,7 @@ pub async fn watch_group_rename(
 #[tauri::command]
 pub async fn watch_group_delete(state: State<'_, AppState>, name: String) -> Result<(), AppError> {
     tracked!(state, "watch_group_delete", {
+        state.ensure_writable()?;
         state.core.delete_watch_group(&name)
     })
 }
@@ -289,9 +320,10 @@ pub async fn dataset_regenerate(
     req: ListSecuritiesRequest,
 ) -> Result<Vec<SecurityDto>, AppError> {
     tracked!(state, "dataset_regenerate", {
-        state.set_dataset_empty(false);
-        // 重建后 manifest 恢复可读（清掉 S-07.01-02 的损坏注入）。
-        state.set_manifest_corrupt(false);
+        // 重建后三个故障位一起清掉（S-07.01-02 损坏注入 + S-08.02-03 数据集注入）。
+        state.clear_dataset_faults();
+        // S-08.02-03：重建成功即退出只读浏览（补4）。
+        state.set_read_only(false);
         Ok(state.core.list_securities(&req))
     })
 }
@@ -351,6 +383,7 @@ pub async fn view_state_set(
     value: Value,
 ) -> Result<(), AppError> {
     tracked!(state, "view_state_set", {
+        state.ensure_writable()?;
         state.core.set_view_state(&scope, &value)
     })
 }
@@ -368,6 +401,7 @@ pub async fn position_save(
     shares: i64,
 ) -> Result<(), AppError> {
     tracked!(state, "position_save", {
+        state.ensure_writable()?;
         state.core.save_position(&security, cost_price, shares)
     })
 }
@@ -375,6 +409,7 @@ pub async fn position_save(
 #[tauri::command]
 pub async fn position_delete(state: State<'_, AppState>, security: String) -> Result<(), AppError> {
     tracked!(state, "position_delete", {
+        state.ensure_writable()?;
         state.core.delete_position(&security)
     })
 }

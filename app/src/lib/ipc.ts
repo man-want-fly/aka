@@ -6,6 +6,7 @@ import type {
   BarsResponse,
   CalcRequest,
   CalcResponse,
+  DatasetIntegrityDto,
   DatasetManifestDto,
   DataHealthDto,
   DatasourceStatusDto,
@@ -110,6 +111,14 @@ export const ipc = {
   /** S-07.01-02：P9 健康检查 6 项；每次点击都重跑，无轮询。 */
   dataHealthCheck: (): Promise<DataHealthDto> =>
     invoke<DataHealthDto>("data_health_check"),
+
+  /** S-08.02-03：启动数据集校验；blocked 时前端只渲染全屏错误卡。 */
+  datasetIntegrity: (): Promise<DatasetIntegrityDto> =>
+    invoke<DatasetIntegrityDto>("dataset_integrity"),
+
+  /** S-08.02-03：进入/退出只读浏览（后端内存态，不写 state.db）。 */
+  datasetSetReadonly: (readOnly: boolean): Promise<boolean> =>
+    invoke<boolean>("dataset_set_readonly", { readOnly }),
 
   /** S-07.05-01：最近一次质量报告；从未扫描过返回 null。 */
   qualityReport: (): Promise<QualityReportDto | null> =>

@@ -1191,6 +1191,190 @@ select {
   word-break: break-all;
 }
 
+/* ---------------- S-08.02-03 启动校验 / 只读浏览 ---------------- */
+.dataset-boot {
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.readonly-banner {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 30px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: var(--up-soft);
+  border-bottom: 1px solid var(--up-line);
+  color: var(--up);
+  font-size: 11px;
+}
+
+.readonly-banner [data-readonly-hint] {
+  color: var(--faint);
+}
+
+:root[data-readonly="1"] .app {
+  height: calc(100vh - 30px);
+  margin-top: 30px;
+}
+
+.calc-readonly {
+  margin: 8px 0;
+  padding: 7px 10px;
+  border: 1px dashed var(--up-line);
+  border-radius: var(--r2);
+  background: var(--up-soft);
+  color: var(--up);
+  font-size: 10.5px;
+}
+
+.dataset-error {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.dataset-error-card {
+  width: 100%;
+  max-width: 560px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--up);
+  border-radius: var(--r2);
+  background: var(--surface);
+}
+
+.dataset-error-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dataset-error-head strong {
+  font-size: 15px;
+}
+
+.dataset-error-desc {
+  margin: 10px 0 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.dataset-error-detail {
+  margin: 6px 0 0;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.dataset-error-meta {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 6px 10px;
+  margin: 14px 0 0;
+  font-size: 11px;
+}
+
+.dataset-error-meta dt {
+  color: var(--faint);
+}
+
+.dataset-error-meta dd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.dataset-error-meta code {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  word-break: break-all;
+}
+
+.dataset-error-copy {
+  flex: none;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--faint);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.dataset-error-copy:hover {
+  color: var(--text);
+}
+
+.dataset-error-history {
+  margin: 8px 0 0;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  word-break: break-all;
+}
+
+.dataset-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.dataset-error-actions button {
+  padding: 4px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.dataset-error-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dataset-error-actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.dataset-error-actions .dataset-error-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+}
+
+.dataset-error-action {
+  margin: 10px 0 0;
+  color: var(--up);
+  font-size: 10.5px;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.dataset-error-hint {
+  margin: 8px 0 0;
+  color: var(--faint);
+  font-size: 10px;
+  word-break: break-all;
+}
+
 .side-note {
   margin-top: 10px;
   padding-top: 9px;

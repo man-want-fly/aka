@@ -58,6 +58,8 @@ pub enum ErrorCode {
     EnginePanic,
     /// S-08.02-02：数据层不可用。
     DataUnavailable,
+    /// S-08.02-03：只读浏览下拒绝写操作。
+    DatasetReadonly,
     Internal,
 }
 
@@ -76,6 +78,7 @@ impl ErrorCode {
             ErrorCode::Timeout => "E_TIMEOUT",
             ErrorCode::EnginePanic => "E_ENGINE_PANIC",
             ErrorCode::DataUnavailable => "E_DATA_UNAVAILABLE",
+            ErrorCode::DatasetReadonly => "E_DATASET_READONLY",
             ErrorCode::Internal => "E_INTERNAL",
         }
     }
@@ -176,6 +179,11 @@ impl AppError {
         Self::new(ErrorCode::DataUnavailable, detail)
             .retryable(true)
             .with_details(json!({ "traceId": id }))
+    }
+
+    /// S-08.02-03：只读浏览下所有写操作统一拒绝，message 直接给用户看的原因。
+    pub fn dataset_readonly() -> Self {
+        Self::new(ErrorCode::DatasetReadonly, "数据集不可写：当前为只读浏览")
     }
 
     /// 页面可见的追踪号；没有 trace id 的错误返回 None。

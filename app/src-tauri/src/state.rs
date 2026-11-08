@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use app_core::AppCore;
+use app_core::{AppCore, DatasetFault};
 
 use crate::diagnostics::CommandLog;
 
@@ -16,6 +16,8 @@ pub struct DiagFaults {
     pub manifest_corrupt: bool,
     /// S-08.02-02：下一次计算的故障注入；生效后自动回落 `None`。
     pub inject: InjectKind,
+    /// S-08.02-03：数据集校验故障注入（QA 取证用）。
+    pub dataset_fault: DatasetFault,
 }
 
 /// S-08.02-02：`inject_error` 口径（none / timeout / panic / data）。
@@ -58,6 +60,8 @@ pub struct AppState {
     /// S-06.03-02：最近 200 条 IPC 命令（只记名字/耗时/结果码，不记入参）。
     pub commands: CommandLog,
     faults: Mutex<DiagFaults>,
+    /// S-08.02-03：用户选择「只读浏览」后置真；重建成功或重启后归零（不跨启动记忆）。
+    read_only: Mutex<bool>,
 }
 
 impl AppState {
@@ -67,26 +71,12 @@ impl AppState {
             db_path,
             commands: CommandLog::default(),
             faults: Mutex::new(faults),
+            read_only: Mutex::new(false),
         }
     }
 
     pub fn faults(&self) -> DiagFaults {
         *self.faults.lock().unwrap_or_else(|err| err.into_inner())
-    }
-
-    pub fn set_dataset_empty(&self, empty: bool) {
-        self.faults
-            .lock()
-            .unwrap_or_else(|err| err.into_inner())
-            .dataset_empty = empty;
-    }
-
-    /// 重建样本包后清除 manifest 损坏注入，否则健康检查无法恢复。
-    pub fn set_manifest_corrupt(&self, corrupt: bool) {
-        self.faults
-            .lock()
-            .unwrap_or_else(|err| err.into_inner())
-            .manifest_corrupt = corrupt;
     }
 
     /// S-08.02-02：设置注入类型，返回旧值。
@@ -100,5 +90,37 @@ impl AppState {
     /// S-08.02-02：取走注入并立即回落 `none`（避免忘记关闭）。
     pub fn take_inject(&self) -> InjectKind {
         self.set_inject(InjectKind::None)
+    }
+
+    /// 重建样本包后同时清掉三个故障位，保证校验能恢复到 ok。
+    pub fn clear_dataset_faults(&self) {
+        let mut faults = self.faults.lock().unwrap_or_else(|err| err.into_inner());
+        faults.dataset_fault = DatasetFault::None;
+        faults.manifest_corrupt = false;
+        faults.dataset_empty = false;
+    }
+
+    /// S-08.02-03：只读浏览开关（不写 state.db，重启即失效）。
+    pub fn set_read_only(&self, read_only: bool) {
+        *self
+            .read_only
+            .lock()
+            .unwrap_or_else(|err| err.into_inner()) = read_only;
+    }
+
+    pub fn read_only(&self) -> bool {
+        *self
+            .read_only
+            .lock()
+            .unwrap_or_else(|err| err.into_inner())
+    }
+
+    /// 只读模式下拒绝写操作；重建类命令不经过这里。
+    pub fn ensure_writable(&self) -> Result<(), app_core::AppError> {
+        if self.read_only() {
+            Err(app_core::AppError::dataset_readonly())
+        } else {
+            Ok(())
+        }
     }
 }

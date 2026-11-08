@@ -217,6 +217,22 @@ PY
     FIXTURE="默认 state.db；工作台真实计算 + diag_set_inject 注入（panic×3 / data / timeout 8s），关闭注入后恢复；不改库"
     BAK=""
     ;;
+  s080203)
+    TARGET="s080203"
+    JSON="$DIAG_DIR/s080203-evidence.json"
+    NAME="s080203-evidence"
+    FLAGS="--dataset-fault=missing"
+    FIXTURE="默认 state.db；--dataset-fault=missing 让启动校验返回 MISSING_DIR，验证全屏错误卡（码/trace/路径/无堆栈）与「重建样本包」恢复后进入行情页；不改库"
+    BAK=""
+    ;;
+  s080203-readonly)
+    TARGET="s080203"
+    JSON="$DIAG_DIR/s080203-evidence.json"
+    NAME="s080203-readonly-evidence"
+    FLAGS="--dataset-fault=sha"
+    FIXTURE="默认 state.db；--dataset-fault=sha 让启动校验返回 SHA256_MISMATCH，验证只读浏览红条、K 线可看/计算禁用、自选与主题写入被拒（自选数不变）；不改库"
+    BAK=""
+    ;;
   *)
     echo "未知套件：$SUITE" >&2
     exit 2
