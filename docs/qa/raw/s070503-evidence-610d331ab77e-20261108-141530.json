@@ -1,0 +1,111 @@
+{
+  "suite": "S-07.05-03 provenance overlay",
+  "card": "S-07.05-03",
+  "ok": true,
+  "env": {
+    "commit": "610d331ab77e1e511ee7e2409d6b049a1a3c0b3f",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.23.4",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-08T06:15:13.165Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/aka/app/target/debug/aka-desktop",
+        "sha256": "120761f1cfe857ad57bd57dba22247db5f3ed5d1683c07bd4813e95e4a990e0b"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s070503\" /Users/sixmillion/Documents/aka/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "finishedAt": "2026-11-08T06:15:36.307Z",
+  "acVerdict": {
+    "AC-07.05-04": "PASS",
+    "AC-07.05-04（补1）": "BLOCKED"
+  },
+  "blocked": [
+    {
+      "ac": "AC-07.05-04（补1）",
+      "blocker": "S-07.05-01",
+      "reason": "P9 页面/路由与质量报告「查看示例」入口未合入 main；不判 PASS、不记跳过",
+      "skipped": false
+    }
+  ],
+  "checks": [
+    {
+      "id": "OV-01",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "bar=2024-12-27 · provider=mock | batchId=b-20260101-01 | ingestedAt=2026-01-01 08:00:00 | datasetId=sim-11970937807906894924-2023-01-02_2024-12-27-62400-v1.0-8aa22a63 | adjMode=qfq | qualityFlags=无"
+    },
+    {
+      "id": "OV-02",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "点击窗口内 invoke=1 次：[bar_provenance]（期望仅 bar_provenance）"
+    },
+    {
+      "id": "OV-03",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "打开=true · ESC 后关闭=true"
+    },
+    {
+      "id": "OV-04",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "浮层打开后点图表外 → 关闭=true"
+    },
+    {
+      "id": "OV-05",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "600519.SH 浮层打开 → 切 DIAGSUSP.SZ 后关闭=true"
+    },
+    {
+      "id": "OV-06",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "bar=2023-05-08 · provider=mock | batchId=b-20260101-01 | ingestedAt=2026-01-01 08:00:00 | datasetId=sim-11970937807906894924-2023-01-02_2024-12-27-62400-v1.0-8aa22a63 | adjMode=qfq | qualityFlags=SUSPENDED"
+    },
+    {
+      "id": "OV-07",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "bar=2023-02-24 · provider=mock | batchId=缺失 | ingestedAt=缺失 | datasetId=sim-11970937807906894924-2023-01-02_2024-12-27-62400-v1.0-8aa22a63 | adjMode=qfq | qualityFlags=无 · 缺失码=E_PROVENANCE_MISSING"
+    },
+    {
+      "id": "OV-08",
+      "card": "S-07.05-03",
+      "ac": "AC-07.05-04",
+      "layer": "render",
+      "passed": true,
+      "detail": "工作台内 P9 入口/「查看示例」= 不存在"
+    }
+  ]
+}
