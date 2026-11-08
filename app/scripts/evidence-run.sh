@@ -144,6 +144,19 @@ if strict:
     if not str(env.get("command") or "").strip():
         abort("env.command 为空")
 
+# W-89 补：置前只允许一次（重复激活会打断采集，现场实测 240 秒超时零 dump）。
+# focusedAtLaunch 是脚本在唯一一次置前后实测的前台状态；focusedAtAssert 取断言点 windowFocused。
+attempts = dump.get("activateAttempts")
+if isinstance(attempts, bool) or not isinstance(attempts, int) or attempts != 1:
+    abort(f"dump.activateAttempts={attempts!r}，置前必须且只能激活一次（禁止轮询式/重复激活）")
+if dump.get("focusedAtLaunch") is not True:
+    abort("dump.focusedAtLaunch 不是 true（置前未成功，不得继续归档）")
+if isinstance(dump.get("windowFocused"), bool):
+    if dump.get("focusedAtAssert") != dump.get("windowFocused"):
+        abort("dump.focusedAtAssert 与 windowFocused 不一致（断言时聚焦态口径不同）")
+    if dump["windowFocused"] is False:
+        abort("断言时 windowFocused=false → 不可判定，不得签（聚焦仍是硬条件）")
+
 stamp = commit[:12]
 raw_json = os.path.join(raw_dir, f"{name}-{stamp}-{label}.json")
 raw_meta = os.path.join(raw_dir, f"{name}-{stamp}-{label}-meta.json")

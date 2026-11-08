@@ -9,6 +9,8 @@
     "verify:constants": "node scripts/verify_constants.mjs --docs",
     "verify:evidence": "node scripts/verify_evidence.mjs",
     "verify:evidence:selftest": "node scripts/verify_evidence_selftest.mjs",
+    "verify:dom-contracts": "node scripts/verify_dom_contracts.mjs",
+    "verify:dom-contracts:selftest": "node scripts/verify_dom_contracts_selftest.mjs",
     "verify:format": "node scripts/verify-number-format.mjs",
     "verify:r03": "node scripts/verify-r03-three-state.mjs",
     "verify:sign": "node scripts/verify_sign_coverage.mjs",
