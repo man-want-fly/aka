@@ -174,29 +174,35 @@ fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
+#[cfg(debug_assertions)]
 fn diag_flag(name: &str) -> bool {
-    #[cfg(debug_assertions)]
-    {
-        return std::env::var("AKA_DIAG").ok().as_deref() == Some("1")
-            && std::env::var(name).ok().as_deref() == Some("1");
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        let _ = name;
-        false
-    }
+    std::env::var("AKA_DIAG").ok().as_deref() == Some("1")
+        && std::env::var(name).ok().as_deref() == Some("1")
+}
+
+#[cfg(not(debug_assertions))]
+fn diag_flag(_name: &str) -> bool {
+    false
 }
 
 /// 可用空间（字节）。`AKA_DIAG_FREE_MB` 仅 debug + `AKA_DIAG=1` 时生效，用作「磁盘不足」夹具。
 fn available_bytes(dir: &Path) -> Option<u64> {
     #[cfg(debug_assertions)]
-    if let Ok(raw) = std::env::var("AKA_DIAG_FREE_MB") {
-        if std::env::var("AKA_DIAG").ok().as_deref() == Some("1") {
-            if let Ok(mb) = raw.parse::<u64>() {
-                return Some(mb * 1024 * 1024);
-            }
-        }
+    if let Some(mb) = debug_free_mb() {
+        return Some(mb * 1024 * 1024);
     }
+    available_bytes_real(dir)
+}
+
+#[cfg(debug_assertions)]
+fn debug_free_mb() -> Option<u64> {
+    if std::env::var("AKA_DIAG").ok().as_deref() != Some("1") {
+        return None;
+    }
+    std::env::var("AKA_DIAG_FREE_MB").ok()?.parse::<u64>().ok()
+}
+
+fn available_bytes_real(dir: &Path) -> Option<u64> {
     let output = Command::new("df").arg("-k").arg(dir).output().ok()?;
     if !output.status.success() {
         return None;
@@ -213,6 +219,7 @@ struct LogBundle {
 }
 
 fn read_log(path: &Path) -> LogBundle {
+    #[cfg(debug_assertions)]
     if diag_flag("AKA_DIAG_NO_LOG") {
         return LogBundle { text: None, truncated: false };
     }

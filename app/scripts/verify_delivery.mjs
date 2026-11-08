@@ -1,15 +1,17 @@
 #!/usr/bin/env node
-// 代码交付规范门禁（`docs/qa/aka-delivery-standard-v0.1.md`，制度第 36 条）。
+// 代码交付规范门禁（`docs/qa/aka-delivery-standard-v0.2.md`，制度第 36/37 条）。
 //   node scripts/verify_delivery.mjs
 //   node scripts/verify_delivery.mjs --root <fixture> --message <file> --changed <file> --today 2026-11-08
 //
-// 机器能卡的六件事：
-// 1. 规范 §1–§10 结构齐备，且 §9 收敛表覆盖制度第 1–35 条（不跳号、不引用不存在的条）。
-// 2. 工单 §0.0 状态表：编号唯一、状态词表内、进行中/待验收必须写分支或提交、表内工单有正文。
+// 机器能卡的七件事：
+// 1. 规范 §1–§10 结构齐备，且 §9 收敛表覆盖制度第 1–37 条（不跳号、不引用不存在的条）。
+// 2. 工单 §0.0 状态表：编号唯一、状态词表内、进行中/待验收必须写分支或提交、表内工单有正文、
+//    每行 `更新日` 格式合法且不晚于今天、有 commit 时不早于该 commit 的提交日。
 // 3. gate-log：`已交付/条件交付/已结项` 必须有 40 位 sign_commit（存量白名单只减不增，2026-11-22 到期）。
-// 4. HEAD 提交信息：`type(scope): 摘要`；合并提交正文列出被合并 commit。
-// 5. 触碰 gate-log / 签字台账 / 证据时，提交信息必须有 `Sign-Invalidates:` 与 `连带修正：`。
-// 6. 检查器自证：selftest 存在、package.json 有入口、规范 §10 挂载了 verify:delivery。
+// 4. §1.3 存量豁免逐张交代：恰 10 行、卡号与门禁名单一致、理由/批准人/处置齐备、处置在枚举内。
+// 5. HEAD 提交信息：`type(scope): 摘要`；合并提交正文列出被合并 commit。
+// 6. 触碰 gate-log / 签字台账 / 证据时，提交信息必须有 `Sign-Invalidates:` 与 `连带修正：`。
+// 7. 检查器自证：selftest 存在、package.json 有入口、规范 §10 挂载了 verify:delivery。
 //
 // 第 29 条：每条判定都必须能被 verify_delivery_selftest.mjs 的反例打红并做变异验证。
 
@@ -26,7 +28,7 @@ const argOf = (name) => {
 
 const ROOT = argOf("--root") ?? join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const TODAY = argOf("--today") ?? new Date().toISOString().slice(0, 10);
-const STANDARD = join(ROOT, "docs", "qa", "aka-delivery-standard-v0.1.md");
+const STANDARD = join(ROOT, "docs", "qa", "aka-delivery-standard-v0.2.md");
 const WORKORDER = join(ROOT, "docs", "qa", "aka-card-workorder-v0.1.md");
 const GATE_LOG = join(ROOT, "docs", "qa", "aka-card-gate-log-v0.1.csv");
 const PKG = join(ROOT, "app", "package.json");
@@ -35,7 +37,7 @@ const SELFTEST = join(ROOT, "app", "scripts", "verify_delivery_selftest.mjs");
 // 变异锚点：selftest 把它们全部置 false，所有反例必须变绿。
 const ENABLED = { standard: true, rules: true, state: true, deliver: true, commit: true, self: true };
 
-const RULE_COUNT = 35;
+const RULE_COUNT = 37;
 const STATUS_ENUM = ["未开始", "待开工", "进行中", "待验收", "已验收", "停线", "阻塞"];
 const DELIVERED = new Set(["已交付", "条件交付", "已结项"]);
 const LEGACY_DEADLINE = "2026-11-22";
@@ -53,11 +55,20 @@ const LEGACY_NO_SIGN = new Set([
   "S-06.01-02",
 ]);
 const TYPE = new Set(["feat", "fix", "docs", "sign", "evidence", "merge", "refactor", "test", "chore"]);
+const DISPOSAL = ["补签", "降级为文档卡", "降级为不可放行", "逐张裁定"];
 
 const failures = [];
 const fail = (message) => failures.push(message);
 const read = (path) => (existsSync(path) ? readFileSync(path, "utf8") : "");
-const git = (gitArgs) => execFileSync("git", gitArgs, { cwd: ROOT, encoding: "utf8" }).trim();
+const git = (gitArgs) =>
+  execFileSync("git", gitArgs, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const commitDate = (sha) => {
+  try {
+    return git(["show", "-s", "--format=%cs", sha]) || null;
+  } catch {
+    return null;
+  }
+};
 
 function parseCsv(text) {
   const rows = [];
@@ -103,7 +114,7 @@ if (ENABLED.standard) {
   }
 }
 
-// 2. §9 制度收敛覆盖第 1–35 条
+// 2. §9 制度收敛覆盖第 1–37 条
 if (ENABLED.rules) {
   const standard = read(STANDARD);
   const start = standard.indexOf("## 9.");
@@ -146,6 +157,7 @@ if (ENABLED.state) {
       const id = cells[1] ?? "";
       const status = cells[4] ?? "";
       const branch = cells[5] ?? "";
+      const updated = cells[6] ?? "";
       if (!/^W-\d+$/.test(id)) {
         fail(`状态表编号不合规：${id || "空"}`);
         continue;
@@ -158,11 +170,63 @@ if (ENABLED.state) {
       if (/^(进行中|待验收)/.test(status) && (!branch || branch === "—" || branch === "-")) {
         fail(`${id}=${status} 但未写分支/提交；别人无法判断是否已有人在做`);
       }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(updated)) {
+        fail(`${id} 的更新日缺失或格式非 YYYY-MM-DD：${updated || "空"}`);
+      } else if (updated > TODAY) {
+        fail(`${id} 的更新日 ${updated} 晚于今天 ${TODAY}`);
+      } else {
+        const sha = (branch.match(/[0-9a-f]{7,40}/) ?? [])[0];
+        const date = sha ? commitDate(sha) : null;
+        if (date && updated < date) {
+          fail(`${id} 的更新日 ${updated} 早于 commit ${sha} 的提交日 ${date}（倒填）`);
+        }
+      }
       if (!new RegExp(`(###\\s*${id}\\b|\\*\\*${id}\\b)`).test(body)) {
         fail(`${id} 在状态表但没有工单正文（标题或加粗锚点）`);
       }
     }
     if (ids.size === 0) fail("状态表没有任何 W-xx 行");
+  }
+}
+
+// 3.5 §1.3 存量豁免逐张交代
+if (ENABLED.deliver) {
+  const standard = read(STANDARD);
+  const start = standard.indexOf("### 1.3");
+  const end = standard.indexOf("## 2.");
+  if (start < 0 || end < 0) {
+    fail("规范缺少 §1.3 存量豁免表，无法逐张交代");
+  } else {
+    const rows = standard
+      .slice(start, end)
+      .split("\n")
+      .filter((line) => /^\|\s*`S-/.test(line))
+      .map((line) => line.split("|").map((s) => s.trim()));
+    if (rows.length !== LEGACY_NO_SIGN.size) {
+      fail(`§1.3 存量豁免应恰为 ${LEGACY_NO_SIGN.size} 行，实际 ${rows.length} 行（只减不增）`);
+    }
+    const listed = new Set();
+    for (const cells of rows) {
+      const card = (cells[1] ?? "").replace(/`/g, "").trim();
+      const reason = cells[3] ?? "";
+      const approver = cells[4] ?? "";
+      const disposal = cells[5] ?? "";
+      if (!/^S-\d{2}\.\d{2}-\d{2}$/.test(card)) {
+        fail(`§1.3 卡号不合规：${card || "空"}`);
+        continue;
+      }
+      if (listed.has(card)) fail(`§1.3 卡号重复：${card}`);
+      listed.add(card);
+      if (!LEGACY_NO_SIGN.has(card)) fail(`§1.3 出现门禁名单外的卡：${card}（白名单只减不增）`);
+      if (!reason || reason === "—" || reason === "-") fail(`${card} 未写豁免理由`);
+      if (!approver.includes("TL")) fail(`${card} 批准人不是 TL：${approver || "空"}`);
+      if (!DISPOSAL.some((word) => disposal.includes(word))) {
+        fail(`${card} 到期处置不在枚举（${DISPOSAL.join("/")}）：${disposal || "空"}`);
+      }
+    }
+    for (const card of LEGACY_NO_SIGN) {
+      if (!listed.has(card)) fail(`§1.3 漏列门禁名单中的卡：${card}`);
+    }
   }
 }
 
