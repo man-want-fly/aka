@@ -1,0 +1,6255 @@
+{
+  "schemaVersion": 1,
+  "kind": "aka-s2-evidence",
+  "suite": "s2",
+  "ok": true,
+  "checksOk": true,
+  "verificationOk": true,
+  "catalogOk": true,
+  "checks": [
+    {
+      "id": "s20601-event-count-burst120",
+      "card": "S-02.06-01",
+      "ac": "AC-02.06-01",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "连键 1→12→120：请求 1 次（应为 1）"
+    },
+    {
+      "id": "s20601-event-count-burst60",
+      "card": "S-02.06-01",
+      "ac": "AC-02.06-01",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "连键 1→12→60：请求 1 次（应为 1）"
+    },
+    {
+      "id": "s20601-batch-cold",
+      "card": "S-02.06-01",
+      "ac": "AC-02.06-01",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "冷缓存批次 count/instances/skip={\"tsMs\":1794118378864,\"count\":44,\"instances\":50,\"skip\":6,\"cacheHit\":false,\"fields\":{\"cacheHit\":false,\"count\":44,\"instances\":50,\"skip\":6}}，全 miss=true"
+    },
+    {
+      "id": "s20601-batch-warm",
+      "card": "S-02.06-01",
+      "ac": "AC-02.06-01",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "热缓存批次 count/instances/skip={\"tsMs\":1794118399029,\"count\":0,\"instances\":50,\"skip\":6,\"cacheHit\":true,\"fields\":{\"cacheHit\":true,\"count\":0,\"instances\":50,\"skip\":6}}，全命中=true，逐点一致=true"
+    }
+  ],
+  "env": {
+    "commit": "6eb07e625f7f8d4cb2d69c1ab010c1ae8cedfc29",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.23.4",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-08T06:12:21.449Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/aka/app/target/debug/aka-desktop",
+        "sha256": "cc82358d224c9940b0eee39f549688b0b2e9f60b1105424aa7def0b48c4f1df2"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s2\" /Users/sixmillion/Documents/aka/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "generatedAt": "2026-11-08T06:13:45.695Z",
+  "finishedAt": "2026-11-08T06:13:45.695Z",
+  "build": {
+    "buildProfile": "dev",
+    "optLevel": "1",
+    "lto": "false",
+    "codegenUnits": "256",
+    "debug": "2",
+    "targetTriple": "x86_64-apple-darwin"
+  },
+  "dataset": {
+    "datasetId": "sim-default",
+    "barCount": 520,
+    "instanceCount": 50,
+    "payloadBytes": 678215,
+    "indicatorSet": "workbench-default",
+    "timeframe": "D",
+    "adj": "qfq"
+  },
+  "engine": {
+    "engineVersion": "aka-engine-0.1.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+    "hardwareConcurrency": 8
+  },
+  "debounce": {
+    "target": "1→12→120（台账判据）+ 1→12→60（成功单次 compute 佐证）",
+    "computeCountSemantics": "compute.count 每次 calc 请求发 1 条；字段 count=本批新增实算条数（cache miss，去重后）、instances=批内实例总数（本项目 50）、skip=批内去重跳过（6）、cacheHit=全命中；热缓存 count=0 不等于没算过。连键断言的是「请求只发 1 次」，不是「只算 1 个实例」",
+    "burst120": {
+      "label": "1→12→120",
+      "inputs": [
+        1,
+        12,
+        120
+      ],
+      "inputGapMs": 40,
+      "quietMs": 120,
+      "requestsIssued": 1,
+      "computeCountEvents": 1,
+      "computeEvent": {
+        "tsMs": 1794118369047,
+        "name": "indicator.compute",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{\"period\":120}|2023-01-02~2024-12-27",
+          "computeMs": 0.023712,
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T05",
+          "paramsHash": "ea09afd3fecd201d",
+          "security": "300750.SZ",
+          "timeframe": "D"
+        }
+      },
+      "computeCountEvent": {
+        "tsMs": 1794118369050,
+        "count": 5,
+        "instances": 50,
+        "skip": 6,
+        "cacheHit": false,
+        "fields": {
+          "cacheHit": false,
+          "count": 5,
+          "instances": 50,
+          "skip": 6
+        }
+      },
+      "samples": [
+        {
+          "phase": "debounce",
+          "security": "300750.SZ",
+          "timeframe": "D",
+          "adj": "qfq",
+          "barsMs": 21.999999999999545,
+          "calcMs": 26.999999999999545,
+          "totalMs": 76.99999999999955,
+          "cacheHit": false,
+          "computedMs": 0.25,
+          "barCount": 520,
+          "seriesHash": "da0ce4f2",
+          "seriesPoints": 38642
+        }
+      ],
+      "passed": true
+    },
+    "burst60": {
+      "label": "1→12→60",
+      "inputs": [
+        1,
+        12,
+        60
+      ],
+      "inputGapMs": 40,
+      "quietMs": 120,
+      "requestsIssued": 1,
+      "computeCountEvents": 1,
+      "computeEvent": {
+        "tsMs": 1794118370429,
+        "name": "indicator.compute",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{\"period\":60}|2023-01-02~2024-12-27",
+          "computeMs": 0.012317999999999999,
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T05",
+          "paramsHash": "0d154e14a228d636",
+          "security": "300750.SZ",
+          "timeframe": "D"
+        }
+      },
+      "computeCountEvent": {
+        "tsMs": 1794118370431,
+        "count": 5,
+        "instances": 50,
+        "skip": 6,
+        "cacheHit": false,
+        "fields": {
+          "cacheHit": false,
+          "count": 5,
+          "instances": 50,
+          "skip": 6
+        }
+      },
+      "samples": [
+        {
+          "phase": "debounce",
+          "security": "300750.SZ",
+          "timeframe": "D",
+          "adj": "qfq",
+          "barsMs": 17,
+          "calcMs": 34,
+          "totalMs": 81,
+          "cacheHit": false,
+          "computedMs": 0.1,
+          "barCount": 520,
+          "seriesHash": "c84fa833",
+          "seriesPoints": 39182
+        }
+      ],
+      "passed": true
+    },
+    "telemetry": {
+      "computeCount": 125,
+      "indicatorCompute": 1374
+    }
+  },
+  "cold": {
+    "targetCount": 30,
+    "sampleCount": 30,
+    "codes": [
+      "600519.SH",
+      "002594.SZ",
+      "601318.SH",
+      "600036.SH",
+      "000858.SZ",
+      "688981.SH",
+      "300059.SZ",
+      "601899.SH",
+      "002415.SZ",
+      "600030.SH",
+      "601012.SH",
+      "000651.SZ",
+      "600900.SH",
+      "000001.SH",
+      "399001.SZ",
+      "399006.SZ",
+      "601000.SH",
+      "601001.SH",
+      "601002.SH",
+      "601003.SH",
+      "601004.SH",
+      "601005.SH",
+      "601006.SH",
+      "601007.SH",
+      "601008.SH",
+      "601009.SH",
+      "601010.SH",
+      "601011.SH",
+      "601013.SH",
+      "601014.SH"
+    ],
+    "allMiss": true,
+    "p95CalcMs": 115,
+    "p95TotalMs": 158,
+    "p95BarsMs": 58,
+    "maxTotalMs": 189,
+    "telemetryColdSamples": 1374,
+    "telemetryColdP95Ms": 0.16,
+    "computeCount": {
+      "tsMs": 1794118378864,
+      "count": 44,
+      "instances": 50,
+      "skip": 6,
+      "cacheHit": false,
+      "fields": {
+        "cacheHit": false,
+        "count": 44,
+        "instances": 50,
+        "skip": 6
+      }
+    },
+    "samples": [
+      {
+        "security": "600519.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 18,
+        "calcMs": 22,
+        "totalMs": 66,
+        "cacheHit": false,
+        "computedMs": 2.11,
+        "barCount": 520,
+        "seriesHash": "95c14bfe",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "002594.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 32,
+        "totalMs": 80,
+        "cacheHit": false,
+        "computedMs": 2.11,
+        "barCount": 520,
+        "seriesHash": "ef23792e",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601318.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 23,
+        "calcMs": 51,
+        "totalMs": 95,
+        "cacheHit": false,
+        "computedMs": 1.94,
+        "barCount": 520,
+        "seriesHash": "2897f0ae",
+        "seriesPoints": 39540
+      },
+      {
+        "security": "600036.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 21,
+        "totalMs": 63,
+        "cacheHit": false,
+        "computedMs": 1.82,
+        "barCount": 520,
+        "seriesHash": "a229e4b2",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "000858.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 19,
+        "totalMs": 62,
+        "cacheHit": false,
+        "computedMs": 1.86,
+        "barCount": 520,
+        "seriesHash": "8c629b00",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "688981.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 21,
+        "totalMs": 65,
+        "cacheHit": false,
+        "computedMs": 1.82,
+        "barCount": 520,
+        "seriesHash": "746c7682",
+        "seriesPoints": 39541
+      },
+      {
+        "security": "300059.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 28,
+        "calcMs": 34,
+        "totalMs": 81,
+        "cacheHit": false,
+        "computedMs": 2.53,
+        "barCount": 520,
+        "seriesHash": "2fdc0b03",
+        "seriesPoints": 39539
+      },
+      {
+        "security": "601899.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 22,
+        "totalMs": 63,
+        "cacheHit": false,
+        "computedMs": 1.74,
+        "barCount": 520,
+        "seriesHash": "2700a7a0",
+        "seriesPoints": 39547
+      },
+      {
+        "security": "002415.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 32,
+        "totalMs": 74,
+        "cacheHit": false,
+        "computedMs": 2.27,
+        "barCount": 520,
+        "seriesHash": "23a23d2c",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "600030.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 48,
+        "calcMs": 63,
+        "totalMs": 108,
+        "cacheHit": false,
+        "computedMs": 6.18,
+        "barCount": 520,
+        "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 58,
+        "calcMs": 63,
+        "totalMs": 107,
+        "cacheHit": false,
+        "computedMs": 1.92,
+        "barCount": 520,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 20,
+        "totalMs": 63,
+        "cacheHit": false,
+        "computedMs": 1.64,
+        "barCount": 520,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 19,
+        "totalMs": 60,
+        "cacheHit": false,
+        "computedMs": 1.57,
+        "barCount": 520,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 20,
+        "totalMs": 62,
+        "cacheHit": false,
+        "computedMs": 1.67,
+        "barCount": 520,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 21,
+        "totalMs": 62,
+        "cacheHit": false,
+        "computedMs": 1.7,
+        "barCount": 520,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 37,
+        "totalMs": 81,
+        "cacheHit": false,
+        "computedMs": 1.96,
+        "barCount": 520,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 40,
+        "totalMs": 81,
+        "cacheHit": false,
+        "computedMs": 1.78,
+        "barCount": 520,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 31,
+        "calcMs": 47,
+        "totalMs": 93,
+        "cacheHit": false,
+        "computedMs": 2.22,
+        "barCount": 520,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 28,
+        "calcMs": 32,
+        "totalMs": 77,
+        "cacheHit": false,
+        "computedMs": 1.75,
+        "barCount": 520,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 18,
+        "calcMs": 22,
+        "totalMs": 65,
+        "cacheHit": false,
+        "computedMs": 2.19,
+        "barCount": 520,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 19,
+        "calcMs": 23,
+        "totalMs": 66,
+        "cacheHit": false,
+        "computedMs": 1.77,
+        "barCount": 520,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 19,
+        "calcMs": 56,
+        "totalMs": 100,
+        "cacheHit": false,
+        "computedMs": 1.92,
+        "barCount": 520,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 54,
+        "totalMs": 96,
+        "cacheHit": false,
+        "computedMs": 1.66,
+        "barCount": 520,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 21,
+        "totalMs": 64,
+        "cacheHit": false,
+        "computedMs": 1.58,
+        "barCount": 520,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 18,
+        "calcMs": 57,
+        "totalMs": 99,
+        "cacheHit": false,
+        "computedMs": 1.91,
+        "barCount": 520,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 17,
+        "calcMs": 22,
+        "totalMs": 64,
+        "cacheHit": false,
+        "computedMs": 1.61,
+        "barCount": 520,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 71,
+        "calcMs": 143,
+        "totalMs": 189,
+        "cacheHit": false,
+        "computedMs": 12.59,
+        "barCount": 520,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 19,
+        "calcMs": 115,
+        "totalMs": 158,
+        "cacheHit": false,
+        "computedMs": 2.73,
+        "barCount": 520,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 55,
+        "totalMs": 97,
+        "cacheHit": false,
+        "computedMs": 1.75,
+        "barCount": 520,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 51,
+        "calcMs": 59,
+        "totalMs": 103,
+        "cacheHit": false,
+        "computedMs": 2.05,
+        "barCount": 520,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      }
+    ]
+  },
+  "warm": {
+    "targetCount": 30,
+    "batchCount": 3,
+    "criterion": "口径 R-S0-07-01：每批 30 连续热切回 × 3 批（≥90），批间不插冷算；全部 cacheHit 且逐点一致，判定取 max ≤ 120ms",
+    "sampleCount": 90,
+    "allCacheHit": true,
+    "allPointwiseMatch": true,
+    "p50TotalMs": 57,
+    "p50CalcMs": 17,
+    "p95TotalMs": 103,
+    "maxTotalMs": 291,
+    "maxCalcMs": 181,
+    "batchMaxTotalMs": [
+      291,
+      113,
+      105
+    ],
+    "computeCount": {
+      "tsMs": 1794118399029,
+      "count": 0,
+      "instances": 50,
+      "skip": 6,
+      "cacheHit": true,
+      "fields": {
+        "cacheHit": true,
+        "count": 0,
+        "instances": 50,
+        "skip": 6
+      }
+    },
+    "samples": [
+      {
+        "security": "600519.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 19,
+        "totalMs": 61,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "95c14bfe",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "002594.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 19,
+        "totalMs": 60,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "ef23792e",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601318.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 20,
+        "totalMs": 60,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2897f0ae",
+        "seriesPoints": 39540
+      },
+      {
+        "security": "600036.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 20,
+        "totalMs": 60,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "a229e4b2",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "000858.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 21,
+        "calcMs": 25,
+        "totalMs": 67,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8c629b00",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "688981.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 20,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "746c7682",
+        "seriesPoints": 39541
+      },
+      {
+        "security": "300059.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 20,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2fdc0b03",
+        "seriesPoints": 39539
+      },
+      {
+        "security": "601899.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 19,
+        "calcMs": 23,
+        "totalMs": 64,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2700a7a0",
+        "seriesPoints": 39547
+      },
+      {
+        "security": "002415.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 19,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "23a23d2c",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "600030.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 19,
+        "totalMs": 62,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 19,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 19,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 18,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 163,
+        "calcMs": 181,
+        "totalMs": 291,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 19,
+        "calcMs": 23,
+        "totalMs": 67,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 19,
+        "calcMs": 23,
+        "totalMs": 67,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 30,
+        "calcMs": 53,
+        "totalMs": 99,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 19,
+        "calcMs": 23,
+        "totalMs": 64,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 40,
+        "calcMs": 44,
+        "totalMs": 85,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 58,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 16,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 58,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 19,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 103,
+        "totalMs": 147,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 21,
+        "calcMs": 25,
+        "totalMs": 68,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "600519.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 18,
+        "totalMs": 59,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "95c14bfe",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "002594.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 19,
+        "totalMs": 60,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "ef23792e",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601318.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 17,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2897f0ae",
+        "seriesPoints": 39540
+      },
+      {
+        "security": "600036.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 17,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "a229e4b2",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "000858.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 17,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8c629b00",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "688981.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "746c7682",
+        "seriesPoints": 39541
+      },
+      {
+        "security": "300059.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2fdc0b03",
+        "seriesPoints": 39539
+      },
+      {
+        "security": "601899.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2700a7a0",
+        "seriesPoints": 39547
+      },
+      {
+        "security": "002415.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 28,
+        "totalMs": 70,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "23a23d2c",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "600030.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 30,
+        "calcMs": 70,
+        "totalMs": 113,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 24,
+        "totalMs": 66,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 25,
+        "totalMs": 66,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 23,
+        "totalMs": 65,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 34,
+        "totalMs": 74,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 36,
+        "totalMs": 77,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 41,
+        "totalMs": 85,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 24,
+        "totalMs": 66,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 62,
+        "totalMs": 103,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 54,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "600519.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "95c14bfe",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "002594.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 13,
+        "calcMs": 17,
+        "totalMs": 58,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "ef23792e",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601318.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 22,
+        "calcMs": 38,
+        "totalMs": 83,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2897f0ae",
+        "seriesPoints": 39540
+      },
+      {
+        "security": "600036.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "a229e4b2",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "000858.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8c629b00",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "688981.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 54,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "746c7682",
+        "seriesPoints": 39541
+      },
+      {
+        "security": "300059.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 54,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2fdc0b03",
+        "seriesPoints": 39539
+      },
+      {
+        "security": "601899.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2700a7a0",
+        "seriesPoints": 39547
+      },
+      {
+        "security": "002415.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "23a23d2c",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "600030.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 36,
+        "totalMs": 77,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 14,
+        "calcMs": 18,
+        "totalMs": 58,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 61,
+        "calcMs": 64,
+        "totalMs": 105,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 17,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 16,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 17,
+        "totalMs": 58,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 16,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 54,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      }
+    ]
+  },
+  "batchCompute": {
+    "criterion": "count=本批新增实算（cache miss、去重后）；instances=批内实例总数 50；skip=批内去重 6；冷缓存 count=44、热缓存 count=0；count=0 且 instances>0 为全命中，不是零批次",
+    "cold": {
+      "tsMs": 1794118378864,
+      "count": 44,
+      "instances": 50,
+      "skip": 6,
+      "cacheHit": false,
+      "fields": {
+        "cacheHit": false,
+        "count": 44,
+        "instances": 50,
+        "skip": 6
+      }
+    },
+    "warm": {
+      "tsMs": 1794118399029,
+      "count": 0,
+      "instances": 50,
+      "skip": 6,
+      "cacheHit": true,
+      "fields": {
+        "cacheHit": true,
+        "count": 0,
+        "instances": 50,
+        "skip": 6
+      }
+    },
+    "coldOk": true,
+    "warmOk": true
+  },
+  "timeframes": {
+    "uiOrder": [
+      "W",
+      "D"
+    ],
+    "wCold": true,
+    "uiSamples": [
+      {
+        "timeframe": "W",
+        "security": "601014.SH",
+        "barCount": 104,
+        "cacheHit": false,
+        "barsMs": 11,
+        "calcMs": 11,
+        "totalMs": 18,
+        "seriesHash": "86e66051",
+        "seriesPoints": 6671
+      },
+      {
+        "timeframe": "D",
+        "security": "601014.SH",
+        "barCount": 520,
+        "cacheHit": true,
+        "barsMs": 7,
+        "calcMs": 16,
+        "totalMs": 59,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      }
+    ],
+    "aggregationOrdered": true,
+    "barProbes": [
+      {
+        "timeframe": "D",
+        "barCount": 520,
+        "datasetId": "sim-default"
+      },
+      {
+        "timeframe": "W",
+        "barCount": 104,
+        "datasetId": "sim-default"
+      },
+      {
+        "timeframe": "M",
+        "barCount": 24,
+        "datasetId": "sim-default"
+      }
+    ],
+    "monthlyNote": "当前模拟数据集仅 520 根日线（≈24 个月）；M 周期按 warmup+1 门：T02/T04/T05/M06 共 4 项不可算，T01/T03/T19/T20/T21/T22/E13 共 7 项可算；本次 M 只取证到行情层聚合"
+  },
+  "verification": {
+    "renderLayer": {
+      "chartPresent": true,
+      "overlays": [
+        "T09",
+        "T09",
+        "T09",
+        "T01"
+      ],
+      "overlayCount": 4,
+      "macd": [
+        "dif",
+        "dea",
+        "hist"
+      ],
+      "macdCount": 3,
+      "macdHistCount": 120,
+      "colorSamples": {
+        "posToken": "rgb(200, 52, 43)",
+        "negToken": "rgb(15, 123, 84)",
+        "upCandleStroke": "rgb(200, 52, 43)",
+        "downCandleStroke": "rgb(15, 123, 84)",
+        "histPosFill": "rgb(200, 52, 43)",
+        "histNegFill": "rgb(15, 123, 84)",
+        "chgFirst": "neg|rgb(15, 123, 84)|▼ −1.01%",
+        "chgSecond": "neg|rgb(15, 123, 84)|▼ −1.64%",
+        "chgPos": "pos|rgb(200, 52, 43)|▲ +2.65%"
+      },
+      "colorOk": true,
+      "colorParts": [
+        {
+          "item": "posToken",
+          "pass": true,
+          "actual": "rgb(200, 52, 43)",
+          "expected": "非空 CSS 颜色"
+        },
+        {
+          "item": "negToken",
+          "pass": true,
+          "actual": "rgb(15, 123, 84)",
+          "expected": "非空 CSS 颜色"
+        },
+        {
+          "item": "upCandleStroke",
+          "pass": true,
+          "actual": "rgb(200, 52, 43)",
+          "expected": "rgb(200, 52, 43)"
+        },
+        {
+          "item": "downCandleStroke",
+          "pass": true,
+          "actual": "rgb(15, 123, 84)",
+          "expected": "rgb(15, 123, 84)"
+        },
+        {
+          "item": "histPosFill",
+          "pass": true,
+          "actual": "rgb(200, 52, 43)",
+          "expected": "rgb(200, 52, 43)"
+        },
+        {
+          "item": "histNegFill",
+          "pass": true,
+          "actual": "rgb(15, 123, 84)",
+          "expected": "rgb(15, 123, 84)"
+        },
+        {
+          "item": "chgPos",
+          "pass": true,
+          "actual": "sign=pos color=rgb(200, 52, 43) text=\"▲ +2.65%\"",
+          "expected": "sign=pos color=rgb(200, 52, 43) text=/^▲\\s*\\+/"
+        },
+        {
+          "item": "chgNeg",
+          "pass": true,
+          "actual": "sign=neg color=rgb(15, 123, 84) text=\"▼ −1.01%\"",
+          "expected": "sign=neg color=rgb(15, 123, 84) text=/^▼\\s*[-\\u2212]/"
+        }
+      ],
+      "colorFailures": [],
+      "statisticalReadouts": [
+        "T21-r2",
+        "E13-bias6",
+        "E13-bias12",
+        "E13-bias24"
+      ],
+      "statisticalReadoutCount": 4,
+      "statisticalUnits": [
+        "无量纲",
+        "%",
+        "%",
+        "%"
+      ],
+      "t21Text": "R² 0.00无量纲",
+      "t21TwoDecimals": true,
+      "readoutHost": 1,
+      "hoverIndex": "76",
+      "maTooltipCount": 4,
+      "maTooltip": [
+        {
+          "id": "ov-T09-upper",
+          "value": "240.66227141879688",
+          "unit": "元",
+          "text": "T09·upper 240.66 元"
+        },
+        {
+          "id": "ov-T09-middle",
+          "value": "235.50899999999993",
+          "unit": "元",
+          "text": "T09·middle 235.51 元"
+        },
+        {
+          "id": "ov-T09-lower",
+          "value": "230.35572858120298",
+          "unit": "元",
+          "text": "T09·lower 230.36 元"
+        },
+        {
+          "id": "ma-T01",
+          "value": "235.50899999999993",
+          "unit": "元",
+          "text": "T01 235.51 元"
+        }
+      ],
+      "decimalsOk": true,
+      "tooltipParity": {
+        "tolerance": 0,
+        "enginePoints": 520,
+        "sampled": 120,
+        "samples": [
+          {
+            "bar": 400,
+            "targetIndex": 0,
+            "hoverIndex": 0,
+            "clicks": 1,
+            "engineSma": 253.59650000000002,
+            "shownSma": "253.59650000000002",
+            "engineDif": -3.5790420613091385,
+            "shownDif": "-3.5790420613091385",
+            "ok": true
+          },
+          {
+            "bar": 401,
+            "targetIndex": 1,
+            "hoverIndex": 1,
+            "clicks": 1,
+            "engineSma": 253.4185,
+            "shownSma": "253.4185",
+            "engineDif": -2.714171402032491,
+            "shownDif": "-2.714171402032491",
+            "ok": true
+          },
+          {
+            "bar": 402,
+            "targetIndex": 2,
+            "hoverIndex": 2,
+            "clicks": 1,
+            "engineSma": 253.45999999999998,
+            "shownSma": "253.45999999999998",
+            "engineDif": -2.2848377356244782,
+            "shownDif": "-2.2848377356244782",
+            "ok": true
+          },
+          {
+            "bar": 403,
+            "targetIndex": 3,
+            "hoverIndex": 3,
+            "clicks": 1,
+            "engineSma": 253.2815,
+            "shownSma": "253.2815",
+            "engineDif": -2.093139418801968,
+            "shownDif": "-2.093139418801968",
+            "ok": true
+          },
+          {
+            "bar": 404,
+            "targetIndex": 4,
+            "hoverIndex": 4,
+            "clicks": 1,
+            "engineSma": 253.63150000000002,
+            "shownSma": "253.63150000000002",
+            "engineDif": -1.6949354450088094,
+            "shownDif": "-1.6949354450088094",
+            "ok": true
+          },
+          {
+            "bar": 405,
+            "targetIndex": 5,
+            "hoverIndex": 5,
+            "clicks": 1,
+            "engineSma": 254.0945,
+            "shownSma": "254.0945",
+            "engineDif": -1.1562293636038703,
+            "shownDif": "-1.1562293636038703",
+            "ok": true
+          },
+          {
+            "bar": 406,
+            "targetIndex": 6,
+            "hoverIndex": 6,
+            "clicks": 1,
+            "engineSma": 254.671,
+            "shownSma": "254.671",
+            "engineDif": -0.9307903612084374,
+            "shownDif": "-0.9307903612084374",
+            "ok": true
+          },
+          {
+            "bar": 407,
+            "targetIndex": 7,
+            "hoverIndex": 7,
+            "clicks": 1,
+            "engineSma": 254.6815,
+            "shownSma": "254.6815",
+            "engineDif": -0.946178147238129,
+            "shownDif": "-0.946178147238129",
+            "ok": true
+          },
+          {
+            "bar": 408,
+            "targetIndex": 8,
+            "hoverIndex": 8,
+            "clicks": 1,
+            "engineSma": 254.6435,
+            "shownSma": "254.6435",
+            "engineDif": -0.8732634138170852,
+            "shownDif": "-0.8732634138170852",
+            "ok": true
+          },
+          {
+            "bar": 409,
+            "targetIndex": 9,
+            "hoverIndex": 9,
+            "clicks": 1,
+            "engineSma": 254.4115,
+            "shownSma": "254.4115",
+            "engineDif": -1.0861847661075217,
+            "shownDif": "-1.0861847661075217",
+            "ok": true
+          },
+          {
+            "bar": 410,
+            "targetIndex": 10,
+            "hoverIndex": 10,
+            "clicks": 1,
+            "engineSma": 254.46749999999997,
+            "shownSma": "254.46749999999997",
+            "engineDif": -1.0116794464934173,
+            "shownDif": "-1.0116794464934173",
+            "ok": true
+          },
+          {
+            "bar": 411,
+            "targetIndex": 11,
+            "hoverIndex": 11,
+            "clicks": 1,
+            "engineSma": 254.57799999999997,
+            "shownSma": "254.57799999999997",
+            "engineDif": -1.047874088431172,
+            "shownDif": "-1.047874088431172",
+            "ok": true
+          },
+          {
+            "bar": 412,
+            "targetIndex": 12,
+            "hoverIndex": 12,
+            "clicks": 1,
+            "engineSma": 255.04199999999997,
+            "shownSma": "255.04199999999997",
+            "engineDif": -0.5082787328162794,
+            "shownDif": "-0.5082787328162794",
+            "ok": true
+          },
+          {
+            "bar": 413,
+            "targetIndex": 13,
+            "hoverIndex": 13,
+            "clicks": 1,
+            "engineSma": 255.70149999999995,
+            "shownSma": "255.70149999999995",
+            "engineDif": 0.21543020657225043,
+            "shownDif": "0.21543020657225043",
+            "ok": true
+          },
+          {
+            "bar": 414,
+            "targetIndex": 14,
+            "hoverIndex": 14,
+            "clicks": 1,
+            "engineSma": 256.53749999999997,
+            "shownSma": "256.53749999999997",
+            "engineDif": 1.0216929914883508,
+            "shownDif": "1.0216929914883508",
+            "ok": true
+          },
+          {
+            "bar": 415,
+            "targetIndex": 15,
+            "hoverIndex": 15,
+            "clicks": 1,
+            "engineSma": 257.02199999999993,
+            "shownSma": "257.02199999999993",
+            "engineDif": 1.3090875609640875,
+            "shownDif": "1.3090875609640875",
+            "ok": true
+          },
+          {
+            "bar": 416,
+            "targetIndex": 16,
+            "hoverIndex": 16,
+            "clicks": 1,
+            "engineSma": 257.3539999999999,
+            "shownSma": "257.3539999999999",
+            "engineDif": 1.0438942742460426,
+            "shownDif": "1.0438942742460426",
+            "ok": true
+          },
+          {
+            "bar": 417,
+            "targetIndex": 17,
+            "hoverIndex": 17,
+            "clicks": 1,
+            "engineSma": 257.73699999999997,
+            "shownSma": "257.73699999999997",
+            "engineDif": 0.9462768071678624,
+            "shownDif": "0.9462768071678624",
+            "ok": true
+          },
+          {
+            "bar": 418,
+            "targetIndex": 18,
+            "hoverIndex": 18,
+            "clicks": 1,
+            "engineSma": 257.823,
+            "shownSma": "257.823",
+            "engineDif": 0.7233995687770403,
+            "shownDif": "0.7233995687770403",
+            "ok": true
+          },
+          {
+            "bar": 419,
+            "targetIndex": 19,
+            "hoverIndex": 19,
+            "clicks": 1,
+            "engineSma": 258.19399999999996,
+            "shownSma": "258.19399999999996",
+            "engineDif": 0.1775738171172634,
+            "shownDif": "0.1775738171172634",
+            "ok": true
+          },
+          {
+            "bar": 420,
+            "targetIndex": 20,
+            "hoverIndex": 20,
+            "clicks": 1,
+            "engineSma": 258.072,
+            "shownSma": "258.072",
+            "engineDif": -0.37813096058903284,
+            "shownDif": "-0.37813096058903284",
+            "ok": true
+          },
+          {
+            "bar": 421,
+            "targetIndex": 21,
+            "hoverIndex": 21,
+            "clicks": 1,
+            "engineSma": 257.5755,
+            "shownSma": "257.5755",
+            "engineDif": -0.8698297925744214,
+            "shownDif": "-0.8698297925744214",
+            "ok": true
+          },
+          {
+            "bar": 422,
+            "targetIndex": 22,
+            "hoverIndex": 22,
+            "clicks": 1,
+            "engineSma": 257.17299999999994,
+            "shownSma": "257.17299999999994",
+            "engineDif": -1.3743820992002895,
+            "shownDif": "-1.3743820992002895",
+            "ok": true
+          },
+          {
+            "bar": 423,
+            "targetIndex": 23,
+            "hoverIndex": 23,
+            "clicks": 1,
+            "engineSma": 256.95599999999996,
+            "shownSma": "256.95599999999996",
+            "engineDif": -1.6287819736313907,
+            "shownDif": "-1.6287819736313907",
+            "ok": true
+          },
+          {
+            "bar": 424,
+            "targetIndex": 24,
+            "hoverIndex": 24,
+            "clicks": 1,
+            "engineSma": 256.3924999999999,
+            "shownSma": "256.3924999999999",
+            "engineDif": -2.138197465295292,
+            "shownDif": "-2.138197465295292",
+            "ok": true
+          },
+          {
+            "bar": 425,
+            "targetIndex": 25,
+            "hoverIndex": 25,
+            "clicks": 1,
+            "engineSma": 255.34699999999992,
+            "shownSma": "255.34699999999992",
+            "engineDif": -3.0745406856553643,
+            "shownDif": "-3.0745406856553643",
+            "ok": true
+          },
+          {
+            "bar": 426,
+            "targetIndex": 26,
+            "hoverIndex": 26,
+            "clicks": 1,
+            "engineSma": 253.8044999999999,
+            "shownSma": "253.8044999999999",
+            "engineDif": -4.775840465873017,
+            "shownDif": "-4.775840465873017",
+            "ok": true
+          },
+          {
+            "bar": 427,
+            "targetIndex": 27,
+            "hoverIndex": 27,
+            "clicks": 1,
+            "engineSma": 252.78949999999992,
+            "shownSma": "252.78949999999992",
+            "engineDif": -5.415367752757277,
+            "shownDif": "-5.415367752757277",
+            "ok": true
+          },
+          {
+            "bar": 428,
+            "targetIndex": 28,
+            "hoverIndex": 28,
+            "clicks": 1,
+            "engineSma": 251.6264999999999,
+            "shownSma": "251.6264999999999",
+            "engineDif": -6.0166456242163235,
+            "shownDif": "-6.0166456242163235",
+            "ok": true
+          },
+          {
+            "bar": 429,
+            "targetIndex": 29,
+            "hoverIndex": 29,
+            "clicks": 1,
+            "engineSma": 250.7514999999999,
+            "shownSma": "250.7514999999999",
+            "engineDif": -6.239679334057882,
+            "shownDif": "-6.239679334057882",
+            "ok": true
+          },
+          {
+            "bar": 430,
+            "targetIndex": 30,
+            "hoverIndex": 30,
+            "clicks": 1,
+            "engineSma": 249.7289999999999,
+            "shownSma": "249.7289999999999",
+            "engineDif": -6.349695154200873,
+            "shownDif": "-6.349695154200873",
+            "ok": true
+          },
+          {
+            "bar": 431,
+            "targetIndex": 31,
+            "hoverIndex": 31,
+            "clicks": 1,
+            "engineSma": 248.3539999999999,
+            "shownSma": "248.3539999999999",
+            "engineDif": -7.032018715233704,
+            "shownDif": "-7.032018715233704",
+            "ok": true
+          },
+          {
+            "bar": 432,
+            "targetIndex": 32,
+            "hoverIndex": 32,
+            "clicks": 1,
+            "engineSma": 246.83899999999988,
+            "shownSma": "246.83899999999988",
+            "engineDif": -7.153816163732529,
+            "shownDif": "-7.153816163732529",
+            "ok": true
+          },
+          {
+            "bar": 433,
+            "targetIndex": 33,
+            "hoverIndex": 33,
+            "clicks": 1,
+            "engineSma": 244.90449999999993,
+            "shownSma": "244.90449999999993",
+            "engineDif": -7.541847598724644,
+            "shownDif": "-7.541847598724644",
+            "ok": true
+          },
+          {
+            "bar": 434,
+            "targetIndex": 34,
+            "hoverIndex": 34,
+            "clicks": 1,
+            "engineSma": 243.02399999999994,
+            "shownSma": "243.02399999999994",
+            "engineDif": -7.4320506022230575,
+            "shownDif": "-7.4320506022230575",
+            "ok": true
+          },
+          {
+            "bar": 435,
+            "targetIndex": 35,
+            "hoverIndex": 35,
+            "clicks": 1,
+            "engineSma": 241.16749999999993,
+            "shownSma": "241.16749999999993",
+            "engineDif": -7.555690555366027,
+            "shownDif": "-7.555690555366027",
+            "ok": true
+          },
+          {
+            "bar": 436,
+            "targetIndex": 36,
+            "hoverIndex": 36,
+            "clicks": 1,
+            "engineSma": 239.74899999999994,
+            "shownSma": "239.74899999999994",
+            "engineDif": -7.343092905488106,
+            "shownDif": "-7.343092905488106",
+            "ok": true
+          },
+          {
+            "bar": 437,
+            "targetIndex": 37,
+            "hoverIndex": 37,
+            "clicks": 1,
+            "engineSma": 238.56199999999995,
+            "shownSma": "238.56199999999995",
+            "engineDif": -6.60144981335597,
+            "shownDif": "-6.60144981335597",
+            "ok": true
+          },
+          {
+            "bar": 438,
+            "targetIndex": 38,
+            "hoverIndex": 38,
+            "clicks": 1,
+            "engineSma": 237.39149999999995,
+            "shownSma": "237.39149999999995",
+            "engineDif": -6.054447962672896,
+            "shownDif": "-6.054447962672896",
+            "ok": true
+          },
+          {
+            "bar": 439,
+            "targetIndex": 39,
+            "hoverIndex": 39,
+            "clicks": 1,
+            "engineSma": 236.50599999999994,
+            "shownSma": "236.50599999999994",
+            "engineDif": -5.46515080942919,
+            "shownDif": "-5.46515080942919",
+            "ok": true
+          },
+          {
+            "bar": 440,
+            "targetIndex": 40,
+            "hoverIndex": 40,
+            "clicks": 1,
+            "engineSma": 236.05049999999997,
+            "shownSma": "236.05049999999997",
+            "engineDif": -4.3811698396863505,
+            "shownDif": "-4.3811698396863505",
+            "ok": true
+          },
+          {
+            "bar": 441,
+            "targetIndex": 41,
+            "hoverIndex": 41,
+            "clicks": 1,
+            "engineSma": 235.81649999999996,
+            "shownSma": "235.81649999999996",
+            "engineDif": -3.1892056059597564,
+            "shownDif": "-3.1892056059597564",
+            "ok": true
+          },
+          {
+            "bar": 442,
+            "targetIndex": 42,
+            "hoverIndex": 42,
+            "clicks": 1,
+            "engineSma": 235.49099999999993,
+            "shownSma": "235.49099999999993",
+            "engineDif": -2.494199945849658,
+            "shownDif": "-2.494199945849658",
+            "ok": true
+          },
+          {
+            "bar": 443,
+            "targetIndex": 43,
+            "hoverIndex": 43,
+            "clicks": 1,
+            "engineSma": 235.27949999999996,
+            "shownSma": "235.27949999999996",
+            "engineDif": -1.6141334036454396,
+            "shownDif": "-1.6141334036454396",
+            "ok": true
+          },
+          {
+            "bar": 444,
+            "targetIndex": 44,
+            "hoverIndex": 44,
+            "clicks": 1,
+            "engineSma": 235.37549999999996,
+            "shownSma": "235.37549999999996",
+            "engineDif": -0.7442905753812283,
+            "shownDif": "-0.7442905753812283",
+            "ok": true
+          },
+          {
+            "bar": 445,
+            "targetIndex": 45,
+            "hoverIndex": 45,
+            "clicks": 1,
+            "engineSma": 235.64199999999997,
+            "shownSma": "235.64199999999997",
+            "engineDif": -0.34388048969978513,
+            "shownDif": "-0.34388048969978513",
+            "ok": true
+          },
+          {
+            "bar": 446,
+            "targetIndex": 46,
+            "hoverIndex": 46,
+            "clicks": 1,
+            "engineSma": 236.62149999999997,
+            "shownSma": "236.62149999999997",
+            "engineDif": 0.10856479668535712,
+            "shownDif": "0.10856479668535712",
+            "ok": true
+          },
+          {
+            "bar": 447,
+            "targetIndex": 47,
+            "hoverIndex": 47,
+            "clicks": 1,
+            "engineSma": 237.63799999999998,
+            "shownSma": "237.63799999999998",
+            "engineDif": 1.1598132142613622,
+            "shownDif": "1.1598132142613622",
+            "ok": true
+          },
+          {
+            "bar": 448,
+            "targetIndex": 48,
+            "hoverIndex": 48,
+            "clicks": 1,
+            "engineSma": 238.52399999999997,
+            "shownSma": "238.52399999999997",
+            "engineDif": 1.6000811970999962,
+            "shownDif": "1.6000811970999962",
+            "ok": true
+          },
+          {
+            "bar": 449,
+            "targetIndex": 49,
+            "hoverIndex": 49,
+            "clicks": 6,
+            "engineSma": 239.27849999999998,
+            "shownSma": "239.27849999999998",
+            "engineDif": 1.8964725660237036,
+            "shownDif": "1.8964725660237036",
+            "ok": true
+          },
+          {
+            "bar": 450,
+            "targetIndex": 50,
+            "hoverIndex": 50,
+            "clicks": 1,
+            "engineSma": 240.3935,
+            "shownSma": "240.3935",
+            "engineDif": 2.6758507318069746,
+            "shownDif": "2.6758507318069746",
+            "ok": true
+          },
+          {
+            "bar": 451,
+            "targetIndex": 51,
+            "hoverIndex": 51,
+            "clicks": 1,
+            "engineSma": 241.5295,
+            "shownSma": "241.5295",
+            "engineDif": 2.620994870448442,
+            "shownDif": "2.620994870448442",
+            "ok": true
+          },
+          {
+            "bar": 452,
+            "targetIndex": 52,
+            "hoverIndex": 52,
+            "clicks": 1,
+            "engineSma": 242.04450000000003,
+            "shownSma": "242.04450000000003",
+            "engineDif": 1.8900280859601821,
+            "shownDif": "1.8900280859601821",
+            "ok": true
+          },
+          {
+            "bar": 453,
+            "targetIndex": 53,
+            "hoverIndex": 53,
+            "clicks": 1,
+            "engineSma": 242.773,
+            "shownSma": "242.773",
+            "engineDif": 1.2622902566778293,
+            "shownDif": "1.2622902566778293",
+            "ok": true
+          },
+          {
+            "bar": 454,
+            "targetIndex": 54,
+            "hoverIndex": 54,
+            "clicks": 1,
+            "engineSma": 243.173,
+            "shownSma": "243.173",
+            "engineDif": 0.5598484786739277,
+            "shownDif": "0.5598484786739277",
+            "ok": true
+          },
+          {
+            "bar": 455,
+            "targetIndex": 55,
+            "hoverIndex": 55,
+            "clicks": 1,
+            "engineSma": 243.91199999999998,
+            "shownSma": "243.91199999999998",
+            "engineDif": 0.2496180431589039,
+            "shownDif": "0.2496180431589039",
+            "ok": true
+          },
+          {
+            "bar": 456,
+            "targetIndex": 56,
+            "hoverIndex": 56,
+            "clicks": 1,
+            "engineSma": 244.2515,
+            "shownSma": "244.2515",
+            "engineDif": -0.41030173444582374,
+            "shownDif": "-0.41030173444582374",
+            "ok": true
+          },
+          {
+            "bar": 457,
+            "targetIndex": 57,
+            "hoverIndex": 57,
+            "clicks": 1,
+            "engineSma": 244.36999999999998,
+            "shownSma": "244.36999999999998",
+            "engineDif": -0.7838536771908764,
+            "shownDif": "-0.7838536771908764",
+            "ok": true
+          },
+          {
+            "bar": 458,
+            "targetIndex": 58,
+            "hoverIndex": 58,
+            "clicks": 1,
+            "engineSma": 244.42399999999998,
+            "shownSma": "244.42399999999998",
+            "engineDif": -1.279783504957635,
+            "shownDif": "-1.279783504957635",
+            "ok": true
+          },
+          {
+            "bar": 459,
+            "targetIndex": 59,
+            "hoverIndex": 59,
+            "clicks": 1,
+            "engineSma": 244.44249999999997,
+            "shownSma": "244.44249999999997",
+            "engineDif": -1.6186483728095027,
+            "shownDif": "-1.6186483728095027",
+            "ok": true
+          },
+          {
+            "bar": 460,
+            "targetIndex": 60,
+            "hoverIndex": 60,
+            "clicks": 1,
+            "engineSma": 244.17649999999998,
+            "shownSma": "244.17649999999998",
+            "engineDif": -1.7595977892426617,
+            "shownDif": "-1.7595977892426617",
+            "ok": true
+          },
+          {
+            "bar": 461,
+            "targetIndex": 61,
+            "hoverIndex": 61,
+            "clicks": 1,
+            "engineSma": 243.90899999999996,
+            "shownSma": "243.90899999999996",
+            "engineDif": -1.5596054768840872,
+            "shownDif": "-1.5596054768840872",
+            "ok": true
+          },
+          {
+            "bar": 462,
+            "targetIndex": 62,
+            "hoverIndex": 62,
+            "clicks": 1,
+            "engineSma": 243.66549999999998,
+            "shownSma": "243.66549999999998",
+            "engineDif": -1.6220661384050743,
+            "shownDif": "-1.6220661384050743",
+            "ok": true
+          },
+          {
+            "bar": 463,
+            "targetIndex": 63,
+            "hoverIndex": 63,
+            "clicks": 1,
+            "engineSma": 243.15249999999997,
+            "shownSma": "243.15249999999997",
+            "engineDif": -1.775366472777307,
+            "shownDif": "-1.775366472777307",
+            "ok": true
+          },
+          {
+            "bar": 464,
+            "targetIndex": 64,
+            "hoverIndex": 64,
+            "clicks": 1,
+            "engineSma": 242.65399999999994,
+            "shownSma": "242.65399999999994",
+            "engineDif": -1.6901702507295795,
+            "shownDif": "-1.6901702507295795",
+            "ok": true
+          },
+          {
+            "bar": 465,
+            "targetIndex": 65,
+            "hoverIndex": 65,
+            "clicks": 1,
+            "engineSma": 242.32199999999995,
+            "shownSma": "242.32199999999995",
+            "engineDif": -1.6280914984046717,
+            "shownDif": "-1.6280914984046717",
+            "ok": true
+          },
+          {
+            "bar": 466,
+            "targetIndex": 66,
+            "hoverIndex": 66,
+            "clicks": 1,
+            "engineSma": 241.58399999999992,
+            "shownSma": "241.58399999999992",
+            "engineDif": -2.0738350229546256,
+            "shownDif": "-2.0738350229546256",
+            "ok": true
+          },
+          {
+            "bar": 467,
+            "targetIndex": 67,
+            "hoverIndex": 67,
+            "clicks": 1,
+            "engineSma": 240.3774999999999,
+            "shownSma": "240.3774999999999",
+            "engineDif": -2.448889521984313,
+            "shownDif": "-2.448889521984313",
+            "ok": true
+          },
+          {
+            "bar": 468,
+            "targetIndex": 68,
+            "hoverIndex": 68,
+            "clicks": 1,
+            "engineSma": 239.51299999999992,
+            "shownSma": "239.51299999999992",
+            "engineDif": -2.5393294910590214,
+            "shownDif": "-2.5393294910590214",
+            "ok": true
+          },
+          {
+            "bar": 469,
+            "targetIndex": 69,
+            "hoverIndex": 69,
+            "clicks": 1,
+            "engineSma": 238.7039999999999,
+            "shownSma": "238.7039999999999",
+            "engineDif": -2.5230151706354036,
+            "shownDif": "-2.5230151706354036",
+            "ok": true
+          },
+          {
+            "bar": 470,
+            "targetIndex": 70,
+            "hoverIndex": 70,
+            "clicks": 1,
+            "engineSma": 237.62549999999993,
+            "shownSma": "237.62549999999993",
+            "engineDif": -2.3426775672193685,
+            "shownDif": "-2.3426775672193685",
+            "ok": true
+          },
+          {
+            "bar": 471,
+            "targetIndex": 71,
+            "hoverIndex": 71,
+            "clicks": 1,
+            "engineSma": 237.00599999999991,
+            "shownSma": "237.00599999999991",
+            "engineDif": -2.0773683045176767,
+            "shownDif": "-2.0773683045176767",
+            "ok": true
+          },
+          {
+            "bar": 472,
+            "targetIndex": 72,
+            "hoverIndex": 72,
+            "clicks": 1,
+            "engineSma": 236.6184999999999,
+            "shownSma": "236.6184999999999",
+            "engineDif": -2.133808417164289,
+            "shownDif": "-2.133808417164289",
+            "ok": true
+          },
+          {
+            "bar": 473,
+            "targetIndex": 73,
+            "hoverIndex": 73,
+            "clicks": 1,
+            "engineSma": 236.1559999999999,
+            "shownSma": "236.1559999999999",
+            "engineDif": -2.3068733667630568,
+            "shownDif": "-2.3068733667630568",
+            "ok": true
+          },
+          {
+            "bar": 474,
+            "targetIndex": 74,
+            "hoverIndex": 74,
+            "clicks": 1,
+            "engineSma": 235.9514999999999,
+            "shownSma": "235.9514999999999",
+            "engineDif": -2.2007917931807413,
+            "shownDif": "-2.2007917931807413",
+            "ok": true
+          },
+          {
+            "bar": 475,
+            "targetIndex": 75,
+            "hoverIndex": 75,
+            "clicks": 1,
+            "engineSma": 235.6599999999999,
+            "shownSma": "235.6599999999999",
+            "engineDif": -1.9849068931583531,
+            "shownDif": "-1.9849068931583531",
+            "ok": true
+          },
+          {
+            "bar": 476,
+            "targetIndex": 76,
+            "hoverIndex": 76,
+            "clicks": 1,
+            "engineSma": 235.50899999999993,
+            "shownSma": "235.50899999999993",
+            "engineDif": -1.9830038302557966,
+            "shownDif": "-1.9830038302557966",
+            "ok": true
+          },
+          {
+            "bar": 477,
+            "targetIndex": 77,
+            "hoverIndex": 77,
+            "clicks": 1,
+            "engineSma": 235.2829999999999,
+            "shownSma": "235.2829999999999",
+            "engineDif": -1.939769193164011,
+            "shownDif": "-1.939769193164011",
+            "ok": true
+          },
+          {
+            "bar": 478,
+            "targetIndex": 78,
+            "hoverIndex": 78,
+            "clicks": 1,
+            "engineSma": 235.23149999999993,
+            "shownSma": "235.23149999999993",
+            "engineDif": -1.8175794439534343,
+            "shownDif": "-1.8175794439534343",
+            "ok": true
+          },
+          {
+            "bar": 479,
+            "targetIndex": 79,
+            "hoverIndex": 79,
+            "clicks": 1,
+            "engineSma": 235.2039999999999,
+            "shownSma": "235.2039999999999",
+            "engineDif": -1.6277432650112473,
+            "shownDif": "-1.6277432650112473",
+            "ok": true
+          },
+          {
+            "bar": 480,
+            "targetIndex": 80,
+            "hoverIndex": 80,
+            "clicks": 1,
+            "engineSma": 235.1974999999999,
+            "shownSma": "235.1974999999999",
+            "engineDif": -1.3208602955834579,
+            "shownDif": "-1.3208602955834579",
+            "ok": true
+          },
+          {
+            "bar": 481,
+            "targetIndex": 81,
+            "hoverIndex": 81,
+            "clicks": 1,
+            "engineSma": 235.2534999999999,
+            "shownSma": "235.2534999999999",
+            "engineDif": -0.6752869116091631,
+            "shownDif": "-0.6752869116091631",
+            "ok": true
+          },
+          {
+            "bar": 482,
+            "targetIndex": 82,
+            "hoverIndex": 82,
+            "clicks": 1,
+            "engineSma": 235.91149999999988,
+            "shownSma": "235.91149999999988",
+            "engineDif": 0.5617325420642487,
+            "shownDif": "0.5617325420642487",
+            "ok": true
+          },
+          {
+            "bar": 483,
+            "targetIndex": 83,
+            "hoverIndex": 83,
+            "clicks": 1,
+            "engineSma": 236.8514999999999,
+            "shownSma": "236.8514999999999",
+            "engineDif": 1.8515713443204334,
+            "shownDif": "1.8515713443204334",
+            "ok": true
+          },
+          {
+            "bar": 484,
+            "targetIndex": 84,
+            "hoverIndex": 84,
+            "clicks": 1,
+            "engineSma": 237.87499999999991,
+            "shownSma": "237.87499999999991",
+            "engineDif": 3.15931888062579,
+            "shownDif": "3.15931888062579",
+            "ok": true
+          },
+          {
+            "bar": 485,
+            "targetIndex": 85,
+            "hoverIndex": 85,
+            "clicks": 1,
+            "engineSma": 238.92549999999991,
+            "shownSma": "238.92549999999991",
+            "engineDif": 4.167049071399191,
+            "shownDif": "4.167049071399191",
+            "ok": true
+          },
+          {
+            "bar": 486,
+            "targetIndex": 86,
+            "hoverIndex": 86,
+            "clicks": 1,
+            "engineSma": 240.12949999999992,
+            "shownSma": "240.12949999999992",
+            "engineDif": 4.641059345407996,
+            "shownDif": "4.641059345407996",
+            "ok": true
+          },
+          {
+            "bar": 487,
+            "targetIndex": 87,
+            "hoverIndex": 87,
+            "clicks": 1,
+            "engineSma": 241.39499999999992,
+            "shownSma": "241.39499999999992",
+            "engineDif": 5.0082063196837225,
+            "shownDif": "5.0082063196837225",
+            "ok": true
+          },
+          {
+            "bar": 488,
+            "targetIndex": 88,
+            "hoverIndex": 88,
+            "clicks": 1,
+            "engineSma": 242.61749999999992,
+            "shownSma": "242.61749999999992",
+            "engineDif": 5.345678093607091,
+            "shownDif": "5.345678093607091",
+            "ok": true
+          },
+          {
+            "bar": 489,
+            "targetIndex": 89,
+            "hoverIndex": 89,
+            "clicks": 1,
+            "engineSma": 244.08399999999992,
+            "shownSma": "244.08399999999992",
+            "engineDif": 5.996681015129894,
+            "shownDif": "5.996681015129894",
+            "ok": true
+          },
+          {
+            "bar": 490,
+            "targetIndex": 90,
+            "hoverIndex": 90,
+            "clicks": 1,
+            "engineSma": 245.23499999999996,
+            "shownSma": "245.23499999999996",
+            "engineDif": 6.073829389369877,
+            "shownDif": "6.073829389369877",
+            "ok": true
+          },
+          {
+            "bar": 491,
+            "targetIndex": 91,
+            "hoverIndex": 91,
+            "clicks": 1,
+            "engineSma": 246.69699999999995,
+            "shownSma": "246.69699999999995",
+            "engineDif": 6.658560116887031,
+            "shownDif": "6.658560116887031",
+            "ok": true
+          },
+          {
+            "bar": 492,
+            "targetIndex": 92,
+            "hoverIndex": 92,
+            "clicks": 1,
+            "engineSma": 248.61649999999995,
+            "shownSma": "248.61649999999995",
+            "engineDif": 7.482738776715195,
+            "shownDif": "7.482738776715195",
+            "ok": true
+          },
+          {
+            "bar": 493,
+            "targetIndex": 93,
+            "hoverIndex": 93,
+            "clicks": 1,
+            "engineSma": 250.48699999999994,
+            "shownSma": "250.48699999999994",
+            "engineDif": 7.811850390236202,
+            "shownDif": "7.811850390236202",
+            "ok": true
+          },
+          {
+            "bar": 494,
+            "targetIndex": 94,
+            "hoverIndex": 94,
+            "clicks": 1,
+            "engineSma": 252.51849999999996,
+            "shownSma": "252.51849999999996",
+            "engineDif": 8.452928145670228,
+            "shownDif": "8.452928145670228",
+            "ok": true
+          },
+          {
+            "bar": 495,
+            "targetIndex": 95,
+            "hoverIndex": 95,
+            "clicks": 1,
+            "engineSma": 254.81349999999992,
+            "shownSma": "254.81349999999992",
+            "engineDif": 9.386958544991217,
+            "shownDif": "9.386958544991217",
+            "ok": true
+          },
+          {
+            "bar": 496,
+            "targetIndex": 96,
+            "hoverIndex": 96,
+            "clicks": 1,
+            "engineSma": 257.01399999999995,
+            "shownSma": "257.01399999999995",
+            "engineDif": 9.67114807671004,
+            "shownDif": "9.67114807671004",
+            "ok": true
+          },
+          {
+            "bar": 497,
+            "targetIndex": 97,
+            "hoverIndex": 97,
+            "clicks": 1,
+            "engineSma": 259.28399999999993,
+            "shownSma": "259.28399999999993",
+            "engineDif": 9.913619669062825,
+            "shownDif": "9.913619669062825",
+            "ok": true
+          },
+          {
+            "bar": 498,
+            "targetIndex": 98,
+            "hoverIndex": 98,
+            "clicks": 1,
+            "engineSma": 261.7579999999999,
+            "shownSma": "261.7579999999999",
+            "engineDif": 10.3822954788086,
+            "shownDif": "10.3822954788086",
+            "ok": true
+          },
+          {
+            "bar": 499,
+            "targetIndex": 99,
+            "hoverIndex": 99,
+            "clicks": 1,
+            "engineSma": 264.6869999999999,
+            "shownSma": "264.6869999999999",
+            "engineDif": 11.430491107768262,
+            "shownDif": "11.430491107768262",
+            "ok": true
+          },
+          {
+            "bar": 500,
+            "targetIndex": 100,
+            "hoverIndex": 100,
+            "clicks": 1,
+            "engineSma": 267.6429999999999,
+            "shownSma": "267.6429999999999",
+            "engineDif": 12.304143055155293,
+            "shownDif": "12.304143055155293",
+            "ok": true
+          },
+          {
+            "bar": 501,
+            "targetIndex": 101,
+            "hoverIndex": 101,
+            "clicks": 1,
+            "engineSma": 270.4849999999999,
+            "shownSma": "270.4849999999999",
+            "engineDif": 13.056615172849945,
+            "shownDif": "13.056615172849945",
+            "ok": true
+          },
+          {
+            "bar": 502,
+            "targetIndex": 102,
+            "hoverIndex": 102,
+            "clicks": 1,
+            "engineSma": 272.54649999999987,
+            "shownSma": "272.54649999999987",
+            "engineDif": 12.975656117791914,
+            "shownDif": "12.975656117791914",
+            "ok": true
+          },
+          {
+            "bar": 503,
+            "targetIndex": 103,
+            "hoverIndex": 103,
+            "clicks": 1,
+            "engineSma": 274.58799999999985,
+            "shownSma": "274.58799999999985",
+            "engineDif": 13.059512628868447,
+            "shownDif": "13.059512628868447",
+            "ok": true
+          },
+          {
+            "bar": 504,
+            "targetIndex": 104,
+            "hoverIndex": 104,
+            "clicks": 1,
+            "engineSma": 275.85649999999987,
+            "shownSma": "275.85649999999987",
+            "engineDif": 12.06140006485299,
+            "shownDif": "12.06140006485299",
+            "ok": true
+          },
+          {
+            "bar": 505,
+            "targetIndex": 105,
+            "hoverIndex": 105,
+            "clicks": 1,
+            "engineSma": 277.04299999999984,
+            "shownSma": "277.04299999999984",
+            "engineDif": 11.03027027749215,
+            "shownDif": "11.03027027749215",
+            "ok": true
+          },
+          {
+            "bar": 506,
+            "targetIndex": 106,
+            "hoverIndex": 106,
+            "clicks": 1,
+            "engineSma": 278.38199999999983,
+            "shownSma": "278.38199999999983",
+            "engineDif": 10.071974628961641,
+            "shownDif": "10.071974628961641",
+            "ok": true
+          },
+          {
+            "bar": 507,
+            "targetIndex": 107,
+            "hoverIndex": 107,
+            "clicks": 1,
+            "engineSma": 279.6624999999998,
+            "shownSma": "279.6624999999998",
+            "engineDif": 9.161720492603422,
+            "shownDif": "9.161720492603422",
+            "ok": true
+          },
+          {
+            "bar": 508,
+            "targetIndex": 108,
+            "hoverIndex": 108,
+            "clicks": 1,
+            "engineSma": 281.2784999999998,
+            "shownSma": "281.2784999999998",
+            "engineDif": 8.986316590982597,
+            "shownDif": "8.986316590982597",
+            "ok": true
+          },
+          {
+            "bar": 509,
+            "targetIndex": 109,
+            "hoverIndex": 109,
+            "clicks": 1,
+            "engineSma": 282.5554999999998,
+            "shownSma": "282.5554999999998",
+            "engineDif": 8.653150382123158,
+            "shownDif": "8.653150382123158",
+            "ok": true
+          },
+          {
+            "bar": 510,
+            "targetIndex": 110,
+            "hoverIndex": 110,
+            "clicks": 1,
+            "engineSma": 283.72299999999984,
+            "shownSma": "283.72299999999984",
+            "engineDif": 7.754252065983962,
+            "shownDif": "7.754252065983962",
+            "ok": true
+          },
+          {
+            "bar": 511,
+            "targetIndex": 111,
+            "hoverIndex": 111,
+            "clicks": 1,
+            "engineSma": 284.8609999999998,
+            "shownSma": "284.8609999999998",
+            "engineDif": 7.508058205009036,
+            "shownDif": "7.508058205009036",
+            "ok": true
+          },
+          {
+            "bar": 512,
+            "targetIndex": 112,
+            "hoverIndex": 112,
+            "clicks": 1,
+            "engineSma": 286.1514999999998,
+            "shownSma": "286.1514999999998",
+            "engineDif": 7.914851525270706,
+            "shownDif": "7.914851525270706",
+            "ok": true
+          },
+          {
+            "bar": 513,
+            "targetIndex": 113,
+            "hoverIndex": 113,
+            "clicks": 1,
+            "engineSma": 287.3254999999998,
+            "shownSma": "287.3254999999998",
+            "engineDif": 7.726158525187714,
+            "shownDif": "7.726158525187714",
+            "ok": true
+          },
+          {
+            "bar": 514,
+            "targetIndex": 114,
+            "hoverIndex": 114,
+            "clicks": 1,
+            "engineSma": 288.10099999999983,
+            "shownSma": "288.10099999999983",
+            "engineDif": 7.32674197497812,
+            "shownDif": "7.32674197497812",
+            "ok": true
+          },
+          {
+            "bar": 515,
+            "targetIndex": 115,
+            "hoverIndex": 115,
+            "clicks": 1,
+            "engineSma": 288.1999999999998,
+            "shownSma": "288.1999999999998",
+            "engineDif": 6.379088074101958,
+            "shownDif": "6.379088074101958",
+            "ok": true
+          },
+          {
+            "bar": 516,
+            "targetIndex": 116,
+            "hoverIndex": 116,
+            "clicks": 1,
+            "engineSma": 288.8014999999998,
+            "shownSma": "288.8014999999998",
+            "engineDif": 6.025010652343099,
+            "shownDif": "6.025010652343099",
+            "ok": true
+          },
+          {
+            "bar": 517,
+            "targetIndex": 117,
+            "hoverIndex": 117,
+            "clicks": 1,
+            "engineSma": 289.4749999999998,
+            "shownSma": "289.4749999999998",
+            "engineDif": 5.923838761764614,
+            "shownDif": "5.923838761764614",
+            "ok": true
+          },
+          {
+            "bar": 518,
+            "targetIndex": 118,
+            "hoverIndex": 118,
+            "clicks": 1,
+            "engineSma": 290.11949999999985,
+            "shownSma": "290.11949999999985",
+            "engineDif": 6.122478006903805,
+            "shownDif": "6.122478006903805",
+            "ok": true
+          },
+          {
+            "bar": 519,
+            "targetIndex": 119,
+            "hoverIndex": 119,
+            "clicks": 1,
+            "engineSma": 290.21849999999984,
+            "shownSma": "290.21849999999984",
+            "engineDif": 6.1373380649826,
+            "shownDif": "6.1373380649826",
+            "ok": true
+          }
+        ],
+        "mismatches": [],
+        "unresolvedHover": [],
+        "ok": true
+      },
+      "hoverError": null,
+      "baselineApplied": true,
+      "focus": {
+        "windowFocused": true,
+        "appActive": true
+      },
+      "focusOk": true,
+      "subchecks": [
+        {
+          "item": "chartPresent",
+          "pass": true,
+          "actual": true,
+          "expected": true
+        },
+        {
+          "item": "baselineApplied",
+          "pass": true,
+          "actual": true,
+          "expected": true
+        },
+        {
+          "item": "windowFocused",
+          "pass": true,
+          "actual": true,
+          "expected": true
+        },
+        {
+          "item": "appActive",
+          "pass": true,
+          "actual": true,
+          "expected": true
+        },
+        {
+          "item": "overlayCount",
+          "pass": true,
+          "actual": 4,
+          "expected": ">= 4"
+        },
+        {
+          "item": "macdCount",
+          "pass": true,
+          "actual": 3,
+          "expected": 3
+        },
+        {
+          "item": "macdHistCount",
+          "pass": true,
+          "actual": 120,
+          "expected": ">= 2"
+        },
+        {
+          "item": "color",
+          "pass": true,
+          "actual": [
+            {
+              "item": "posToken",
+              "pass": true,
+              "actual": "rgb(200, 52, 43)",
+              "expected": "非空 CSS 颜色"
+            },
+            {
+              "item": "negToken",
+              "pass": true,
+              "actual": "rgb(15, 123, 84)",
+              "expected": "非空 CSS 颜色"
+            },
+            {
+              "item": "upCandleStroke",
+              "pass": true,
+              "actual": "rgb(200, 52, 43)",
+              "expected": "rgb(200, 52, 43)"
+            },
+            {
+              "item": "downCandleStroke",
+              "pass": true,
+              "actual": "rgb(15, 123, 84)",
+              "expected": "rgb(15, 123, 84)"
+            },
+            {
+              "item": "histPosFill",
+              "pass": true,
+              "actual": "rgb(200, 52, 43)",
+              "expected": "rgb(200, 52, 43)"
+            },
+            {
+              "item": "histNegFill",
+              "pass": true,
+              "actual": "rgb(15, 123, 84)",
+              "expected": "rgb(15, 123, 84)"
+            },
+            {
+              "item": "chgPos",
+              "pass": true,
+              "actual": "sign=pos color=rgb(200, 52, 43) text=\"▲ +2.65%\"",
+              "expected": "sign=pos color=rgb(200, 52, 43) text=/^▲\\s*\\+/"
+            },
+            {
+              "item": "chgNeg",
+              "pass": true,
+              "actual": "sign=neg color=rgb(15, 123, 84) text=\"▼ −1.01%\"",
+              "expected": "sign=neg color=rgb(15, 123, 84) text=/^▼\\s*[-\\u2212]/"
+            }
+          ],
+          "expected": "8 个配色子项全部通过"
+        },
+        {
+          "item": "statisticalReadoutCount",
+          "pass": true,
+          "actual": 4,
+          "expected": ">= 4"
+        },
+        {
+          "item": "statisticalUnitCount",
+          "pass": true,
+          "actual": 4,
+          "expected": ">= 4"
+        },
+        {
+          "item": "t21TwoDecimals",
+          "pass": true,
+          "actual": "R² 0.00无量纲",
+          "expected": "R² 保留两位小数"
+        },
+        {
+          "item": "maTooltipCount",
+          "pass": true,
+          "actual": 4,
+          "expected": ">= 4"
+        },
+        {
+          "item": "hoverIndexPresent",
+          "pass": true,
+          "actual": "76",
+          "expected": "非空 data-hover-index"
+        },
+        {
+          "item": "decimalsOk",
+          "pass": true,
+          "actual": [],
+          "expected": "每条读数含两位小数"
+        },
+        {
+          "item": "tooltipParity",
+          "pass": true,
+          "actual": {
+            "sampled": 120,
+            "mismatches": [],
+            "unresolvedHover": []
+          },
+          "expected": "每一根 hoverIndex===targetIndex 且读数与引擎逐点等值"
+        },
+        {
+          "item": "maFields",
+          "pass": true,
+          "actual": [],
+          "expected": "所有 ma-*/ov-* 的 data-value / data-unit 非空"
+        }
+      ],
+      "failures": [],
+      "ok": true
+    },
+    "b2Render": {
+      "cardCount": 8,
+      "clauseCount": 63,
+      "failCount": 0,
+      "dataLimitedCount": 1,
+      "assertionsOk": true,
+      "focusOk": true,
+      "failedCards": [],
+      "dataLimitedCards": [
+        "S-03.05-07"
+      ],
+      "okRule": "ok = assertionsOk（产品断言，不含聚焦）；signable = assertionsOk && focusOk（可签的唯一判据）；status=n/a（dataLimited）不计 failCount、也不让 ok=false；未聚焦记 focusOk=false → 不可判定，不得签",
+      "cards": [
+        {
+          "card": "S-03.05-01",
+          "ac": "AC-03.05-05",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T09 三轨可见",
+              "status": "pass",
+              "detail": {
+                "nodes": 3,
+                "blocks": [
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "clause": "T09 中轨虚线、上下轨实线（虚实可区分）",
+              "status": "pass",
+              "detail": {
+                "middleDash": "4px, 3px",
+                "expected": "4px, 3px",
+                "upper": "none",
+                "lower": "none"
+              }
+            },
+            {
+              "clause": "T09 upper 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T09 middle 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T09 lower 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T09 图例三线齐全且颜色=线色",
+              "status": "pass",
+              "detail": {
+                "legendKeys": [
+                  "upper",
+                  "middle",
+                  "lower"
+                ],
+                "legendByKey": [
+                  [
+                    "upper",
+                    "rgb(200, 52, 43)"
+                  ],
+                  [
+                    "middle",
+                    "rgb(31, 110, 147)"
+                  ],
+                  [
+                    "lower",
+                    "rgb(15, 123, 84)"
+                  ]
+                ],
+                "strokeByKey": [
+                  [
+                    "upper",
+                    "rgb(200, 52, 43)"
+                  ],
+                  [
+                    "middle",
+                    "rgb(31, 110, 147)"
+                  ],
+                  [
+                    "lower",
+                    "rgb(15, 123, 84)"
+                  ]
+                ]
+              }
+            },
+            {
+              "clause": "T09 读数条 3 条",
+              "status": "pass",
+              "detail": {
+                "count": 3
+              }
+            },
+            {
+              "clause": "切标的后不残留旧线",
+              "status": "pass",
+              "detail": {
+                "switched": true,
+                "afterPaths": 3,
+                "awayDiffers": true,
+                "backMatches": true,
+                "stableAfter": true,
+                "candlesSame": true,
+                "candleCount": 120,
+                "axisSame": true,
+                "axisBeforeA": [
+                  "211.65",
+                  "236.41",
+                  "261.17",
+                  "285.93",
+                  "310.69",
+                  "成交量",
+                  "MACD 需要 34 根，当前 520 根",
+                  "MACD(12,26,9)",
+                  "×",
+                  "RSI 需要 15 根，当前 520 根",
+                  "RSI(14)",
+                  "×"
+                ],
+                "axisAfterA": [
+                  "211.65",
+                  "236.41",
+                  "261.17",
+                  "285.93",
+                  "310.69",
+                  "成交量",
+                  "MACD 需要 34 根，当前 520 根",
+                  "MACD(12,26,9)",
+                  "×",
+                  "RSI 需要 15 根，当前 520 根",
+                  "RSI(14)",
+                  "×"
+                ],
+                "toA": {
+                  "max": 0,
+                  "mean": 0
+                },
+                "toB": {
+                  "max": 0.9988,
+                  "mean": 0.2788
+                },
+                "beforeA": [
+                  1759,
+                  1771,
+                  1782
+                ],
+                "awayB": [
+                  1755,
+                  1774,
+                  1786
+                ],
+                "afterA": [
+                  1759,
+                  1771,
+                  1782
+                ],
+                "pointsA": [
+                  120,
+                  120,
+                  120
+                ],
+                "pointsBack": [
+                  120,
+                  120,
+                  120
+                ],
+                "backSameAsAway": [
+                  false,
+                  false,
+                  false
+                ]
+              }
+            },
+            {
+              "clause": "T09 负控：错误虚实值必须被判红",
+              "status": "pass",
+              "detail": {
+                "injected": "6px, 4px",
+                "expected": "4px, 3px"
+              }
+            },
+            {
+              "clause": "T09 负控：旧线值必须被判残留",
+              "status": "pass",
+              "detail": {
+                "awayEqualsA": [
+                  false,
+                  false,
+                  false
+                ]
+              }
+            },
+            {
+              "clause": "T09 负控：回切未重绘（仍显示 B 线）必须被判红",
+              "status": "pass",
+              "detail": {
+                "staleToA": {
+                  "max": 0.9988,
+                  "mean": 0.2788
+                },
+                "staleToB": {
+                  "max": 0,
+                  "mean": 0
+                }
+              }
+            }
+          ],
+          "ok": true
+        },
+        {
+          "card": "S-03.05-02",
+          "ac": "AC-03.05-10",
+          "kind": "sub",
+          "clauses": [
+            {
+              "clause": "V01 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V01 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V02 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "V02 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V09 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V09 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V10 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V10 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "ATR 以元显示",
+              "status": "pass",
+              "detail": {
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "ATRP 以比值显示",
+              "status": "pass",
+              "detail": {
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "切标的后读数与当前引擎一致（旧值不残留）",
+              "status": "pass",
+              "detail": {
+                "readout": "7.263738808394929",
+                "expectLast": 7.263738808394929
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-03",
+          "ac": "AC-03.05-16",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T13 两轨可见",
+              "status": "pass",
+              "detail": {
+                "nodes": 2
+              }
+            },
+            {
+              "clause": "T13 仅显示激活侧",
+              "status": "pass",
+              "detail": {
+                "long": 277.1451659810958,
+                "short": null
+              }
+            },
+            {
+              "clause": "T13 翻转根有标记",
+              "status": "pass",
+              "detail": {
+                "markers": 10,
+                "flips": 10
+              }
+            },
+            {
+              "clause": "T13 翻转后新侧不继承旧侧值",
+              "status": "pass",
+              "detail": {
+                "flipBars": 5,
+                "carryOver": 0,
+                "staleSide": 0
+              }
+            },
+            {
+              "clause": "T13 long NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 3,
+                "runs": 3
+              }
+            },
+            {
+              "clause": "T13 short NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 3,
+                "runs": 3
+              }
+            },
+            {
+              "clause": "T13 读数条 2 条",
+              "status": "pass",
+              "detail": {
+                "count": 2
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-04",
+          "ac": "AC-03.05-20",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T15 云带按多空着色",
+              "status": "pass",
+              "detail": {
+                "count": 3,
+                "signs": [
+                  "pos",
+                  "neg"
+                ],
+                "fills": [
+                  "rgb(200, 52, 43)",
+                  "rgb(15, 123, 84)",
+                  "rgb(200, 52, 43)"
+                ]
+              }
+            },
+            {
+              "clause": "T15 先行带在最后一根截断（不越过未来区）",
+              "status": "pass",
+              "detail": {
+                "lastA": 519,
+                "lastB": 519,
+                "bars": 520
+              }
+            },
+            {
+              "clause": "T15 迟行线 26 根留白（位移在尾端）",
+              "status": "pass",
+              "detail": {
+                "tailNaN": 26,
+                "headFinite": 26
+              }
+            },
+            {
+              "clause": "T15 图例五线齐全",
+              "status": "pass",
+              "detail": {
+                "legendCount": 5
+              }
+            },
+            {
+              "clause": "T15 tenkan NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 kijun NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 senkouA NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 senkouB NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 chikou NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 读数条 5 条",
+              "status": "pass",
+              "detail": {
+                "count": 5
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-05",
+          "ac": "AC-03.05-24",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T16 以点列显示",
+              "status": "pass",
+              "detail": {
+                "dots": 120
+              }
+            },
+            {
+              "clause": "T16 点不连成线",
+              "status": "pass",
+              "detail": {
+                "lines": 0
+              }
+            },
+            {
+              "clause": "T16 反转箭头数量与方向正确",
+              "status": "pass",
+              "detail": {
+                "arrows": 9,
+                "expectedFlips": 9,
+                "up": 5,
+                "expectedUp": 5,
+                "down": 4,
+                "expectedDown": 4
+              }
+            },
+            {
+              "clause": "T16 多空颜色正确（红涨绿跌）",
+              "status": "pass",
+              "detail": {
+                "colors": [
+                  "rgb(15, 123, 84)",
+                  "rgb(200, 52, 43)"
+                ],
+                "rise": "rgb(200, 52, 43)",
+                "fall": "rgb(15, 123, 84)",
+                "hasBull": true,
+                "hasBear": true,
+                "upArrowColors": [
+                  "rgb(200, 52, 43)"
+                ],
+                "downArrowColors": [
+                  "rgb(15, 123, 84)"
+                ]
+              }
+            },
+            {
+              "clause": "T16 读数条 1 条",
+              "status": "pass",
+              "detail": {
+                "count": 1
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-06",
+          "ac": "AC-03.05-27",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T23 三线可见",
+              "status": "pass",
+              "detail": {
+                "nodes": 3
+              }
+            },
+            {
+              "clause": "T23 首根无值",
+              "status": "pass",
+              "detail": {
+                "first": null
+              }
+            },
+            {
+              "clause": "T23 切周期后三线重算",
+              "status": "pass",
+              "detail": {
+                "weeklyBars": 104,
+                "dailyBars": 520,
+                "weeklyLasts": [
+                  290.26,
+                  299.66999999999996,
+                  281.03
+                ],
+                "dailyLasts": [
+                  294.7733333333333,
+                  300.66666666666663,
+                  290.8166666666666
+                ],
+                "differ": [
+                  "pivot",
+                  "r1",
+                  "s1"
+                ]
+              }
+            },
+            {
+              "clause": "T23 切周期后旧线不残留",
+              "status": "pass",
+              "detail": {
+                "nodes": 3,
+                "residual": 0
+              }
+            },
+            {
+              "clause": "T23 读数标签不重叠",
+              "status": "pass",
+              "detail": {
+                "count": 3,
+                "overlap": 0
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-07",
+          "ac": "AC-03.05-31",
+          "kind": "sub",
+          "clauses": [
+            {
+              "clause": "V03 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V03 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V04 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "V04 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V05 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "V05 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "带宽以比值显示",
+              "status": "pass",
+              "detail": {
+                "unit": "无量纲",
+                "text": "V04·width 0.08 无量纲"
+              }
+            },
+            {
+              "clause": "%B 保留两位小数",
+              "status": "pass",
+              "detail": {
+                "text": "V05·percentB 0.75 无量纲",
+                "decimals": 2,
+                "value": "0.7490034868843555"
+              }
+            },
+            {
+              "clause": "零带宽段显示 —",
+              "status": "n/a",
+              "detail": "窗口内零带宽根 = 0（无样本时由 NaN→— 路径覆盖）"
+            }
+          ],
+          "ok": true,
+          "dataLimited": 1
+        },
+        {
+          "card": "S-03.05-08",
+          "ac": "AC-03.05-35",
+          "kind": "sub",
+          "clauses": [
+            {
+              "clause": "V08 0 轴可见",
+              "status": "pass",
+              "detail": {
+                "zeroAxis": 1
+              }
+            },
+            {
+              "clause": "V08 正负分色",
+              "status": "pass",
+              "detail": {
+                "posStroke": "rgb(200, 52, 43)",
+                "negStroke": "rgb(15, 123, 84)"
+              }
+            },
+            {
+              "clause": "V08 正负路径按符号断开",
+              "status": "pass",
+              "detail": {
+                "posSegments": 28,
+                "negSegments": 28,
+                "posRuns": 28,
+                "negRuns": 28
+              }
+            },
+            {
+              "clause": "V08 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1
+              }
+            },
+            {
+              "clause": "切标的后不残留",
+              "status": "pass",
+              "detail": {
+                "switched": true,
+                "nodes": 2,
+                "readout": "3.7170940079507164",
+                "expectLast": 3.7170940079507164
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        }
+      ],
+      "focus": {
+        "windowFocused": true,
+        "appActive": true
+      },
+      "ok": true,
+      "signable": true
+    },
+    "b3Render": {
+      "cardCount": 13,
+      "optionsCount": 24,
+      "missing": [],
+      "expect": {
+        "M01": 1,
+        "M02": 3,
+        "M04": 1,
+        "M05": 1,
+        "M08": 2,
+        "M09": 1,
+        "M10": 1,
+        "M19": 2,
+        "M20": 2,
+        "M21": 1,
+        "M24": 1,
+        "M25": 2,
+        "M26": 1
+      },
+      "cards": [
+        {
+          "id": "M01",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M02",
+          "nodes": 3,
+          "paintCount": 3,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)",
+            "rgb(138, 100, 16)",
+            "rgb(139, 92, 246)"
+          ],
+          "readouts": 3,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M04",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(15, 123, 84)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M05",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M08",
+          "nodes": 2,
+          "paintCount": 2,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)",
+            "rgb(138, 100, 16)"
+          ],
+          "readouts": 2,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M09",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M10",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M19",
+          "nodes": 2,
+          "paintCount": 2,
+          "paintOk": true,
+          "paints": [
+            "rgb(200, 52, 43)",
+            "rgb(15, 123, 84)"
+          ],
+          "readouts": 2,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M20",
+          "nodes": 2,
+          "paintCount": 2,
+          "paintOk": true,
+          "paints": [
+            "rgb(200, 52, 43)",
+            "rgb(15, 123, 84)"
+          ],
+          "readouts": 2,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M21",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M24",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M25",
+          "nodes": 2,
+          "paintCount": 2,
+          "paintOk": true,
+          "paints": [
+            "rgb(31, 110, 147)",
+            "rgb(200, 52, 43)"
+          ],
+          "readouts": 2,
+          "readoutOk": true,
+          "triColor": {
+            "fillCount": 120,
+            "unique": [
+              "rgb(200, 52, 43)",
+              "rgb(31, 110, 147)",
+              "rgb(15, 123, 84)"
+            ],
+            "ok": true
+          },
+          "ok": true
+        },
+        {
+          "id": "M26",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(138, 100, 16)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        }
+      ],
+      "ok": true
+    },
+    "catalog": {
+      "route": "#/catalog",
+      "rootPresent": true,
+      "itemCount": 105,
+      "itemCountUnique": 105,
+      "declaredCount": 105,
+      "itemCountOk": true,
+      "betaIds": [
+        "T16",
+        "T19"
+      ],
+      "betaCount": 2,
+      "expectedBetaCount": 2,
+      "targetIds": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "E13",
+        "M06",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T23",
+        "T24",
+        "V01",
+        "V02",
+        "V03",
+        "V04",
+        "V05",
+        "V07",
+        "V08",
+        "V09",
+        "V10",
+        "M01",
+        "M02",
+        "M04",
+        "M05",
+        "M08",
+        "M09",
+        "M10",
+        "M19",
+        "M20",
+        "M21",
+        "M24",
+        "M25",
+        "M26",
+        "D01"
+      ],
+      "cards": [
+        {
+          "id": "T01",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T02",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "前 N 根 SMA 作种子，α=2/(N+1) 递推"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 60 根 K 线（首个有效值下标 59，0 基）\" expected=60"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "前 N 根 SMA 作种子，α=2/(N+1) 递推；首个有效值 N-1，应用层按 B1 建议预热 3N 根（warmu"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T03",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "权重 1..N，最新一根权重最大"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "权重 1..N，最新一根权重最大；前 N-1 根为 NaN，窗口含 NaN 时该根为 NaN，N=1 退化为收盘价。标准"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T04",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "DEMA=2·E1-E2，E2=EMA(E1,N)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 60 根 K 线（首个有效值下标 59，0 基）\" expected=60"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "DEMA=2·E1-E2，E2=EMA(E1,N)；首个有效值 2N-2，应用层按 B1 建议预热 3N 根（warmu"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T05",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "TEMA=3·E1-3·E2+E3"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 90 根 K 线（首个有效值下标 89，0 基）\" expected=90"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "TEMA=3·E1-3·E2+E3；首个有效值 3N-3，应用层按 B1 建议预热 4.5N 根（warmup=4.5N"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T19",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "窗口内 x=0..N-1 对收盘价做 OLS，取当前根拟合值（x=N-1），不是下一根预测；该终点口径为自定，保持 be"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T20",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "窗口首根（x=0）的拟合值，等于 intercept"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "窗口首根（x=0）的拟合值，等于 intercept。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T21",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "R²=Sxy²/(Sxx·Syy)，落在 [0,1]；Syy=0（常数序列）明示约定为 R²=1.0。数学定义明确，转正"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T22",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "窗口内每根 K 线的价格变化量（元/根）"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "窗口内每根 K 线的价格变化量（元/根）。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "E13",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "BIAS=(C-SMA_N)/SMA_N×100%"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=3 expected=3"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 6 根 K 线（首个有效值下标 5，0 基）\" expected=6"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "BIAS=(C-SMA_N)/SMA_N×100%；SMA=0 时输出 NaN，不产生 Infinity；warmup="
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M06",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "DIF=EMA(fast)-EMA(slow)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=3 expected=3"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 34 根 K 线（首个有效值下标 33，0 基）\" expected=34"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "DIF=EMA(fast)-EMA(slow)；DEA=EMA(signal)(DIF)；柱=2×(DIF-DEA)（A"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T08",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)；上/下轨=中轨×(1±pct%)；首根有效值 N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T09",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)；σ 为样本标准差（ddof=1）；上/下轨=中轨±kσ。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T10",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "中轨=EMA(close,N)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 40 根 K 线（首个有效值下标 39，0 基）\" expected=40"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "中轨=EMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T11",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "上轨=近 N 根最高价"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "上轨=近 N 根最高价；下轨=近 N 根最低价；首根有效值 N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T12",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 60 根 K 线（首个有效值下标 59，0 基）\" expected=60"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "中轨=SMA(close,N)；上下轨=中轨±k×ATR(N,Wilder)；首个有效值 N。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T13",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 40 根 K 线（首个有效值下标 39，0 基）\" expected=40"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "多空状态机（裁定 R-01）：多头止损=max(前值, C-k×ATR14)，收盘价跌破前值翻空；翻空当根冻结旧值，空头"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T14",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "多头=HHV(high,N)-k×ATR(N)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 40 根 K 线（首个有效值下标 39，0 基）\" expected=40"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "多头=HHV(high,N)-k×ATR(N)；空头=LLV(low,N)+k×ATR(N)；首个有效值 N。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T15",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=4 expected=4"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 90 根 K 线（首个有效值下标 89，0 基）\" expected=90"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "五线（裁定 R-02）：转换/基准=(HHV+LLV)/2；先行带不延伸；迟行线末尾 D 根留白。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T16",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=3 expected=3"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "Wilder 抛物线转向（裁定 R-03 保留 beta）：初始方向与首根 SAR 在通达信/同花顺/TA-Lib 三家"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T23",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=0 expected=0"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 1 根 K 线（首个有效值下标 0，0 基）\" expected=1"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "轴心点（裁定 R-04）：P=(H+L+C)/3，R1=2P-L，S1=2P-H，只用上一根；日/周/月由图表周期决定，"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T24",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "近 N 根最高价/最低价（裁定 R-05）：原始值直取、窗口含当前根，无中轨/带宽输出；首根有效值 N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V01",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "TR 首根 NaN"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 14 根 K 线（首个有效值下标 13，0 基）\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "TR 首根 NaN；ATR 为 TR 的 Wilder 平滑，种子取前 N 个 TR 的均值；首个有效值 N。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V02",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "ATRP=ATR/收盘，无量纲比值（非百分数）"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 14 根 K 线（首个有效值下标 13，0 基）\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "ATRP=ATR/收盘，无量纲比值（非百分数）；收盘为 0 时 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V03",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "样本标准差（ddof=1）"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "样本标准差（ddof=1）；分母 N-1；首根有效值 N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V04",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "带宽=(上轨-下轨)/中轨=2kσ/SMA"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "带宽=(上轨-下轨)/中轨=2kσ/SMA；中轨为 0 时 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V05",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "%B=(C-下轨)/(上轨-下轨)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "%B=(C-下轨)/(上轨-下轨)；零带宽输出 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V07",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "回撤=(C-窗口峰值)/窗口峰值×100"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 14 根 K 线（首个有效值下标 13，0 基）\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "回撤=(C-窗口峰值)/窗口峰值×100；UI=sqrt(mean(回撤²))；峰值为 0 时 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V08",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "GAPO（裁定 R-06）：(Open-前收)/ATR14×100，保留正负号，不筛同向；ATR 未就绪或 ATR=0 "
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V09",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "单根 H-L（元），首根即有效"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=0 expected=0"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 2 根 K 线（首个有效值下标 1，0 基）\" expected=2"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "单根 H-L（元），首根即有效。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V10",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "TR=max(H-L, |H-PC|, |L-PC|)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=0 expected=0"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 2 根 K 线（首个有效值下标 1，0 基）\" expected=2"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "TR=max(H-L, |H-PC|, |L-PC|)；首根 NaN。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M01",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "Wilder 平滑涨幅/跌幅，RSI=100-100/(1+RS)"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 14 根 K 线（首个有效值下标 13，0 基）\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "Wilder 平滑涨幅/跌幅，RSI=100-100/(1+RS)；avg_loss=0→100，avg_gain=0→"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M02",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=3 expected=3"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 9 根 K 线（首个有效值下标 8，0 基）\" expected=9"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "RSV=(C-LLV(L,N))/(HHV(H,N)-LLV(L,N))×100；K/D 以 50/50 为种子按 (N"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M04",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "%R=(HHV(H,N)-C)/(HHV(H,N)-LLV(L,N))×-100，值域 [-100,0]"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 14 根 K 线（首个有效值下标 13，0 基）\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "%R=(HHV(H,N)-C)/(HHV(H,N)-LLV(L,N))×-100，值域 [-100,0]；高低差为 0 "
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M05",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "TP=(H+L+C)/3"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "TP=(H+L+C)/3；CCI=(TP-SMA(TP,N))/(0.015×平均绝对偏差)；偏差为 0 时 NaN；首"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M08",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "PPO=(EMA(fast)-EMA(slow))/EMA(slow)×100"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=3 expected=3"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 34 根 K 线（首个有效值下标 33，0 基）\" expected=34"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "PPO=(EMA(fast)-EMA(slow))/EMA(slow)×100；signal=PPO 的 EMA(sig"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M09",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "ROC=(C-C[-N])/C[-N]×100"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 12 根 K 线（首个有效值下标 11，0 基）\" expected=12"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "ROC=(C-C[-N])/C[-N]×100；前值为 0 时 NaN；首根有效值 12。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M10",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "MOM=C-C[-N]，差额单位元"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 10 根 K 线（首个有效值下标 9，0 基）\" expected=10"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "MOM=C-C[-N]，差额单位元；首根有效值 10。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M19",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "Up=100×(N-距最高价根数)/N，Down 同理取最低价"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 25 根 K 线（首个有效值下标 24，0 基）\" expected=25"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "Up=100×(N-距最高价根数)/N，Down 同理取最低价；窗口 N 根，并列极值取最近一次；首根有效值 24。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M20",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "VI+=Σ|H_i-L_{i-1}|/ΣTR，VI-=Σ|L_i-H_{i-1}|/ΣTR，窗口 N"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 14 根 K 线（首个有效值下标 13，0 基）\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "VI+=Σ|H_i-L_{i-1}|/ΣTR，VI-=Σ|L_i-H_{i-1}|/ΣTR，窗口 N；ΣTR=0 时 N"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M21",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "CMO=100×(Σ涨幅-Σ跌幅)/(Σ涨幅+Σ跌幅)，窗口 N"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 14 根 K 线（首个有效值下标 13，0 基）\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "CMO=100×(Σ涨幅-Σ跌幅)/(Σ涨幅+Σ跌幅)，窗口 N；分母为 0 时 NaN；首根有效值 14。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M24",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=2 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 40 根 K 线（首个有效值下标 39，0 基）\" expected=40"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "Mass=Σ[EMA9(H-L)/EMA9(EMA9(H-L))]，求和 25 根；首值下标 40；warmup 40（"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M25",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "eps_i=1e-9×max(abs(C[i]),1.0)（按当根收盘价，非全局常数）"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=4 expected=4"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 46 根 K 线（首个有效值下标 45，0 基）\" expected=46"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "eps_i=1e-9×max(abs(C[i]),1.0)（按当根收盘价，非全局常数）；柱=2×(DIF-DEA)（复用"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "M26",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "range=H-L"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 7 根 K 线（首个有效值下标 6，0 基）\" expected=7"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "range=H-L；当根为近 7 根最小振幅→1，否则 0；首根有效值 6。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "D01",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "OBV(t) = OBV(t−1) + V(t)·sign(C(t)−C(t−1))；平盘日沿用前值"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=0 expected=0"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 2 根 K 线（首个有效值下标 1，0 基）\" expected=2"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "默认参数 —；手册 §3.2｜A股主口径：同 ChartSchool｜平盘日沿用前值｜停牌/零量根断线(NaN)，复牌后"
+            }
+          },
+          "ok": true
+        }
+      ],
+      "ok": true
+    }
+  },
+  "telemetry": {
+    "path": "/Users/sixmillion/Library/Application Support/aka/logs/telemetry.jsonl",
+    "total": 9124,
+    "counts": {
+      "cache.hit": 4126,
+      "cache.miss": 1374,
+      "compute.count": 125,
+      "compute.skip": 750,
+      "datasource.probe": 1,
+      "indicator.cold_ms": 1374,
+      "indicator.compute": 1374
+    },
+    "coldSamples": 1374,
+    "coldP95Ms": 0.16,
+    "recent": [
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M06",
+          "paramsHash": "cc530a4de7afed5c",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T08|{\"pct\":2.5,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T08",
+          "paramsHash": "84688a996eb80282",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T09|{\"mult\":2,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T09",
+          "paramsHash": "ef0bde338da0f104",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T10|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T10",
+          "paramsHash": "2058501d9d30925e",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T11|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T11",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T12|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T12",
+          "paramsHash": "2058501d9d30925e",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T13|{\"mult\":3.5,\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T13",
+          "paramsHash": "0c36bf4e54fbc39f",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T14|{\"mult\":3.0,\"period\":22}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T14",
+          "paramsHash": "e91a1244413544bd",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T15|{\"displacement\":26,\"kijun\":26,\"senkou\":52,\"tenkan\":9}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T15",
+          "paramsHash": "0f10292179b46ef7",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399028,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T16|{\"increment\":0.02,\"max\":0.2,\"step\":0.02}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T16",
+          "paramsHash": "ded8d99ed383318c",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T23|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T23",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T24|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T24",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V01|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V01",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V02|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V02",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V03|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V03",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V04|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V04",
+          "paramsHash": "2058501d9d30925e",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V05|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V05",
+          "paramsHash": "2058501d9d30925e",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V07|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V07",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V08|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V08",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V09|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V09",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V10|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V10",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M01|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M01",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M02|{\"d\":3,\"k\":3,\"period\":9}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M02",
+          "paramsHash": "0c81daa36611fd84",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M04|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M04",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M05|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M05",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M08|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M08",
+          "paramsHash": "cc530a4de7afed5c",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M09|{\"period\":12}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M09",
+          "paramsHash": "cfa02f147f1dc3d1",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M10|{\"period\":10}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M10",
+          "paramsHash": "cf992b147f179e57",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M19|{\"period\":25}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M19",
+          "paramsHash": "e932a6148d7b2dfb",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M20|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M20",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M21|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M21",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M24|{\"ema\":9,\"sum\":25}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M24",
+          "paramsHash": "b8792a32c607c003",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M25|{\"ema\":13,\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M25",
+          "paramsHash": "90a59b7e0edb97d3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M26|{\"period\":7}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M26",
+          "paramsHash": "a8ce3752702ce95d",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T19",
+          "instanceId": "b1x-T19",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T20",
+          "instanceId": "b1x-T20",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T21",
+          "instanceId": "b1x-T21",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T22",
+          "instanceId": "b1x-T22",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
+          "indicatorId": "E13",
+          "instanceId": "b1x-E13",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794118399029,
+        "name": "compute.count",
+        "fields": {
+          "cacheHit": true,
+          "count": 0,
+          "instances": 50,
+          "skip": 6
+        }
+      }
+    ]
+  },
+  "notes": [
+    "回切异常：样本 90 / cacheHit true / 逐点一致 true / max 291ms"
+  ]
+}
