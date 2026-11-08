@@ -7,7 +7,8 @@ use app_core::{
     DatasetManifest, DatasourceStatusDto, DataHealthDto, ErrorCode, GetBarsRequest,
     IndicatorFavoritesResponse,
     ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto, QualityReportDto,
-    RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
+    RecentViewDto, RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary,
+    WatchToggleResult, WatchlistDto,
 };
 use serde_json::Value;
 use tauri::State;
@@ -91,6 +92,26 @@ pub async fn set_indicator_favorite(
 ) -> Result<IndicatorFavoritesResponse, AppError> {
     tracked!(state, "set_indicator_favorite", {
         state.core.set_indicator_favorite(&indicator_id, favorited)
+    })
+}
+
+/// S-05.01-02：浮层「最近查看」，最多 5 条，读取时清理数据集里已不存在的记录。
+#[tauri::command]
+pub async fn recent_views(state: State<'_, AppState>) -> Result<Vec<RecentViewDto>, AppError> {
+    tracked!(state, "recent_views", {
+        state.core.recent_views()
+    })
+}
+
+/// S-05.01-02：工作台打开标的时写入/刷新，返回裁剪后的最新 5 条。
+#[tauri::command]
+pub async fn touch_recent_view(
+    state: State<'_, AppState>,
+    code: String,
+) -> Result<Vec<RecentViewDto>, AppError> {
+    tracked!(state, "touch_recent_view", {
+        state.ensure_writable()?;
+        state.core.touch_recent_view(&code)
     })
 }
 

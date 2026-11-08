@@ -22,7 +22,8 @@ use crate::dto::{
     GetBarsRequest, IndicatorFavoriteDto, IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto,
     ListSecuritiesRequest, MarketRowDto,
     MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto,
-    QualityCheckDto, QualityExampleDto, QualityReportDto, RangeDto, RegistryResponse, SecurityDto,
+    QualityCheckDto, QualityExampleDto, QualityReportDto, RangeDto, RecentViewDto, RegistryResponse,
+    SecurityDto,
     SeriesDto, WatchGroupDto, WatchItemDto, WatchToggleResult, WatchlistDto,
 };
 use serde_json::Value;
@@ -47,6 +48,8 @@ pub const EVENT_CALC_PANIC: &str = "calc.panic";
 
 /// 自选上限（跨分组按标的去重计数）
 pub const WATCHLIST_LIMIT: i64 = 500;
+/// 最近查看保留条数（S-05.01-02）
+pub const RECENT_VIEW_LIMIT: usize = 5;
 /// 自定义分组上限
 pub const MAX_CUSTOM_GROUPS: usize = 20;
 /// 内置分组名（只读派生，不承载 items）
@@ -618,6 +621,52 @@ impl AppCore {
             }
         }
         self.indicator_favorites()
+    }
+
+    // ---------- 最近查看 ----------
+
+    /// 浮层「最近查看」：最多 5 条，名称/板块由数据集补齐；
+    /// 数据集里已不存在的记录顺手清理，避免显示幽灵标的。
+    pub fn recent_views(&self) -> Result<Vec<RecentViewDto>, AppError> {
+        let db = self
+            .state_db()
+            .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+        let rows = db.recent_views(RECENT_VIEW_LIMIT).map_err(AppError::from)?;
+        let mut out = Vec::with_capacity(rows.len());
+        for row in rows {
+            match self.securities.iter().find(|sec| sec.code == row.code) {
+                Some(sec) => out.push(RecentViewDto {
+                    code: sec.code.clone(),
+                    name: sec.name.clone(),
+                    board: sec.board.label_zh(),
+                    is_index: sec.is_index,
+                    viewed_at: row.viewed_at,
+                }),
+                None => {
+                    db.remove_recent_view(&row.code).map_err(AppError::from)?;
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    /// 工作台打开标的时调用：同一标的只刷新时间，随后裁剪到 5 条。
+    pub fn touch_recent_view(&self, code: &str) -> Result<Vec<RecentViewDto>, AppError> {
+        let target = code.trim();
+        if target.is_empty() {
+            return Err(AppError::invalid_argument("code 不能为空"));
+        }
+        if !self.securities.iter().any(|sec| sec.code == target) {
+            return Err(AppError::invalid_argument(format!("未知标的：{target}")));
+        }
+        {
+            let db = self
+                .state_db()
+                .ok_or_else(|| AppError::internal("state.db 未初始化"))?;
+            db.touch_recent_view(target).map_err(AppError::from)?;
+            db.prune_recent_views(RECENT_VIEW_LIMIT).map_err(AppError::from)?;
+        }
+        self.recent_views()
     }
 
     // ---------- 自选 ----------
@@ -2295,6 +2344,44 @@ mod tests {
     async fn indicator_favorites_requires_state_db() {
         let core = AppCore::new_mock().await.unwrap();
         assert!(core.indicator_favorites().is_err());
+    }
+
+    #[tokio::test]
+    async fn recent_views_map_names_prune_to_five_and_drop_stale() {
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        let codes: Vec<String> = core.securities.iter().map(|sec| sec.code.clone()).collect();
+        assert!(codes.len() > 6);
+
+        let rows = core.touch_recent_view(&codes[0]).unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].code, codes[0]);
+        assert_eq!(
+            rows[0].name,
+            core.securities[0].name,
+            "名称必须从数据集补齐，不能只回代码"
+        );
+
+        // 数据集里不存在的记录：读取时清理，不返回幽灵行。
+        core.state_db().unwrap().touch_recent_view("999999.SZ").unwrap();
+        let rows = core.recent_views().unwrap();
+        assert!(rows.iter().all(|row| row.code != "999999.SZ"));
+        assert!(core
+            .state_db()
+            .unwrap()
+            .recent_views(10)
+            .unwrap()
+            .iter()
+            .all(|row| row.code != "999999.SZ"));
+
+        for code in codes.iter().take(6) {
+            core.touch_recent_view(code).unwrap();
+        }
+        assert_eq!(core.recent_views().unwrap().len(), RECENT_VIEW_LIMIT);
+
+        assert!(core.touch_recent_view("999999.SZ").is_err(), "未知标的不得写入");
     }
 
     #[tokio::test]

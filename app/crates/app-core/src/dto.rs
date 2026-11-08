@@ -255,6 +255,17 @@ pub struct IndicatorFavoritesResponse {
     pub favorites: Vec<IndicatorFavoriteDto>,
 }
 
+/// 最近查看条目：名称与板块由数据集补齐；数据集里已不存在的记录读取时清理。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentViewDto {
+    pub code: String,
+    pub name: String,
+    pub board: &'static str,
+    pub is_index: bool,
+    pub viewed_at: i64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QualityExampleDto {
