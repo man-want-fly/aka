@@ -557,6 +557,7 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - `a` **谁跑**：**BA 为唯一取证执行人**；dev 只交「开发自测参考」，不产出可签证据；TL 只复核与签字。BA 缺席时由 TL 指定交叉执行（dev A 跑 dev B 的卡、dev B 跑 dev A 的卡），meta 记 `runner`；**任何 dev 不得给自己的卡取证**。
     - `b` **在哪跑**：只在 `main` 主树、干净工作区（`git status --porcelain` 为空、`dirty=false`）；**dump 的 `commit` 必须等于 `sign_commit`，或是它的祖先**（不要求等于取证当时的 `main` tip）。**`dev2`/worktree 的 dump 一律只作参考、不计证据**；合并后按第 25 条判是否重跑；未合并的卡不可签。
     - `c` **怎么留痕**：入口固定为 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本必须：自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测到 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项（`runtime`/`build`/`command`/`dump`/`commit`+`dirty=false`）并落固定路径 `docs/qa/evidence/` 与 `raw/<name>-<commit12>-<label>.json`，缺一 `exit 2`。**禁止 `open /tmp/*.command` 之类人工步骤**；meta 必须写 `reproduce` 字段，下一个人照抄即可复现。
+    - `d` **窗口置前只允许一次（2026-11-08 起）**：取证期间把窗口置前**只做一次**，由脚本自己保证并把尝试次数写进 dump（`activateAttempts`，正常应为 1），**禁止轮询式重复激活**（每 N 秒 `activate`/`set_focus` 直到结束）。反例：BA 首次重跑用「每 3 秒重复激活保前台」，240 秒超时、零 dump；改为只激活一次后约 40 秒正常。教训：**为满足条件所做的动作，过量后反过来变成了破坏条件的原因**——置前动作与取证窗口抢焦点/打断套件节奏，触发的是「自伤」而不是产品问题。此类超时先查激活方式，再查产品。
 24. **工具/链路的端到端门槛与归属证据（2026-11-08 起）**：
     - `a` 脚本、套件入口、取证链路等**工具类改动，必须至少端到端跑通一次并留产物**才算通过；`--check`、`bash -n`、语法检查只算前置，**不算主路径通过**。
     - `b` 套件名必须能在 `diag-evidence.sh` 找到对应 `case` 分支；`evidence-run.sh` 对未知套件直接 `exit 2`，不得进入构建/取证。
@@ -598,6 +599,11 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
       ③ 采集代码不得在清单外拼接选择器字符串。
     - 契约变更必须与产品 DOM 变更同提交：只改产品不改契约、只改契约不改产品，均红。检查器的反例（改名、删登记、新增未登记选择器）必须与检查器同提交（第 29 条）。
     - 已发生三次：`[data-hist]` / `[data-readout-host]`、`data-catalog-beta`（P4→P3）、点错 `<li>` 行容器（无点击 handler）。教训：**产品改 DOM，证据静默失效，而且失效方向永远是「红」，每次都要人去分辨「产品坏了还是取证坏了」**。本机制与 `verify_card_pages`（卡↔页面锚点）、`verify:constants`（常量派生）同一思路：把沉默的耦合变成会叫的断言。
+33. **一卡多行判定：逐行判、卡级取严（2026-11-08 起）**：
+    - 同一张卡的主 AC 与补记（`补N`）**各自独立判定**，可以出现「主行 PASS / 补记 BLOCKED」：主行有 dump 支撑即判 PASS，补记因依赖的前置未交付判 BLOCKED（记 `blocker` 与 `skipped=false`），二者互不折算。
+    - **卡级状态取最严**：只要还有补记 BLOCKED，卡级必须是 `Blocked-AC`，不得因为主行 PASS 而记 `已交付`；`sign_commit` 只能在这一行的 `sign_scope` 内生效，必须写明「仅 AC-xx（补N 仍 BLOCKED，不计入本签字）」。
+    - 解除条件：补记依赖的前置交付并取得可签证据后重新判定，届时才可把卡级升 `已交付`；不得用主行 PASS 提前顶替。
+    - 首次适用：`S-07.05-03` —— `AC-07.05-04=PASS`（`OV-01…OV-08` 8/8 有 dump 支撑）、`补1=BLOCKED`（blocker `S-07.05-01`，`skipped=false`）、卡级 `Blocked-AC`。
 
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
@@ -2632,6 +2638,37 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - 安全方向：若将来有代码绕过 `ipc` 直接 import `invoke`，`OV-02` 会读成 0 次而判红，不会假通过。
 
 **五、落盘**：本条与 W-91 随下一提交入库；`W-90` 第 1/3/4 项已由 `4f44b08` 交付、待 BA 重跑验收，**第 2 项（失败自动落盘到 `raw/`）仍未交付**，仍归 dev A。
+
+#### 4.7.71 `s2` / `s070503` 双签、一卡两行、取证窗口与 `291ms` 留档（2026-11-08）
+
+**一、双签（run `42454710780`，`head=26e795f`，relation=equal）**
+- `s2`：dump `6eb07e6`（`relation=equal`、`finishedAt=2026-11-08T06:13:45.695Z`），顶层 `ok=true`、`verification` 三块全 `true`、`blocked=[]`、`checks` 全 pass；`catalog` 105/105、45 卡、`beta` 2/2；`verify:evidence` failed=0。签 `S-02.06-01`，原 `W-81` 留白收口。
+- `s070503`：dump `610d331`（`relation=equal`），`OV-01…OV-08` 8/8、约 40 秒、`ok=true`。签 `S-07.05-03`，**scope 仅 `AC-07.05-04`**。
+- 两个提交 `610d331` / `26e795f` 已推 `main`；签字台账新增 run `42454710780` 一行（`equal`、`ancestor_check=0`、`success`）。
+
+**二、一卡两行：落制度第 33 条**
+- `S-07.05-03`：`AC-07.05-04=PASS`（8/8 有 dump 支撑），`补1=BLOCKED`（blocker `S-07.05-01`，`skipped=false`），卡级 `Blocked-AC`。
+- 口径：主行与补记逐行独立判定，**卡级取最严**；`sign_commit` 只在 `sign_scope` 内生效，必须写明「仅 AC-xx（补N 仍 BLOCKED，不计入本签字）」。不得因主行 PASS 升 `已交付`，也不得把补记折算成 PASS 或跳过。
+- 由此产生一项台账同步（BA 执行，见 §4.7.71 六）：`S-07.05-03` 在完成台账里仍记 `未开始`，与 gate-log 的 `Blocked-AC` 不一致；应转 `Blocked-AC`，总账 `未开始 21→20`、`Blocked-AC 1→2`。
+
+**三、取证窗口：落制度第 23 条 `d`，派 W-92**
+- 反例：BA 首次用「每 3 秒重复激活保前台」→ 240s 超时、零 dump；改为**只激活一次** → 约 40 秒正常。
+- 口径：取证期间只置前一次，脚本自己保证并记录 `activateAttempts`（正常 1），**禁止轮询式激活**；超时诊断先查激活方式再查产品。
+- 教训成文：**为满足条件所做的动作，过量后反过来变成了破坏条件的原因**。这不是产品缺陷，不能按产品 bug 立案。
+
+**四、`b2Render` 291ms：单列为可查字段，派 W-93**
+- 现状：`291ms` 只写在 `notes` 自由文本（「回切异常：样本 90 / cacheHit true / 逐点一致 true / max 291ms」），`ok=true` 是缓存命中 + 逐点一致的结论，**不等于时延达标**。
+- 口径：`ok=true` 只否定「回切渲染错误」，不评价时延；`291ms` 与早期 `P95=31ms`（跨批次 P95）**不是同一统计量**，不得互相比较或折算。
+- 处置：`verification.b2Render.latency` 单列 `{scope,sample,cacheHit,pointwiseEqual,maxMs,p95Ms,advisory}`；门禁只校验字段存在与类型，**不设阈值、不参与 `ok`/`signable`**；将来时延类 AC 必须自带阈值并显式引用该字段。
+
+**五、`W-90` 拆分**
+- 第 1/3/4 项关闭（`4f44b08` 交付 + BA 重跑 + run `42454710780` 签署）。
+- 第 2 项「失败自动落盘 `raw/`」**未交付**，拆为 **W-94**，不随 W-90 关闭；在 W-94 关闭前，失败留痕只算人工补录（如 `4190cf5` 那次），不算链路能力。
+
+**六、落盘与门禁**
+- 本提交：审计 §4.7.71、制度第 23 条 `d` 与第 33 条、gate-log 两行签字、签字台账一行、W-90 结项说明与 W-92/W-93/W-94。
+- 自测：`verify:gate-log`（签字 40 位 + 台账对齐）、`verify:sign`（run 与 `head_sha`）、`verify:evidence`（扫描 8 / 冻结 18 / 兼容 8 / 失败记录 1 / 失败 0）、`verify:docs`、`tsc --noEmit` 全绿后提交。
+- BA 待办（不属本提交）：完成台账同步 `S-07.05-03` 状态与两处总数；W-94 交付前失败记录继续人工补录。
 
 
 

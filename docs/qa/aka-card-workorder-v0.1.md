@@ -1905,7 +1905,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
    - TL 反例：把一份合规 dump 的 `verification.catalog.ok` 改成 `false` 而顶层 `ok` 保持 `true` → `verify:evidence` 必须 failed；把失败记录复制进 `docs/qa/evidence/` → 必须 failed。
    - 任一项不过，`W-90` 退回，`S-02.06-01` / `S-07.05-03` 均不签。
 
-**W-90 执行状态（2026-11-08）**：第 1/3/4 项由 `4f44b08` 交付（`s070503` 只读赋值崩溃、`catalog` P3 契约、顶层聚合补目录维度），**待 BA 用新采集重跑 `s2` + `s070503` 验收**；**第 2 项（失败时自动落盘 `docs/qa/raw/`）未交付**，仍归 dev A，`evidence-run.sh` / `diag-evidence.sh` 失败分支补齐前不得关闭 W-90。
+**W-90 执行状态（2026-11-08，已结）**：第 1/3/4 项由 `4f44b08` 交付，BA 于 `610d331` / `26e795f` 重跑 `s2` + `s070503` 全绿；`S-02.06-01` 与 `S-07.05-03`（仅 AC-07.05-04）已于 run `42454710780`（`head=26e795f`，relation=equal）签署，W-90 第 1/3/4 项关闭。**第 2 项（失败时自动落盘 `docs/qa/raw/`）未交付，拆出为 W-94**，不随 W-90 关闭；`evidence-run.sh` / `diag-evidence.sh` 失败分支补齐前 W-94 不得关闭。
 
 ### W-91（dev A 实现 / TL 验收 / 不进 BA 主路径）取证选择器与产品 DOM 契约绑定
 
@@ -1920,3 +1920,31 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 4. **禁区**：不改产品 DOM 以迁就检查（产品契约变更必须改清单，不是反过来）；不改 `verify_evidence.mjs` 判据与白名单；不改变任何取证产物字段。
 5. **验收**：`verify:dom-contracts` 在 CI 上全绿且反例 4/4 判红；清单条目数 ≥ 覆盖首批三组；`verify:evidence` / `verify:evidence:selftest` 数字不变（本工单不加取证件数）。
 6. 任一项不过，`W-91` 退回；本工单不阻塞任何卡签字（但 `S-02.06-01` 的重跑仍须等 W-90 第 2 项与 BA 验收）。
+
+### W-92（BA 执行口径 / dev A 实现 / TL 验收）取证窗口只置前一次，dump 记 `activateAttempts`
+
+> 依据 §4.7.71 二与制度第 23 条 `d`。反例：轮询式激活（每 3 秒）导致 240s 超时、零 dump；改为只激活一次后约 40s 正常。
+
+1. `evidence-run.sh` / `diag-evidence.sh` 在取证前只执行一次窗口置前，**删除任何定时/轮询式 `activate` / `set_focus`**。
+2. dump 顶层新增 `activateAttempts`（整数，正常为 `1`）；`verify_evidence.mjs` 校验其存在且为整数，`> 3` 记 WARN（不判红），缺失按失败记录处理。
+3. 失败时的超时诊断顺序写进入口提示：先查 `activateAttempts` 与激活方式，再查产品；超时原因必须落 `raw/`（W-94）。
+4. 反例：轮询式脚本 → 代码审查判红；`activateAttempts=12` 的 dump → WARN 可查。
+5. 验收：BA 按第 23 条重跑 `s2`，`activateAttempts=1`；`verify:evidence` 数字不变。
+
+### W-93（dev A 实现 / TL 验收）`b2Render` 回切时延单列为可查字段
+
+> 依据 §4.7.71 三。当前 `291ms` 只存在于 `notes` 自由文本，标注 `ok=true` 会把时延问题盖过去。
+
+1. `verification.b2Render` 新增 `latency` 对象：`{ scope: "cutback-sample-90", sample: 90, cacheHit: true, pointwiseEqual: true, maxMs: 291, p95Ms: <有则记，无则 null>, advisory: true }`；`notes` 保留人读文案，不替代结构化字段。
+2. 门禁只校验 `latency` 存在与字段类型，**不设阈值、不参与 `ok` / `signable`**；若将来有时延类 AC，必须自带阈值并显式引用本字段，不得默认它已达标。
+3. 必须区分口径：`s2 §2 P95=31ms`（跨批次 P95）与「回切异常样本 90 的单次 max=291ms」不是同一统计量，不得互相折算或比较。
+4. 验收：BA 重跑 `s2` 后 `latency` 五字段齐备；TL 反例：把 `latency.maxMs` 改成字符串 → 门禁红；`latency` 缺失 → 门禁红。
+
+### W-94（dev A 实现 / BA 验收 / 自 W-90 拆出）失败产物自动落盘 `docs/qa/raw/`
+
+> 自 W-90 第 2 项拆出，**不随 W-90 关闭**。W-90 第 1/3/4 项已于 run `42454710780` 签署关闭。
+
+1. `evidence-run.sh` / `diag-evidence.sh` 的失败分支（崩溃、超时、非零退出、dump `error` 非空）必须自动把产物写入 `docs/qa/raw/<suite>-evidence-<commit12>-<label>.json` 及配对 meta，字段要求同制度第 31 条；**禁止只留 `/tmp`**。
+2. 失败记录 `ok=false`、带 `blocked[]` 或 `error`、`finishedAt`、`suite`；meta `commit` 40 位、`dirty=false`；不得写入证据根。
+3. 验收：人为让套件崩溃一次，`raw/` 自动出现合规记录，`verify:evidence` 汇总 `失败记录 N 份（不可签，不计证据份数）` 且 failed=0；随后清理该人造记录。
+4. 任一项不过，W-94 退回；本条未关闭前，任何「失败留痕」结论只算人工补录（如 `4190cf5` 那次），不算链路能力。
