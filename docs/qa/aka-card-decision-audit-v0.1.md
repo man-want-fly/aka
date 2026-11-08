@@ -549,6 +549,7 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - `command`：完整启动命令与环境变量（`AKA_DIAG`、`AKA_DIAG_TARGET` 等）；
     - `dump`：原始 JSON 路径 + `finishedAt`，并复制入库：当次落 `docs/qa/evidence/`、归档落 `docs/qa/raw/`（第 27 条单一常量），不得只留在 `~/Library`。
     - 机器约束：`diag.ts` 统一写 `env` 块，`commit` 由构建期注入（define），禁止手写；`verify:evidence` 校验 `env` 五项非空（`electron` 允许显式 `"none"`，缺失仍 `failed`）。
+    - **`env` 兼容只有一种合法形态（2026-11-08 收紧）**：仅 `scripts/evidence-legacy-whitelist.json` 的 `envCompat` 冻结名单可缺 `env`/`reproduce`，条目必须同时给出**文件名 + 证据 `sha256` + meta `sha256` + `expiresOn`**，且只豁免 `R-EV-02`（`card`/`ac`/归属/`meta` 断言照跑）。**名单外缺 `env` 一律 `FAIL`** —— 免检资格不得由 dump「不写 `env`」自证（与已删除的 `EXCLUDED_DIRS`、`W-70` 同形）。名单**只减不增**（`ENV_COMPAT_MAX_FILES`），到期即失效；白名单 JSON 的摘要硬编码在脚本里，改动必须同步改常量并由 **TL 单独签字**，**不得与制度/实现改动同提交**。
 20. **未分配池与自取（2026-11-08 起）**：产品批准的可排池（当前 A 组 22 张，花名册 `aka-dispatch-pool-v0.1.csv`）允许 dev **自行取卡、不等 TL 分配**；取卡须同时满足机械资格——未开始/未分配、AC 不引用 `absent` 页面、上游无 `Blocked`、不与其他 dev 占用冲突。取卡当天只报 `Pxx` 与预计人日，**TL 不写 gate-log**（第 14 条边界前不进场）；批次边界由 TL 一次性追认，每卡一行：`owner=dev X`、`workorder=W-86#Pxx`、`note` 以 `【dev自取|Pxx|取卡 YYYY-MM-DD】` 开头，并记池快照 commit。签字规则不变，仍在合并 tip 一次签。补池归 TL、在边界做；池空或撞缺页由 TL 三选一（换卡 / 降 `Blocked` / 补页面依赖），dev 不得自行扩池或改卡状态。
 21. **签后取证违规、结论不变的处理（2026-11-08 起，替代「一律重签」）**：签字已绑 commit、卡面与 AC 均未变，事后认定取证过程违规（计数错误、以 CI/源码代偿运行层、证据只在 `~/Library` 等），但按原始 dump 独立重核后**结论不变** → **不重签**，维持原 `sign_commit`，在同一行 `note` 追加「更正注记」，至少写四项：① 日期与引用条（如 `§4.7.56`）；② 原表述；③ 更正后表述；④ 重核依据（dump 路径 + `finishedAt`）与复核人；末句固定写「结论不变，不重签」。**只有下列三种情形才重签**：`a` 卡面或 AC 改动；`b` 被测 commit 变化（签字对象本身变了）；`c` 重核结论改变（PASS↔FAIL）。更正注记**只追加、不覆盖**原文。若原签字未绑 commit，或违规已导致结论无法独立重核，则按失效处理，在批次边界重签。
 22. **交付计数双口径（2026-11-08 起，B 案）**：`已交付` 保留「实现成立」口径，但台账与任何对外宣读必须**同时**给出「已交付 N 张，其中 M 张无有效签字；可放行 N−M 张」，**禁止单读已交付数或单读占比**。无有效签字的已交付只计「实现进度」，**不计可放行**，不得作为放行、结项或对外承诺的依据；每张无签卡必须在跟踪表登记「分类 / 缺什么 / 责任人 / 期限」，逾期未签则降 `条件交付` 并同步人日。当前基线：已交付 **21**、无签 **6**、可放行 **15**（详见 §4.7.59）。
@@ -2533,6 +2534,37 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - 代码核对：`[data-hist]`、`[data-readout-host]` 在 `app/src` **不存在**；真实契约是 `[data-readout="1"]`、`[data-macd="hist"] rect`、`data-sub-zero="V08"`。`shownSma` 全空、`macdCount=3`、`colorOk=false` 均可用采集选择器解释。
 - 定性：**采集侧缺陷**（副图基线缺 M06、选择器写错、T13 容量截断、V08 找错属性），不是产品渲染 bug。修复方向（归一化基线 `T01+T09`/`M06+M01`、对齐真实 DOM 契约）合理。
 - 纪律：修采集前**不得**据此判产品 bug，也不得据此签；修完必须重跑，四项转绿才算证据成立。此案例作为「按真 bug 去修一个本来正确的图表」的反例入审计。
+
+#### 4.7.68 收紧 `env` 兼容分支；`finishedAt` / `b2Render` 两处口径裁定（2026-11-08）
+
+**一、`env` 兼容分支：从「自证免检」改为「冻结名单免检」（用户指出，当场收紧）**
+- 原实现（`64a5005`）：R-EV-02 以 `meta.reproduce` 非空为开关，dev A 的说法是「旧套件 dump 没有 `env` 块，走兼容分支」。这等于**任何一份 dump 只要不写 `env` 就自动免检** —— 免检资格由被检方自己声明，与已删除的 `EXCLUDED_DIRS` 同一个形状（`W-70` 已栽过一次）。
+- 改法：兼容只对 `scripts/evidence-legacy-whitelist.json` 的 `envCompat` 冻结名单生效，条目 = **文件名 + 证据 `sha256` + meta `sha256` + `expiresOn`**；名单外缺 `env`/`reproduce` **一律红**（`R-EV-02` 对所有非冻结证据无条件生效）。
+- 只豁免 `R-EV-02`：`card`/`ac`/归属/`meta` 结构断言对名单内文件**照跑**（不是整份冻结），避免借兼容把弱化扩散到别的断言。
+- 棘轮与失效：`ENV_COMPAT_MAX_FILES=8`（超出即红）、`expiresOn` 不得晚于 `LEGACY_DEADLINE=2026-11-22`、到期即失效；白名单 JSON 摘要硬编码在脚本常量里，改名单必须同步改常量并由 TL 单独签字，**不得与本类实现/制度改动同提交**。
+- **一次补录（TL 签字）**：8 份 pre-W-89 已入库证据此前能过是因为「缺 `env` 即放行」，收紧后会转红。它们被 docs 引用、原始取证窗口不可复现、删除会断链，故按「补录冻结、非新增豁免」一次性入名单：`e01-market`、`s0102-watchlist-corrupt`、`s070101-datasource`、`s070401-backfill`、`s070501-quality-p9`、`s080102-search-empty`、`s20401`、`s20601`。**此后只减不增**；到期后仍存活的条目必须重取证或删除。
+- 独立反向验证（不复用 dev A selftest）：
+
+| 用例 | 结果 |
+|---|---|
+| 门禁自测（含新增：缺 `reproduce`、`reproduce` 空、名单外缺 `env`、`b2Render` 派生不一致等） | 36/36 exit 符合预期 |
+| 名单内证据改一个字节 | **exit 1**（hash 不符） |
+| 名单内 meta 改 `commit` | **exit 1**（meta hash 不符） |
+| 名单内、未改动 | exit 0（汇总行 `env 兼容 8 份`） |
+
+**二、口径①：`finishedAt` 删掉 mtime 回退、缺失即 `exit 2` —— 批准**
+- `evidence-run.sh` 只认 dump 顶层 `finishedAt`；有 `env` 的 dump 缺失即 `abort`，不再回退 mtime。理由与第 28 条现场案例一致：mtime 是文件系统时间，可被复制/触碰改写，且会与 `commit` 各说一套。旧套件（名单内、无 `env`）仍保留 mtime 兜底，属于冻结口径，随名单到期一并消失。
+
+**三、口径②：`b2Render` 的 `status=n/a` 与「未聚焦」——方向采纳，但 dev A 的表述不准确，已改**
+- dev A 原话「`n/a` 不计 failCount、也不让 `ok=false`，窗口未聚焦只体现在 `focusOk`」：**后半句与代码不符**。`collectB2RenderChecks` 原返回 `ok: assertionsOk && focusOk`，即未聚焦时 `ok` 已经是 `false`。后果不是「能签」，而是**把「不可判定」记成了「产品失败」**，违反第 10 条对三态的区分（`n/a` 不计 fail 是对的，方向没问题）。
+- 改法（与「未聚焦 → 不可判定 → 不得签」对齐）：
+  - `ok = assertionsOk`：产品断言结论，不含聚焦；
+  - `focusOk = windowFocused && appActive`：运行时前置条件；
+  - `signable = assertionsOk && focusOk`：**可签的唯一判据**；
+  - `verify:evidence` 对 `s2` dump 校验 `ok === assertionsOk`、`signable === (assertionsOk && focusOk)`、`focusOk` 与顶层 `windowFocused`/`appActive` 同源；派生不一致即红；`focusOk=false` 只输出「不可判定」WARN，不判证据失败。
+- 结论：兼容两处说法——**未聚焦确实不得签（`signable=false`），但不得记成产品失败**；把「不得签」放在 `signable` 上，`ok` 只回答产品问题，两者不再互相冒充。
+
+
 
 ---
 

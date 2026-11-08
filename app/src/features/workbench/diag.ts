@@ -1484,10 +1484,10 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     (total, card) => total + Number(card.dataLimited ?? 0),
     0,
   );
-  // W-89 第 6 项：ok 与 failCount 的算法摊开并写明。
-  // - assertionsOk：8 张卡齐全且没有任何 status="fail" 的 clause；
-  // - dataLimited（status="n/a"，如 V05 零带宽段）不算 fail、也不改 ok，只在卡片里单列；
-  // - focusOk 是运行时前置条件，与 clause 断言分开报，不允许混进 failCount。
+  // W-89 第 6 项：ok 与 failCount 的算法摊开并写明（第 10 条：不可判定 ≠ 通过 ≠ 失败）。
+  // - assertionsOk：8 张卡齐全且没有任何 status="fail" 的 clause（产品断言，不含聚焦）；
+  // - dataLimited（status="n/a"，如 V05 零带宽段）不算 fail、也不改 assertionsOk，只在卡片里单列；
+  // - focusOk 是运行时前置条件；signable = assertionsOk && focusOk 是「可签」的唯一判据。
   const assertionsOk =
     cards.length === 8 && failCount === 0 && cards.every((item) => Boolean(item.ok));
   const focusOk = focus.windowFocused && focus.appActive;
@@ -1503,10 +1503,11 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
       .filter((item) => Number(item.dataLimited ?? 0) > 0)
       .map((item) => item.card),
     okRule:
-      "ok = assertionsOk && focusOk；status=n/a（dataLimited）不计入 failCount、也不让 ok=false；windowFocused/appActive 单列在 focusOk",
+      "ok = assertionsOk（产品断言，不含聚焦）；signable = assertionsOk && focusOk（可签的唯一判据）；status=n/a（dataLimited）不计 failCount、也不让 ok=false；未聚焦记 focusOk=false → 不可判定，不得签",
     cards,
     focus,
-    ok: assertionsOk && focusOk,
+    ok: assertionsOk,
+    signable: assertionsOk && focusOk,
   };
 }
 
@@ -1954,6 +1955,9 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   const catalog = await collectCatalogCheck();
   if (!renderLayer.ok) notes.push("渲染层 DOM 断言未通过，见 verification.renderLayer");
   if (!b2Render.ok) notes.push("B2 渲染层 8 卡断言未通过，见 verification.b2Render");
+  else if (b2Render.signable !== true) {
+    notes.push("B2 渲染层断言通过但窗口未聚焦 → 不可判定，不得据此签（见 verification.b2Render.focusOk）");
+  }
   if (!b3Render.ok) notes.push("B3 渲染层 13 指标断言未通过，见 verification.b3Render");
   if (!catalog.ok) notes.push("口径页 DOM 断言未通过，见 verification.catalog");
 

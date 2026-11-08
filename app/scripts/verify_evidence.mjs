@@ -52,9 +52,13 @@ const LEGACY_DEADLINE = "2026-11-22";
 // 只缩不扩的棘轮：前两轮教训是「靠有人会看」的约束都没被看住；
 // 新增冻结项必须付出「减一份或改本常量」的显式代价。
 const LEGACY_MAX_FILES = 18;
+// R-EV-02 env 兼容名单：只允许「pre-W-89 已入库、无 env 块」的历史证据缺 env/reproduce。
+// 免检资格只能由「文件名 + sha256 + expiresOn」锁定，不得由 dump 自己「不写 env」声明。
+// 棘轮只减不增：当前 8（2026-11-08 一次补录，TL 签字），新增必须同时减一份。
+const ENV_COMPAT_MAX_FILES = 8;
 // 冻结白名单 JSON 的 sha256：改动该 JSON 必须同步改本常量并单独过审。
 const LEGACY_WHITELIST_FILE_SHA256 =
-  "d3152a90cd9757b3db806e1a8a89db45bcf9b28387a95d3940f331f158c77cfe";
+  "6209c183bd37e9c4e4a6769baa7d754985444faf1c14b55aeac434dc8e26bac4";
 // 层名受控，防自建层（缺字段 / "undefined" / "runtime2" 一律红）。
 const ALLOWED_LAYERS = new Set(["data", "render", "runtime"]);
 const AC_TOKEN_RE = /^AC-\d{2}\.\d{2}-\d{2}(（补\d+）)?$/;
@@ -175,6 +179,7 @@ const stable = (layers) =>
 
 // 旧格式冻结：白名单 JSON 必须与脚本常量摘要一致才可信。
 let freezeMap = {};
+let envCompatMap = {};
 let whitelistUsable = false;
 try {
   const raw = fs.readFileSync(WHITELIST_PATH);
@@ -216,6 +221,42 @@ try {
       }
     }
     if (entriesValid) {
+      // env 兼容名单：同一份 JSON、同一把摘要锁；只允许缺 env/reproduce，其余断言照跑。
+      const envCompatEntries = Object.entries(parsed.envCompat?.files ?? {});
+      if (envCompatEntries.length > ENV_COMPAT_MAX_FILES) {
+        failures.push(
+          `env 兼容名单 ${envCompatEntries.length} > ENV_COMPAT_MAX_FILES=${ENV_COMPAT_MAX_FILES}（只减不增）`,
+        );
+      } else {
+        let envCompatValid = true;
+        for (const [name, entry] of envCompatEntries) {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+            failures.push(`${name}: env 兼容条目必须是 {sha256, expiresOn} 对象`);
+            envCompatValid = false;
+            continue;
+          }
+          if (typeof entry.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(entry.sha256)) {
+            failures.push(`${name}: env 兼容条目缺合法 sha256`);
+            envCompatValid = false;
+          }
+          // meta 也要锁：否则可以只改 meta 借壳（R-EV-02 已被豁免，没人再看它）。
+          if (typeof entry.metaSha256 !== "string" || !/^[0-9a-f]{64}$/.test(entry.metaSha256)) {
+            failures.push(`${name}: env 兼容条目缺合法 metaSha256`);
+            envCompatValid = false;
+          }
+          if (
+            typeof entry.expiresOn !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresOn)
+          ) {
+            failures.push(`${name}: env 兼容条目缺 expiresOn（必填，YYYY-MM-DD）`);
+            envCompatValid = false;
+          } else if (entry.expiresOn > LEGACY_DEADLINE) {
+            failures.push(`${name}: env 兼容 expiresOn=${entry.expiresOn} 超过 ${LEGACY_DEADLINE}（不许续期）`);
+            envCompatValid = false;
+          }
+        }
+        if (envCompatValid) envCompatMap = parsed.envCompat.files;
+      }
       freezeMap = parsed.files ?? {};
       whitelistUsable = true;
     }
@@ -270,6 +311,7 @@ const anchorLineMatches = (section, ac) => {
 
 let scanned = 0;
 let frozen = 0;
+let envCompatCount = 0;
 const evidenceFiles = [];
 
 // W-71：删除 EXCLUDED_DIRS。证据根只允许平铺；出现子目录即红——
@@ -330,6 +372,33 @@ for (const { full, rel } of evidenceFiles) {
     frozen += 1;
     warnings.push(`${file}: 旧格式冻结（白名单命中，expiresOn ${freezeEntry.expiresOn}）`);
     continue;
+  }
+
+  // pre-W-89 env 兼容：只豁免 R-EV-02（env/reproduce/dump/聚焦），其余断言照跑。
+  // 名单外缺 env 一律红——「不写 env」不再构成免检资格。
+  let envCompatHit = false;
+  const envCompatEntry = whitelistUsable ? envCompatMap[path.basename(file)] : undefined;
+  if (envCompatEntry) {
+    if (!legacyAllowed) {
+      failures.push(`${file}: env 兼容名单已于 ${LEGACY_DEADLINE} 截止，必须重新由 evidence-run 取证`);
+      continue;
+    }
+    if (sha256(full) !== envCompatEntry.sha256) {
+      failures.push(`${file}: env 兼容名单 hash 不符（文件被改动，不得借壳续免检）`);
+      continue;
+    }
+    const compatMeta = full.replace(/\.json$/i, "-meta.json");
+    if (!fs.existsSync(compatMeta)) {
+      failures.push(`${file}: env 兼容名单命中但缺 meta（名单与证据集不同步）`);
+      continue;
+    }
+    if (sha256(compatMeta) !== envCompatEntry.metaSha256) {
+      failures.push(`${file}: env 兼容名单 meta hash 不符（meta 被改动，不得借壳续免检）`);
+      continue;
+    }
+    envCompatHit = true;
+    envCompatCount += 1;
+    warnings.push(`${file}: env 兼容（冻结名单命中，expiresOn ${envCompatEntry.expiresOn}，仅豁免 R-EV-02）`);
   }
 
   // 非冻结文件：坏 JSON 直接红，不许静默跳过。
@@ -432,10 +501,17 @@ for (const { full, rel } of evidenceFiles) {
     continue;
   }
   // R-EV-02 运行层五项 + dump 完整性 + 聚焦可判定性。
-  // 只对新格式（evidence-run.sh 统一入口产物，meta.reproduce 非空）生效：
-  // 旧证据没有被改写的义务，但新证据缺一项就必须 failed，不许「大概跑完了」。
-  if (typeof meta.reproduce === "string" && meta.reproduce.trim() !== "") {
+  // 对所有「非冻结」证据强制生效：兼容只能由 evidence-legacy-whitelist.json
+  // （文件名 + sha256 + expiresOn + 棘轮）声明；不再由 meta.reproduce 是否存在自证。
+  // 冻结白名单命中已在上面 continue，走到这里的任何文件缺 env/reproduce 一律红。
+  // 唯一的例外是上一步的 envCompatHit：它只对冻结名单内、sha256 锁定的历史文件生效。
+  if (!envCompatHit) {
     const problems = [];
+    if (typeof meta.reproduce !== "string" || meta.reproduce.trim() === "") {
+      problems.push(
+        "meta.reproduce 缺失/为空（非冻结证据必须由 evidence-run 产出，不得自免 R-EV-02）",
+      );
+    }
     const env = evidence.env;
     if (!env || typeof env !== "object" || Array.isArray(env)) {
       problems.push("缺 env 块（R-EV-02 五项：commit/runtime/build/command/dirty）");
@@ -629,6 +705,37 @@ for (const { full, rel } of evidenceFiles) {
       if (evidence.suite !== "s2") {
         problems.push(`s2 dump suite=${JSON.stringify(evidence.suite)} 不是 "s2"`);
       }
+      // b2Render 判定分层（第 10 条 / 第 19 条）：
+      //   ok       = assertionsOk            —— 产品断言结论，不含聚焦；
+      //   signable = assertionsOk && focusOk —— 可签的唯一判据；
+      // n/a（dataLimited）不算 fail、不改 assertionsOk；未聚焦不得签，但记「不可判定」而非产品失败。
+      const b2 = evidence.verification && evidence.verification.b2Render;
+      if (!b2 || typeof b2 !== "object" || Array.isArray(b2)) {
+        problems.push("s2 dump 缺 verification.b2Render（判定分层不可省）");
+      } else {
+        for (const key of ["assertionsOk", "focusOk", "signable", "ok"]) {
+          if (typeof b2[key] !== "boolean") {
+            problems.push(`b2Render.${key} 不是布尔（缺键 = 不可判定 = FAIL）`);
+          }
+        }
+        if (typeof b2.assertionsOk === "boolean" && typeof b2.focusOk === "boolean") {
+          if (b2.ok !== b2.assertionsOk) {
+            problems.push("b2Render.ok 必须等于 assertionsOk（产品断言，不得混入聚焦）");
+          }
+          if (b2.signable !== (b2.assertionsOk && b2.focusOk)) {
+            problems.push("b2Render.signable 必须等于 assertionsOk && focusOk（派生不一致）");
+          }
+        }
+        if (
+          typeof b2.focusOk === "boolean" &&
+          b2.focusOk !== (evidence.windowFocused === true && evidence.appActive === true)
+        ) {
+          problems.push("b2Render.focusOk 与 dump 顶层 windowFocused/appActive 不一致");
+        }
+        if (b2.focusOk === false) {
+          focusNotes.push(`${file}: b2Render.focusOk=false → 不可判定，不得据此签（第 10 条）`);
+        }
+      }
     }
 
     for (const problem of problems) failures.push(`${file}: ${problem}`);
@@ -724,7 +831,7 @@ for (const note of focusNotes) console.warn(`WARN ${note}`);
 for (const failure of failures) console.error(`FAIL ${failure}`);
 console.log(
   `证据归属门禁：卡集 ${CARD_SET.size} 张，扫描 ${scanned} 份证据（全部平铺），` +
-    `冻结 ${frozen} 份，未聚焦 ${focusNotes.length} 份，失败 ${failures.length} 项` +
-    `（白名单上限 ${LEGACY_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
+    `冻结 ${frozen} 份，env 兼容 ${envCompatCount} 份，未聚焦 ${focusNotes.length} 份，失败 ${failures.length} 项` +
+    `（白名单上限 ${LEGACY_MAX_FILES} / env 兼容上限 ${ENV_COMPAT_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
 );
 process.exit(failures.length === 0 ? 0 : 1);

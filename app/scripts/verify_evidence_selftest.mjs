@@ -102,7 +102,10 @@ const baseEvidence = () => ({
   warm: {},
   batchCompute: {},
   timeframes: {},
-  verification: {},
+  // 判定分层（第 10 条）：ok=产品断言，signable=断言∧聚焦。
+  verification: {
+    b2Render: { assertionsOk: true, focusOk: true, signable: true, ok: true },
+  },
   telemetry: {},
 });
 
@@ -156,7 +159,11 @@ const cases = [
   ["缺 meta.dump.finishedAt", (evidence, meta) => { delete meta.dump.finishedAt; }, 1],
   ["meta.dump.finishedAt 与 dump 不等", (evidence, meta) => { meta.dump.finishedAt = "2026-11-08T04:00:00.000Z"; }, 1],
   ["缺 windowFocused", (evidence) => { delete evidence.windowFocused; }, 1],
-  ["appActive=false（记不可判定，不判证据失败）", (evidence) => { evidence.appActive = false; }, 0],
+  ["appActive=false（记不可判定，不判证据失败）", (evidence) => {
+    evidence.appActive = false;
+    evidence.verification.b2Render.focusOk = false;
+    evidence.verification.b2Render.signable = false;
+  }, 0],
   ["binary.sha256 非法", (evidence) => { evidence.env.build.binary.sha256 = "xyz"; }, 1],
   ["electron=null", (evidence) => { evidence.env.runtime.electron = null; }, 1],
   ["electron 缺键", (evidence) => { delete evidence.env.runtime.electron; }, 1],
@@ -180,6 +187,20 @@ const cases = [
   ["meta.build.binary.sha256 漂移", (evidence, meta) => { meta.build.binary.sha256 = "1".repeat(64); }, 1],
   ["meta.command 为空", (evidence, meta) => { meta.command = ""; }, 1],
   ["meta.command 与 env.command 不等", (evidence, meta) => { meta.command = "AKA_DIAG=1 something-else"; }, 1],
+  // R-EV-02 不再由「写不写 reproduce」自免：缺 reproduce 一律红（兼容只能靠冻结白名单）。
+  ["缺 meta.reproduce（不得自免 R-EV-02）", (evidence, meta) => { delete meta.reproduce; }, 1],
+  ["meta.reproduce 为空", (evidence, meta) => { meta.reproduce = "   "; }, 1],
+  ["缺 env 块（名单外文件不得自免 R-EV-02）", (evidence) => { delete evidence.env; }, 1],
+  // b2Render 判定分层：ok 只等于 assertionsOk；signable 是唯一可签判据。
+  ["缺 verification.b2Render", (evidence) => { delete evidence.verification.b2Render; }, 1],
+  ["b2Render.ok 混入聚焦（assertionsOk=true 却 ok=false）", (evidence) => { evidence.verification.b2Render.ok = false; }, 1],
+  ["b2Render.signable 派生不一致", (evidence) => { evidence.verification.b2Render.signable = false; }, 1],
+  ["b2Render.focusOk 与顶层聚焦不一致", (evidence) => { evidence.verification.b2Render.focusOk = false; }, 1],
+  ["未聚焦：断言通过但 signable=false（记不可判定，不判证据失败）", (evidence) => {
+    evidence.windowFocused = false;
+    evidence.verification.b2Render.focusOk = false;
+    evidence.verification.b2Render.signable = false;
+  }, 0],
 ];
 
 let failed = 0;

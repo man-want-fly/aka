@@ -1866,7 +1866,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 
 1. **归档路径**：归档从 `docs/qa/evidence/raw/` 改到 `docs/qa/raw/`；路径常量单一来源，`evidence-run.sh` 与 `verify_evidence.mjs` 同源引用（第 27 条）。
 2. **`meta.dump`**：补 `finishedAt`（与 dump 内 `finishedAt` 一致），第 19 条第五项可取。
-3. **`env` 块与注入**：`diag.ts` 写 `env`，`commit` 构建期 `define` 注入；`verify:evidence` 校验 env 五项、缺一 failed（第 28 条）。`runtime.electron` 允许显式 `"none"`（Tauri WebKit 必然如此），**缺失才 failed**。
+3. **`env` 块与注入**：`diag.ts` 写 `env`，`commit` 构建期 `define` 注入；`verify:evidence` 校验 env 五项、缺一 failed（第 28 条）。`runtime.electron` 允许显式 `"none"`（Tauri WebKit 必然如此），**缺失才 failed**。**兼容只认冻结名单**：仅 `scripts/evidence-legacy-whitelist.json` 的 `envCompat`（文件名 + 证据 `sha256` + meta `sha256` + `expiresOn`）可缺 `env`/`reproduce`，且只豁免 R-EV-02；**名单外缺 `env` 一律红** —— 不得用「不写 env」自证免检。名单只减不增（`ENV_COMPAT_MAX_FILES=8`），到期失效，改动需 TL 单独签字、不得与本类改动同提交（§4.7.68）。
 4. **`s2` schema 分支**：后处理按 `build/dataset/engine/debounce/cold/warm/batchCompute/timeframes/verification/telemetry` 解析，不再套 `ok/checks[]/blocked`，否则必 `exit 2`。
 5. **`s070503` 超时**：查清是套件未跑完还是等待路径不对；查清前不得重跑。**`--check` 只验前置，不验 240s 内能否写出 dump**，超时结论只认完整跑的结果。
 6. **`S-02.06-01` 现状**：5 项过 2 项、`suite=null`、`checks=0`；`s2` 三项运行时未过（MACD 副图、悬停取值、B2 渲染），先判真 bug / 环境问题。**真 bug 则重签不只是重跑。**
@@ -1880,6 +1880,8 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
    - **`env` 注入**：TL 查 `vite.config.*` 确为 `define` 注入 + 产物 `commit` 与 `git rev-parse HEAD` 一致；**反例**：手改 `meta.commit` 为上游 commit 后 `verify:evidence` 必须 failed，仍 PASS → 未完成。
    - **`runtime`**：`node`/`os`/`arch`/`hostTarget` 齐全，`electron` 显式为 `"none"`（记通过；其他值 → `failed`）；任一项**缺失** → `failed`。**不得因「没有 Electron」判红**，也不得为过门禁伪造 electron 版本。
    - **聚焦字段**：`windowFocused`/`appActive` 缺失或类型错 → `failed`；值为 `false` → 该证据运行时 check 记「不可判定」，**不判证据失败**，按第 29 条复核判据，不得记 PASS、不得签。
+   - **`b2Render` 判定分层**：`ok=assertionsOk`（产品断言，不含聚焦）、`signable=assertionsOk && focusOk`（可签唯一判据）；`verify:evidence` 校验派生一致、`focusOk` 与顶层聚焦同源。`n/a` 不计 failCount、不改 `assertionsOk`；`signable=false` → 不得签，记「不可判定」而非产品失败（§4.7.68 三）。
+   - **`env` 兼容**：`verify:evidence` 汇总行必须给出 `env 兼容 N 份`；名单外缺 `env`/`reproduce` 必须 failed，名单内改动任一字节（证据或 meta）必须 failed。
    - **`s2` schema 分支**：TL 查 dump 含 10 个 schema 键、后处理 `checks>0` 且 `suite=s2`；仍 `exit 2` 或 `checks=0` → 未完成。
    - **`s070503` 超时**：240s 内产出 dump，或明确 `blocked` 原因；仍超时且无 dump → 未完成，不得以「大概跑完了」记 PASS。
    - **通用**：以上任一项不过，`W-89` 退回，BA 停跑，不签任何卡。
