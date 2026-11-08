@@ -834,6 +834,8 @@ export function WorkbenchPage({
       Promise.all([barsPromise, calcPromise])
         .then(([nextBars, calcResult]) => {
           if (current !== generation.current) return;
+          // W-114：计时终点＝两份响应都到手那一刻，不含其后的状态提交与取证哈希
+          const totalMs = performance.now() - startedAt;
           inFlightRef.current = false;
           setBars(nextBars);
           barsRef.current = nextBars;
@@ -902,7 +904,7 @@ export function WorkbenchPage({
               adj,
               barsMs,
               calcMs,
-              totalMs: performance.now() - startedAt,
+              totalMs,
               cacheHit: calcResult.value.cacheHit,
               computedMs: calcResult.value.computedMs,
               barCount: calcResult.value.barCount,
@@ -922,7 +924,7 @@ export function WorkbenchPage({
             adj,
             barsMs,
             calcMs,
-            totalMs: performance.now() - startedAt,
+            totalMs,
             cacheHit: false,
             computedMs: Number.NaN,
             barCount: 0,

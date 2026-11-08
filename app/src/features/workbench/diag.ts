@@ -16,9 +16,13 @@ import type { CalcResponse, TelemetryEventDto, TelemetrySummary } from "../../li
 import type { WorkbenchParams } from "./model";
 import {
   evaluateWarmCutback,
+  seriesSignature,
   WARM_CUTBACK_MAX_TOTAL_MS,
   WARM_CUTBACK_MIN_SAMPLES,
 } from "./warmCutback";
+
+// W-114：签名实现搬到判据同源模块（便于 verify-s20602 在 node 下直接等价校验）
+export { seriesSignature };
 
 export type DiagPhase = "off" | "debounce" | "cold" | "warm" | "done";
 
@@ -144,39 +148,6 @@ export const DEBOUNCE_INPUT_GAP_MS = 40;
 export const DEBOUNCE_QUIET_MS = 120;
 
 const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
-
-function fnv1a(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0");
-}
-
-/** 逐点签名：占位 null 也参与哈希，只有数值完全一致才可能得到相同签名。 */
-export function seriesSignature(calc: CalcResponse): {
-  hash: string;
-  points: number;
-} {
-  const parts: string[] = [];
-  let points = 0;
-  for (const series of calc.series) {
-    parts.push(`${series.instanceId}|${series.indicatorId}|w${series.warmup}`);
-    for (const output of series.outputs) {
-      parts.push(output.key);
-      for (const value of output.values) {
-        if (value === null) {
-          parts.push("n");
-          continue;
-        }
-        points += 1;
-        parts.push(value.toString());
-      }
-    }
-  }
-  return { hash: fnv1a(parts.join(",")), points };
-}
 
 /** 就近秩 P95（与 Rust `cold_p95_ms` 同口径）。 */
 export function nearestRankPercentile(values: number[], ratio: number): number | null {
