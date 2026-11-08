@@ -29,6 +29,38 @@ scripts/diag-evidence.sh s070102-corrupt  # 期望：②FAIL / ③~⑥ SKIP / 1/
 
 两套都必须先绿；任一不绿即停，先查环境，不得继续打补丁。
 
+## 0.1 每次取证后恢复证据目录（否则下一次 `meta.dirty=true`）
+
+`diag-evidence.sh` 会把 dump 复制进 `docs/qa/evidence/`（已跟踪），复制完工作树就脏了。**每跑完一次（基线或变异）立即快照并恢复**，再做下一次：
+
+```bash
+mkdir -p /tmp/b1-evidence/<run-name>
+cp -R docs/qa/evidence/. /tmp/b1-evidence/<run-name>/
+git checkout -- docs/qa/evidence
+git clean -fd docs/qa/evidence        # 只清本次新增的未跟踪 dump
+git status --short                    # 必须为空，才允许进入下一段
+```
+
+窗口结束前把 `/tmp/b1-evidence/` 三份快照（基线、变异①、变异②）一起复制回 `docs/qa/evidence/`，作为一个独立证据提交入库；不要每段各提交一次。
+
+## 0.2 变异必须在一次性分支上提交（否则 `meta.dirty=true`）
+
+`git apply` 后直接跑，dump 的 `meta.dirty` 会是 `true`，该条变异记录不能入账。每个变异用一次性分支提交后再跑，跑完删分支回到签 tip：
+
+```bash
+SIGN_TIP=$(git rev-parse HEAD)        # 窗口启动时 main HEAD；先确认 git status --short 为空
+git switch -c mutation/b1-01
+git apply docs/qa/mutations/b1/01-error-code-title.patch
+git add -A && git commit -m "mutation(b1-01): E_ENGINE_PANIC title"
+MUT01=$(git rev-parse HEAD)           # dump 的 commit；其 parent = SIGN_TIP
+cd app && npm run build && scripts/diag-evidence.sh s080202
+cd .. && git switch main && git branch -D mutation/b1-01
+```
+
+- 变异 ② 同法：`git switch -c mutation/b1-02`、应用 02、`cargo build`、跑 `s070102-corrupt`。
+- 台账记 `mutation_of=<SIGN_TIP>`、`mutation_commit=<MUT01/MUT02>`；**禁止**把变异提交带回 main，**禁止**在签 tip 上 apply 后不提交直接跑。
+- 不用 `git worktree`：B1 的 `app/node_modules` 不在 repo 内，worktree 需要额外软链，反而多一处环境变量；一次性分支在同一棵树上更稳。
+
 ## 变异 ①：错误码→标题映射改错
 
 - 目标文件：`app/src/pages/workbench/WorkbenchPage.tsx`
@@ -37,13 +69,18 @@ scripts/diag-evidence.sh s070102-corrupt  # 期望：②FAIL / ③~⑥ SKIP / 1/
 
 ```bash
 cd <批次 B1 检出根目录>
+SIGN_TIP=$(git rev-parse HEAD)          # 先确认 git status --short 为空
+git switch -c mutation/b1-01
 git apply --check docs/qa/mutations/b1/01-error-code-title.patch   # 失败即停，不许 --reject
 git apply docs/qa/mutations/b1/01-error-code-title.patch
-cd app && npm run build                # 前端变异，需重建 dist
-scripts/diag-evidence.sh s080202       # 期望：P06-R1 = FAIL（标题不再是「引擎异常」）
-cd .. && git apply -R docs/qa/mutations/b1/01-error-code-title.patch
-git status --short                     # 必须为空
-cd app && npm run build                # 回退后重建，再跑一次 s080202 应恢复全绿
+git add -A && git commit -m "mutation(b1-01): E_ENGINE_PANIC title"
+MUT01=$(git rev-parse HEAD)
+cd app && npm run build                 # 前端变异，需重建 dist
+scripts/diag-evidence.sh s080202        # 期望：P06-R1 = FAIL（标题不再是「引擎异常」）
+# 快照 /tmp/b1-evidence/mut01 并恢复 docs/qa/evidence（见 0.1）
+cd .. && git switch main && git branch -D mutation/b1-01
+cd app && npm run build && scripts/diag-evidence.sh s080202   # 回退后复绿
+# 快照 /tmp/b1-evidence/mut01-revert 并恢复 docs/qa/evidence
 ```
 
 ## 变异 ②：健康检查 SKIP 逻辑改错
@@ -54,14 +91,19 @@ cd app && npm run build                # 回退后重建，再跑一次 s080202 
 
 ```bash
 cd <批次 B1 检出根目录>
+SIGN_TIP=$(git rev-parse HEAD)
+git switch -c mutation/b1-02
 git apply --check docs/qa/mutations/b1/02-health-skip-status.patch  # 失败即停，不许 --reject
 git apply docs/qa/mutations/b1/02-health-skip-status.patch
+git add -A && git commit -m "mutation(b1-02): health skip status PASS"
+MUT02=$(git rev-parse HEAD)
 cd app && cargo build -p aka-desktop --features tauri/custom-protocol
 scripts/diag-evidence.sh s070102-corrupt   # 期望：P07-R5 = FAIL（③~⑥不再为 SKIP）
-cd .. && git apply -R docs/qa/mutations/b1/02-health-skip-status.patch
-git status --short                     # 必须为空
+# 快照 /tmp/b1-evidence/mut02 并恢复 docs/qa/evidence（见 0.1）
+cd .. && git switch main && git branch -D mutation/b1-02
 cd app && cargo build -p aka-desktop --features tauri/custom-protocol
 scripts/diag-evidence.sh s070102-corrupt   # 回退后应恢复 1/6，P07-R5 绿
+# 快照 /tmp/b1-evidence/mut02-revert 并恢复 docs/qa/evidence
 ```
 
 ## 可逆性说明
