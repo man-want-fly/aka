@@ -9,6 +9,8 @@ export interface S080203Check {
   id: string;
   card: string;
   ac: string;
+  /** 该条断言对象所在层：DOM 文本/元素 = render，写入被拒/数据不变 = data，网络/计时 = runtime。 */
+  layer: "data" | "render" | "runtime";
   passed: boolean;
   detail: string;
 }
@@ -88,8 +90,14 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     appActive: false,
     checks: [],
   };
-  const push = (id: string, ac: string, passed: boolean, detail: string) => {
-    report.checks.push({ id, card: "S-08.02-03", ac, passed, detail });
+  const push = (
+    id: string,
+    ac: string,
+    layer: S080203Check["layer"],
+    passed: boolean,
+    detail: string,
+  ) => {
+    report.checks.push({ id, card: "S-08.02-03", ac, layer, passed, detail });
   };
 
   // ① 错误卡字段：枚举值 + trace id + 数据集路径（AC-08.02-03）。
@@ -100,6 +108,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
   push(
     "P09-R1",
     "AC-08.02-03",
+    "render",
     card !== null &&
       codeMatches &&
       domCode === expectedCode &&
@@ -112,13 +121,20 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
   );
 
   // ② 不展示堆栈（补3）。
-  push("P09-R2", "AC-08.02-03（补3）", !looksLikeStack(errorText()), "错误卡未出现堆栈字样");
+  push(
+    "P09-R2",
+    "AC-08.02-03（补3）",
+    "render",
+    !looksLikeStack(errorText()),
+    "错误卡未出现堆栈字样",
+  );
 
   if (codeMatches && expectedCode === "MISSING_DIR") {
     // ③ 不可读数据集不给「只读浏览」。
     push(
       "P09-R3",
       "AC-08.02-03",
+      "render",
       document.querySelector("[data-dataset-readonly]") === null,
       "MISSING_DIR 未提供只读浏览入口",
     );
@@ -136,6 +152,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     push(
       "P09-R4",
       "AC-08.02-03（补4）",
+      "render",
       recovered === true &&
         window.location.hash.startsWith("#/market") &&
         document.querySelector("[data-readonly-banner]") === null &&
@@ -144,7 +161,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     );
 
     // ⑤ 全程不发起外部网络请求。
-    push("P09-R5", "AC-08.02-03", externalRequests().length === 0, "外部请求 0 条");
+    push("P09-R5", "AC-08.02-03", "runtime", externalRequests().length === 0, "外部请求 0 条");
   }
 
   if (codeMatches && expectedCode === "SHA256_MISMATCH") {
@@ -157,6 +174,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     push(
       "P09-R6",
       "AC-08.02-03（补1）",
+      "render",
       banner !== null &&
         textOf(banner).includes("仅只读浏览") &&
         banner.querySelector("button") === null &&
@@ -183,6 +201,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     push(
       "P09-R8",
       "AC-08.02-03（补2）",
+      "data",
       row !== null && star !== null && toast !== null && before === after,
       `提示=${textOf(toast)}，自选 ${before} → ${after}`,
     );
@@ -200,6 +219,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     push(
       "P09-R7",
       "AC-08.02-03（补1）",
+      "render",
       row !== null &&
         notice !== null &&
         textOf(notice).includes("已禁用计算") &&
@@ -230,6 +250,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     push(
       "P09-R9",
       "AC-08.02-03（补2）",
+      "data",
       themeButton !== undefined &&
         hint !== null &&
         themeBefore.attr === themeAfter.attr &&
@@ -239,7 +260,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     );
 
     // ⑩ 全程不发起外部网络请求。
-    push("P09-R10", "AC-08.02-03", externalRequests().length === 0, "外部请求 0 条");
+    push("P09-R10", "AC-08.02-03", "runtime", externalRequests().length === 0, "外部请求 0 条");
   }
 
   // R-EV-02：env 与聚焦状态由 diag.ts 统一产出；env 采集失败也照常落 dump（由 verify 判 failed）。
