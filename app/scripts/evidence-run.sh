@@ -31,6 +31,32 @@ case "$EVIDENCE_REL$ARCHIVE_REL" in *..*) fail "路径常量不得含 ..";; esac
 OUT="$ROOT/$EVIDENCE_REL"
 RAW="$ROOT/$ARCHIVE_REL"
 
+# W-94：失败/崩溃现场自动落归档根（docs/qa/raw），不依赖 BA 人工补录。
+# 只在「确实开始取证」之后记录（preflight 失败属于用法错误，不往 raw 里堆记录）；
+# 记录本身是失败记录（ok=false / blocked=true），verify:evidence 不计份数、不可签（第 31 条）。
+STEP="preflight"
+STEP_CMD=""
+DIAG_LOG=""
+RECORD_READY=0
+FAILURE_RECORDED=0
+on_error() {
+  STEP_CMD="${BASH_COMMAND}"
+}
+on_exit() {
+  rc=$?
+  [ "$rc" -ne 0 ] || return 0
+  [ "$RECORD_READY" = "1" ] || return 0
+  [ "$FAILURE_RECORDED" = "1" ] && return 0
+  FAILURE_RECORDED=1
+  "$APP_DIR/scripts/record-evidence-failure.sh" \
+    "$RAW" "$SUITE" "$(git -C "$ROOT" rev-parse HEAD)" "$STEP" "$rc" \
+    "app/scripts/evidence-run.sh $SUITE" "${STEP_CMD}" "${DIAG_LOG}" \
+    || echo "EVIDENCE_FAIL: 失败现场落盘失败（见上方 stderr）" >&2
+  [ -n "$DIAG_LOG" ] && rm -f "$DIAG_LOG" || true
+}
+trap on_error ERR
+trap on_exit EXIT
+
 # 1) 位置与干净度：只在 main 干净树取证；dump 的 commit 允许等于或祖先于最终 sign_commit（第 25 条）。
 branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
 # W-112：macOS 自带 bash 3.2 会把紧跟变量的全角字符吞进变量名（`$branch）` → unbound variable）。
@@ -64,12 +90,18 @@ if [ "$MODE" = "--check" ]; then
   exit 0
 fi
 
+RECORD_READY=1
+
 # 3) 构建：前端用真 Node 直跑 tsc/vite；后端 debug（QA 注入仅 debug 存在，W-47）。
+STEP="build:tsc"
 (cd "$APP_DIR" && "$NODE_BIN" node_modules/typescript/bin/tsc --noEmit)
+STEP="build:vite"
 (cd "$APP_DIR" && NODE_ENV=development "$NODE_BIN" node_modules/vite/bin/vite.js build)
+STEP="build:cargo"
 (cd "$APP_DIR" && cargo build -p aka-desktop --features tauri/custom-protocol)
 
 # 4) 取证并归档（脚本固定，禁止 open /tmp/xxx.command 之类的人工步骤）。
+STEP="collect"
 # W-89 第 2/3 项：meta 路径由 diag-evidence.sh 用 EVIDENCE_META= 显式交接，
 # 禁止 `ls -t` 猜最新——那会挑中历史套件的 meta（dump 是字符串、没有 env），
 # 把旧格式混进本次证据（BA 实测 meta.dump.finishedAt=null、meta.electron=null）。
@@ -81,6 +113,7 @@ rm -f "$DIAG_LOG"
   || fail "diag-evidence.sh 未输出有效的 EVIDENCE_META=（拒绝按 mtime 猜 meta）"
 
 # 5) 补齐第 19 条五项并落固定产物；缺一即失败。
+STEP="archive"
 python3 - "$ROOT" "$APP_DIR" "$META" "$SUITE" "$commit" "$RAW" "$PRE_DIRTY" <<'PY'
 import datetime, hashlib, json, os, shutil, sys
 

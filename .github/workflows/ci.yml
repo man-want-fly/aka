@@ -105,6 +105,10 @@ jobs:
       - name: DOM 契约门禁（第 32 条，取证选择器未登记即红）
         run: npm run verify:dom-contracts
 
+      # W-112 / W-94：分支≠main 必须 EVIDENCE_FAIL；失败现场必须自动落 raw（可查不可签）。
+      - name: 取证入口自测（W-112 分支判定 / W-94 失败现场落盘）
+        run: npm run verify:evidence-run:selftest
+
       - name: 涨跌幅三态判据负例（W-74，平盘/缺前收必红）
         run: npm run verify:r03
 
