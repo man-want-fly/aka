@@ -709,7 +709,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
       view.total === 24;
     return {
       passed: empty,
-      detail: `周线/月线：月线 ${view.total} 根 · 整段不画线提示 ${overlayNotices.length} 条（${overlayNotices
+      detail: `月线 ${view.total} 根 · 整段不画线提示 ${overlayNotices.length} 条（${overlayNotices
         .join(" | ")}）· T01 有效点 ${points} · T09 已绘制=${t09Drawn} · M06 副图 empty=${subPanel?.getAttribute(
         "data-sub-empty",
       )} 文案「${subNotice}」· 副图路径长度 ${subD.length}`,
@@ -749,7 +749,7 @@ export async function runS207Diagnostics(hooks: S207Hooks) {
         subReadout.textContent?.includes("—") === true &&
         priceReadout !== null &&
         tipText.includes("—"),
-      detail: `周线/月线：月线第 3 根：副图读数「${subReadout?.textContent ?? "无"}」· 主图读数「${priceReadout?.textContent ?? "无"}」· tooltip 含「—」=${tipText.includes("—")}`,
+      detail: `月线第 3 根：副图读数「${subReadout?.textContent ?? "无"}」· 主图读数「${priceReadout?.textContent ?? "无"}」· tooltip 含「—」=${tipText.includes("—")}`,
     };
   });
 

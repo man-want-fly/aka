@@ -3035,6 +3035,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - **合入执行（严格分批）**：`ab1622c`、`73c1428`、`abb604d`、`246d129` 已入 `main`；其中 `s080203Diag.ts`、`s010301Diag.ts` 属 B2（main 尚无该文件），相关 hunk 留待 B2 合并时随文件带入。`e406e76` 仅改 `s010301Diag.ts`，同样整体留 B2。`eb1d5b6`（P6 页）不早于 B1 签字完成；`61fb175`/`2671bbe`（P09/P10 oracle 与附录）属 B2，均按令扣住，不进签 tip。
 - **`W-99` 状态**：DoD 已定为「骨架」，`eb1d5b6` 符合，改「已验收」；dev B 可接 `W-101`，合入仍等 B1 之后。
 - **CI 挂载**：新增独立 job `ac-token`（`verify_ac_token.mjs --selftest` + 全仓扫描），失败阻断合并。
+- **合入回归**：`246d129` 给 `s207Diag` 两条 `detail` 加「周线/月线：」前缀，触发 `verify:dom-contracts` 1 项红（模板未登记）。已回退该前缀——`detail` 原文已含「月线」，限定语信息不丢失；复跑 `verify:dom-contracts`、`verify:ac-token` 均绿。
 
 **十一、`ac` 字段语义进规范**
 - 规范新增 §3.4：`ac` 只承载卡面 AC token（全角补号可选），限定语进 `detail`；一个 check 只对应一个 token，多补号拆成多条 check；**禁止扩正则**允许 `W/M`、`/ UI 无障碍` 等后缀。
