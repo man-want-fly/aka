@@ -1,0 +1,54 @@
+{
+  "card": "S-02.06-01",
+  "workorder": "W-81",
+  "commit": "2aa8eced2efc386b5b2567ed40ac949a8c7dbda7",
+  "dirty": false,
+  "runAt": "2026-11-08T09:41:37+08:00",
+  "runtime": {
+    "kind": "tauri-wkwebview",
+    "engineVersion": "aka-engine-0.1.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+    "hardwareConcurrency": 8,
+    "note": "Tauri 容器（非 Electron），无 process.versions.node/electron；构建用 node v22.21.1（/tmp/aka-node/bin/node），运行引擎 aka-engine-0.1.0"
+  },
+  "build": {
+    "frontend": "NODE_ENV=development npm run build → app/dist/index.html mtime 2026-11-08T09:39:45+08:00",
+    "rust": "cargo build -p aka-desktop --features tauri/custom-protocol；rustc 1.98.1 (48a229cea 2026-09-01)",
+    "profile": {
+      "buildProfile": "dev",
+      "optLevel": "1",
+      "lto": "false",
+      "codegenUnits": "256",
+      "debug": "2",
+      "targetTriple": "x86_64-apple-darwin"
+    }
+  },
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=s2 target/debug/aka-desktop",
+  "dump": "docs/qa/raw/s2-evidence-s20601-2aa8ece-20261108.json",
+  "dumpSha256": "7fd0e26d96526fa5eb5ae45fd729ed64bb347c8ad87c53053555ada91a6d1f8d",
+  "hardMetrics": [
+    {
+      "id": "event-count",
+      "expect": "一次切换只发 1 个 compute.count 事件，无第二批",
+      "actual": "debounce.burst120 requestsIssued=1 / computeCountEvents=1；debounce.burst60 requestsIssued=1 / computeCountEvents=1",
+      "passed": true
+    },
+    {
+      "id": "batch-shape",
+      "expect": "instances=50 / skip=6",
+      "actual": "cold.computeCount 与 warm.computeCount 均 instances=50、skip=6",
+      "passed": true
+    },
+    {
+      "id": "count-miss-hit",
+      "expect": "冷缓存 count=44 / 热缓存 count=0",
+      "actual": "cold.computeCount count=44、cacheHit=false；warm.computeCount count=0、cacheHit=true",
+      "passed": true
+    }
+  ],
+  "countZeroRule": "instances=0 才是零批次；instances>0 且 count=0 是热缓存全部命中，不是「没算过」",
+  "notes": [
+    "dump 同时携带他卡渲染断言（renderLayer / b2Render / catalog）在本次为红：均与本卡 AC-02.06-01 无关（renderLayer 期望 13 条主图线为 S-02.04-02 容量 2 之前的旧断言；catalog 为导航时序），不记入本卡",
+    "cold 30/30 cache miss、P95=114ms；warm 90/90 cacheHit、逐点一致、max=66ms"
+  ]
+}
