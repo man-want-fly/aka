@@ -221,16 +221,16 @@ PY
     TARGET="s080203"
     JSON="$DIAG_DIR/s080203-evidence.json"
     NAME="s080203-evidence"
-    FLAGS="--dataset-fault=missing"
-    FIXTURE="默认 state.db；--dataset-fault=missing 让启动校验返回 MISSING_DIR，验证全屏错误卡（码/trace/路径/无堆栈）与「重建样本包」恢复后进入行情页；不改库"
+    FLAGS="--dataset-fault=missing --expect-code=MISSING_DIR"
+    FIXTURE="默认 state.db；--dataset-fault=missing 让启动校验返回 MISSING_DIR（期望码由 --expect-code 独立给出，和 DTO 比对不一致即红），验证全屏错误卡（码/trace/路径/无堆栈）与「重建样本包」恢复后进入行情页；不改库"
     BAK=""
     ;;
   s080203-readonly)
     TARGET="s080203"
     JSON="$DIAG_DIR/s080203-evidence.json"
     NAME="s080203-readonly-evidence"
-    FLAGS="--dataset-fault=sha"
-    FIXTURE="默认 state.db；--dataset-fault=sha 让启动校验返回 SHA256_MISMATCH，验证只读浏览红条、K 线可看/计算禁用、自选与主题写入被拒（自选数不变）；不改库"
+    FLAGS="--dataset-fault=sha --expect-code=SHA256_MISMATCH"
+    FIXTURE="默认 state.db；--dataset-fault=sha 让启动校验返回 SHA256_MISMATCH（期望码由 --expect-code 独立给出，和 DTO 比对不一致即红），验证只读浏览红条、K 线可看/计算禁用、自选与主题写入被拒（自选数不变、主题三路不变）；不改库"
     BAK=""
     ;;
   s010301)

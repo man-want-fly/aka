@@ -491,6 +491,8 @@ export interface DiagFaultsDto {
   datasetEmpty: boolean;
   corruptDb: boolean;
   readOnlyDb: boolean;
+  /** S-08.02-03：脚本传入的期望错误码，和数据集 DTO 独立。 */
+  expectCode: string;
 }
 
 export interface MarketRowDto {

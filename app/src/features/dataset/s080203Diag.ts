@@ -15,6 +15,8 @@ export interface S080203Report {
   target: string;
   card: string;
   errorCode: string;
+  /** 脚本 `--expect-code=` 给出的期望码；与 DTO 独立。 */
+  expectedCode: string;
   startedAt: string;
   finishedAt: string;
   ok: boolean;
@@ -63,11 +65,16 @@ function click(selector: string): void {
 }
 
 export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Promise<S080203Report> {
+  const faults = await ipc.diagFaults();
+  const expectedCode = (faults.expectCode ?? "").trim();
   const code = integrity.errorCode ?? "UNKNOWN";
+  // 分类是否正确由脚本期望码锚定，而不是拿 DTO 自己比自己。
+  const codeMatches = expectedCode.length > 0 && code === expectedCode;
   const report: S080203Report = {
     target: "s080203",
     card: "S-08.02-03",
     errorCode: code,
+    expectedCode,
     startedAt: new Date().toISOString(),
     finishedAt: "",
     ok: false,
@@ -79,25 +86,27 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
 
   // ① 错误卡字段：枚举值 + trace id + 数据集路径（AC-08.02-03）。
   const card = document.querySelector("[data-dataset-error]");
+  const domCode = textOf(document.querySelector("[data-dataset-error-code]"));
   const trace = textOf(document.querySelector("[data-dataset-error-trace]"));
   const path = textOf(document.querySelector("[data-dataset-error-path]"));
   push(
     "P09-R1",
     "AC-08.02-03",
     card !== null &&
-      textOf(document.querySelector("[data-dataset-error-code]")) === code &&
+      codeMatches &&
+      domCode === expectedCode &&
+      path === integrity.datasetPath &&
       trace.length > 0 &&
-      path.length > 0 &&
       document.querySelector("[data-dataset-copy-trace]") !== null &&
       document.querySelector("[data-dataset-rebuild]") !== null &&
       document.querySelector("[data-dataset-export]") !== null,
-    `code=${code}，trace=${trace}，path=${path}`,
+    `独立来源：脚本 --expect-code=${expectedCode || "(未传)"}；DTO=${code}，DOM=${domCode}，path=${path}`,
   );
 
   // ② 不展示堆栈（补3）。
   push("P09-R2", "AC-08.02-03(补3)", !looksLikeStack(errorText()), "错误卡未出现堆栈字样");
 
-  if (code === "MISSING_DIR") {
+  if (codeMatches && expectedCode === "MISSING_DIR") {
     // ③ 不可读数据集不给「只读浏览」。
     push(
       "P09-R3",
@@ -130,7 +139,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     push("P09-R5", "AC-08.02-03", externalRequests().length === 0, "外部请求 0 条");
   }
 
-  if (code === "SHA256_MISMATCH") {
+  if (codeMatches && expectedCode === "SHA256_MISMATCH") {
     // ⑥ 只读浏览：红条常驻且不可关闭（补1）。
     click("[data-dataset-readonly]");
     const banner = await waitFor(
@@ -191,10 +200,16 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
       `提示=${textOf(notice)}，K线=${chart !== null}，无计算错误卡=${document.querySelector("[data-calc-error]") === null}`,
     );
 
-    // ⑨ 主题写入被拒并提示原因（补2）。
+    // ⑨ 主题写入被拒并提示原因（补2）：三路都要保持不变。
     const themeButton = Array.from(
       document.querySelectorAll<HTMLButtonElement>(".theme-controls .seg button"),
     ).find((node) => node.getAttribute("aria-pressed") !== "true");
+    const themeSnapshot = () => ({
+      attr: document.documentElement.dataset.theme ?? "",
+      stored: window.localStorage.getItem("aka.theme") ?? "",
+      pressed: themeButton?.getAttribute("aria-pressed") ?? "",
+    });
+    const themeBefore = themeSnapshot();
     themeButton?.click();
     const hint = await waitFor(
       () => {
@@ -203,11 +218,16 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
       },
       4_000,
     ).catch(() => null);
+    const themeAfter = themeSnapshot();
     push(
       "P09-R9",
       "AC-08.02-03(补2)",
-      themeButton !== undefined && hint !== null && !looksLikeStack(errorText()),
-      `主题按钮=${themeButton?.textContent?.trim() ?? "缺失"}，提示=${textOf(hint)}`,
+      themeButton !== undefined &&
+        hint !== null &&
+        themeBefore.attr === themeAfter.attr &&
+        themeBefore.stored === themeAfter.stored &&
+        themeBefore.pressed === themeAfter.pressed,
+      `独立来源：三路不变（data-theme=${themeAfter.attr}、localStorage=${themeAfter.stored}、aria-pressed=${themeAfter.pressed}）；提示=${textOf(hint)}`,
     );
 
     // ⑩ 全程不发起外部网络请求。

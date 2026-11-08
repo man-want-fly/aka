@@ -1,5 +1,5 @@
 //! S-01.03-01 持仓透视取证套件。仅在 `AKA_DIAG_TARGET=s010301` 时触发。
-//! 数值口径统一走 positions.ts（与页面同一份实现），渲染层只核对 DOM 文本与正红样式类。
+//! 数据层用卡面常量锁定公式；渲染层期望值改为手算常量/恒等式，不再复用 positionTexts。
 
 import { describeError, ipc } from "../../lib/ipc";
 import {
@@ -51,6 +51,21 @@ const posCell = (code: string, name: string): HTMLElement | null =>
   document.querySelector<HTMLElement>(`[data-pos="${code}"] [data-pos-cell="${name}"]`);
 
 const cellText = (code: string, name: string): string => posCell(code, name)?.textContent?.trim() ?? "";
+
+/** 渲染层期望值独立于 positionTexts：只解析 DOM 数字，再用恒等式/手算常量核对。 */
+function parseNumber(text: string): number | null {
+  const cleaned = text.replace(/,/g, "").replace(/[%+\s]/g, "");
+  if (!/^-?\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  const value = Number(cleaned);
+  return Number.isFinite(value) ? value : null;
+}
+
+const near = (value: number | null, expected: number, tolerance = 0.02): boolean =>
+  value !== null && Math.abs(value - expected) <= tolerance;
+
+const isMoney = (text: string): boolean => /^\d{1,3}(,\d{3})*\.\d{2}$/.test(text);
+const isSignedMoney = (text: string): boolean => /^[+-]\d{1,3}(,\d{3})*\.\d{2}$/.test(text);
+const isSignedPct = (text: string): boolean => /^[+-]\d+\.\d{2}%$/.test(text);
 
 function setInput(input: HTMLInputElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
@@ -173,40 +188,53 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
 
     // 渲染层：走「⋯ → 填写持仓 → 保存」真实路径。Mock 末日收盘低于 1500，正红用成本 1000 展示。
     const close = await lastClose("600519.SH", adj);
-    const expected = positionTexts(position(1000, 100), close);
     await fillPosition("600519.SH", "1000", "100");
     const marketValue = await waitFor(() => {
       const value = cellText("600519.SH", "marketValue");
       return value && value !== "—" ? value : null;
     }, 10_000);
     const pnlCell = posCell("600519.SH", "pnl");
+    const pnlText = cellText("600519.SH", "pnl");
+    const pctText = cellText("600519.SH", "pnlPct");
+    // 期望值独立来源：手算 close×100 / (close−1000)×100 / (close/1000−1)×100，加恒等式 pnl=市值−100,000。
+    const mv5 = parseNumber(marketValue);
+    const pnl5 = parseNumber(pnlText);
+    const pnlBeforeCostChange = pnl5;
+    const mvBeforeAdjChange = marketValue;
     push(
       "P10-R5",
       "AC-01.03-01",
       "render",
       cellText("600519.SH", "costPrice") === "1,000.00" &&
         cellText("600519.SH", "shares") === "100" &&
-        marketValue === expected.marketValue &&
-        cellText("600519.SH", "pnl") === expected.pnl &&
-        cellText("600519.SH", "pnlPct") === expected.pnlPct &&
+        isMoney(marketValue) &&
+        isSignedMoney(pnlText) &&
+        isSignedPct(pctText) &&
+        near(mv5, close * 100) &&
+        near(pnl5, (close - 1000) * 100) &&
+        near(parseNumber(pctText), (close / 1000 - 1) * 100) &&
+        near(pnl5, (mv5 ?? Number.NaN) - 100_000) &&
         pnlCell?.dataset.posSign === "pos" &&
         pnlCell.classList.contains("pos"),
-      `末日收盘 ${close} → ${marketValue} / ${cellText("600519.SH", "pnl")} / ${cellText("600519.SH", "pnlPct")}，正红=${pnlCell?.dataset.posSign}`,
+      `独立来源：手算 ${close}×100=${(close * 100).toFixed(2)}、(${close}−1000)×100=${((close - 1000) * 100).toFixed(2)}、恒等式 pnl=市值−100,000；DOM=${marketValue} / ${pnlText} / ${pctText}，正红=${pnlCell?.dataset.posSign}`,
     );
 
     // 补1：改成本后三值同帧刷新。
     await fillPosition("600519.SH", "1100", "100");
     await waitFor(() => cellText("600519.SH", "costPrice") === "1,100.00", 8_000);
-    const expectedSecond = positionTexts(position(1100, 100), close);
     const sameFrame = ["marketValue", "pnl", "pnlPct"].map((name) => cellText("600519.SH", name));
+    const [mv6, pnl6, pct6] = sameFrame.map(parseNumber);
+    // 独立来源：同标的同数量 → 市值不变；浮盈与 R5 的差恰为 (1100−1000)×100=10,000；比例手算。
     push(
       "P10-R6",
       "AC-01.03-01(补1)",
       "render",
-      sameFrame[0] === expectedSecond.marketValue &&
-        sameFrame[1] === expectedSecond.pnl &&
-        sameFrame[2] === expectedSecond.pnlPct,
-      `改成本 1100 后同一帧读取：${sameFrame.join(" / ")}`,
+      near(mv6, close * 100) &&
+        near(mv6, parseNumber(mvBeforeAdjChange) ?? Number.NaN) &&
+        near(pnl6, (pnlBeforeCostChange ?? Number.NaN) - 10_000) &&
+        near(pnl6, (mv6 ?? Number.NaN) - 110_000) &&
+        near(pct6, (close / 1100 - 1) * 100),
+      `独立来源：市值应与 R5 相同（${mvBeforeAdjChange}）、pnl(R6)=pnl(R5)${pnlBeforeCostChange?.toFixed(2)}−10,000、恒等式 pnl=市值−110,000；DOM=${sameFrame.join(" / ")}`,
     );
 
     // 补4：切不复权 → 提示 + 按新口径重算。
@@ -221,17 +249,28 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
     }, 4_000);
     adj = "none";
     const noneClose = await lastClose("600519.SH", adj);
-    const expectedNone = positionTexts(position(1100, 100), noneClose);
     await sleep(300);
+    const mv7Text = cellText("600519.SH", "marketValue");
+    const pnl7Text = cellText("600519.SH", "pnl");
+    const pct7Text = cellText("600519.SH", "pnlPct");
+    const mv7 = parseNumber(mv7Text);
+    const pnl7 = parseNumber(pnl7Text);
+    // 独立来源：手算 noneClose×100 与 (noneClose−1100)×100；另用「市值必须随口径变化」证到确实重取。
+    const shouldChange = Math.abs(noneClose - close) > 0.005;
     push(
       "P10-R7",
       "AC-01.03-01(补4)",
       "render",
       notice.textContent?.trim() === "复权口径已变更，盈亏仅供参考" &&
-        cellText("600519.SH", "marketValue") === expectedNone.marketValue &&
-        cellText("600519.SH", "pnl") === expectedNone.pnl &&
-        cellText("600519.SH", "pnlPct") === expectedNone.pnlPct,
-      `提示「${notice.textContent?.trim()}」；不复权收盘 ${noneClose} → ${cellText("600519.SH", "marketValue")} / ${cellText("600519.SH", "pnl")} / ${cellText("600519.SH", "pnlPct")}`,
+        isMoney(mv7Text) &&
+        isSignedMoney(pnl7Text) &&
+        isSignedPct(pct7Text) &&
+        near(mv7, noneClose * 100) &&
+        near(pnl7, (noneClose - 1100) * 100) &&
+        near(pnl7, (mv7 ?? Number.NaN) - 110_000) &&
+        near(parseNumber(pct7Text), (noneClose / 1100 - 1) * 100) &&
+        (!shouldChange || mv7Text !== mvBeforeAdjChange),
+      `独立来源：手算 ${noneClose}×100=${(noneClose * 100).toFixed(2)}、恒等式 pnl=市值−110,000、口径变化后市值 ${mvBeforeAdjChange}→${mv7Text}（应不同）；DOM=${mv7Text} / ${pnl7Text} / ${pct7Text}`,
     );
 
     // 补2：停牌标本（AKA_DIAG=1 注入）按停牌前收盘计市值并带徽标。
@@ -246,8 +285,6 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
       suspendedReady = false;
     }
     const suspendedBars = suspendedReady ? await lastClose(SUSPENDED_CODE, adj) : null;
-    const suspendedExpected =
-      suspendedBars == null ? null : positionTexts({ ...position(100, 100), security: SUSPENDED_CODE }, suspendedBars);
     const badge =
       suspendedReady
         ? await waitFor(
@@ -255,6 +292,11 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
             8_000,
           ).catch(() => null)
         : null;
+    const mv8Text = cellText(SUSPENDED_CODE, "marketValue");
+    const pnl8Text = cellText(SUSPENDED_CODE, "pnl");
+    const mv8 = parseNumber(mv8Text);
+    const pnl8 = parseNumber(pnl8Text);
+    // 独立来源：手算 停牌前收盘×100、恒等式 pnl=市值−10,000（成本 100×100 股）。
     push(
       "P10-R8",
       "AC-01.03-01(补2)",
@@ -262,13 +304,15 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
       suspendedReady &&
         badge !== null &&
         badge.textContent?.trim() === "停牌" &&
-        suspendedExpected !== null &&
-        cellText(SUSPENDED_CODE, "marketValue") === suspendedExpected.marketValue &&
-        cellText(SUSPENDED_CODE, "pnl") === suspendedExpected.pnl &&
-        cellText(SUSPENDED_CODE, "pnl") !== "—",
-      suspendedExpected === null
+        suspendedBars !== null &&
+        isMoney(mv8Text) &&
+        isSignedMoney(pnl8Text) &&
+        near(mv8, suspendedBars * 100) &&
+        near(pnl8, (suspendedBars - 100) * 100) &&
+        near(pnl8, (mv8 ?? Number.NaN) - 10_000),
+      suspendedBars === null
         ? "停牌样本不可用（需 AKA_DIAG=1）"
-        : `徽标「${badge?.textContent?.trim() ?? "缺失"}」；停牌前收盘 ${suspendedBars} → ${cellText(SUSPENDED_CODE, "marketValue")} / ${cellText(SUSPENDED_CODE, "pnl")}`,
+        : `独立来源：手算 ${suspendedBars}×100=${(suspendedBars * 100).toFixed(2)}、恒等式 pnl=市值−10,000；徽标「${badge?.textContent?.trim() ?? "缺失"}」，DOM=${mv8Text} / ${pnl8Text}`,
     );
 
     // 补3：成本价 0 → 字段标红提示且不写库。

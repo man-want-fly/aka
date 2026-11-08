@@ -6,7 +6,7 @@ use app_core::{AppCore, DatasetFault};
 use crate::diagnostics::CommandLog;
 
 /// QA 故障注入（仅 `AKA_DIAG=1` 时由启动参数打开）；正常启动全为 false。
-#[derive(Debug, Clone, Copy, Default, serde::Serialize)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DiagFaults {
     pub dataset_empty: bool,
@@ -18,6 +18,8 @@ pub struct DiagFaults {
     pub inject: InjectKind,
     /// S-08.02-03：数据集校验故障注入（QA 取证用）。
     pub dataset_fault: DatasetFault,
+    /// S-08.02-03：脚本传入的期望错误码，与后端 DTO 独立，用于锚定分类是否真错。
+    pub expect_code: String,
 }
 
 /// S-08.02-02：`inject_error` 口径（none / timeout / panic / data）。
@@ -76,7 +78,10 @@ impl AppState {
     }
 
     pub fn faults(&self) -> DiagFaults {
-        *self.faults.lock().unwrap_or_else(|err| err.into_inner())
+        self.faults
+            .lock()
+            .unwrap_or_else(|err| err.into_inner())
+            .clone()
     }
 
     /// S-08.02-02：设置注入类型，返回旧值。
