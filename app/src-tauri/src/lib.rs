@@ -1,4 +1,5 @@
 mod commands;
+mod diagnostics;
 mod state;
 
 use tauri::Manager;
@@ -87,6 +88,8 @@ pub fn run() {
         .setup(move |app| {
             #[cfg(debug_assertions)]
             cleanup_stale_diag_temp();
+            // S-06.03-02：上次导出中途崩溃留下的临时目录，启动时清掉。
+            diagnostics::cleanup_stale_temp();
             let faults = {
                 #[cfg(debug_assertions)]
                 {
@@ -144,6 +147,12 @@ pub fn run() {
                 None => core,
             };
             app.manage(AppState::with_diag(core, db_path, faults));
+            // S-06.03-02：真实启动日志（诊断包 `app.log` 的来源），不伪造、不上传。
+            diagnostics::append_app_log(&format!(
+                "[startup] version={} build={}",
+                env!("CARGO_PKG_VERSION"),
+                std::env::var("AKA_BUILD_NO").unwrap_or_else(|_| "dev".to_string())
+            ));
             // 取证运行：窗口被遮挡时 WKWebView 会节流/挂起定时器，诊断会卡在 await 上。
             // 只在 debug 构建且 AKA_DIAG=1 时把窗口钉到最前，正常启动与发布构建不受影响。
             #[cfg(debug_assertions)]
@@ -192,6 +201,8 @@ pub fn run() {
         commands::diag_write,
         commands::diag_write_named,
         commands::telemetry_note,
+        commands::export_diagnostics,
+        commands::reveal_diagnostics,
     ]);
     #[cfg(not(debug_assertions))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -225,6 +236,8 @@ pub fn run() {
         commands::diag_target,
         commands::diag_build_info,
         commands::telemetry_note,
+        commands::export_diagnostics,
+        commands::reveal_diagnostics,
     ]);
     builder
         .run(tauri::generate_context!())

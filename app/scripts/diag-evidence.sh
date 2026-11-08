@@ -185,6 +185,28 @@ PY
     FIXTURE="默认 state.db；--empty-dataset 让数据源不可用，验证关于页数据目录「目录不存在」+「重建样本包」入口，同时核对版本/计数/通道；只读，不改库"
     BAK=""
     ;;
+  s060302)
+    TARGET="s060302"
+    JSON="$DIAG_DIR/s060302-evidence.json"
+    NAME="s060302-evidence"
+    FIXTURE="默认 state.db；自选注入 600519.SH 供隐私 grep 反证；关于页点导出，落 ~/Downloads/aka-diagnostics-*.zip；取证后 .backup 还原"
+    BAK="/tmp/aka-state-s060302-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    python3 - "$DB" <<'PY'
+import sqlite3, sys
+conn = sqlite3.connect(sys.argv[1])
+count = conn.execute("SELECT COUNT(*) FROM watchlist_items").fetchone()[0]
+if count == 0:
+    conn.execute(
+        "INSERT OR REPLACE INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?,?,?,?)",
+        ("600519.SH", None, 0, 1700000000),
+    )
+    conn.commit()
+    print("fixture 已注入 1 条 600519.SH")
+else:
+    print(f"自选已有 {count} 条，无需注入")
+PY
+    ;;
   s0602)
     TARGET="s0602"
     JSON="$DIAG_DIR/s0602-display-evidence.json"

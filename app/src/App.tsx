@@ -132,7 +132,7 @@ export default function App() {
           return;
         }
         // S-06.03-01 关于页取证：直接进设置页。
-        if (target === "s060301") {
+        if (target === "s060301" || target === "s060302") {
           sessionStorage.setItem("aka.s2.diag.once", "1");
           sessionStorage.setItem("aka.drawer.diag.done", "1");
           sessionStorage.setItem("aka.catalog.diag.done", "1");

@@ -8,6 +8,8 @@ import type {
   CalcResponse,
   DatasetManifestDto,
   DatasourceStatusDto,
+  DiagnosticsConfigSnapshot,
+  DiagnosticsExportDto,
   DiagBuildInfo,
   DiagFaultsDto,
   GetBarsRequest,
@@ -121,6 +123,13 @@ export const ipc = {
 
   diagWriteNamed: (name: string, payload: string): Promise<string> =>
     invoke<string>("diag_write_named", { name, payload }),
+
+  /** S-06.03-02：一键导出诊断包（后端强制白名单与隐私排除，0 网络）。 */
+  exportDiagnostics: (config: DiagnosticsConfigSnapshot): Promise<DiagnosticsExportDto> =>
+    invoke<DiagnosticsExportDto>("export_diagnostics", { config }),
+
+  revealDiagnostics: (path: string): Promise<void> =>
+    invoke<void>("reveal_diagnostics", { path }),
 
   /** S-02.02-02：前端写入运行日志（如 switch.period_ms），落 telemetry.jsonl */
   telemetryNote: (name: string, fields?: Record<string, unknown>): Promise<void> =>

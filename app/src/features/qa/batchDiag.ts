@@ -489,3 +489,81 @@ export async function runS060301Diagnostics() {
   await ipc.diagWriteNamed("s060301-about-evidence.json", JSON.stringify(report, null, 2));
   return report;
 }
+
+/** 外部 http(s) 资源数量；用于「0 网络」取证（补4）。 */
+const externalResourceCount = () =>
+  performance
+    .getEntriesByType("resource")
+    .map((entry) => entry.name)
+    .filter((name) => /^https?:\/\//.test(name)).length;
+
+/** P05：S-06.03-02 一键导出诊断包；只读，会新增 ~/Downloads/aka-diagnostics-*.zip。 */
+export async function runS060302Diagnostics() {
+  const report = { ...baseReport("s060302"), card: "S-06.03-02" };
+  const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
+    report.checks.push({ id, card: "S-06.03-02", ac, layer, passed, detail });
+  };
+  await waitFor(() => q("[data-about-page]"));
+
+  const button = q<HTMLButtonElement>("[data-about-export]");
+  const hint = q<HTMLElement>("[data-about-diagnostics-hint]")?.textContent?.trim() ?? "";
+  push(
+    "P05-R1",
+    "AC-06.03-02",
+    "render",
+    button !== null && !button.disabled && hint.includes("不含自选") && hint.includes("不上传"),
+    `按钮可用=${Boolean(button && !button.disabled)} / 说明「${hint}」`,
+  );
+
+  const before = externalResourceCount();
+  button?.click();
+  await waitFor(
+    () => q("[data-about-diagnostics-path], [data-about-diagnostics-error]"),
+    25_000,
+    100,
+  );
+  const path = q<HTMLElement>("[data-about-diagnostics-path]")?.dataset.aboutDiagnosticsPath ?? "";
+  const pathText = q<HTMLElement>("[data-about-diagnostics-path]")?.textContent ?? "";
+  const error = q<HTMLElement>("[data-about-diagnostics-error]")?.dataset.aboutDiagnosticsError ?? "";
+  const state = q<HTMLElement>("[data-about-export]")?.dataset.aboutExportState ?? "";
+  const after = externalResourceCount();
+
+  if (error !== "") {
+    push(
+      "P05-R2",
+      "AC-06.03-02(补2)",
+      "runtime",
+      /磁盘空间不足/.test(error) && /可用/.test(error),
+      `导出失败提示「${error}」`,
+    );
+  } else {
+    push(
+      "P05-R2",
+      "AC-06.03-02",
+      "runtime",
+      /\/Downloads\/aka-diagnostics-\d{8}-\d{6}\.zip$/.test(path) &&
+        (state === "success" || state === "no-log"),
+      `路径=${path} / 状态=${state}`,
+    );
+    push(
+      "P05-R3",
+      "AC-06.03-02(补3)",
+      "render",
+      state !== "no-log" || pathText.includes("无日志"),
+      state === "no-log" ? "路径行已注明「本次无日志」" : "本次有日志，形态见包内 app.log",
+    );
+  }
+
+  push(
+    "P05-R4",
+    "AC-06.03-02(补4)",
+    "runtime",
+    after - before === 0,
+    `导出期间外部 http(s) 资源 ${after - before} 个`,
+  );
+
+  report.ok = report.checks.every((check) => check.passed);
+  report.finishedAt = new Date().toISOString();
+  await ipc.diagWriteNamed("s060302-evidence.json", JSON.stringify(report, null, 2));
+  return report;
+}

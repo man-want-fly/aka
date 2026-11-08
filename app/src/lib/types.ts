@@ -502,3 +502,27 @@ export interface PositionDto {
   shares: number;
   updatedAt: number;
 }
+
+/** S-06.03-02：诊断包导出结果；`noLog` 为真时包内是 `README.txt`。 */
+export interface DiagnosticsExportDto {
+  path: string;
+  fileName: string;
+  bytes: number;
+  included: string[];
+  noLog: boolean;
+  logTruncated: boolean;
+  crashedLogsIncluded: boolean;
+  excluded: string[];
+}
+
+/** 配置快照白名单；后端只认这 8 个键，其余字段一律丢弃。 */
+export interface DiagnosticsConfigSnapshot {
+  theme_mode?: string | null;
+  color_direction?: string | null;
+  density?: string | null;
+  crosshair?: string | null;
+  candle_hollow?: string | null;
+  subchart_height?: string | null;
+  insufficient_hint?: string | null;
+  dataset_id?: string | null;
+}
