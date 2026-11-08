@@ -186,14 +186,34 @@ AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" env $EXTRA_ENV "$APP_BIN" $FLAGS &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true; sleep 1; restore_db' EXIT
 
-# W-89：best-effort 前置聚焦。窗口未聚焦时运行层判「不可判定 = FAIL」，
-# 取证链路必须先尽力把窗口拉到前台（失败不阻断，由 dump 的 windowFocused/appActive 记录）。
-for _ in $(seq 1 16); do
-  if osascript -e 'tell application "System Events" to set frontmost of process "aka-desktop" to true' >/dev/null 2>&1; then
-    break
-  fi
+# W-89：前置聚焦。窗口未聚焦时运行层判「不可判定 = FAIL」，取证链路必须先真正把窗口拉到前台。
+# 硬约束（BA 现场带回）：置前只做**一次**。实测「每 3 秒重复激活」会打断采集 → 240 秒超时、零 dump；
+# 改成单次激活后约 40 秒正常。因此这里只等待进程/窗口就绪（不激活），随后一次性置前，
+# 失败或置后前台不是 aka-desktop 就 exit 2，不进入采集（禁止轮询式/重复激活）。
+ACTIVATE_ATTEMPTS=0
+FOCUSED_AT_LAUNCH=""
+for _ in $(seq 1 20); do
+  if pgrep -x aka-desktop >/dev/null 2>&1; then break; fi
   sleep 0.5
 done
+if ! pgrep -x aka-desktop >/dev/null 2>&1; then
+  echo "置前失败：10 秒内 aka-desktop 进程未启动（activateAttempts=0），中止取证" >&2
+  exit 2
+fi
+# 只等待窗口创建，不做任何激活；固定等待 2 秒后再执行唯一一次置前。
+sleep 2
+ACTIVATE_ATTEMPTS=1
+if ! osascript -e 'tell application "System Events" to set frontmost of process "aka-desktop" to true' >/dev/null 2>&1; then
+  echo "置前失败：单次激活未成功（activateAttempts=1），中止取证" >&2
+  exit 2
+fi
+sleep 1
+FRONTMOST="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null || true)"
+if [ "$FRONTMOST" != "aka-desktop" ]; then
+  echo "置前失败：前台进程=${FRONTMOST:-未知}（activateAttempts=1），中止取证" >&2
+  exit 2
+fi
+FOCUSED_AT_LAUNCH=1
 
 ARCHIVED=0
 for _ in $(seq 1 240); do
@@ -354,10 +374,28 @@ if [ "$SUITE" = "s0602" ]; then
   cat "$SCAN_FILE"
 fi
 
-python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" "$EXTRA_ENV" <<'PY'
+python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" "$EXTRA_ENV" "$ACTIVATE_ATTEMPTS" "$FOCUSED_AT_LAUNCH" <<'PY'
 import json, os, subprocess, sys, datetime
-evidence_path, meta_path, label, target, fixture, scan_file, scan_rc, flags, extra_env = sys.argv[1:10]
+(
+    evidence_path, meta_path, label, target, fixture, scan_file, scan_rc,
+    flags, extra_env, attempts_raw, launch_focus_raw,
+) = sys.argv[1:12]
 d = json.load(open(evidence_path))
+# W-89 补：置前/断言分离记录。activateAttempts 只可能是 0/1（置前只做一次），
+# focusedAtLaunch 由脚本在唯一一次置前之后实测（前台进程 = aka-desktop），
+# focusedAtAssert 直接取 dump 顶层 windowFocused（它本就在断言点采样）。
+d["activateAttempts"] = int(attempts_raw)
+d["focusedAtLaunch"] = launch_focus_raw == "1"
+d["focusedAtAssert"] = d.get("windowFocused") if isinstance(d.get("windowFocused"), bool) else None
+focus_bad = d["focusedAtAssert"] is False
+if focus_bad:
+    print(
+        "::error::置前后断言时 windowFocused 仍为 false"
+        f"（focusedAtLaunch={d['focusedAtLaunch']}, activateAttempts={d['activateAttempts']}）"
+        " → 不可判定，不得签",
+        file=sys.stderr,
+    )
+json.dump(d, open(evidence_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 commit = subprocess.check_output(["git", "-C", root, "rev-parse", "HEAD"], text=True).strip()
 # W-89 第 1 项：dirty 只认 evidence-run.sh 落盘前导出的 PRE 快照；
@@ -456,5 +494,5 @@ print(f"ok={d.get('ok')} layers={d.get('layers')} blocked={len(d.get('blocked', 
 # W-89 第 2 项：把本次 meta 的绝对路径显式交接给 evidence-run.sh；
 # 禁止调用方按 `ls -t` 猜（会挑中历史套件的 meta，混进旧格式）。
 print(f"EVIDENCE_META={meta_path}")
-sys.exit(0 if d.get("ok") and (not scan_rc or int(scan_rc) == 0) else 2)
+sys.exit(0 if d.get("ok") and (not scan_rc or int(scan_rc) == 0) and not focus_bad else 2)
 PY
