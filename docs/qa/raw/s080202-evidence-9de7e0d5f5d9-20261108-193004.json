@@ -1,0 +1,103 @@
+{
+  "target": "s080202",
+  "card": "S-08.02-02",
+  "startedAt": "2026-11-08T11:30:08.670Z",
+  "finishedAt": "2026-11-08T11:30:18.162Z",
+  "ok": true,
+  "env": {
+    "commit": "9de7e0d5f5d9fb41f89e95a31af7fdd2372c8da6",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-08T11:29:51.866Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+        "sha256": "ca0dff1d9ad59331d4acb446db8d760c1b7e0565960a74ee84f43479a6aae4f9"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s080202\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "checks": [
+    {
+      "id": "P06-R1",
+      "card": "S-08.02-02",
+      "ac": "AC-08.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "标题/码/trace=trace TR-20261108-193008-0001，动作=重试/降低参数"
+    },
+    {
+      "id": "P06-R2",
+      "card": "S-08.02-02",
+      "ac": "AC-08.02-02（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "切到 600519.SH 后错误卡消失=true"
+    },
+    {
+      "id": "P06-R3",
+      "card": "S-08.02-02",
+      "ac": "AC-08.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "第 3 次连续失败后导出按钮=true"
+    },
+    {
+      "id": "P06-R3-log",
+      "card": "S-08.02-02",
+      "ac": "AC-08.02-02",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "连续 3 次 panic 后 calc.panic 新增 3 条（应为 3）"
+    },
+    {
+      "id": "P06-R4",
+      "card": "S-08.02-02",
+      "ac": "AC-08.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "标题=数据不可用，数据源入口=true"
+    },
+    {
+      "id": "P06-R5",
+      "card": "S-08.02-02",
+      "ac": "AC-08.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "标题=计算超时，elapsed=8010ms"
+    },
+    {
+      "id": "P06-R5-run",
+      "card": "S-08.02-02",
+      "ac": "AC-08.02-02",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "wall=8171ms，calc.timeout 新增 1 条（应为 1）"
+    },
+    {
+      "id": "P06-R6",
+      "card": "S-08.02-02",
+      "ac": "AC-08.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "注入关闭后错误卡消失=true"
+    }
+  ],
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}

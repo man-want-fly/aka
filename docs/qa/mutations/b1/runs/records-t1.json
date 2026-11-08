@@ -1,0 +1,116 @@
+{
+  "operator": "BA",
+  "suite_batch": "B1",
+  "mutation_of": "6259b9f881244bf647e76a10fa479e1587a860f0",
+  "window": "2026-11-08",
+  "runner_note": "变异红/绿跑使用 app/scripts/diag-evidence.sh（evidence-run.sh 强制 main 干净树，而变异必须在一次性分支提交后才能跑）；diag 产物仅作变异记录随附，不替换签字证据、不计证据份数。正式证据仍由 evidence-run.sh 产出。",
+  "segments": [
+    {
+      "id": "b1-01",
+      "patch": "docs/qa/mutations/b1/01-error-code-title.patch",
+      "patch_sha256": "511adcd622c60116ef46b2fb0bd005a08df4a57a77821086de9658d4076e726a",
+      "mutation_commit": "e5c2572deca1ff87203b6d5f54f7dca1492206dd",
+      "mutation_parent": "6259b9f881244bf647e76a10fa479e1587a860f0",
+      "mutation": "CALC_ERROR_TITLES.E_ENGINE_PANIC 标题 引擎异常→引擎故障",
+      "expected_red": {
+        "suite": "s080202",
+        "check": "P06-R1"
+      },
+      "runs": {
+        "base": {
+          "file": "runs/01-base.json",
+          "commit": "6259b9f881244bf647e76a10fa479e1587a860f0",
+          "dirty": false,
+          "ok": true,
+          "passed": 8,
+          "total": 8,
+          "failedChecks": [],
+          "windowFocused": true,
+          "activateAttempts": 1,
+          "finishedAt": "2026-11-08T14:09:31.506Z"
+        },
+        "red": {
+          "file": "runs/01-red.json",
+          "commit": "e5c2572deca1ff87203b6d5f54f7dca1492206dd",
+          "dirty": false,
+          "ok": false,
+          "passed": 7,
+          "total": 8,
+          "failedChecks": [
+            "P06-R1"
+          ],
+          "windowFocused": true,
+          "activateAttempts": 1,
+          "finishedAt": "2026-11-08T14:21:59.544Z"
+        },
+        "green": {
+          "file": "runs/01-green.json",
+          "commit": "6259b9f881244bf647e76a10fa479e1587a860f0",
+          "dirty": false,
+          "ok": true,
+          "passed": 8,
+          "total": 8,
+          "failedChecks": [],
+          "windowFocused": true,
+          "activateAttempts": 1,
+          "finishedAt": "2026-11-08T14:23:48.142Z"
+        }
+      },
+      "result": "P06-R1 在红跑中 passed=false，其余 7 条保持 true；回退后 8/8 复绿"
+    },
+    {
+      "id": "b1-02",
+      "patch": "docs/qa/mutations/b1/02-health-skip-status.patch",
+      "patch_sha256": "de2e10ac12e6be617887f84ee1b2c1ee9e1f84be306fe43831e705acc8b3bd70",
+      "mutation_commit": "97ad959651f3309b736241709237a30af866618c",
+      "mutation_parent": "6259b9f881244bf647e76a10fa479e1587a860f0",
+      "mutation": "data_health_check 的 skip 闭包 status SKIP→PASS",
+      "expected_red": {
+        "suite": "s070102-corrupt",
+        "check": "P07-R5"
+      },
+      "runs": {
+        "base": {
+          "file": "runs/02-base.json",
+          "commit": "6259b9f881244bf647e76a10fa479e1587a860f0",
+          "dirty": false,
+          "ok": true,
+          "passed": 7,
+          "total": 7,
+          "failedChecks": [],
+          "windowFocused": true,
+          "activateAttempts": 1,
+          "finishedAt": "2026-11-08T14:24:26.393Z"
+        },
+        "red": {
+          "file": "runs/02-red.json",
+          "commit": "97ad959651f3309b736241709237a30af866618c",
+          "dirty": false,
+          "ok": false,
+          "passed": 6,
+          "total": 7,
+          "failedChecks": [
+            "P07-R5"
+          ],
+          "windowFocused": true,
+          "activateAttempts": 1,
+          "finishedAt": "2026-11-08T14:26:12.448Z"
+        },
+        "green": {
+          "file": "runs/02-green.json",
+          "commit": "6259b9f881244bf647e76a10fa479e1587a860f0",
+          "dirty": false,
+          "ok": true,
+          "passed": 7,
+          "total": 7,
+          "failedChecks": [],
+          "windowFocused": true,
+          "activateAttempts": 1,
+          "finishedAt": "2026-11-08T14:27:36.443Z"
+        }
+      },
+      "result": "P07-R5 在红跑中 passed=false（P07-R2 仍 true=合法 PASS、P07-R3 汇总仍 1/6 保持 true）；回退后 7/7 复绿"
+    }
+  ],
+  "conclusion": "两段变异均完成 基线绿→注入红→回退复绿 闭环，红点与 dev B 提供的期望一致；变异提交只在一次性分支，main 未接触。"
+}
