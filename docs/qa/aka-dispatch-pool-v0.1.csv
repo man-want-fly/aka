@@ -24,3 +24,4 @@ P22,S-07.04-01,P0,1.0,—,已交付待签,代码已在 main（048f16b/d996c6f）
 P23,S-02.06-02,P0,2.0,dev B,在制,性能修复（W-114）：回切时延 291ms → ≤120ms；口径 warm.criterion / maxTotalMs，90 次样本，allCacheHit 与 allPointwiseMatch 不得退化；验收 s20602 红转绿且 indicator.compute 无新增；反例=改回旧实现必红,card,6654a51
 PG-P6,PAGE-P6,P0,—,dev B,已交付待签,页面层（W-99）骨架 eb1d5b6：与路由+布局空态+7 条 DOM 契约锚点，不含数据；逐卡验证，验过即合；骨架不得作任何数据 AC 证据,page,eb1d5b6
 PG-P7,PAGE-P7,P0,—,dev B,已交付待签,页面层（W-100）9df6957 后端 + af36f9e 前端：承载 S-05.01-01/02；逐卡验证，验过即合；合入后解阻 P14/P15/P18,page,af36f9e
+P24,S-02.08-01,P0,1.5,dev A,待开工,新死 AC（补2）「只缺 sha256、其余 6 段正常」无入口可达：W-116 补 debug-only 注入；W-115 完成后开工；不得顺手改产品语义,card,a53371c
