@@ -54,11 +54,11 @@ const LEGACY_DEADLINE = "2026-11-22";
 const LEGACY_MAX_FILES = 18;
 // R-EV-02 env 兼容名单：只允许「pre-W-89 已入库、无 env 块」的历史证据缺 env/reproduce。
 // 免检资格只能由「文件名 + sha256 + expiresOn」锁定，不得由 dump 自己「不写 env」声明。
-// 棘轮只减不增：当前 8（2026-11-08 一次补录，TL 签字），新增必须同时减一份。
+// 棘轮只减不增：当前 7（2026-11-08 移出 s20601 后，TL 签字），新增必须同时减一份。
 const ENV_COMPAT_MAX_FILES = 8;
 // 冻结白名单 JSON 的 sha256：改动该 JSON 必须同步改本常量并单独过审。
 const LEGACY_WHITELIST_FILE_SHA256 =
-  "6209c183bd37e9c4e4a6769baa7d754985444faf1c14b55aeac434dc8e26bac4";
+  "fd2567b912b1753b644ee9777e71a38b345e46a885b4a54587e2ce3136bad0c2";
 // 层名受控，防自建层（缺字段 / "undefined" / "runtime2" 一律红）。
 const ALLOWED_LAYERS = new Set(["data", "render", "runtime"]);
 const AC_TOKEN_RE = /^AC-\d{2}\.\d{2}-\d{2}(（补\d+）)?$/;

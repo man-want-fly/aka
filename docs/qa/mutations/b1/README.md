@@ -13,9 +13,16 @@ de2e10ac12e6be617887f84ee1b2c1ee9e1f84be306fe43831e705acc8b3bd70  02-health-skip
 
 ---
 
+## 0.0 正式产物一律走 `evidence-run.sh`（2026-11-08 起硬规则）
+
+**正式证据必须由 `app/scripts/evidence-run.sh <suite>` 生成。** 它负责写入 `meta.dump`、`meta.reproduce`、`env` 与焦点字段；用 `diag-evidence.sh` + 手工快照产出的文件**不含 `reproduce`/`meta.dump`**，`verify:evidence` 会直接判红（BA 基线实测 6 项 FAIL）。
+
+- `evidence-run.sh`：唯一可计入证据份数的入口，窗口内所有正式产物用它。
+- `diag-evidence.sh` + 手工快照：**只允许基线自检**（证明环境能开），产物不入库、不计份数、不作签字依据。
+
 ## 0. 打补丁前先跑绿（必须，缺此步本次变异记录作废）
 
-没有基线绿，只有「打补丁后红」不能证明红点来自变异。BA 在窗口开始、应用任何补丁之前先跑：
+没有基线绿，只有「打补丁后红」不能证明红点来自变异。BA 在窗口开始、应用任何补丁之前先跑**基线自检**：
 
 ```bash
 cd <批次 B1 检出根目录>
@@ -23,25 +30,26 @@ git status --short                     # 必须为空
 cd app
 npm run build
 cargo build -p aka-desktop --features tauri/custom-protocol
-scripts/diag-evidence.sh s080202          # 期望：全 PASS，P06-R1 绿
-scripts/diag-evidence.sh s070102-corrupt  # 期望：②FAIL / ③~⑥ SKIP / 1/6，P07-R5 绿
+scripts/evidence-run.sh s080202          # 期望：全 PASS，P06-R1 绿；产物可入账
+scripts/evidence-run.sh s070102-corrupt  # 期望：②FAIL / ③~⑥ SKIP / 1/6，P07-R5 绿
 ```
 
 两套都必须先绿；任一不绿即停，先查环境，不得继续打补丁。
 
-## 0.1 每次取证后恢复证据目录（否则下一次 `meta.dirty=true`）
+## 0.1 基线自检快照（不计份数；正式产物不得走此流程）
 
-`diag-evidence.sh` 会把 dump 复制进 `docs/qa/evidence/`（已跟踪），复制完工作树就脏了。**每跑完一次（基线或变异）立即快照并恢复**，再做下一次：
+`diag-evidence.sh` 会把 dump 复制进 `docs/qa/evidence/`（已跟踪），复制完工作树就脏了。**仅基线自检时**可快照并恢复：
 
 ```bash
-mkdir -p /tmp/b1-evidence/<run-name>
-cp -R docs/qa/evidence/. /tmp/b1-evidence/<run-name>/
+mkdir -p /tmp/b1-baseline/<run-name>
+cp -R docs/qa/evidence/. /tmp/b1-baseline/<run-name>/
 git checkout -- docs/qa/evidence
 git clean -fd docs/qa/evidence        # 只清本次新增的未跟踪 dump
-git status --short                    # 必须为空，才允许进入下一段
+git status --short                    # 必须为空
 ```
 
-窗口结束前把 `/tmp/b1-evidence/` 三份快照（基线、变异①、变异②）一起复制回 `docs/qa/evidence/`，作为一个独立证据提交入库；不要每段各提交一次。
+- 这些快照**只用于自检**，**不得复制回 `docs/qa/evidence/`**，不得计入证据份数。
+- 正式产物由 `evidence-run.sh` 直接写入，窗口末一次性提交；不需要手工快照恢复。
 
 ## 0.2 变异必须在一次性分支上提交（否则 `meta.dirty=true`）
 
@@ -53,7 +61,7 @@ git switch -c mutation/b1-01
 git apply docs/qa/mutations/b1/01-error-code-title.patch
 git add -A && git commit -m "mutation(b1-01): E_ENGINE_PANIC title"
 MUT01=$(git rev-parse HEAD)           # dump 的 commit；其 parent = SIGN_TIP
-cd app && npm run build && scripts/diag-evidence.sh s080202
+cd app && npm run build && scripts/evidence-run.sh s080202
 cd .. && git switch main && git branch -D mutation/b1-01
 ```
 
@@ -76,11 +84,9 @@ git apply docs/qa/mutations/b1/01-error-code-title.patch
 git add -A && git commit -m "mutation(b1-01): E_ENGINE_PANIC title"
 MUT01=$(git rev-parse HEAD)
 cd app && npm run build                 # 前端变异，需重建 dist
-scripts/diag-evidence.sh s080202        # 期望：P06-R1 = FAIL（标题不再是「引擎异常」）
-# 快照 /tmp/b1-evidence/mut01 并恢复 docs/qa/evidence（见 0.1）
+scripts/evidence-run.sh s080202         # 期望：P06-R1 = FAIL（标题不再是「引擎异常」）
 cd .. && git switch main && git branch -D mutation/b1-01
-cd app && npm run build && scripts/diag-evidence.sh s080202   # 回退后复绿
-# 快照 /tmp/b1-evidence/mut01-revert 并恢复 docs/qa/evidence
+cd app && npm run build && scripts/evidence-run.sh s080202   # 回退后复绿
 ```
 
 ## 变异 ②：健康检查 SKIP 逻辑改错
@@ -98,12 +104,10 @@ git apply docs/qa/mutations/b1/02-health-skip-status.patch
 git add -A && git commit -m "mutation(b1-02): health skip status PASS"
 MUT02=$(git rev-parse HEAD)
 cd app && cargo build -p aka-desktop --features tauri/custom-protocol
-scripts/diag-evidence.sh s070102-corrupt   # 期望：P07-R5 = FAIL（③~⑥不再为 SKIP）
-# 快照 /tmp/b1-evidence/mut02 并恢复 docs/qa/evidence（见 0.1）
+scripts/evidence-run.sh s070102-corrupt   # 期望：P07-R5 = FAIL（③~⑥不再为 SKIP）
 cd .. && git switch main && git branch -D mutation/b1-02
 cd app && cargo build -p aka-desktop --features tauri/custom-protocol
-scripts/diag-evidence.sh s070102-corrupt   # 回退后应恢复 1/6，P07-R5 绿
-# 快照 /tmp/b1-evidence/mut02-revert 并恢复 docs/qa/evidence
+scripts/evidence-run.sh s070102-corrupt   # 回退后应恢复 1/6，P07-R5 绿
 ```
 
 ## 可逆性说明

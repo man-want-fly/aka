@@ -120,12 +120,6 @@
         "metaSha256": "818bc9e774282a93cd951c2fd80685c6ffc283d624b5ddcc40583dccbe425310",
         "expiresOn": "2026-11-22",
         "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
-      },
-      "s20601-evidence.json": {
-        "sha256": "c433844136e9ed2fafd9d8f7285c97508b01c2bb5e4674bbae12a8e0ae0d665c",
-        "metaSha256": "566e2edb5c4a05fc97e8374e4e3e3376a145b757032d93ffdcb5ec8bb31c7982",
-        "expiresOn": "2026-11-22",
-        "reason": "pre-W-89 历史证据，补录冻结（非新增豁免）"
       }
     }
   }
