@@ -7,6 +7,7 @@ import { SettingsPage } from "./pages/settings/SettingsPage";
 import { DatasourcePage } from "./pages/datasource/DatasourcePage";
 import { InstallPage } from "./pages/install/InstallPage";
 import { DatasetErrorPage } from "./pages/dataset/DatasetErrorPage";
+import { SearchOverlay } from "./components/SearchOverlay";
 import { ipc, isTauriRuntime } from "./lib/ipc";
 import type { DatasetIntegrityDto } from "./lib/types";
 import { loadDisplaySettings } from "./lib/settings";
@@ -412,6 +413,7 @@ export default function App() {
         </div>
       )}
       {renderPage()}
+      <SearchOverlay onOpenSecurity={openSecurity} onNavigate={navigate} />
     </>
   );
 }

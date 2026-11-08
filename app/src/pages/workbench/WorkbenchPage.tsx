@@ -240,7 +240,13 @@ export function WorkbenchPage({
   // S-03.01-04：工作台每次带到某只标的，都刷新目录页可用的最近标的。
   useEffect(() => {
     writeLastCode(activeCode);
-  }, [activeCode]);
+    // S-05.01-02：工作台打开标的即写最近查看；只读模式与浏览器预览不写。
+    if (!readOnly && isTauriRuntime()) {
+      void ipc.touchRecentView(activeCode).catch(() => {
+        /* 最近查看失败不影响主流程 */
+      });
+    }
+  }, [activeCode, readOnly]);
   // S-02.02-02：复权口径本地持久化（chart.adj），默认前复权
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">(() => {
     try {

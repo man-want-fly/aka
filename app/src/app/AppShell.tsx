@@ -72,6 +72,19 @@ export function AppShell({ children, active, onNavigate }: Props) {
     <div className="app">
       <nav className="rail" aria-label="主导航">
         <div className="brand-mark">AK</div>
+        <button
+          type="button"
+          className="rail-btn rail-search"
+          title="搜索标的（⌘K）"
+          data-search-trigger
+          onClick={() => window.dispatchEvent(new CustomEvent("aka:search-open"))}
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="9" cy="9" r="5" />
+            <path d="M13 13l4 4" strokeLinecap="round" />
+          </svg>
+          搜索
+        </button>
         {NAV.map((item) => (
           <button
             key={item.key}
