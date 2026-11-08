@@ -110,7 +110,6 @@ pub async fn touch_recent_view(
     code: String,
 ) -> Result<Vec<RecentViewDto>, AppError> {
     tracked!(state, "touch_recent_view", {
-        state.ensure_writable()?;
         state.core.touch_recent_view(&code)
     })
 }
