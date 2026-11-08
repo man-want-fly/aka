@@ -1,9 +1,9 @@
 pool_seq,card_id,priority,estimate_pd,take_by,eligibility,note,layer,last_check
-P01,S-03.01-04,P0,1.5,dev A,已交付,代码已在 main（adef5b7）；原判定「未开始」是旧快照；s030104 case 缺失另见 W-113,card,adef5b7
-P02,S-03.02-01,P0,2.0,—,已交付,代码已在 main（adef5b7）；原「可取」为旧快照，已关闭,card,adef5b7
-P03,S-03.03-02,P0,2.0,—,已交付,代码已在 main（adef5b7）；原「可取」为旧快照，已关闭,card,adef5b7
-P04,S-06.03-01,P0,1.5,—,已交付,代码已在 main（adef5b7）；原「可取」为旧快照，已关闭,card,adef5b7
-P05,S-06.03-02,P0,2.5,—,已交付,代码已在 main（adef5b7）；签字待 W-83 按 tip 重跑,card,adef5b7
+P01,S-03.01-04,P0,1.5,dev A,未开始,实现已在 main（adef5b7）；s030104 入口被合并吞掉，补入口后转待验收；不得记已交付,card,adef5b7
+P02,S-03.02-01,P0,2.0,—,未开始,实现已在 main（adef5b7）；s030201 入口缺失，补入口后转待验收,card,adef5b7
+P03,S-03.03-02,P0,2.0,—,未开始,实现已在 main（adef5b7）；s030302 / s030302-catalog 两入口缺失，补齐后转待验收,card,adef5b7
+P04,S-06.03-01,P0,1.5,—,未开始,实现已在 main（adef5b7）；s060301 入口缺失，补入口后转待验收,card,adef5b7
+P05,S-06.03-02,P0,2.5,—,未核,实现已在 main（adef5b7）待核；入口是否存在由 W-113 检查；核后定状态,card,adef5b7
 P06,S-08.02-02,P0,3.0,dev B,在制,证据已采（8 条：render 6 + runtime 2，dirty=false）；BA 逐卡验证中，验过即合；不并批、不排窗口,card,0ed37d6
 P07,S-07.01-02,P0,2.0,dev B,在制,证据已采（7 条：render 5 + runtime 2，dirty=false）；BA 逐卡验证中，验过即合；不并批、不排窗口,card,0ed37d6
 P08,S-07.05-01,P0,3.5,—,已交付待签,代码已在 main（689528a/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
