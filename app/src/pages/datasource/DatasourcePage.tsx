@@ -15,7 +15,9 @@ import { BackfillSection } from "./BackfillSection";
 import { QualitySection } from "./QualitySection";
 
 interface Props {
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
+  onNavigate: (
+    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource",
+  ) => void;
 }
 
 const STATE_TEXT: Record<DatasourceStatusDto["state"], string> = {

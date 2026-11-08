@@ -18,7 +18,9 @@ import { loadColorMode, loadThemeMode } from "../../lib/theme";
 
 const DATA_DIR = "~/Library/Application Support/AKA/data/sim";
 interface Props {
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
+  onNavigate: (
+    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource",
+  ) => void;
 }
 
 const DENSITY_OPTIONS: Array<{ key: Density; label: string }> = [

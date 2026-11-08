@@ -165,7 +165,9 @@ const SCROLL_KEY = "aka.market.scroll";
 const SELECTED_KEY = "aka.market.selected";
 
 interface Props {
-  onNavigate: (key: "workbench" | "catalog" | "market" | "settings" | "datasource") => void;
+  onNavigate: (
+    key: "workbench" | "catalog" | "market" | "indices" | "settings" | "datasource",
+  ) => void;
   onOpenSecurity: (security: string) => void;
   /** S-08.02-03：只读浏览下不落盘视图状态，避免无谓的“设置未保存”提示 */
   readOnly?: boolean;

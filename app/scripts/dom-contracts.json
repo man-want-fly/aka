@@ -134,6 +134,72 @@
       "note": "MACD 柱挂在 data-macd 下；历史上的 data-hist='pos|neg' 已废弃"
     },
     {
+      "key": "p6.root",
+      "selector": "[data-indices-root='p6']",
+      "source": "src/pages/indices/IndexPage.tsx",
+      "markers": [
+        "data-indices-root=\"p6\""
+      ],
+      "note": "PAGE-P6 页面根；P6 由 S-04.01-01/02、S-04.02-01/02 共同承载"
+    },
+    {
+      "key": "p6.range",
+      "selector": "[data-indices-range='today|d5|d20']",
+      "source": "src/pages/indices/IndexPage.tsx",
+      "markers": [
+        "data-indices-range"
+      ],
+      "note": "区间切换；aria-pressed 表示当前口径，左右方向键可切换"
+    },
+    {
+      "key": "p6.kpi",
+      "selector": "[data-indices-kpi='leader|laggard|advancers|amount']",
+      "source": "src/pages/indices/IndexPage.tsx",
+      "markers": [
+        "data-indices-kpi"
+      ],
+      "note": "4 张 KPI；骨架阶段值为占位，不构成任何 AC 证据"
+    },
+    {
+      "key": "p6.table",
+      "selector": "[data-indices-table]",
+      "source": "src/pages/indices/IndexPage.tsx",
+      "markers": [
+        "data-indices-table"
+      ],
+      "note": "指数表容器；行锚点由 S-04.01-01 实装时登记"
+    },
+    {
+      "key": "p6.breadth",
+      "selector": "[data-breadth-bar]",
+      "source": "src/pages/indices/IndexPage.tsx",
+      "markers": [
+        "data-breadth-bar",
+        "data-breadth-bucket"
+      ],
+      "note": "六桶堆叠条与桶图例；桶顺序 停牌>涨停>跌停>上涨>下跌>平盘"
+    },
+    {
+      "key": "p6.limitCard",
+      "selector": "[data-limit-card]",
+      "source": "src/pages/indices/IndexPage.tsx",
+      "markers": [
+        "data-limit-card",
+        "data-limit-approx"
+      ],
+      "note": "涨跌停近似卡；data-limit-approx 表示按板块规则推导，需四舍五入到 0.01"
+    },
+    {
+      "key": "p6.sector",
+      "selector": "[data-sector-section]",
+      "source": "src/pages/indices/IndexPage.tsx",
+      "markers": [
+        "data-sector-section",
+        "data-sector-empty"
+      ],
+      "note": "板块区骨架；V1 未排期，本期只保留空态，不产出数值"
+    },
+    {
       "key": "auto.data-adj-badge",
       "selector": "[data-adj-badge]",
       "source": "src/pages/workbench/WorkbenchPage.tsx",

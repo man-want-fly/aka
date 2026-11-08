@@ -3326,3 +3326,259 @@ mark {
 .legend-help:focus-visible {
   opacity: 1;
 }
+
+/* ---------------- P6 指数与板块页（W-99 页面骨架） ---------------- */
+.indices {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.indices-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 18px;
+  min-height: 58px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.indices-head h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.indices-sub {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.indices-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.indices-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 18px 4px;
+}
+
+.indices-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 11px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+
+.indices-kpi__label {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.indices-kpi__value {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.indices-kpi__hint {
+  color: var(--faint);
+  font-size: 10.5px;
+}
+
+.indices-table-wrap {
+  padding: 8px 18px 4px;
+}
+
+.indices-table {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.indices-row {
+  display: grid;
+  grid-template-columns:
+    minmax(120px, 1.4fr) minmax(90px, 1fr) repeat(6, minmax(72px, 0.8fr));
+  align-items: center;
+  min-height: 34px;
+  padding: 0 11px;
+  border-bottom: 1px solid var(--line);
+}
+
+.indices-row:last-child {
+  border-bottom: 0;
+}
+
+.indices-row--head {
+  min-height: 30px;
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.indices-cell {
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.indices-cell.num {
+  text-align: right;
+  font-family: var(--mono);
+}
+
+.indices-table .state-card {
+  margin: 10px;
+}
+
+.indices-breadth,
+.indices-sectors {
+  padding: 10px 18px 12px;
+}
+
+.indices-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.indices-section-head h2 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.indices-note {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.breadth-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface3);
+  overflow: hidden;
+}
+
+.breadth-bar__empty {
+  color: var(--faint);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.breadth-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 9px 0 10px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.breadth-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.breadth-legend b {
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.breadth-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.breadth-dot--limitUp,
+.breadth-dot--up {
+  background: var(--up);
+}
+
+.breadth-dot--limitDown,
+.breadth-dot--down {
+  background: var(--down);
+}
+
+.breadth-dot--flat {
+  background: var(--flat);
+}
+
+.limit-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.limit-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 96px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+
+.limit-card__label {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.limit-card__value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.limit-card__approx {
+  position: absolute;
+  right: 7px;
+  bottom: 5px;
+  color: var(--faint);
+  font-size: 11px;
+  cursor: help;
+}
+
+.indices-sectors {
+  border-top: 1px solid var(--line);
+}
+
+.indices-sector-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+@media (max-width: 1280px) {
+  .indices-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

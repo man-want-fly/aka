@@ -93,7 +93,9 @@ interface Props {
   onThemeMode: (mode: ThemeMode) => void;
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
+  onNavigate: (
+    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource",
+  ) => void;
   /** S-08.02-03：只读浏览下禁用指标计算，K 线/行情表照常可看 */
   readOnly?: boolean;
 }

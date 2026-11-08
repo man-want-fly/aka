@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MarketPage } from "./pages/market/MarketPage";
+import { IndexPage } from "./pages/indices/IndexPage";
 import { CatalogPage } from "./pages/catalog/CatalogPage";
 import { WorkbenchPage } from "./pages/workbench/WorkbenchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
@@ -17,7 +18,7 @@ import {
   type ThemeMode,
 } from "./lib/theme";
 
-type Route = "workbench" | "market" | "catalog" | "settings" | "datasource";
+type Route = "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource";
 
 interface Location {
   route: Route;
@@ -28,6 +29,7 @@ interface Location {
 /** 默认落地页 = 行情列表（S-01.01-01：打开应用第一屏就是样本全量行情表）。 */
 const routeFromHash = (): Location => {
   const hash = window.location.hash;
+  if (hash.startsWith("#/indices")) return { route: "indices", code: null };
   if (hash.startsWith("#/catalog")) return { route: "catalog", code: null };
   if (hash.startsWith("#/settings")) return { route: "settings", code: null };
   if (hash.startsWith("#/datasource")) return { route: "datasource", code: null };
@@ -363,6 +365,10 @@ export default function App() {
 
     if (location.route === "datasource") {
       return <DatasourcePage onNavigate={navigate} />;
+    }
+
+    if (location.route === "indices") {
+      return <IndexPage onNavigate={navigate} />;
     }
 
     if (location.route === "market") {

@@ -14,7 +14,9 @@ import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { AppError, Category, ManifestIndicatorDto, ManifestResponse } from "../../lib/types";
 
 interface Props {
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
+  onNavigate: (
+    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource",
+  ) => void;
   /** S-03.01-04：目录「在工作台查看」复用既有路由，把最近标的带过去。 */
   onOpenWorkbench?: (code: string) => void;
 }
