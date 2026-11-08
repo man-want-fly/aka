@@ -636,7 +636,7 @@ export async function runS070102Diagnostics() {
     : statuses.every((status) => status === "PASS");
   push(
     "P07-R5",
-    "AC-07.01-02(补3)",
+    "AC-07.01-02（补3）",
     "render",
     chainPassed,
     rebuild ? `②FAIL、③~⑥SKIP、汇总「${summary}」` : "默认数据集全部 PASS（注入链由 --corrupt-manifest 覆盖）",
