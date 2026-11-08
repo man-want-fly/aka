@@ -2278,7 +2278,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **三、合并后重新成立的事实**
 - 基线：`verify:constants`（模块 19 + 反例 18、漂移 0）、`verify:index-pd`（74 行 / 207.9 对 207.9）、`verify:evidence`（失败 0）、`verify:r03`、`verify:format`、`verify:docs`（failed=0/skipped=0、74 卡 / 10 页）、`verify:gate-log`（56 行）全绿；共用基线文件未被 dev2 改动，数字保持。
 - CI：合并 tip `d996c6f` 的 run **`42433408456` 为红**（详见七）；后续收口提交 `2accf94` 的 run `42434355191` **success**（macOS build/test/golden + 签字台账两 job 均绿），**新 tip 已转绿**。签名一律以对应 run 的 `head_sha` 为准（第 16 条）。
-- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 19 条，证据 commit 必须是被签 tip 本身，故三卡置 `待签`、`gate_c=FAIL`，由 dev B 在合并后的干净 tip 上重跑（13/7/9 项）后 TL 签，**不用旧 dump 凑签**。
+- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 19 条，证据 commit 必须是被签 tip 本身，故三卡置 `待签`、`gate_c=FAIL`，由 BA 在合并后的干净 tip 上重跑（13/7/9 项）后 TL 签（执行人按 §4.7.60），**不用旧 dump 凑签**。
 
 **四、`S-08.01-02` 的异常（需 BA 判）**
 台账记为 `Blocked`（理由：标的侧 AC 依赖 P7 搜索浮层），但 `dev2` 已实现指标侧空态（`CatalogPage.tsx`，`a60a504`），且 `IndicatorDrawer.tsx` 注释写「搜索无结果空态并入 S-08.01-02」。代码与台账口径冲突：要么拆卡（指标侧可交付、标的侧继续 Blocked），要么整卡继续等 P7。已置池内 `待BA复核`，**不签、不结项**。
@@ -2297,7 +2297,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **七、`S-02.08-01` 合并即失效（run `42433408456` 红）**
 - 红因：`dev2` 的 `a60a504` 修改了 `app/src/pages/workbench/WorkbenchPage.tsx`（「暂无数据」→「行情未加载」），该 basename 在 `S-02.08-01` 的 `sign_scope` 内 → 原签字 `1d02300` 失效；合并提交未申报 `Sign-Invalidates`，`verify:sign-impact` 按第 18 条判红。
 - 处置：合并提交已推送且禁止改写历史，**不 amend、不 force push**；`S-02.08-01` 在 gate-log 置 `待签`、`gate_c=FAIL`。因 gate-log 规则要求 `gate_c=FAIL` 行不得留 `sign_commit`，原签 `1d02300` 与 `sign_scope` **只存该行 note 供回溯**；owner=TL、workorder=`W-83`。该失败 run 只作事故记录（不写签字台账——`verify_sign_coverage` 拒收 `conclusion≠success` 的行）。
-- 放行条件：dev B 在合并后的干净 tip 上重跑 `S-02.08-01` 证据，CI 在新 tip 绿后 TL 重签；重签前该卡不得标 `已交付`。
+- 放行条件：BA 在合并后的干净 tip 上重跑 `S-02.08-01` 证据，CI 在新 tip 绿后 TL 重签；重签前该卡不得标 `已交付`。
 - 教训：合并分支前应先跑 `verify:sign-impact` 对**待并入 diff** 预演，而不是等合并 tip CI 报警；该预演列入 `W-83` 后续窗口动作。
 
 #### 4.7.59 交付计数口径（B）、无签交付跟踪与 G5 收口（2026-11-08）
