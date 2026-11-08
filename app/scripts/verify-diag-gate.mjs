@@ -34,8 +34,9 @@ const read = (path) => readFileSync(path, "utf8");
 const rel = (path) => relative(rootPath, path);
 const splitLines = (text) => text.split("\n");
 
-/** 诊断标记串：从源码字符串字面量里抽出的标记片段（允许是更长路径/文件名的一部分）。 */
-const MARKER = /AKA[_-][A-Z0-9_-]*|--(?:corrupt-db|readonly-db|empty-dataset)|s2-evidence|aka\/diag/g;
+/** 诊断标记串：从源码字符串字面量里抽出的标记片段（允许是更长路径/文件名的一部分）。
+ *  `AKA_BUILD_*` 是发布构建元数据（W-28），不是调试开关，必须允许出现在 release。 */
+const MARKER = /AKA[_-](?!BUILD_)[A-Z0-9_-]*|--(?:corrupt-db|readonly-db|empty-dataset)|s2-evidence|aka\/diag/g;
 const STRING_LITERAL = /"((?:[^"\\]|\\.)*)"/g;
 
 const markerNames = new Set();
@@ -213,7 +214,12 @@ for (const name of diagCommands) {
   if (!debug.has(name)) failures.push(`诊断命令 commands::${name} 未注册进 debug invoke_handler（调试能力被误删）`);
 }
 
-/** 物质不变量：写盘 API 只能在诊断命令，或 cfg(debug) 覆盖的辅助函数里。 */
+/** 物质不变量：写盘 API 只能在诊断命令，或 cfg(debug) 覆盖的辅助函数里。
+ *  例外：S-06.03-02 的「导出诊断包」是 release 用户功能，写盘固定在 ~/Downloads 且内容经白名单过滤。 */
+const USER_EXPORT_FNS = new Set([
+  "src-tauri/src/diagnostics.rs:write_json",
+  "src-tauri/src/diagnostics.rs:build_package",
+]);
 const writeApi = /(?:std::)?fs::write|File::create/;
 for (const path of desktopFiles) {
   const file = rel(path);
@@ -231,7 +237,7 @@ for (const path of desktopFiles) {
       }
       return;
     }
-    if (!entry.debugOnly && !statementGated(lines, at)) {
+    if (!entry.debugOnly && !statementGated(lines, at) && !USER_EXPORT_FNS.has(`${file}:${entry.name}`)) {
       failures.push(`${file}:${at + 1} 写盘调用所在 fn ${entry.name} 未被 cfg(debug_assertions) 覆盖`);
     }
   });
