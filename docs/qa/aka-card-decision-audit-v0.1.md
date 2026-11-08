@@ -2798,6 +2798,26 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - `W-93`（`b2Render.latency` 七字段：`scope`/`sample`/`cacheHit`/`pointwiseEqual`/`maxMs`/`p95Ms`/`advisory`；门禁只校验字段与类型，不设阈值、不参与 `ok`/`signable`）与 `W-94`（失败自动落 `docs/qa/raw/`）由 PM 2026-11-08 派给 dev A，已落 §0.0（`待开工`、`更新日 2026-11-08`）。
 - 合并队列：P01–P07 已于 `adef5b7` 合入、门禁修复 `208ce8f`、文档修正 `f50b54f`；BA 取证窗口 **2026-11-08 18:00–19:00**，签 tip 取窗口启动时 main HEAD（不早于 `208ce8f`）。
 
+#### 4.7.76 状态表唯一真源、注入证据判法与 P09 合并路径（2026-11-08）
+
+**一、状态表「唯一」必须靠读 `origin/main`**
+- 现象：main §0.0 有 `W-95`，dev2 未同步 main，dev B 查不到——同一张表三份副本，是 W-92 的同机理（从「没写」变成「写了但不同步」）。
+- 规范 §7 加死：查表、派单、贴单前必须先 `git fetch origin`，读 `git show origin/main:docs/qa/aka-card-workorder-v0.1.md`；工作区副本只作编辑缓冲。
+- 机器校验并入 `verify:delivery`：本地 HEAD 严格落后 `origin/main`（`merge-base --is-ancestor HEAD origin/main` 成立且不相等）即红，提示先 fetch/rebase 再查表；selftest 增加反例（HEAD 落后、`origin/main` 在前）。
+
+**二、五类数据集错误均为注入复现：明确判法**
+- 事实：`MISSING_DIR / MANIFEST_INVALID / REQUIRED_TABLE_MISSING / SHA256_MISMATCH / DB_CORRUPT` 当前全走 `--dataset-fault=`（debug 注入），磁盘数据集未接入。
+- 判法按 AC 拆，不按卡一刀切：
+  - Given 明确要求真实触发（如主 AC「删除 `data/sim` 目录」）→ 注入不算通过，记 `Blocked-AC`、`blocker=磁盘数据集未接入`，`sign_scope` 不含该 AC。
+  - 只断言「给定错误类下的 UI / 动作可用性 / 写禁 / 无堆栈 / 恢复」的 AC → 注入可作证据，但只能记 `条件交付` / `[条件签]`，note 写 `trigger=injected`。
+  - 磁盘接入后只补真实触发类 AC 的证据，条件签才可升 `已交付`；注入类证据按第 34 条不追溯（实现被本次 diff 触碰的除外）。
+- 落地：规范 §3.3、`S-08.02-03` 卡面、§0.0 `W-97` 第 3 条均写同一判法；不留「limit 一下但可签」的中间态。
+
+**三、P09 合并路径与时点（维持 §4.7.75 六）**
+- `P06 ab463c3` + `P07 7ef4e96` 已一次合并为 `adef5b7`，门禁修复 `208ce8f`，文档修正 `f50b54f`；W-96 只签 `f50b54f` 这一 tip。
+- `P09 d0a2c60` 不并入本窗口：它的证据需 BA 在新 tip 重出，且注入证据只能条件签；并入会让 W-96 签字失效。故 `W-97` 在 W-96 签完后开工，新 tip 单独取证签字（第 34 条只重取 P09）。
+- 时点：BA 窗口 2026-11-08 18:00–19:00；窗口内签 W-96；W-97 随后。
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。
