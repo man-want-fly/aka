@@ -8,6 +8,8 @@
 // 2. 列数、枚举、必填、sign_commit 40 位且可解析。
 // 3. sign_commit 非空 ⇒ Gate C=PASS + gate_c_source 非空 + sign_scope 非空。
 // 4. 台账引入后的签字必须与 verify:sign 台账对齐（relation/ancestor_check/conclusion）。
+// 5. 与 BA 完成台账双向对齐：台账 `已交付/条件交付/已结项` 的卡必须在 gate-log 有行；
+//    gate-log 的每张卡必须存在于 BA 台账（防止「不在表里就没人管」）。
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -17,6 +19,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const GATE_LOG = join(ROOT, "docs", "qa", "aka-card-gate-log-v0.1.csv");
 const SIGN_LEDGER = join(ROOT, "docs", "qa", "aka-ci-sign-ledger-v0.1.csv");
+const LEDGER = join(ROOT, "docs", "qa", "aka-story-completion-ledger-v0.1.md");
+const LEDGER_MUST_HAVE_ROW = new Set(["已交付", "条件交付", "已结项"]);
 const COLUMNS = [
   "card_id",
   "ledger_status",
@@ -31,7 +35,7 @@ const COLUMNS = [
   "sign_commit",
   "sign_scope",
 ];
-const STATUS = new Set(["已交付", "条件交付", "渲染层已具备", "数值层已具备", "未开始", "待签", "Blocked", "Blocked-AC"]);
+const STATUS = new Set(["已交付", "条件交付", "渲染层已具备", "数值层已具备", "未开始", "待签", "已结项", "Blocked", "Blocked-AC"]);
 const GATE = { gate_a: new Set(["PASS", "FAIL", "N/A"]), gate_b: new Set(["PASS", "FAIL", ""]), gate_c: new Set(["PASS", "FAIL", ""]) };
 const SOURCE_PREFIX = new Set(["BA", "dev", "TL", "CI", "自动化", "合并"]);
 const OWNER = /^(TL|BA|dev A|开发)(;(TL|BA|dev A|开发))*$/;
@@ -174,6 +178,29 @@ for (let i = 0; i < rows.length; i += 1) {
 if (FIX) {
   writeFileSync(GATE_LOG, serialize(out), "utf8");
   console.log(`verify:gate-log --fix 写回 ${out.length - 1} 行`);
+}
+
+// 与 BA 完成台账双向对齐：缺行不能再靠「没人发现」过关。
+const LEDGER_STATUSES = new Set([...STATUS, "已结项（并入宿主）"]);
+const ledgerCards = new Map();
+for (const line of readFileSync(LEDGER, "utf8").split("\n")) {
+  if (!line.startsWith("|")) continue;
+  const cells = line.split("|").map((s) => s.trim());
+  const card = cells[1] ?? "";
+  const status = cells[4] ?? "";
+  if (!CARD_ID.test(card) || !LEDGER_STATUSES.has(status)) continue;
+  if (!ledgerCards.has(card)) ledgerCards.set(card, new Set());
+  ledgerCards.get(card).add(status);
+}
+for (const [card, statuses] of ledgerCards) {
+  if (statuses.has("已结项（并入宿主）") && !statuses.has("已结项")) statuses.add("已结项");
+  if ([...statuses].some((s) => LEDGER_MUST_HAVE_ROW.has(s)) && !seen.has(card)) {
+    failures.push(`BA 台账 ${card}=${[...statuses].join("/")}，但 gate-log 无行`);
+  }
+}
+for (const row of out.slice(1)) {
+  if (!(row[10] ?? "").trim()) continue;
+  if (!ledgerCards.has(row[0])) failures.push(`gate-log 有签字行但 BA 台账无此卡：${row[0]}`);
 }
 
 if (failures.length > 0) {
