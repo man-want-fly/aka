@@ -14,6 +14,8 @@ pub struct DiagFaults {
     pub read_only_db: bool,
     /// S-07.01-02：模拟 manifest 不可读（健康检查①/② FAIL 链取证）。
     pub manifest_corrupt: bool,
+    /// W-115：模拟数据集 manifest 整体缺失（数据目录「目录不存在」取证）。
+    pub manifest_missing: bool,
     /// S-08.02-02：下一次计算的故障注入；生效后自动回落 `None`。
     pub inject: InjectKind,
 }

@@ -37,7 +37,7 @@ fn diag_flag(args: &[String], name: &str) -> bool {
     diag_enabled() && args.iter().any(|arg| arg == name)
 }
 
-/// 四个 QA 启动参数集中在此处，源码层门禁可按「函数是否被 cfg 覆盖」逐条检查。
+/// 五个 QA 启动参数集中在此处，源码层门禁可按「函数是否被 cfg 覆盖」逐条检查。
 #[cfg(debug_assertions)]
 fn faults_from_args(args: &[String]) -> DiagFaults {
     DiagFaults {
@@ -45,6 +45,7 @@ fn faults_from_args(args: &[String]) -> DiagFaults {
         corrupt_db: diag_flag(args, "--corrupt-db"),
         read_only_db: diag_flag(args, "--readonly-db"),
         manifest_corrupt: diag_flag(args, "--corrupt-manifest"),
+        manifest_missing: diag_flag(args, "--missing-dataset-manifest"),
         // S-08.02-02：`--inject=timeout|panic|data`；生效一次后自动回落 none。
         inject: if diag_enabled() {
             args.iter()
