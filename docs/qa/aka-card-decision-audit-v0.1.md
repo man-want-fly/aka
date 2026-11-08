@@ -591,6 +591,13 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - 失败记录不得放证据根；正常证据允许带 `blocked[]`（被阻塞 AC 及其原因），**不能**据此判为失败记录 —— 判定只看 `blocked:true` 或 `error` 非空。
     - 套件崩溃/未跑完时，相关 AC 记**「不可判」**：既不记 PASS，也不记 FAIL；对应补记为 `BLOCKED`。不得以「产物不完整」为由丢弃过程记录（丢进 `/tmp` 等于不留痕），也不得把不完整产物充作可签证据——两者是同一个病的两面。
     - 失败记录**不构成对产品的判定**；修复或重跑后按正常取证重新判定，崩溃期间的「不可判」不得被追认成 PASS。
+32. **取证选择器必须与产品 DOM 契约绑定（2026-11-08 起）**：
+    - 取证采集用到的全部 DOM 契约（`data-*` 属性名与取值、必需的 class、事件 handler 挂载点）集中登记在单一清单 `app/scripts/dom-contracts.json`，每条注明产出该契约的组件源码；`verify:dom-contracts` 静态校验三件事：
+      ① 每条契约的标记字面量必须在声明的组件源码中出现（产品改属性名/改结构 → CI 当场红在契约，而不是跑完取证再红在断言）；
+      ② 取证代码（`app/src/features/workbench/*Diag.ts` 与 `diag.ts`）中出现的每个 `data-*` 属性名必须已登记，新增未登记的选择器判红；
+      ③ 采集代码不得在清单外拼接选择器字符串。
+    - 契约变更必须与产品 DOM 变更同提交：只改产品不改契约、只改契约不改产品，均红。检查器的反例（改名、删登记、新增未登记选择器）必须与检查器同提交（第 29 条）。
+    - 已发生三次：`[data-hist]` / `[data-readout-host]`、`data-catalog-beta`（P4→P3）、点错 `<li>` 行容器（无点击 handler）。教训：**产品改 DOM，证据静默失效，而且失效方向永远是「红」，每次都要人去分辨「产品坏了还是取证坏了」**。本机制与 `verify_card_pages`（卡↔页面锚点）、`verify:constants`（常量派生）同一思路：把沉默的耦合变成会叫的断言。
 
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
@@ -2597,6 +2604,34 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - 「套件崩溃 → 断言不可判」写入第 31 条，不再逐次临时议；崩溃期间的不可判**不得被追认成 PASS**。
 
 **四、落盘与自测**：`verify_evidence_selftest` **53/53**（新增：汇总口径 5 例、失败记录 6 例、`blocked[]` 误杀 1 例）；`verify:evidence` 汇总：扫描 8 份、冻结 18 份、env 兼容 8 份、失败记录 1 份、失败 0 项。**本提交只含门禁与文档**：`diag.ts` 的 catalog 重写与顶层聚合由 dev A 在 W-90 批次提交（其在途文件 `s070503Diag.ts` / `ipc.ts` / `CatalogPage.tsx` 未被本提交触碰），避免同一工作树两方混写。
+
+#### 4.7.70 dev A `4f44b08` 复核、DOM 契约绑定与「崩溃修复」的可签边界（2026-11-08）
+
+**一、`4f44b08` 已推送、CI 绿（`0953036` / run `42451805731`）**
+- `4f44b08` 六个文件：`s070503` 只读赋值崩溃修复、`catalog` 采集契约对齐 P3、顶层聚合补目录维度；`0953036` 在其上补失败记录入库、s2 旧证据移出证据根与两份文档。
+- **同树混写如实记录**：`4f44b08` 的实际内容还包含 TL 已暂存的门禁与自测改动（`verify_evidence.mjs` / `verify_evidence_selftest.mjs`）——dev A 提交时索引里已有这两份暂存。文件内容正确、测试全绿，但提交边界与作者归属被混在一起。这是第 26 条「取证窗口无并发写」的邻近风险：**同一工作树两方提交，必须按索引快照核对 `git show --stat`，不能只看提交说明**。后续批次仍按 §4.7.69 四执行：一方在途文件，另一方不 stage。
+- 远端 `main=0953036`，CI run `42451805731`（`head_sha=0953036`）：签字覆盖台账 success、macOS build / test / golden success。
+
+**二、`catalog` 定性复核：证据契约过期，不是产品 bug（维持 §4.7.69 二）**
+- 路由通、dump 读到 24 行 `data-catalog-item`：24 是 P3 重写后的默认分组（只展开 `trend`），不是产品少渲染。
+- `betaCount=0`：旧检查找 P4 的 `data-catalog-beta`，P3 用 `data-catalog-status`；`data-catalog-completeness` 是「口径完整度」，与 status 不同维度，不得混用。
+- 参数/预热 12 项失败：旧代码 `click()` 行容器 `<li data-catalog-item>`，该容器无 handler，detail 一直停在默认 T01；真正的选择按钮是 `button.catalog-row__select`，选中后以 `[data-catalog-detail][data-catalog-active]` 确认。
+- 结论：修复方向正确，**不得据此改产品**；`S-02.06-01` 仍「不可判」，等 BA 用新采集重跑。
+
+**三、DOM 契约绑定：做，落第 32 条，派 W-91（dev A 实现 / TL 验收）**
+- 三次同类：`[data-hist]` / `[data-readout-host]`、`data-catalog-beta`、点错 `<li>`。共同点不是「谁写错了」，而是**采集选择器与产品 DOM 之间没有绑定，失效只能等取证跑完才在断言里暴露**。
+- 机制（第 32 条）：`app/scripts/dom-contracts.json` 单一清单 + `verify:dom-contracts` 静态检查；产品改属性名/结构 → CI 红在「契约」；取证代码新增未登记 `data-*` → 红；契约与产品必须同提交。
+- 归属：**W-91，dev A 实现、TL 验收、不进 BA 主路径**（纯静态检查，不改变取证产物）。不新开卡、不调人日；触发卡记 `S-02.06`，覆盖范围含既有采集点 `S-07.05-03` / `S-02.08` / `S-02.05` / `S-02.02`。
+- 反例（第 29 条）：改产品属性名不改清单 → 红；清单删一条 → 红；取证代码新增 `data-*` 不登记 → 红；把选择器字符串挪到清单外拼接 → 红。
+
+**四、`s070503` 修复复核：不削弱 `OV-02`，但其可签上限只到「命令集」**
+- 根因确认：Tauri 用 `Object.defineProperty(writable=false)` 注入 `__TAURI_INTERNALS__.invoke`，旧代码在严格模式下给它赋值，**必抛** `Attempted to assign to readonly property.`，且发生在 `OV-00` 之后、`OV-01` 之前。
+- 修法确认：不碰注入对象，改在唯一 IPC 出口 `lib/ipc.ts` 挂只读 `setInvokeAudit` 旁路，`finally` 里复位；业务代码不得使用，默认 `null` 零开销。
+- 复核结论：**不削弱**。`OV-02` 的断言原文是 `commands.length === 1 && commands[0] === "bar_provenance"`，本来就只证命令名；旧 monkey-patch 记录的也只是 `String(args[0])`。两者证据强度相同。
+- 边界写清：`OV-02` 证的是「点击窗口内只调了一条 `bar_provenance`」，**不证参数正确**；参数正确性由 `OV-01` / `OV-06` 的浮层渲染结果（日期、`qualityFlags`、五段元数据）间接覆盖。若将来某条 AC 要求参数级证据，必须新立断言并记录脱敏入参摘要（命令 + 参数键/摘要），**不得默认 `OV-02` 已覆盖**。
+- 安全方向：若将来有代码绕过 `ipc` 直接 import `invoke`，`OV-02` 会读成 0 次而判红，不会假通过。
+
+**五、落盘**：本条与 W-91 随下一提交入库；`W-90` 第 1/3/4 项已由 `4f44b08` 交付、待 BA 重跑验收，**第 2 项（失败自动落盘到 `raw/`）仍未交付**，仍归 dev A。
 
 
 

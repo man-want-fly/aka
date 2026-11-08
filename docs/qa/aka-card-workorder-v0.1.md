@@ -1904,3 +1904,19 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
    - BA 重跑 `s070503`：若仍在 240s 内无 dump，`docs/qa/raw/` 必须出现合规失败记录（`失败记录 N 份` 递增）且门禁 failed=0；若跑通，按正常证据入库。
    - TL 反例：把一份合规 dump 的 `verification.catalog.ok` 改成 `false` 而顶层 `ok` 保持 `true` → `verify:evidence` 必须 failed；把失败记录复制进 `docs/qa/evidence/` → 必须 failed。
    - 任一项不过，`W-90` 退回，`S-02.06-01` / `S-07.05-03` 均不签。
+
+**W-90 执行状态（2026-11-08）**：第 1/3/4 项由 `4f44b08` 交付（`s070503` 只读赋值崩溃、`catalog` P3 契约、顶层聚合补目录维度），**待 BA 用新采集重跑 `s2` + `s070503` 验收**；**第 2 项（失败时自动落盘 `docs/qa/raw/`）未交付**，仍归 dev A，`evidence-run.sh` / `diag-evidence.sh` 失败分支补齐前不得关闭 W-90。
+
+### W-91（dev A 实现 / TL 验收 / 不进 BA 主路径）取证选择器与产品 DOM 契约绑定
+
+> 依据 §4.7.70 三与制度第 32 条。同类第三次（`[data-hist]` / `[data-readout-host]`、`data-catalog-beta`、点错 `<li>`），本次把「沉默的耦合」改成「会叫的断言」。
+
+1. **清单**：新增 `app/scripts/dom-contracts.json`，逐条登记取证依赖的 DOM 契约：`key`、`selector`（或属性名 + 取值）、`source`（产出该契约的组件源码相对路径）、`markers`（必须在源码中字面出现的标记，如属性名与取值）、`note`。首批至少覆盖：`catalog` 全套（`data-catalog-root='p3'`、`data-catalog-cat-toggle`、`data-catalog-item`、`data-catalog-status='beta'`、`data-catalog-section`、`data-catalog-detail` + `data-catalog-active`、`button.catalog-row__select`）、`s070503` 浮层（`data-provenance='1'`、`data-provenance-date`、`data-prov-field`、`data-provenance-missing`）、以及 `b2Render` 已用到的 `data-hist` / `data-readout-host`。
+2. **检查器**：新增 `app/scripts/verify_dom_contracts.mjs` + `package.json` 脚本 `verify:dom-contracts`，并接入 CI（与既有 `verify:*` 同 job）。校验：
+   - 每条契约的 `markers` 全部在 `source` 中字面出现，缺一即红，报出 `key` 与缺失标记；
+   - `app/src/features/workbench` 下取证代码出现的每个 `data-*` 属性名都已在清单登记，未登记即红（新增选择器 = 静默耦合）；
+   - 禁止在清单外拼接选择器字符串（同目录出现未登记的 `data-` 字面量即红）。
+3. **反例（第 29 条，必须同提交）**：改产品属性名不改清单 → 红；清单删一条 → 红；取证代码新增 `data-*` 不登记 → 红；把选择器挪到清单外拼接 → 红。反例以临时目录/临时副本方式跑，**不得改动真实产品源码**。
+4. **禁区**：不改产品 DOM 以迁就检查（产品契约变更必须改清单，不是反过来）；不改 `verify_evidence.mjs` 判据与白名单；不改变任何取证产物字段。
+5. **验收**：`verify:dom-contracts` 在 CI 上全绿且反例 4/4 判红；清单条目数 ≥ 覆盖首批三组；`verify:evidence` / `verify:evidence:selftest` 数字不变（本工单不加取证件数）。
+6. 任一项不过，`W-91` 退回；本工单不阻塞任何卡签字（但 `S-02.06-01` 的重跑仍须等 W-90 第 2 项与 BA 验收）。
