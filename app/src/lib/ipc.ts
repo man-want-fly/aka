@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type {
   AppError,
   BarProvenanceDto,
@@ -47,6 +47,19 @@ export function describeError(error: unknown): AppError {
   }
   return { code: "E_INTERNAL", message: String(error), retryable: false };
 }
+
+/** 取证专用旁路：只记录命令名，不改变 invoke 行为；业务代码不得使用（默认 null 即零开销）。 */
+let invokeAudit: ((command: string) => void) | null = null;
+
+/** 只读监听 invoke，用于「点击窗口内无新增 IPC」类断言；不得包装/改写 Tauri 注入对象。 */
+export function setInvokeAudit(listener: ((command: string) => void) | null): void {
+  invokeAudit = listener;
+}
+
+const invoke = <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
+  invokeAudit?.(command);
+  return tauriInvoke<T>(command, args);
+};
 
 /** 前端唯一允许调用 Tauri 命令的出口。页面与组件禁止直接 import invoke。 */
 export const ipc = {

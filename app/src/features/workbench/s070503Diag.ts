@@ -7,7 +7,7 @@
  * 停牌标记沿用 DIAGSUSP.SZ。release 不注入，本套件只在 debug + AKA_DIAG 下运行。
  */
 
-import { ipc } from "../../lib/ipc";
+import { ipc, setInvokeAudit } from "../../lib/ipc";
 import type { BarsResponse } from "../../lib/types";
 import { collectEvidenceEnv, collectFocus } from "./diag";
 
@@ -111,31 +111,25 @@ const firePointer = (
   );
 };
 
-interface TauriInternals {
-  invoke?: (...args: unknown[]) => Promise<unknown>;
-}
-
-/** 点击期间包住 Tauri invoke，收集真实命令名（用于「无新增 IPC」） */
+/**
+ * 点击期间旁路记录 Tauri 命令名（用于「无新增 IPC」）。
+ *
+ * 不得改写 `window.__TAURI_INTERNALS__.invoke`：Tauri 用 Object.defineProperty 注入，
+ * 该属性不可写且不可配置，严格模式下赋值直接抛「Attempted to assign to readonly property」。
+ * 改为在唯一 IPC 出口（lib/ipc.ts）挂只读监听，不碰注入对象也不影响调用行为。
+ */
 const clickBar = async (absoluteIndex: number, total: number, audit?: string[]) => {
   await resetView(total);
   const node = svg();
   const point = clientPoint(absoluteIndex, 150);
-  const internals = (window as unknown as { __TAURI_INTERNALS__?: TauriInternals })
-    .__TAURI_INTERNALS__;
-  const original = internals?.invoke;
-  if (audit && internals && original) {
-    internals.invoke = (...args: unknown[]) => {
-      audit.push(String(args[0]));
-      return original.apply(internals, args);
-    };
-  }
+  if (audit) setInvokeAudit((command) => audit.push(command));
   try {
     firePointer(node, "pointerdown", point);
     await sleep(20);
     firePointer(node, "pointerup", point);
     await sleep(60);
   } finally {
-    if (audit && internals && original) internals.invoke = original;
+    if (audit) setInvokeAudit(null);
   }
 };
 

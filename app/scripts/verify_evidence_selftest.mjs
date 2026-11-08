@@ -69,7 +69,9 @@ const baseEvidence = () => ({
   kind: "aka-s2-evidence",
   suite: "s2",
   ok: true,
-  checks,
+  checksOk: true,
+  catalogOk: true,
+  checks: checks.map((check) => ({ ...check })),
   env: {
     commit: "a".repeat(40),
     dirty: false,
@@ -103,9 +105,14 @@ const baseEvidence = () => ({
   batchCompute: {},
   timeframes: {},
   // 判定分层（第 10 条）：ok=产品断言，signable=断言∧聚焦。
+  // 第 30 条：顶层汇总覆盖全部 verification 子块。
   verification: {
+    renderLayer: { ok: true },
     b2Render: { assertionsOk: true, focusOk: true, signable: true, ok: true },
+    b3Render: { ok: true },
+    catalog: { ok: true },
   },
+  verificationOk: true,
   telemetry: {},
 });
 
@@ -201,15 +208,80 @@ const cases = [
     evidence.verification.b2Render.focusOk = false;
     evidence.verification.b2Render.signable = false;
   }, 0],
+  // 第 30 条：顶层汇总必须覆盖全部 verification 子块（catalog 曾整块漏聚合）。
+  ["缺 verification.catalog（汇总漏维度）", (evidence) => { delete evidence.verification.catalog; }, 1],
+  ["catalog.ok=false 但顶层 ok/verificationOk 仍 true", (evidence) => { evidence.verification.catalog.ok = false; }, 1],
+  ["verificationOk 与现算不一致", (evidence) => { evidence.verificationOk = false; }, 1],
+  ["顶层 ok=true 但 checks 有失败", (evidence) => { evidence.checks[0].passed = false; }, 1],
+  ["顶层 ok=false 但全部通过", (evidence) => { evidence.ok = false; }, 1],
+  ["未知 verification 子块缺布尔 ok", (evidence) => { evidence.verification.extra = {}; }, 1],
+  // 第 30 条单列字段：catalogOk / checksOk 必须存在且与现算一致（门禁可直接判读）。
+  ["缺 catalogOk（目录维度未单列）", (evidence) => { delete evidence.catalogOk; }, 1],
+  ["catalogOk 与 catalog.ok 不一致", (evidence) => { evidence.catalogOk = false; }, 1],
+  ["缺 checksOk（checks 聚合未单列）", (evidence) => { delete evidence.checksOk; }, 1],
+  ["checksOk 与现算不一致", (evidence) => { evidence.checksOk = false; }, 1],
+  // 第 31 条：失败记录（error 非空 / blocked:true）不得充作证据根里的可签证据。
+  ["证据根出现失败记录（error 非空）", (evidence) => { evidence.error = "Attempted to assign to readonly property."; }, 1],
+  ["正常证据带 blocked[]（被阻塞 AC）不判红", (evidence) => {
+    evidence.blocked = [{ ac: "AC-08.01-02", reason: "依赖 P7 全局搜索浮层，未实现" }];
+  }, 0],
 ];
+
+// 失败记录（raw/）：可查、不可签、不判红、不计证据份数。
+const rawCases = [
+  ["失败记录合规（raw，不判红）", () => {}, 0],
+  ["失败记录缺失败原因", (dump) => { dump.blocked = true; delete dump.error; }, 1],
+  ["失败记录缺 finishedAt", (dump) => { delete dump.finishedAt; }, 1],
+  ["失败记录缺 suite", (dump) => { delete dump.suite; }, 1],
+  ["失败记录 meta.dirty=true", (dump, meta) => { meta.dirty = true; }, 1],
+];
+
+const runRawCase = (name, mutate, expectedExit) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aka-evidence-selftest-"));
+  const raw = fs.mkdtempSync(path.join(os.tmpdir(), "aka-raw-selftest-"));
+  writeCase(dir, baseEvidence(), baseMeta());
+  const dump = {
+    suite: "s070503",
+    ok: false,
+    finishedAt: FINISHED,
+    blocked: [{ ac: "AC-07.05-04", blocker: "crash", reason: "Attempted to assign to readonly property." }],
+    error: "Attempted to assign to readonly property.",
+  };
+  const meta = { suite: "s070503", commit: "a".repeat(40), dirty: false };
+  mutate(dump, meta);
+  fs.writeFileSync(path.join(raw, "s070503-evidence.json"), JSON.stringify(dump, null, 2));
+  fs.writeFileSync(path.join(raw, "s070503-evidence-meta.json"), JSON.stringify(meta, null, 2));
+  const proc = spawnSync(process.execPath, [VERIFY, `--dir=${dir}`, `--raw-dir=${raw}`], {
+    encoding: "utf8",
+  });
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(raw, { recursive: true, force: true });
+  const actual = proc.status;
+  if (actual !== expectedExit) {
+    console.error(
+      `✗ ${name}: 期望 exit ${expectedExit}，实际 exit ${actual}\n` +
+        `${(proc.stderr || proc.stdout || "").trim()}`,
+    );
+    return false;
+  }
+  if (!(proc.stdout || "").includes("失败记录")) {
+    console.error(`✗ ${name}: 汇总行未单列「失败记录」（不可与证据份数混计）`);
+    return false;
+  }
+  console.log(`✓ ${name}: exit ${actual}`);
+  return true;
+};
 
 let failed = 0;
 for (const [name, mutate, expected] of cases) {
   if (!runCase(name, mutate, expected)) failed += 1;
+}
+for (const [name, mutate, expected] of rawCases) {
+  if (!runRawCase(name, mutate, expected)) failed += 1;
 }
 
 if (failed > 0) {
   console.error(`\n${failed} 个用例不符合预期`);
   process.exit(1);
 }
-console.log(`\n全部 ${cases.length} 个用例符合预期`);
+console.log(`\n全部 ${cases.length + rawCases.length} 个用例符合预期`);

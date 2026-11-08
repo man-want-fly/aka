@@ -75,6 +75,7 @@ const EXPLICIT_AUX_EXTENSIONS = new Set([".txt", ".jsonl", ".log"]);
 
 const argv = process.argv.slice(2);
 const dirArg = argv.find((item) => item.startsWith("--dir="));
+const rawDirArg = argv.find((item) => item.startsWith("--raw-dir="));
 // 证据根由 scripts/evidence-layout.json 单一提供（制度第 27 条）：写入方与校验方不得各写一份。
 const LAYOUT_PATH = path.join(HERE, "evidence-layout.json");
 function layoutDir(key) {
@@ -95,6 +96,14 @@ const ARCHIVE_REL = path
   .relative(ROOT, layoutDir("archiveRoot"))
   .split(path.sep)
   .join("/");
+// 失败/blocked 记录的扫描根：真实运行时用归档根；单测用 --raw-dir 指向临时目录（不得扫到真实 raw）。
+const ARCHIVE_DIR = rawDirArg
+  ? path.resolve(rawDirArg.slice("--raw-dir=".length))
+  : dirArg
+    ? null
+    : layoutDir("archiveRoot");
+// 第 30 条：s2 dump 顶层汇总必须覆盖的 verification 子块（缺一即红，新增子块必须并进来）。
+const S2_VERIFICATION_BLOCKS = ["renderLayer", "b2Render", "b3Render", "catalog"];
 // R-EV-02：s2 dump 的 schema 键（缺键说明是旧构建产物，不许静默通过）。
 const S2_SCHEMA_KEYS = [
   "build",
@@ -355,6 +364,16 @@ for (const { full, rel } of evidenceFiles) {
     evidence = JSON.parse(fs.readFileSync(full, "utf8"));
   } catch (error) {
     failures.push(`${file}: JSON 解析失败（${error.message}）`);
+    continue;
+  }
+
+  // 第 31 条：失败记录（崩溃/中断）不得充作可签证据——它必须入归档根，单独计数。
+  // 注意：正常证据也会有 `blocked[]`（被阻塞的 AC 及原因），所以不能用 blocked 数组判失败；
+  // 判定只看「显式 blocked:true」或「error 非空」。
+  if (evidence.blocked === true || (typeof evidence.error === "string" && evidence.error.trim() !== "")) {
+    failures.push(
+      `${file}: 失败记录不得放证据根（应入 ${ARCHIVE_REL}/ 作过程记录，不计证据份数）`,
+    );
     continue;
   }
 
@@ -736,6 +755,66 @@ for (const { full, rel } of evidenceFiles) {
           focusNotes.push(`${file}: b2Render.focusOk=false → 不可判定，不得据此签（第 10 条）`);
         }
       }
+
+      // 第 30 条：顶层 ok 必须覆盖全部 verification 子块——漏一个维度就等于让红证据显示通过。
+      const verification = evidence.verification;
+      const blockOks = [];
+      if (!verification || typeof verification !== "object" || Array.isArray(verification)) {
+        problems.push("s2 dump 缺 verification（顶层 ok 无法覆盖子块）");
+      } else {
+        for (const key of S2_VERIFICATION_BLOCKS) {
+          const block = verification[key];
+          if (!block || typeof block !== "object" || Array.isArray(block)) {
+            problems.push(`verification.${key} 缺失（顶层汇总必须覆盖全部子块，缺一即红）`);
+            continue;
+          }
+          if (typeof block.ok !== "boolean") {
+            problems.push(`verification.${key}.ok 不是布尔（缺键 = 汇总漏维度）`);
+            continue;
+          }
+          blockOks.push(block.ok === true);
+        }
+        for (const key of Object.keys(verification)) {
+          if (S2_VERIFICATION_BLOCKS.includes(key)) continue;
+          const block = verification[key];
+          if (!block || typeof block !== "object" || typeof block.ok !== "boolean") {
+            problems.push(`verification.${key} 不是带布尔 ok 的子块（新增子块必须纳入汇总口径）`);
+          }
+        }
+        const checksAllPassed =
+          Array.isArray(evidence.checks) && evidence.checks.every((check) => check.passed === true);
+        const allBlocksOk =
+          blockOks.length === S2_VERIFICATION_BLOCKS.length && blockOks.every(Boolean);
+        if (typeof evidence.verificationOk !== "boolean") {
+          problems.push("s2 dump 缺布尔 verificationOk（子块汇总结果必须单列）");
+        } else if (evidence.verificationOk !== allBlocksOk) {
+          problems.push(
+            `verificationOk=${evidence.verificationOk} 与现算「全部子块 ok=${allBlocksOk}」不一致`,
+          );
+        }
+        // 目录维度单列，门禁直接判读：catalog 红不得藏在顶层 ok=true / verificationOk 下。
+        if (typeof evidence.catalogOk !== "boolean") {
+          problems.push("s2 dump 缺布尔 catalogOk（目录维度必须单列）");
+        } else if (
+          verification.catalog &&
+          typeof verification.catalog.ok === "boolean" &&
+          evidence.catalogOk !== verification.catalog.ok
+        ) {
+          problems.push(
+            `catalogOk=${evidence.catalogOk} 与 verification.catalog.ok=${verification.catalog.ok} 不一致`,
+          );
+        }
+        if (typeof evidence.checksOk !== "boolean") {
+          problems.push("s2 dump 缺布尔 checksOk（checks 聚合结果必须单列）");
+        } else if (evidence.checksOk !== checksAllPassed) {
+          problems.push(`checksOk=${evidence.checksOk} 与现算「checks 全过=${checksAllPassed}」不一致`);
+        }
+        if (evidence.ok !== (checksAllPassed && allBlocksOk)) {
+          problems.push(
+            `顶层 ok=${evidence.ok} 必须等于「checks 全过=${checksAllPassed} ∧ 全部子块 ok=${allBlocksOk}」`,
+          );
+        }
+      }
     }
 
     for (const problem of problems) failures.push(`${file}: ${problem}`);
@@ -822,6 +901,67 @@ for (const { full, rel } of evidenceFiles) {
   }
 }
 
+// 第 31 条：失败/blocked 记录入归档根留痕——可查、可追、不可签；
+// 与可签证据分开计数，不判红（否则真实过程记录又会因为「不完整」被挤回 /tmp）。
+let blockedRecords = 0;
+if (ARCHIVE_DIR && fs.existsSync(ARCHIVE_DIR)) {
+  const rawNames = fs
+    .readdirSync(ARCHIVE_DIR)
+    .filter((name) => /\.json$/i.test(name) && !/-meta\.json$/.test(name))
+    .sort();
+  for (const name of rawNames) {
+    const full = path.join(ARCHIVE_DIR, name);
+    const rel = `${ARCHIVE_REL}/${name}`;
+    let dump;
+    try {
+      dump = JSON.parse(fs.readFileSync(full, "utf8"));
+    } catch (error) {
+      failures.push(`${rel}: JSON 解析失败（${error.message}）`);
+      continue;
+    }
+    const blocked = Array.isArray(dump.blocked) ? dump.blocked : [];
+    const hasError = typeof dump.error === "string" && dump.error.trim() !== "";
+    const isFailure = dump.blocked === true || hasError;
+    if (!isFailure) continue; // 成功 dump 的归档副本：不充证据、不计数
+
+    blockedRecords += 1;
+    if (dump.ok !== false) {
+      failures.push(`${rel}: 失败记录必须 ok=false`);
+    }
+    if (typeof dump.suite !== "string" || dump.suite.trim() === "") {
+      failures.push(`${rel}: 失败记录缺 suite`);
+    }
+    if (typeof dump.finishedAt !== "string" || dump.finishedAt.trim() === "") {
+      failures.push(`${rel}: 失败记录缺 finishedAt（崩溃时间必须可追）`);
+    }
+    const reasons = blocked
+      .map((item) => (item && typeof item.reason === "string" ? item.reason.trim() : ""))
+      .filter(Boolean);
+    if (reasons.length === 0 && !hasError) {
+      failures.push(`${rel}: 失败记录缺失败原因（blocked[].reason 或 error 至少一项）`);
+    }
+    const rawMeta = full.replace(/\.json$/i, "-meta.json");
+    if (!fs.existsSync(rawMeta)) {
+      failures.push(`${rel}: 失败记录缺 meta（suite/commit/dirty 必须可追）`);
+    } else {
+      try {
+        const m = JSON.parse(fs.readFileSync(rawMeta, "utf8"));
+        if (!/^[0-9a-f]{40}$/.test(String(m.commit ?? ""))) {
+          failures.push(`${rel}: 失败记录 meta.commit 非法`);
+        }
+        if (m.dirty !== false) {
+          failures.push(`${rel}: 失败记录 meta.dirty 必须为 false（失败产物也要有干净基线）`);
+        }
+      } catch (error) {
+        failures.push(`${rel}: 失败记录 meta 解析失败（${error.message}）`);
+      }
+    }
+    warnings.push(
+      `${rel}: 失败记录（suite=${dump.suite}，${reasons.length + (hasError ? 1 : 0)} 条原因）——不可签，不计证据份数`,
+    );
+  }
+}
+
 if (scanned === 0) {
   failures.push(`未在 ${EVIDENCE_DIR} 扫描到任何证据（拒绝空转）`);
 }
@@ -831,7 +971,8 @@ for (const note of focusNotes) console.warn(`WARN ${note}`);
 for (const failure of failures) console.error(`FAIL ${failure}`);
 console.log(
   `证据归属门禁：卡集 ${CARD_SET.size} 张，扫描 ${scanned} 份证据（全部平铺），` +
-    `冻结 ${frozen} 份，env 兼容 ${envCompatCount} 份，未聚焦 ${focusNotes.length} 份，失败 ${failures.length} 项` +
+    `冻结 ${frozen} 份，env 兼容 ${envCompatCount} 份，未聚焦 ${focusNotes.length} 份，` +
+    `失败记录 ${blockedRecords} 份（不可签，不计证据份数），失败 ${failures.length} 项` +
     `（白名单上限 ${LEGACY_MAX_FILES} / env 兼容上限 ${ENV_COMPAT_MAX_FILES}，截止 ${LEGACY_DEADLINE}，以 CI 时钟为准）`,
 );
 process.exit(failures.length === 0 ? 0 : 1);

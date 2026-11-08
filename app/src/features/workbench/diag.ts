@@ -1606,69 +1606,133 @@ async function collectB3RenderChecks(): Promise<Record<string, unknown>> {
   };
 }
 
-/** 口径页证据：真实跳转 P4 路由，逐个 B2 指标点击后校验四段存在且有内容。 */
+/**
+ * 口径页证据：真实跳转指标目录路由（P3），六分类全部展开后逐个已实现指标点选，
+ * 校验四段存在且内容与 manifest 同源。
+ *
+ * P3 目录相对旧 P4 页有三处契约变化，选择器必须跟着变：
+ * 1. 根标记 `data-catalog-root='p3'`；
+ * 2. 分类懒挂载（首屏只挂 trend 24 行），必须先点开全部分类，DOM 才等于 manifest 全量；
+ * 3. 行容器 `<li data-catalog-item>` 无点击 handler，真正的选择按钮是内部
+ *    `button.catalog-row__select`；beta 由 `data-catalog-status` 承载
+ *    （`data-catalog-completeness` 是「口径完整度」，与 status 不同维度，不得混用）。
+ */
 async function collectCatalogCheck(): Promise<Record<string, unknown>> {
   const previous = window.location.hash;
   window.location.hash = "#/catalog";
-  await sleep(600);
+  const waitFor = async <T,>(probe: () => T | null, timeoutMs = 5_000, stepMs = 40) => {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const value = probe();
+      if (value) return value;
+      if (Date.now() > deadline) return null;
+      await sleep(stepMs);
+    }
+  };
+
   const registry = await ipc.indicatorRegistry();
   const manifest = await ipc.indicatorManifest();
   const registryById = new Map(registry.indicators.map((item) => [item.id, item] as const));
-  // 逐项覆盖全部已实现指标（44），不再只抽样 B2 的 20 个
+  const manifestById = new Map(manifest.indicators.map((item) => [item.id, item] as const));
+  // 逐项覆盖全部已实现指标（manifest 中 status != planned，当前 45），不再只抽样 B2 的 20 个
   const targetIds = registry.indicators.map((item) => item.id);
   const expectedBetaIds = manifest.indicators
     .filter((item) => item.status === "beta")
     .map((item) => item.id)
     .sort();
+
+  const root = await waitFor(() => document.querySelector<HTMLElement>("[data-catalog-root='p3']"));
+  if (root) {
+    // 先等分组挂载：root 在 manifest 就绪前就已存在，过早扫 toggles 会拿到 0 个而漏展开。
+    await waitFor(() => document.querySelectorAll("[data-catalog-cat-toggle]").length > 0, 5_000, 30);
+    const toggles = Array.from(document.querySelectorAll<HTMLElement>("[data-catalog-cat-toggle]"));
+    for (const toggle of toggles) {
+      if (toggle.getAttribute("aria-expanded") !== "true") {
+        toggle.click();
+        await sleep(60);
+      }
+    }
+    await waitFor(
+      () =>
+        document.querySelectorAll("[data-catalog-item]").length === manifest.indicators.length
+          ? true
+          : null,
+      2_000,
+      30,
+    );
+  }
+
   const listed = Array.from(document.querySelectorAll("[data-catalog-item]")).map(
     (element) => element.getAttribute("data-catalog-item") ?? "",
   );
   const betaIds = Array.from(
-    document.querySelectorAll<HTMLElement>("[data-catalog-item][data-catalog-beta='1']"),
+    document.querySelectorAll<HTMLElement>("[data-catalog-item][data-catalog-status='beta']"),
   ).map((element) => element.getAttribute("data-catalog-item") ?? "");
-  const rootPresent = document.querySelectorAll("[data-catalog-root='p4']").length > 0;
+  const rootPresent = root !== null;
 
-  const sectionText = (name: string) => {
-    const section = document.querySelector<HTMLElement>(`[data-catalog-section='${name}']`);
-    if (!section) return null;
-    return section;
-  };
+  const section = (name: string) =>
+    document.querySelector<HTMLElement>(`[data-catalog-section='${name}']`);
+  const activeOf = () =>
+    document
+      .querySelector<HTMLElement>("[data-catalog-detail]")
+      ?.getAttribute("data-catalog-active") ?? "";
+
   const cards: Array<Record<string, unknown>> = [];
   for (const id of targetIds) {
-    const button = document.querySelector<HTMLElement>(`[data-catalog-item='${id}']`);
-    if (!button) {
+    const row = document.querySelector<HTMLElement>(`[data-catalog-item='${id}']`);
+    if (!row) {
       cards.push({ id, ok: false, reason: "条目缺失" });
       continue;
     }
-    button.click();
-    await sleep(180);
-    const meta = registryById.get(id);
-    if (!meta) {
-      cards.push({ id, ok: false, reason: "registry 无此指标" });
+    const select = row.querySelector<HTMLElement>("button.catalog-row__select");
+    if (!select) {
+      cards.push({ id, ok: false, reason: "缺少行内选择按钮" });
       continue;
     }
-    const formula = sectionText("formula");
-    const params = sectionText("params");
-    const warmup = sectionText("warmup");
-    const boundary = sectionText("boundary");
+    select.click();
+    // 点行容器不会切 activeId；必须等 detail 的 data-catalog-active 落到该项再读数
+    const picked = await waitFor(() => (activeOf() === id ? id : null), 1_500, 30);
+    if (!picked) {
+      cards.push({ id, ok: false, reason: "选中未切换", active: activeOf() });
+      continue;
+    }
+    const item = manifestById.get(id);
+    const register = registryById.get(id);
+    if (!item && !register) {
+      cards.push({ id, ok: false, reason: "registry/manifest 无此指标" });
+      continue;
+    }
+    const paramsCount = item ? item.params.length : (register?.params.length ?? 0);
+    const warmupBars = item ? item.warmupBars : (register?.warmup ?? 0);
+    const formula = section("formula");
+    const params = section("params");
+    const warmup = section("warmup");
+    const boundary = section("boundary");
     const formulaText = formula?.querySelector("p")?.textContent?.trim() ?? "";
     const boundaryText = boundary?.querySelector("p")?.textContent?.trim() ?? "";
+    const paramsText = params?.textContent ?? "";
     const warmupText = warmup?.querySelector("p")?.textContent?.trim() ?? "";
     const warmupMatch = warmupText.match(/首个有效值下标\s*(\d+)/);
     const paramRows = params?.querySelectorAll("tbody tr").length ?? 0;
-    const noParamHint = (params?.textContent ?? "").includes("无参数");
+    const expectedWarmupIndex = warmupBars > 0 ? warmupBars - 1 : null;
     const clauses = {
       formula: { ok: formulaText.length > 0, detail: formulaText.slice(0, 60) },
       params: {
+        // 零参数项页面渲染「无参数。」/「默认参数 …」，不能按表格行数判
         ok:
-          meta.params.length === 0
-            ? noParamHint
-            : paramRows === meta.params.length,
-        detail: `rows=${paramRows} expected=${meta.params.length}`,
+          paramsCount === 0
+            ? paramsText.includes("无参数") || paramsText.includes("默认参数")
+            : paramRows === paramsCount,
+        detail: `rows=${paramRows} expected=${paramsCount}`,
       },
       warmup: {
-        ok: Boolean(warmupMatch) && Number(warmupMatch?.[1]) === meta.warmup,
-        detail: `text="${warmupText.slice(0, 40)}" expected=${meta.warmup}`,
+        ok:
+          expectedWarmupIndex === null
+            ? warmupText === "—"
+            : Boolean(warmupMatch) &&
+              Number(warmupMatch?.[1]) === expectedWarmupIndex &&
+              warmupText.includes(String(warmupBars)),
+        detail: `text="${warmupText.slice(0, 40)}" expected=${warmupBars}`,
       },
       boundary: { ok: boundaryText.length > 0, detail: boundaryText.slice(0, 60) },
     };
@@ -1678,12 +1742,15 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
 
   window.location.hash = previous || "#/workbench";
   await sleep(320);
-  const betaIdsSorted = [...betaIds].sort();
+  const betaSorted = [...betaIds].sort();
+  const listedUnique = new Set(listed).size;
   return {
     route: "#/catalog",
     rootPresent,
     itemCount: listed.length,
-    itemCountOk: listed.length === registry.indicators.length,
+    itemCountUnique: listedUnique,
+    declaredCount: manifest.indicators.length,
+    itemCountOk: listed.length === manifest.indicators.length && listedUnique === listed.length,
     betaIds,
     betaCount: betaIds.length,
     expectedBetaCount: expectedBetaIds.length,
@@ -1691,10 +1758,11 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
     cards,
     ok:
       rootPresent &&
-      listed.length === registry.indicators.length &&
+      listed.length === manifest.indicators.length &&
+      listedUnique === listed.length &&
       targetIds.every((id) => listed.includes(id)) &&
-      betaIdsSorted.length === expectedBetaIds.length &&
-      betaIdsSorted.every((id, index) => id === expectedBetaIds[index]) &&
+      betaSorted.length === expectedBetaIds.length &&
+      betaSorted.every((id, index) => id === expectedBetaIds[index]) &&
       cards.length === targetIds.length &&
       cards.every((item) => Boolean(item.ok)),
   };
@@ -1999,13 +2067,22 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
       detail: `热缓存批次 count/instances/skip=${JSON.stringify(warmComputeCount)}，全命中=${warmAllHit}，逐点一致=${warmAllMatch}`,
     },
   ];
-  const ok = checks.every((item) => item.passed);
+  // 第 30 条：顶层 ok 必须覆盖全部 verification 子块——漏一个维度就等于让红证据显示通过。
+  // 历史事故：catalog 整块未聚合，45 张目录卡全红（rootPresent=false、25 个条目缺失）而顶层 ok=true。
+  const verificationBlocks = { renderLayer, b2Render, b3Render, catalog };
+  const checksOk = checks.every((item) => item.passed);
+  const verificationOk = Object.values(verificationBlocks).every((block) => block.ok === true);
+  const catalogOk = Boolean(catalog.ok);
+  const ok = checksOk && verificationOk;
 
   const payload = {
     schemaVersion: 1,
     kind: "aka-s2-evidence",
     suite: "s2",
     ok,
+    checksOk,
+    verificationOk,
+    catalogOk,
     checks,
     env,
     windowFocused: focus.windowFocused,
