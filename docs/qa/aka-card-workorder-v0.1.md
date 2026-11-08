@@ -18,7 +18,8 @@
 | W-92 | 取证窗口只置前一次 + `activateAttempts` | dev A | 已验收 | `2192340`，合并 `7cf7d69` |
 | W-93 | `b2Render` 回切时延单列 `latency` | dev A | 待开工 | — |
 | W-94 | 失败产物自动落盘 `docs/qa/raw/` | dev A | 待开工 | 自 W-90 拆出 |
-| W-95 | P09 `S-08.02-03` | dev B | 待开工 | `dev2` |
+| W-95 | P09 `S-08.02-03` | dev B | 进行中 | `dev2` `d0a2c60`（未合入） |
+| W-96 | P06 `S-08.02-02` + P07 `S-07.01-02`（一次合并、一次签） | dev B | 待验收 | `main` `adef5b7` |
 
 ## 0.1 双线开发复核口径（2026-11-07 起）
 
@@ -1970,9 +1971,20 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 ### W-95（dev B 实现 / TL 验收）P09 `S-08.02-03`
 
 > PM 于 2026-11-08 指派；P10 `S-01.03-01` 留作下一张，不在本单内。
+> **2026-11-08 复核**：dev B 已在 `dev2` 交 `d0a2c60`（启动数据集校验与只读兜底），本单不再重复派；未合入 main，待 W-96 签完后单独提合并。
 
 1. 开工当天把 §0.0 本行改「进行中」并写分支/提交；交付当天改「待验收」；停线当天写原因。
 2. 交付前跑规范 §3.1 全部门禁（typecheck / build / cargo test / golden / 全部 `verify:*`），数字写进交付说明。
 3. 运行层证据只能由 BA 出（规范 §3.2）；dev B 在 `dev2` 的自测只作参考，不计证据。
 4. 合并前置按规范 §5：`main` 干净、CI 绿、对待并入 diff 跑 `verify:sign-impact --staged`，共用文件先合先定基线。
 5. **交付自检**：`verify:delivery` 绿后才可贴单；缺反例、缺自测数字、缺 `Sign-Invalidates:` 任一项即退回。
+
+### W-96（dev B 实现 / BA 取证 / TL 签字）P06 `S-08.02-02` + P07 `S-07.01-02`
+
+> 2026-11-08 一次合并入 main：`adef5b7`（dev2 tip `2f35aac`）；P09 `d0a2c60` 不随本批。
+
+1. **合并范围**：P01–P04 功能批次、P05 `S-06.03-02` 诊断包导出、P06、P07 共 32 文件；`app/bench`、`manifest/indicators.json`、`dom-contracts.json` 已按先合先定基线处理，无冲突。
+2. **审查结论**：P06 错误码 / trace / 8s 超时 / 错误卡 / 连续 3 次失败导出入口齐；P07 六项健康检查、②失败 ③~⑥ SKIP 1/6、tushare 0/4 与 4 个禁用按钮齐。合并后本地 `tsc`、全部 `verify:*`、`cargo test -p app-core`（48 passed）绿。
+3. **BA 取证窗口（2026-11-08 18:00–19:00，BA 主执行、TL 在场）**：在 `adef5b7` 上依次跑 `s070102`（全 PASS）、`s070102-corrupt`（②FAIL / ③~⑥ SKIP / 汇总 1/6）、`s080202`（panic×3 → 导出入口、data → 数据源入口、timeout 真实 8s、关注入后恢复），dump 与归档一次完成；不得分两次签。
+4. **签字前置（第 29 条）**：dev B 在签字前补两段变异记录并贴到本单——①把 `E_TIMEOUT/E_ENGINE_PANIC/E_DATA_UNAVAILABLE` 任一映射改错，`s080202` 必须红；②把 `1/6` 分母或 ②失败后的 SKIP 逻辑改错，`s070102-corrupt` 必须红。缺记录不签，但不阻断代码留在 main。
+5. **台账**：签字后 TL 回填 gate-log 两行（`S-08.02-02`、`S-07.01-02`），BA 回填完成台账；`verify:delivery` 绿才改「已验收」。

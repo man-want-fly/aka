@@ -2739,6 +2739,29 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - §0.0 补 `W-95` = P09 `S-08.02-03`，执行人 dev B，状态 `待开工`，分支 `dev2`；P10 `S-01.03-01` 留作下一张。
 - 仍欠 BA：完成台账 `S-07.05-03` 由 `未开始` 同步为 `Blocked-AC`（未开始 21→20、Blocked-AC 1→2）。
 
+#### 4.7.74 P06/P07 代码审查与一次合并（2026-11-08）
+
+**一、审查结论：代码可合，卡未完成。**
+- `P06 S-08.02-02`（`ab463c3`）：`app/crates/app-core/src/error.rs` 落 `E_TIMEOUT` / `E_ENGINE_PANIC` / `E_DATA_UNAVAILABLE` 与 trace id；`app/src-tauri/src/commands.rs` 用 `tokio::time::timeout` 统一 8s，注入只生效一次；`state.rs` 记连续失败，`WorkbenchPage.tsx` 出错误卡与「导出诊断包」，切标的清旧错误。运行层反例在 `s080202Diag.ts`。
+- `P07 S-07.01-02`（`7ef4e96`）：`core.rs:1095` `data_health_check` 六项；②失败 → ③~⑥ SKIP 并按 1/6 汇总；`core.rs:2634/2666` 两个反例（全 PASS、corrupt manifest 在第 2 步失败）；`batchDiag.ts:603-635` 断言 6 行、状态枚举、汇总格式与 1/6；`DatasourcePage.tsx` P9 健康面板与 tushare 0/4、4 个禁用按钮。
+- 合并后本地 `tsc --noEmit`、`verify:delivery`/`evidence`/`dom-contracts`/`gate-log`/`constants`/`format`/`docs`/`cards-pages` 全绿；`cargo test -p app-core` 48 passed、`cargo check` 通过。
+
+**二、一次合并**
+- `main` 以 `--no-ff` 合入 dev2 tip `2f35aac`，得 `adef5b7`；带进 P01–P04、P05 `S-06.03-02`、P06、P07，共 32 文件 / 4163 插入。P09 `d0a2c60` 留在 dev2，不随本批，避免未评审代码混入签字 tip。
+- 共用文件 `app/bench`、`manifest/indicators.json`、`dom-contracts.json` 无冲突，按先合先定基线处理。
+
+**三、签字前置与取证窗口**
+- 状态表新增 `W-96`（P06+P07，`待验收`，`adef5b7`）；BA 窗口定 **2026-11-08 18:00–19:00**，在 `adef5b7` 上一次跑 `s070102` / `s070102-corrupt` / `s080202`，一次归档、一次签，不分两次。
+- 第 29 条还欠两段变异记录（错误码映射改错 → `s080202` 红；1/6 分母或 SKIP 逻辑改错 → `s070102-corrupt` 红），由 dev B 在签字前贴单；缺记录不签，但不阻断代码留在 main。
+- 签字后才回填 gate-log 两行与 BA 完成台账；此前不得写「已交付」。
+
+**四、`S-08.02-03` 与仓库卫生**
+- dev B 已在 `dev2` 交 `d0a2c60`（P09 启动校验与只读兜底）；§0.0 `W-95` 由 `待开工` 改 `进行中`（`dev2 d0a2c60`），不重复派单；该笔未合入，待 W-96 签完后单独提合并。
+- `app/node_modules` 在 dev2 为未跟踪软链，`git ls-files` 为空；主树 `.gitignore:8 /app/node_modules` 已命中，两分支 ignore 一致，不再依赖本地 `.git/info/exclude`。
+
+**五、交付规范试跑**
+- 规范首版已在 `973e4f6` 可评审（含 `verify:delivery` 与 9 条反例）；P06/P07 作为首个试跑对象，结论正是「代码可进合并队列、四件未齐不得称完成」，与规范 §1/§5 一致。
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。
