@@ -84,6 +84,9 @@ function cardMap(text) {
   for (let i = 0; i < lines.length; i += 1) {
     const m = lines[i].match(/^#{2,4}\s*(S-\d{2}\.\d{2}-\d{2})/);
     if (m) current = m[1];
+    // 一级/二级标题（部分、10.x 估算边界等）不是卡面：重置归属，
+    // 否则文末章节的改动会被错算到最后一张卡上。
+    else if (/^#{1,2}\s/.test(lines[i])) current = null;
     map[i + 1] = current;
   }
   return map;
