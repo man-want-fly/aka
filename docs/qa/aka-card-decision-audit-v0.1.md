@@ -542,6 +542,13 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - **不选 B/C/D**：B（main 不取消）与 C（按 sha 分组）都变成每次 push 全量跑，macOS runner 成本与排队上升；D（手工 rerun）在活跃推送期会与后续 push 互相取消，形成乒乓。A 的零额外 CI 成本是唯一可持续解。
 17. **两份台账分主（2026-11-08 写死）**：`docs/qa/aka-card-gate-log-v0.1.csv` 由 **TL 写**（Gate A/B/C、`gate_c_source`、`blocker`、`ledger_status` 的签字相关格、`sign_commit`、`sign_scope`），BA 与 dev **只读不写**；`docs/qa/aka-story-completion-ledger-v0.1.md` 由 **BA 写**（逐卡完成状态、人日、派生数），TL 与 dev **只读不写**。越权写入按无效处理：同一提交回退并在审计记一条。两份台账冲突时，完成状态与人日以 BA 台账为准，Gate 与签字以 gate-log 为准，不得互相替代。
 18. **已签卡面改动与失效申报（2026-11-08 起）**：已签字卡面**只允许 BA 改**；任何提交若 diff 击中已签卡（故事卡分节或 `sign_scope` 中的文件路径），提交信息必须带 `Sign-Invalidates: S-xx.xx-xx, ...`，且与 `verify:sign-impact` 实算集合**完全一致**；漏报、多报、非法卡号一律红。TL 在批次边界重签，重签前旧签字按规则 8 失效。失效集合由工具现算，不允许维护「哪些卡已签」的人手名单。**trailer 由工具生成**：提交前跑 `npm run verify:sign-impact -- --staged --print-trailer`，把输出原样粘进提交信息（或走 `git commit -F`）；校验按**集合相等**，不要求字节/顺序一致——工具输出就是全量，少一个即红，因此不存在「应付得过去的最小集合」。
+19. **运行层证据最低可核条件（2026-11-08 起，R-EV-02）**：任何「真机 / 运行层」结论必须同时给出下列五项，缺一记 `failed`，**不得用 CI、数据层或渲染层结论代偿**：
+    - `commit` + `dirty=false`（工作区干净，证据与所签 commit 同源）；
+    - `runtime`：启动方式（枚举 `tauri-dev` / `tauri-build` / `cargo+custom-protocol` / 其他）、`node` 或 `electron` 版本、`os` / `arch`；
+    - `build`：前端入口文件名与构建时间、cargo profile、features、二进制路径 + `sha256`；
+    - `command`：完整启动命令与环境变量（`AKA_DIAG`、`AKA_DIAG_TARGET` 等）；
+    - `dump`：原始 JSON 路径 + `finishedAt`，并复制入库 `docs/qa/evidence/`，不得只留在 `~/Library`。
+    - 机器约束：`diag.ts` 统一写 `env` 块，`commit` 由构建期注入（define），禁止手写；`verify:evidence` 校验 `env` 五项非空。
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
 
@@ -1973,9 +1980,9 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 
 | 线 | 卡 | 说明 |
 |---|---|---|
-| dev A | `S-02.06-01` 按需计算与缓存 | P0，`D-06`；与已签的参数/工作台同域 |
-| dev A | `S-02.07-01` 图表交互与数据不足 | P0；缩放/数据不足边界 |
-| dev A | `S-07.05-03` 溯源浮层 | `W-62` 已立项、卡面归 dev A；承接 `S-07.05-02` 渲染缺口 |
+| dev A | ~~`S-02.06-01`~~ | **已交付**（BA v0.23，证据 `fec428e`/s2），分配作废，见 §4.7.54 四#1 |
+| dev A | ~~`S-02.07-01`~~ | **已交付**（BA v0.23，证据 `fec428e`，18/18），分配作废 |
+| dev A | `S-07.05-03` 溯源浮层 | `W-62` 已立项、卡面归 dev A；本批只交浮层，补1 `Blocked-AC` |
 | dev B | `S-07.01-01` 数据源状态 | P0；数据源可用性口径 |
 | dev B | `S-07.04-01` 回填方案 | P0；手动回填边界 |
 | dev B | `S-07.05-01` 数据质量报告证据包 | `W-53`；6 行检查 + 过期前后快照 |
@@ -2135,7 +2142,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 
 选择理由：四张都落在 dev2 已具备的 P9/P8 面，不再引入新页面依赖；总量 9.0 人日与上批 8.0 持平。`S-08.01-02` 整卡 `Blocked`，不占额度；P7 相关卡等 `S-05.01`。
 
-**二、dev A 不加卡**：手上 `S-02.06-01`（方案 2 收口）与 `S-07.05-03`（只落浮层、补1 `Blocked-AC`）够到批次边界。
+**二、dev A 不加卡**：`S-02.06-01`、`S-02.07-01` 已在 BA 台账 `已交付`（§4.7.46 表已更正），手上实际只剩 `S-07.05-03`（只落浮层、补1 `Blocked-AC`），够到批次边界。
 
 **三、`dev2 → main` 合并协议。**
 - **谁做**：TL。dev 只推自己的分支，不推 `main`；合并、重跑、重签都由 TL 在批次边界执行。
@@ -2143,6 +2150,47 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - **冲突预检**：`git merge-tree $(git merge-base main origin/dev2) main origin/dev2` 冲突标记 = 0，可快进式合并（仍需 `--no-ff` 留合并点）。
 - **重签节奏**：**每次合并一次，不是每个提交一次**。合并后在新 tip 跑完整 CI，以该 run 的 `headSha` 作为唯一签字对象；dev2 上的证据只作参考，不单独签。
 - **合并清单**：① `git merge --no-ff origin/dev2`；② 把 `aka-page-registry-v0.1.csv` 的 P9 改为 `exists` + `app/src/pages/datasource/DatasourcePage.tsx` 锚点（合并后 P9 才真实存在）；③ 跑 `verify:docs`、`verify:sign`、`verify:gate-log`、`cargo test --workspace`、`npm test`；④ 推送后在 merge tip 的 run 上一次性签本批卡；⑤ 台账登记 merge run 的 `head_sha` 与被签 `signed_sha`，`relation=equal`。
+
+#### 4.7.54 运行层证据来源核实 + BA 六项清单交叉裁定（2026-11-08）
+
+**一、本机运行约束（实测）**
+- `~/.local/bin/node` 是垫片：`ELECTRON_RUN_AS_NODE=1 "/Applications/Trae CN.app/Contents/MacOS/Electron"`；`node -v` = v22.21.1，`process.versions.electron` = 39.2.7。
+- 本终端复跑 `npm run build`：`dlopen app/node_modules/@rollup/rollup-darwin-x64/rollup.darwin-x64.node ... mapped file has no cdhash, completely unsigned` → `ERR_DLOPEN_FAILED`。`vite build` / `vite dev` / `tauri dev` 在本终端不可用；CI 用真实 Node，故一直绿。
+- 结论：**运行层证据不可能来自 CI**，CI 只覆盖数据层与脚本门禁。
+
+**二、两份运行层证据的实际产出环境**
+- `s20501`：本机 `~/Library/Application Support/aka/diag/s20501-evidence.json`，`finishedAt=2026-11-07T21:54:37Z`（本地 11-08 05:54），**10/10**（data 1/1、render 8/8、runtime 1/1）。台账与 §4.7.45 写的「11/11」是计数错误（1+8+1=10），已改；§4.7.45「真机 11/11 未重跑，以 CI 与源码为据」是拿 CI/源码代偿运行层，违反 R-EV-01，**该表述撤回**。
+- `S-02.07-01/02`：`~/Library/Application Support/aka/diag/s207-evidence.json`，`finishedAt=2026-11-07T23:24:29Z`（本地 11-08 07:24），**18/18**（render 14、data 4）；`app/dist` 入口包 07:23 且含 `2557b1b` 新增的 `未找到副图面板 M06` / `鼠标移到副图` 字串，`app/target/debug/aka-desktop` 07:24。
+- 产出方式：**本机 cargo 构建的 debug 二进制 + 内嵌 dist（`--features tauri/custom-protocol`）直接启动**，不是 `tauri dev`、不是 CI，也不是打包好的 `.app`（本机只有 `app/target/{debug,release}/aka-desktop`）。render 层断言（DOM 实测、aria、tooltip）通过，说明 WebView 真跑起来了。
+- 缺口：两次运行都**没有记录** commit、node/electron 版本、启动命令、二进制 `sha256`；`s207` 的 18/18 dump 只在 `~/Library`，`2557b1b` 未随提交入库；`dist` 被 gitignore，仓库内无法复算。结论：**当前证据「成立但不可审计」，构建路径也不可复现**（本终端 `vite build` 已失败，本机 `~/.local/lib/node-dist/bin/node` 执行即被 SIGKILL/exit 137）。按制度第 19 条重取证，见 `W-84`。
+
+**三、六项清单裁定**
+
+1. **本批只剩 5 张 → 改分配表，不改台账。** `S-02.06-01`（证据 `fec428e`/s2）与 `S-02.07-01`（`fec428e`，18/18）在 BA 台账已是 `已交付`；§4.7.46 表是起草时未回收。该表已划掉两行，§4.7.53 二同步更正：**dev A 实际只剩 `S-07.05-03`**。
+2. **P5 定性：`exists`（P2 内嵌自选面板）**。`Watchlist.tsx` 由 `WorkbenchPage.tsx` 使用，`S-01.02-01/02/03` 均已交付；registry 写 `absent` 与事实不符。已改 `exists`、锚点 `app/src/components/Watchlist.tsx` + `Watchlist`、owner `S-01.02-01`，note 写「作为 P2 工作台自选面板实现，无独立路由」。三张卡的验收口径不需要改——是页面索引写错，不是交付写错。
+3. **P6 owner 改 `S-04.01-01`**：E-04 只有 `S-04.01-01/02`、`S-04.02-01/02`，`S-04.03-01` 不存在。P6 仍未实现，owner 记 `S-04.01-01`，note 写「由 `S-04.01-01/02`、`S-04.02-01/02` 共同承载，当前无页面」。错号本身说明页面索引是手写的，见第五条。
+4. **3 张合并卡改「结项（并入宿主）」**：`S-08.01-01`（1.0，并入 `S-01.02-03`）、`S-08.01-03`（1.5，并入 `S-02.07-02`/`S-01.02-03`）、`S-08.02-01`（1.0，并入 `S-02.05-01`）宿主均已交付。**不记「已交付」**——它们没有独立签字；新增 `已结项（并入宿主）` 桶 3 张 / 3.5 人日，不计剩余。总账：74 张不变；已交付 19、已结项 3、剩余 55→**52 张**、153.4→**149.9 人日**。`S-08.01-02` 不结项（宿主 `S-05.01-02` 未交付）。由 BA 在 v0.24 落账（`W-85`）。
+5. **`S-03.03-03` 不能解阻**：`verify:docs` 已 PASS（failed=0 / skipped=0），但该卡真 blocker 不是脚本，而是 `AC-03.03-04` 补1–补5 的运行/数据证据（补6 已于 `80d8c59` 撤回并改挂 `S-03.03-01（补4）`）。blocker 已改为「AC-03.03-04 补1–补5 运行/数据证据缺（verify:docs 已 PASS，脚本不再是 blocker）」，状态仍 `Blocked-AC`。补1–补4 需脚本 `--self-test` 之外的反例实跑记录，补5 需 10 指标数值比对。
+6. **B 组不是 6 张「只等签字」**，按机械判据拆开（Gate A/B/C 全 PASS + `sign_commit` 覆盖卡级 + note 明确可放行才算已签）：
+   - **可并入下一次批签（3 张）**：`S-03.03-01`（Gate C 仅签 `80d8c59` 补项、`6367c09` diff 未外推）、`S-03.04-02`、`S-03.05-05`（后两张 `c111f5f` 签字 scope 仅 W-75 文字、非卡交付）。
+   - **先重判再签（1 张）**：`S-03.05-02`（ATRP 3 位，BA 口头 FAIL 与 `6367c09` 不符；blocker 已改为「待 BA 以现版重判 Gate C」，PASS 后转 `待签`）。
+   - **不能并（1 张）**：`S-03.01-01`（Gate A FAIL，G5 裸写），退回内容侧修。
+   - **已签未回填（3 张，不用重新签）**：`S-02.01-01`（`1fb9dd0` / 全卡）、`S-06.01-01`（`a846473` / diff）、`S-07.02-01`（`6367c09` / diff）三列全 PASS 且 note 明确可放行，gate-log 仍记 `Blocked` 属状态回填错。按第 17 条完成状态以 BA 台账为准，由 BA 在 `W-85` 一次回填，TL 同步 gate-log。
+   - **台账新增 `待签` 状态**（`verify_gate_log.mjs` 枚举同步）：把「技术未完成」与「只差一次合并 tip 签字」分开。本轮 `S-03.03-01`、`S-03.04-02`、`S-03.05-05` 三行已置 `待签`。
+   - **页面索引的同类问题**：P5/P6 两条错误说明「卡 ↔ 页面」索引也是手写。`verify_card_pages` 目前只校验「引用的页面是否存在」，不校验 registry 的 `owner_story` 是否是真实卡号、`status` 是否与锚点文件一致。补两条判据（owner 必须存在于 `aka-story-index-v0.1.csv`；`exists` 行的锚点文件与文本必须存在），见 `W-84`。
+
+**四、dev B 自选卡**：只认 `W-82` 四张或同线未交付卡；报上来后按「不新增页面依赖 + 不跨 dev A 线」核，超范围即驳回到批次边界重排，不在对话里追加额度。
+
+#### 4.7.55 A 组 22 张「可排池」授权落地（2026-11-08）
+
+产品批准 BA 分组：**A 组 22 张作为可排池**，dev B 连续取卡、每批报卡号；dev A 收口手上两张后从池接。落地形式如下。
+
+- **花名册**：`docs/qa/aka-dispatch-pool-v0.1.csv`。A 组 = 台账「未开始」25 张 − 3 张并入宿主（`S-08.01-01/03`、`S-08.02-01`，见 §4.7.54 四#4）= 22，逐卡带 `pool_seq`、`eligibility`、`take_by`。**花名册只定顺序，不定资格**。
+- **取卡顺序（确定性，不靠人挑）**：① `可取` 先于 `待合并`、`待解阻`；② 同 dev 线按 Epic 连续（P1→P3→P6→P7→P8→P9），减少跨页切换；③ P0 > P1 > V1；④ 同档人日小者先（≤2.0 优先），缩短批次。当前队首：`P01 S-03.01-04`、`P02 S-03.02-01`、`P03 S-03.03-02`、`P04 S-06.03-01`、`P05 S-06.03-02`、`P06 S-08.02-02`；合并 dev2 后 `P07 S-07.01-02`、`P09 S-08.02-03`、`P10 S-01.03-01` 解阻。
+- **资格是机器判定**，不看花名册静态值：取卡前跑 `verify_card_pages`（`AKA_CARD_FILE` 指向该卡）确认无缺页；gate-log 非 `Blocked`/`Blocked-AC`；BA 台账非 `已交付`/`已结项`；依赖卡已交付。任一不满足即顺延，dev 不得自行改卡状态或换池。
+- **批次边界追认**：dev 取卡当天只报卡号（`Pxx`），TL 不写 gate-log；dev 报「本批完成」时，TL 一次性追加行：`owner=dev B`、`workorder=W-86#Pxx`、`note` 写「A组自取，序 Pxx，取自 <sha>」；Gate A/B/C 判据与签字规则不变，仍在合并 tip 一次签。未在池、未报号的交付不予追认（第 14/15 条）。
+- **补池归 TL，在边界做**：来源为本边界新解阻卡、新拆卡、BA 新立卡。池空或撞缺页时 dev 停线报 TL，TL 做「换卡 / 降 Blocked / 补页面依赖」三选一；不在对话里临时加卡。V1 永久不入池，`S-09.01-01` 属文档交付物、不进 dev 编码线。
+- **边界**：自取不等于预签；`Blocked` 卡不因在池内而放开。`W-82` 固定批次自本日起由 `W-86` 取代，已开工卡以 dev B 报号为准、按 `W-86#Pxx` 追认。
 
 ---
 

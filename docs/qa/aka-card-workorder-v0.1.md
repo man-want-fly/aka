@@ -1692,6 +1692,8 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 
 ### W-82（dev B）下一批：P9/P8 数据源与设置 4 张（9.0 人日）
 
+> **2026-11-08 已被 W-86 取代**：产品批准 A 组 22 张可排池、dev 连续自取。本表不再作为派工单；dev B 已自取的卡以报号为准，在批次边界按 `W-86#Pxx` 追认。下表仅留作选卡参考。
+
 | 卡 | 标题 | 人日 | 依赖 |
 |---|---|---|---|
 | `S-07.01-02` | tushare 禁用卡与健康检查 | 2.0 | `S-07.01-01`（已交付） |
@@ -1704,7 +1706,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 ### W-83（TL）`dev2 → main` 合并与重签协议
 
 - **谁做**：TL；dev 不推 `main`。
-- **何时**：每个批次边界一次，下一批开始前。本边界先合 `dev2` 再开 W-82。
+- **何时**：每个批次边界一次，下一批开始前。本边界先合 `dev2` 再开 W-86 的取卡。
 - **重签**：每次合并一次，不是每提交一次；合并后在新 tip 跑完整 CI，只签该 run 的 `headSha`；dev2 证据仅参考。
 - **清单**：`git merge --no-ff origin/dev2` → 更新页面索引 P9=`exists`（锚点 `app/src/pages/datasource/DatasourcePage.tsx`）→ `verify:docs`/`verify:sign`/`verify:gate-log`/`cargo test --workspace`/`npm test` → push → 在 merge tip 一次性签本批 → 台账登记 `relation=equal`。
 - **预检**：冲突标记 0，可合并。
@@ -1773,3 +1775,32 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 4. **bench 门禁（严格串行）**：先 **W-33**（TD-BENCH-02，耗时字段归一，连跑两次 sha256 一致）→ 验收通过后再开 **W-34**（TD-BENCH-01，CI `git diff --exit-code app/bench/aggregates app/bench/ipc-snapshots`）。**顺序反了就是永久红门禁**，TL 在 W-33 验收前不放 W-34。W-33 功能部分已签 `7cbad20`（说明文字见 **W-39**）；W-34 已签 `5131f89`（首跑 run `42355133312` 成功，红路径反例见 **W-39**）。
 5. **收尾**：按 W-31 删除 `sector-12` 两条白名单并收窄正则（正确表述 0 命中），CI 从「有登记漂移」转为「零漂移」。禁止把新漂移加进 baseline。
 6. 卡改完后，由 TL 在 gate log 的 `gate_b` 签 `PASS`；未签不得派工。脚本类工单（W-03/W-24/W-28/W-29/W-30/W-31/W-32/W-33/W-34/W-35/W-36/W-37/W-38/W-39/W-40/W-41/W-42/W-43/W-44/W-45/W-46/W-47/W-48/W-49/W-55/W-56/W-57/W-58/W-59/W-60/W-61/W-62/W-63/W-64/W-65/W-66/W-67/W-68/W-69/W-70/W-71/W-72/W-73/W-74/W-75/W-76/W-77）须由 TL 按验收判据复核后才能签。W-47/W-48 于 2026-11-07 签（`1292eb9` / `7abf3b8`），**W-47 与 W-49 当日作废**（QA R8 反证：release 仍注册 `diag_write`/`diag_write_named`，见 W-58）；**`W-63` 全签 `8ae6bdc`**、`W-58` 签 `8ae6bdc`；`W-66` 六条全落（`d27f640` + `045cbd6`）结项、`W-67` 签 `f3037e6`；`W-59` 已交付待签（`4838bb2` 红路径 / `ea107f7` 还原）、`W-65` 已交付待签（`93ba0f3`，R-LAT 223ms）；**`W-68` 复核不签（8 类绕过，见 §4.7.36）**；**`W-69` 代码层 8/8 已封、整单不签**（白名单扩到 24 + 子目录未覆盖，见 §4.7.37）；**`W-70` 复核不签**（`EXCLUDED_DIRS` 可藏证据、`e01` 无 commit 套壳，见 §4.7.38），开 `W-71`；**`W-71` 签 `da228d9`（仅门禁范围，不含 `S-01.01-01`）**；`W-72` 行为已验、错误码三套并存曾不签（§4.7.40）→ `W-75`；`R-03` 判卡面过宽（真实平盘 `0.00%` 合法）→ `W-74`；**`W-74` 签 `dc05a7f`**（Gate C `PASS`，`S-01.01-01` 仍不签）；**`W-75` 复核不签**：MACD/PPO/M25 已返回 `E_PARAM_ORDER`，但 `AC-03.06-17` 与 PRD L861 仍写 `E_PARAM_OUT_OF_RANGE`，且新增 PRD 行与 L861 自相矛盾，见 §4.7.41 → `W-76`；**`W-76` BA 半落地（`481f02c`）**：AC/卡 L3371/PRD L861/L1332 已同口径，卡 L3364 连带获认可（§4.7.42）；**`W-76(a)` 前端通过（`7aa2dc8`）**；**`W-77`** 参数范围回抄（§4.7.43/§4.7.44）；**同批签（§4.7.45，`c111f5f`）**：`W-72`、`W-75`、`W-76`、`W-77` 全签，CI `42418865354`（`headSha=c111f5f`）success，被取消的 `42418100295`/`42417852645` 已按制度第 16 条登记覆盖关系；**`W-66` 归属落地（`b74783c`）仍差 3 项**（`AC-03.03-03（补5）` 挂错基号、`AC-08.01-05` 基条丢失、PRD 无 `AC-07.05-04`），见 §4.7.39 → `W-73`。
+
+### W-84（dev B / QA）运行层证据补环境块并按第 19 条重取证
+
+1. **`diag.ts` 统一写 `env` 块**：`commit`（构建期 define，不手写）、`dirty`、`runtime{launchMode,node,electron,os,arch}`、`build{entryFile,builtAt,cargoProfile,features,binaryPath,binarySha256}`、`command`、`dump{path,finishedAt}`。所有 `s20xxx` / `s207` 证据共用，禁止各写一套。
+2. **`verify:evidence`**：扫描 `docs/qa/evidence/*.json`，`env` 五项任一为空即红；`dirty=true` 直接红。
+3. **重取两份证据并入库**：`s20501`（10 项，非 11）与 `s207`（18 项）在记录环境后重跑，dump 复制到 `docs/qa/evidence/`，提交信息写明 commit 与 `dirty=false`。
+4. **构建路径必须写清**：本终端 `node` 是 Electron 垫片（Electron 39.2.7），`vite build` 因 `@rollup/rollup-darwin-x64.node` 未签名报 `mapped file has no cdhash`；实际可用路径（真实 Node / 预构建 dist / 其他）必须写进证据 `command`，不得只写「真机」。
+5. **页面索引补两条判据**：`registry.owner_story` 必须存在于 `aka-story-index-v0.1.csv`；`status=exists` 行的 `anchor_file` 必须存在且 `anchor_text` 在文件中出现。两条例行纳入 `verify_card_pages.mjs`。
+6. 验收：`npm run verify:docs` 全绿；`verify:evidence` 对两份新证据 exit 0，对缺 `env` 的旧证据 exit 非 0（附红路径输出）。
+
+### W-85（BA）台账三项回填：本批分配、合并卡结项、已签未回填
+
+1. **本批分配**：`S-02.06-01`、`S-02.07-01` 已是 `已交付`，§4.7.46 表已删；本批 dev A 只剩 `S-07.05-03`。完成台账不再改动。
+2. **3 张合并卡结项**：`S-08.01-01`（1.0）、`S-08.01-03`（1.5）、`S-08.02-01`（1.0）改 `已结项（并入宿主）`，不记已交付、不计剩余；总账改为已交付 19 / 已结项 3 / 剩余 **52 张 / 149.9 人日**；`S-08.01-02` 保持 Blocked。
+3. **已签未回填三行**：`S-02.01-01`（`1fb9dd0`/全卡）、`S-06.01-01`（`a846473`/diff）、`S-07.02-01`（`6367c09`/diff）三列全 PASS 且 note 明确可放行，BA 在完成台账回填 `已交付`；TL 同步 gate-log 状态。
+4. **`S-03.05-02` 重判**：以现版（ATRP 3 位）重判 Gate C；PASS 则 gate-log 转 `待签`，FAIL 则写具体反例。
+5. **不在本轮动作**：`S-03.01-01`（Gate A FAIL）退回内容侧；`S-03.03-03` 仍 `Blocked-AC`（补1–补5 证据缺）。
+
+### W-86（TL/BA/dev）A 组 22 张可排池：取卡、追认与补池
+
+**授权**：产品 2026-11-08 批准 BA 分组，A 组 22 张作为可排池；dev B 连续取卡、每批报卡号；dev A 收口 `S-07.05-03` 后从池接。
+
+1. **花名册**：`docs/qa/aka-dispatch-pool-v0.1.csv`，22 行（A 组 = 台账「未开始」25 张 − 3 张并入宿主），`pool_seq` = 取卡顺序。花名册只定顺序，不定资格。
+2. **取卡顺序（确定性）**：① `eligibility=可取` 先于 `待合并`、`待解阻`；② 同 dev 线按 Epic 连续（P1→P3→P6→P7→P8→P9）；③ P0 > P1 > V1；④ 同档人日小者先。当前队列 `P01 S-03.01-04`、`P02 S-03.02-01`、`P03 S-03.03-02`、`P04 S-06.03-01`、`P05 S-06.03-02`、`P06 S-08.02-02`。
+3. **资格机器判定**：取卡前跑 `node scripts/verify_card_pages.mjs`（`AKA_CARD_FILE` 指向该卡）确认无缺页；gate-log 非 `Blocked`/`Blocked-AC`；BA 台账非 `已交付`/`已结项`；依赖卡已交付。任一不满足即顺延下一张，dev 不得自行改卡状态或换池。
+4. **取卡登记**：dev 取卡当天只报卡号（`Pxx`）与预计人日，TL **不写 gate-log**（第 14 条边界前不进场）。dev 报「本批完成」时，TL 一次性追加：`owner=dev B`、`workorder=W-86#Pxx`、`note` =「A组自取，序 Pxx，取自 <sha>」；Gate A/B/C 与签字规则不变，仍在合并 tip 一次签。
+5. **不予追认**：未在池内、未报卡号、或绕开资格判定的交付，一律不进 gate-log、不签字（第 14/15 条）。
+6. **补池归 TL**：每个批次边界补一次；来源为本次边界新解阻卡（如 `S-03.05-02` 重判通过）、新拆卡、BA 新立卡。池被取空或某卡撞缺页时，dev 停线报 TL，TL 在边界做「换卡 / 降 Blocked / 补页面依赖」三选一；不在对话里临时加卡。V1 永久不入池。
+7. **边界**：自取不等于预签；`Blocked` 卡不因在池内而放开；`S-08.01-02`、`S-04.02-02`、`S-09.01-01` 的 `eligibility` 已写明不可排/非 dev，取卡时直接跳过。
