@@ -1,23 +1,25 @@
-pool_seq,card_id,priority,estimate_pd,take_by,eligibility,note
-P01,S-03.01-04,P0,1.5,dev B,可取,页面 P1/P3 均 exists；无上游未交付依赖
-P02,S-03.02-01,P0,2.0,dev B,可取,页面 P3/P4 exists；依赖 S-03.01-02 已交付
-P03,S-03.03-02,P0,2.0,dev B,可取,页面 P3/P4 exists；深链返回态
-P04,S-06.03-01,P0,1.5,dev B,可取,页面 P8 exists；关于页
-P05,S-06.03-02,P0,2.5,dev B,可取,访问 P1/P8；上游 S-07.05-01 代码已并入 main（d996c6f），签字待 W-83
-P06,S-08.02-02,P0,3.0,dev B,可取,无页面引用；上游 S-07.01-01 代码已并入 main（d996c6f），签字待 W-83
-P07,S-07.01-02,P0,2.0,dev B,可取,P9 已并入 main（d996c6f），页面 exists
-P08,S-07.05-01,P0,3.5,—,已交付待签,代码已在 main（689528a/d996c6f）；证据需按 tip 重跑后签
-P09,S-08.02-03,P0,3.0,dev B,可取,P9 已并入 main（d996c6f），页面 exists
-P10,S-01.03-01,P1,2.5,dev B,可取,P9 已并入 main（d996c6f）；P1 持仓成本
-P11,S-04.01-01,P0,4.0,dev B,待解阻,P6 未实现（E-04 无页面）
-P12,S-04.01-02,P0,2.0,dev B,待解阻,P6 未实现
-P13,S-04.02-01,P0,4.0,dev B,待解阻,P6 未实现
-P14,S-05.01-01,P0,3.5,dev B,待解阻,P7 搜索浮层未实现（S-05.01 自身即页面）
-P15,S-05.01-02,P0,1.5,dev B,待解阻,P7 未实现
-P16,S-07.03-01,P0,8.0,dev B,待解阻,P10 未实现；P9 合并后部分解阻
-P17,S-07.05-03,P0,1.0,dev A,已占用,dev A 手上；只落浮层、补1 Blocked-AC
-P18,S-08.01-02,P0,1.0,—,不可排,BA 2026-11-08 判「整卡续 Blocked、不拆卡」：指标侧随宿主 S-02.04-01 已验收（a60a504/cb5ec5e）；标的侧 AC-08.01-02 及补1/补2 依赖 P7 搜索浮层（absent，宿主 S-05.01-02 未做），台账已改 Blocked
-P19,S-04.02-02,V1,3.0,—,不可排,V1 不排期；恢复须先补 sector_members
-P20,S-09.01-01,P0,5.0,BA,非 dev,架构图集为文档交付物，不进 dev 编码线
-P21,S-07.01-01,P0,2.5,—,已交付待签,代码已在 main（7b4f87e/d996c6f）；证据需按 tip 重跑后签
-P22,S-07.04-01,P0,1.0,—,已交付待签,代码已在 main（048f16b/d996c6f）；证据需按 tip 重跑后签
+pool_seq,card_id,priority,estimate_pd,take_by,eligibility,note,layer
+P01,S-03.01-04,P0,1.5,dev B,可取,页面 P1/P3 均 exists；无上游未交付依赖,card
+P02,S-03.02-01,P0,2.0,dev B,可取,页面 P3/P4 exists；依赖 S-03.01-02 已交付,card
+P03,S-03.03-02,P0,2.0,dev B,可取,页面 P3/P4 exists；深链返回态,card
+P04,S-06.03-01,P0,1.5,dev B,可取,页面 P8 exists；关于页,card
+P05,S-06.03-02,P0,2.5,dev B,可取,访问 P1/P8；上游 S-07.05-01 代码已并入 main（d996c6f），签字待 W-83,card
+P06,S-08.02-02,P0,3.0,dev B,已交付待签,已并入批次 B1（W-97），不单独签,card
+P07,S-07.01-02,P0,2.0,dev B,已交付待签,已并入批次 B1（W-97），不单独签,card
+P08,S-07.05-01,P0,3.5,—,已交付待签,代码已在 main（689528a/d996c6f）；证据需按 tip 重跑后签,card
+P09,S-08.02-03,P0,3.0,dev B,已交付待签,并入批次 B2（W-104）；W-102 已复核符合第 38 条；主 AC 仍 Blocked-AC,card
+P10,S-01.03-01,P1,2.5,dev B,已交付待签,并入批次 B2（W-104）；W-102 已复核；P1 条件交付,card
+P11,S-04.01-01,P0,4.0,dev B,待解阻,页面层已拆出 PAGE-P6；另等 W-101 步骤② index_members 256；不得用 fixture 取证,card
+P12,S-04.01-02,P0,2.0,dev B,待解阻,P6 未实现 → 等 PAGE-P6,card
+P13,S-04.02-01,P0,4.0,dev B,待解阻,P6 未实现 → 等 PAGE-P6,card
+P14,S-05.01-01,P0,3.5,dev B,待解阻,P7 搜索浮层未实现 → 等 PAGE-P7,card
+P15,S-05.01-02,P0,1.5,dev B,待解阻,P7 未实现 → 等 PAGE-P7,card
+P16,S-07.03-01,P0,8.0,dev B,可取,页面层+生成器（W-101）：页面 P10、5 步生成器、步骤② index_members 256；解阻 P11,page
+P17,S-07.05-03,P0,1.0,dev A,已占用,dev A 手上；只落浮层、补1 Blocked-AC,card
+P18,S-08.01-02,P0,1.0,—,不可排,BA 2026-11-08 判「整卡续 Blocked、不拆卡」：指标侧随宿主 S-02.04-01 已验收（a60a504/cb5ec5e）；标的侧 AC-08.01-02 及补1/补2 依赖 P7 搜索浮层（absent）→ 等 PAGE-P7，台账已改 Blocked,card
+P19,S-04.02-02,V1,3.0,—,不可排,V1 不排期；恢复须先补 sector_members,card
+P20,S-09.01-01,P0,5.0,BA,非 dev,架构图集为文档交付物，不进 dev 编码线,card
+P21,S-07.01-01,P0,2.5,—,已交付待签,代码已在 main（7b4f87e/d996c6f）；证据需按 tip 重跑后签,card
+P22,S-07.04-01,P0,1.0,—,已交付待签,代码已在 main（048f16b/d996c6f）；证据需按 tip 重跑后签,card
+PG-P6,PAGE-P6,P0,—,dev B,可取,页面层（W-99）：承载 S-04.01-01/02、S-04.02-01/02；页面 exists 后解阻 P11/P12/P13,page
+PG-P7,PAGE-P7,P0,—,dev B,可取,页面层（W-100）：承载 S-05.01-01/02；页面 exists 后解阻 P14/P15/P18 标的侧,page
