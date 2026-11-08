@@ -14,6 +14,11 @@
 import { ipc } from "../../lib/ipc";
 import type { CalcResponse, TelemetryEventDto, TelemetrySummary } from "../../lib/types";
 import type { WorkbenchParams } from "./model";
+import {
+  evaluateWarmCutback,
+  WARM_CUTBACK_MAX_TOTAL_MS,
+  WARM_CUTBACK_MIN_SAMPLES,
+} from "./warmCutback";
 
 export type DiagPhase = "off" | "debounce" | "cold" | "warm" | "done";
 
@@ -2228,5 +2233,166 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   };
 
   const written = await hooks.write(JSON.stringify(payload, null, 2));
+  return { ...payload, writtenTo: written };
+}
+
+/**
+ * W-111 / S-02.06-02：独立缓存回切套件。
+ *
+ * 只采「冷算 30 只 → 热切回 3 批 × 30」，判据由 `evaluateWarmCutback` 单一给出：
+ * maxTotalMs ≤ 120 且全命中、逐点一致、`indicator.compute` 无新增。
+ * 与冻结的 s2 套件分离：不改 s2 dump，也不把结论混进 S-02.06-01。
+ */
+export async function runS20602Diagnostics(
+  hooks: DiagHooks,
+): Promise<Record<string, unknown>> {
+  // 等首屏请求结束，避免把挂载时的请求混进冷/热样本
+  await sleep(1_800);
+  hooks.drainSamples();
+  hooks.setPhase("cold");
+
+  const codes = Array.from(new Set(hooks.codes))
+    .filter((code) => code !== hooks.getActiveCode())
+    .slice(0, 30);
+  const cold: DiagSample[] = [];
+  for (const code of codes) {
+    const pending = hooks.nextSample(4_000);
+    hooks.setCode(code);
+    const sample = await pending;
+    if (!sample) continue;
+    cold.push({ ...sample, phase: "cold" });
+  }
+
+  // 冷批次的 indicator.compute 先落盘，再取热批基线，避免把冷事件算成新增
+  await sleep(400);
+  hooks.setPhase("warm");
+  const before = await hooks.telemetry();
+  const computeBefore = before.counts["indicator.compute"] ?? 0;
+
+  const warm: Array<DiagSample & { matchesCold: boolean; batch: number }> = [];
+  const batches = 3;
+  for (let batch = 1; batch <= batches; batch += 1) {
+    for (const code of codes) {
+      const pending = hooks.nextSample(4_000);
+      hooks.setCode(code);
+      const sample = await pending;
+      if (!sample) continue;
+      const coldRef = cold.find((item) => item.security === code) ?? null;
+      warm.push({
+        ...sample,
+        phase: "warm",
+        batch,
+        matchesCold: coldRef ? coldRef.seriesHash === sample.seriesHash : false,
+      });
+    }
+  }
+
+  const after = await hooks.telemetry();
+  const computeAfter = after.counts["indicator.compute"] ?? 0;
+  const computeCountDelta = computeAfter - computeBefore;
+
+  hooks.setPhase("done");
+
+  const allCacheHit = warm.every((item) => item.cacheHit);
+  const allPointwiseMatch = warm.every((item) => item.matchesCold);
+  const maxTotalMs = round2(warm.reduce((max, item) => Math.max(max, item.totalMs), 0));
+  const maxCalcMs = round2(warm.reduce((max, item) => Math.max(max, item.calcMs), 0));
+  const p95 = nearestRankP95(warm.map((item) => item.totalMs));
+  const verdict = evaluateWarmCutback({
+    sampleCount: warm.length,
+    allCacheHit,
+    allPointwiseMatch,
+    maxTotalMs,
+    computeCountDelta,
+  });
+
+  const env = await collectEvidenceEnv("s20602");
+  const focus = collectFocus();
+  const checks = [
+    {
+      id: "s20602-warm-cutback",
+      card: "S-02.06-02",
+      ac: "AC-02.06-02",
+      layer: "runtime",
+      passed: verdict.passed,
+      detail:
+        `${verdict.reasons.length === 0 ? "判据全部满足" : verdict.reasons.join("；")}｜` +
+        `样本 ${warm.length} / 全命中 ${allCacheHit} / 逐点一致 ${allPointwiseMatch} / ` +
+        `max ${maxTotalMs}ms / indicator.compute 增量 ${computeCountDelta}`,
+    },
+  ];
+
+  const payload = {
+    schemaVersion: 1,
+    kind: "aka-s20602-evidence",
+    suite: "s20602",
+    ok: verdict.passed,
+    checksOk: verdict.passed,
+    checks,
+    env,
+    windowFocused: focus.windowFocused,
+    appActive: focus.appActive,
+    generatedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    build: await ipc.diagBuildInfo().catch(() => null),
+    criterion: {
+      card: "S-02.06-02",
+      ac: "AC-02.06-02",
+      expression:
+        "maxTotalMs<=120 && allCacheHit && allPointwiseMatch && indicator.compute 无新增",
+      maxTotalMsLimit: WARM_CUTBACK_MAX_TOTAL_MS,
+      minSamples: WARM_CUTBACK_MIN_SAMPLES,
+    },
+    cold: {
+      targetCount: 30,
+      sampleCount: cold.length,
+      allMiss: cold.every((item) => !item.cacheHit),
+      samples: cold.map((item) => ({
+        security: item.security,
+        timeframe: item.timeframe,
+        adj: item.adj,
+        barsMs: round2(item.barsMs),
+        calcMs: round2(item.calcMs),
+        totalMs: round2(item.totalMs),
+        cacheHit: item.cacheHit,
+        seriesHash: item.seriesHash,
+        seriesPoints: item.seriesPoints,
+        error: item.error,
+      })),
+    },
+    warm: {
+      targetCount: 30,
+      batchCount: batches,
+      sampleCount: warm.length,
+      allCacheHit,
+      allPointwiseMatch,
+      maxTotalMs,
+      maxCalcMs,
+      p95TotalMs: p95 === null ? null : round2(p95),
+      computeCountDelta,
+      samples: warm.map((item) => ({
+        security: item.security,
+        batch: item.batch,
+        timeframe: item.timeframe,
+        adj: item.adj,
+        barsMs: round2(item.barsMs),
+        calcMs: round2(item.calcMs),
+        totalMs: round2(item.totalMs),
+        engineMs: round2(item.computedMs),
+        cacheHit: item.cacheHit,
+        matchesCold: item.matchesCold,
+        seriesHash: item.seriesHash,
+        seriesPoints: item.seriesPoints,
+        error: item.error,
+      })),
+    },
+    notes: verdict.reasons,
+  };
+
+  // 独立文件名：不能走 diag_write（那是 s2-evidence.json 的专用入口）
+  const written = await ipc.diagWriteNamed(
+    "s20602-evidence.json",
+    JSON.stringify(payload, null, 2),
+  );
   return { ...payload, writtenTo: written };
 }
