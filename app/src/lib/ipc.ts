@@ -9,6 +9,7 @@ import type {
   DiagBuildInfo,
   DiagFaultsDto,
   GetBarsRequest,
+  IndicatorFavoritesResponse,
   ManifestResponse,
   MarketSnapshotDto,
   PositionDto,
@@ -64,6 +65,20 @@ export const ipc = {
   /** 指标目录唯一事实来源；生成指标列表/参数面板应优先用它。 */
   indicatorManifest: (): Promise<ManifestResponse> =>
     invoke<ManifestResponse>("indicator_manifest"),
+
+  /** S-03.02-01：首装首次读取写入默认 8 个收藏，后续读取幂等。 */
+  indicatorFavorites: (): Promise<IndicatorFavoritesResponse> =>
+    invoke<IndicatorFavoritesResponse>("indicator_favorites"),
+
+  /** S-03.02-01：收藏/取消收藏，返回最新完整列表。 */
+  setIndicatorFavorite: (
+    indicatorId: string,
+    favorited: boolean,
+  ): Promise<IndicatorFavoritesResponse> =>
+    invoke<IndicatorFavoritesResponse>("set_indicator_favorite", {
+      indicatorId,
+      favorited,
+    }),
 
   /** S-02.08-01：数据集 manifest；provider 不提供时返回 null。 */
   datasetManifest: (): Promise<DatasetManifestDto | null> =>

@@ -132,6 +132,23 @@ export interface ManifestIndicatorDto {
   defaultParamsText: string;
 }
 
+/** S-03.02-01：收藏 chip；`offline` = 注册表已移除，灰显但保留。 */
+export interface IndicatorFavoriteDto {
+  indicatorId: string;
+  abbr: string;
+  nameZh: string;
+  status: "normal" | "beta" | "planned" | "offline";
+  panel: string;
+  paramSummary: string;
+  isDefault: boolean;
+  addedAt: number;
+  sortOrder: number;
+}
+
+export interface IndicatorFavoritesResponse {
+  favorites: IndicatorFavoriteDto[];
+}
+
 /** 指标目录的单一事实来源；前端指标列表一律由它生成。 */
 export interface ManifestResponse {
   schemaVersion: number;

@@ -124,11 +124,10 @@ fn push_flag(flags: &mut Vec<String>, flag: &str) {
     }
 }
 
-/// 首装默认收藏：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / CCI。
-/// W-51：默认 8 项必须全部 `status=normal`。注册表内量能类 D01~D15 全为 `planned`，
-/// 因此本批不含量能项；量能项须先由单独立项把指标升为 `normal`，不能靠默认集硬塞。
+/// 首装默认收藏：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / OBV。
+/// W-51：默认 8 项必须全部 `status=normal`；D01（OBV）已实现且为 normal。
 pub const DEFAULT_INDICATOR_FAVORITES: [&str; 8] =
-    ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "M05"];
+    ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "D01"];
 
 fn favorite_status(status: &str) -> &'static str {
     match status {

@@ -15,6 +15,7 @@ import { Watchlist } from "../../components/Watchlist";
 import { StarButton } from "../../components/StarButton";
 import { IndicatorDrawer } from "../../features/workbench/IndicatorDrawer";
 import { runDrawerDiagnostics } from "../../features/workbench/drawerDiag";
+import { writeLastCode } from "../../features/catalog/chartLink";
 import {
   B2_OVERLAY_CHOICES,
   B1_OVERLAY_CHOICES,
@@ -62,6 +63,7 @@ import { runRestartDiagnostics, restartDiagStage } from "../../features/workbenc
 import { runWatchlistDiagnostics, watchlistDiagStage } from "../../features/watchlist/watchlistDiag";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
+import { runS030302WorkbenchDiagnostics } from "../../features/qa/batchDiag";
 import type {
   AppError,
   BarsResponse,
@@ -187,6 +189,11 @@ export function WorkbenchPage({
     [manifest],
   );
   const [activeCode, setActiveCode] = useState(initialCode ?? "300750.SZ");
+
+  // S-03.01-04：工作台每次带到某只标的，都刷新目录页可用的最近标的。
+  useEffect(() => {
+    writeLastCode(activeCode);
+  }, [activeCode]);
   // S-02.02-02：复权口径本地持久化（chart.adj），默认前复权
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">(() => {
     try {
@@ -348,6 +355,36 @@ export function WorkbenchPage({
   const closeDrawer = useCallback(() => {
     setDrawerOpen(false);
     window.requestAnimationFrame(() => drawerTriggerRef.current?.focus());
+  }, []);
+  // S-03.03-02：从抽屉深链返回时恢复抽屉，视口/副图由各自持久化恢复
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem("aka.workbench.drawer.return") === "1") {
+        window.sessionStorage.removeItem("aka.workbench.drawer.return");
+        setDrawerOpen(true);
+      }
+    } catch {
+      // 返回态只影响体验，存储不可用时不阻断工作台
+    }
+  }, []);
+  // S-03.03-02：图例「?」/ 抽屉来源取证
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s030302" || !(await ipc.diagEnabled()) || !alive) return;
+      if (window.sessionStorage.getItem("aka.batch.s030302.done") === "1") return;
+      window.sessionStorage.setItem("aka.batch.s030302.done", "1");
+      try {
+        await runS030302WorkbenchDiagnostics();
+      } catch (err) {
+        console.error("[s030302.diag]", describeError(err).message);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
   const [bars, setBars] = useState<BarsResponse | null>(null);
   const [calc, setCalc] = useState<CalcResponse | null>(null);
@@ -1512,7 +1549,7 @@ export function WorkbenchPage({
 
   return (
     <AppShell active="workbench" onNavigate={onNavigate}>
-      <div className="workbench">
+      <div className="workbench" data-workbench-root="1">
         {datasourceIssue && (
           <div className="watch-error-bar" data-wb-datasource-entry="1" role="alert">
             <span>数据源必需能力不可用（{datasourceIssue}）</span>
@@ -1896,6 +1933,10 @@ export function WorkbenchPage({
                     subLabels={subLabels}
                     units={units}
                     adjMode={adj}
+                    onOpenIndicatorDetail={(indicatorId) => {
+                      // S-03.03-02：图例「?」进入 P4，返回仍回工作台并保留副图/缩放
+                      window.location.hash = `#/catalog/${encodeURIComponent(indicatorId)}?from=chart&code=${encodeURIComponent(activeCode)}`;
+                    }}
                   />
                   <IndicatorReadouts
                     series={calc?.series ?? []}
@@ -1938,6 +1979,7 @@ export function WorkbenchPage({
                 subIds={subIds}
                 subCount={subPlots.length}
                 hasTarget={Boolean(security)}
+                activeCode={activeCode}
                 onAddMain={(id) =>
                   setOverlayIds((prev) =>
                     prev.includes(id) || prev.length >= MAX_MAIN_OVERLAYS

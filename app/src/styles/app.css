@@ -2557,3 +2557,176 @@ mark {
   padding: 2px 0;
   color: var(--text2);
 }
+
+/* S-03.01-04：目录行操作区；「加入图表 / 在工作台查看」仅 hover/focus 出现 */
+.catalog-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.catalog-row__add,
+.catalog-row__open {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.catalog-row:hover .catalog-row__add,
+.catalog-row:hover .catalog-row__open,
+.catalog-row:focus-within .catalog-row__add,
+.catalog-row:focus-within .catalog-row__open {
+  opacity: 1;
+}
+
+.catalog-row__add,
+.catalog-row__fav,
+.catalog-row__open {
+  border: 1px solid var(--line2);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text2);
+  font-size: 10.5px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+
+.catalog-row__add:disabled {
+  color: var(--faint);
+  cursor: default;
+}
+
+.catalog-row__fav {
+  border-color: transparent;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.catalog-row__fav[aria-pressed="true"] {
+  color: var(--warn, #d6a44c);
+}
+
+.catalog-crumb {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.catalog-crumb:hover {
+  color: var(--text);
+}
+
+/* S-03.02-01：收藏区 */
+.fav-strip {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px;
+  background: var(--panel, transparent);
+}
+
+.fav-strip__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.fav-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 132px;
+  overflow: auto;
+}
+
+.fav-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line2);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+.fav-chip--off {
+  opacity: 0.55;
+}
+
+.fav-chip__main {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 1px 2px;
+  cursor: pointer;
+}
+
+.fav-chip__main:disabled {
+  cursor: default;
+}
+
+.fav-chip__abbr {
+  font-size: 11px;
+}
+
+.fav-chip__param {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.fav-chip__detail,
+.fav-chip__remove {
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.fav-chip__detail:hover,
+.fav-chip__remove:hover {
+  color: var(--text);
+}
+
+.catalog-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* S-03.01-04：容量/规划项提示只在悬停操作区时出现，避免行内常驻噪声 */
+.catalog-row__hint {
+  display: none;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.catalog-row__actions:hover .catalog-row__hint {
+  display: inline;
+}
+
+.catalog-row__add[aria-disabled="true"],
+.fav-chip__main[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* S-03.03-02：图例「?」悬停/聚焦才显示，不改变图表本身 */
+.legend-help {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.legend-group:hover .legend-help,
+.sub-panel:hover .legend-help,
+.legend-help:focus,
+.legend-help:focus-visible {
+  opacity: 1;
+}

@@ -134,10 +134,46 @@ conn.commit()
 print(f"fixture 已注入 {len(rows)} 条 SEED 标的")
 PY
     ;;
+  s030104)
+    TARGET="s030104"
+    JSON="$DIAG_DIR/s030104-evidence.json"
+    NAME="s030104-evidence"
+    FIXTURE="默认 state.db；App 清空 aka.last.code 后验证无标的引导，再按「副图满仓 / 留出空位」两阶段验证容量、去重与规划项；只改 localStorage，不改库"
+    BAK=""
+    ;;
+  s030201)
+    TARGET="s030201"
+    JSON="$DIAG_DIR/s030201-favorites-evidence.json"
+    NAME="s030201-favorites-evidence"
+    FIXTURE="默认 state.db；收藏套件自行增删并验证首装 8 项、顺序、幂等与「清空后不重播」；取证后 sqlite3 .backup 还原"
+    BAK="/tmp/aka-state-s030201-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    ;;
+  s030302-catalog)
+    TARGET="s030302-catalog"
+    JSON="$DIAG_DIR/s030302-catalog-evidence.json"
+    NAME="s030302-catalog-evidence"
+    FIXTURE="默认 state.db；目录行进 P4 后 Esc 返回，验证展开/滚动/筛选还原；只读，不改库"
+    BAK=""
+    ;;
+  s030302)
+    TARGET="s030302"
+    JSON="$DIAG_DIR/s030302-evidence.json"
+    NAME="s030302-evidence"
+    FIXTURE="默认 state.db；工作台图例「?」与抽屉「查看口径」进 P4 后返回，验证副图/视口保持与抽屉恢复；只读，不改库"
+    BAK=""
+    ;;
+  s060301)
+    TARGET="s060301"
+    JSON="$DIAG_DIR/s060301-about-evidence.json"
+    NAME="s060301-about-evidence"
+    FLAGS="--empty-dataset"
+    FIXTURE="默认 state.db；--empty-dataset 让数据源不可用，验证关于页数据目录「目录不存在」+「重建样本包」入口，同时核对版本/计数/通道；只读，不改库"
+    BAK=""
+    ;;
   s0602)
     TARGET="s0602"
     JSON="$DIAG_DIR/s0602-display-evidence.json"
-    NAME="s0602-display-evidence"
     FIXTURE="默认 state.db；自选为空时直插 1 条 600519.SH 供自选行高取证；取证后 sqlite3 .backup 还原，产品代码未改动"
     BAK="/tmp/aka-state-s0602-$LABEL.db"
     sqlite3 "$DB" ".backup '$BAK'"
@@ -329,7 +365,7 @@ if [ "$SUITE" = "s0602" ]; then
 fi
 
 python3 - "$OUT/$NAME.json" "$OUT/$NAME-meta.json" "$LABEL" "$TARGET" "$FIXTURE" "$SCAN_FILE" "$SCAN_RC" "$FLAGS" "$EXTRA_ENV" <<'PY'
-import json, subprocess, sys, datetime
+import json, subprocess, sys, datetime, os, platform, hashlib
 evidence_path, meta_path, label, target, fixture, scan_file, scan_rc, flags, extra_env = sys.argv[1:10]
 d = json.load(open(evidence_path))
 root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
@@ -384,7 +420,37 @@ meta = {
     "runAt": now,
     "commit": commit,
     "dirty": dirty,
-    "command": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" {extra_env} target/debug/aka-desktop {flags}".replace("  ", " ").strip(),
+    "command": {
+        "line": f"AKA_DIAG=1 AKA_DIAG_TARGET=\"{target}\" {extra_env} target/debug/aka-desktop {flags}".replace("  ", " ").strip(),
+        "env": {
+            "AKA_DIAG": "1",
+            "AKA_DIAG_TARGET": target,
+            **dict(part.split("=", 1) for part in extra_env.split() if "=" in part),
+        },
+    },
+    "runtime": {
+        "launch": "target/debug/aka-desktop 直接启动（AKA_DIAG=1，非 CI 代偿）",
+        "node": subprocess.run(["node", "-v"], text=True, capture_output=True).stdout.strip() or "unknown",
+        "electron": "N/A（Tauri v2 / WKWebView）",
+        "os": platform.platform(),
+        "arch": platform.machine(),
+    },
+    "build": {
+        "entry": "app/src-tauri",
+        "profile": "dev (debug)",
+        "features": "tauri/custom-protocol",
+        "binary": "app/target/debug/aka-desktop",
+        "sha256": (
+            hashlib.sha256(open(os.path.join(root, "app/target/debug/aka-desktop"), "rb").read()).hexdigest()
+            if os.path.exists(os.path.join(root, "app/target/debug/aka-desktop"))
+            else "missing"
+        ),
+    },
+    "dump": {
+        "path": evidence_path,
+        "finishedAt": d.get("finishedAt", ""),
+        "copiedIntoRepo": True,
+    },
     "fixture": fixture,
     "buildMode": "dev",
     "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
@@ -403,5 +469,5 @@ json.dump(meta, open(meta_path, "w", encoding="utf-8"), ensure_ascii=False, inde
 print(f"已归档：{evidence_path}")
 print(f"已归档：{meta_path}")
 print(f"ok={d.get('ok')} layers={d.get('layers')} blocked={len(d.get('blocked', []))} commit={commit} dirty={dirty}")
-sys.exit(0 if d.get("ok") and (not scan_rc or int(scan_rc) == 0) else 2)
+sys.exit(0 if d.get("ok") and not dirty and (not scan_rc or int(scan_rc) == 0) else 2)
 PY
