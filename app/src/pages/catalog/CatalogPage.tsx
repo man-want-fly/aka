@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "../../app/AppShell";
 import { runCatalogDiagnostics } from "../../features/catalog/catalogDiag";
 import { Highlight, PANEL_LABEL, searchIndicators } from "../../features/indicators/search";
@@ -6,7 +6,7 @@ import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { AppError, Category, ManifestIndicatorDto, ManifestResponse } from "../../lib/types";
 
 interface Props {
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings") => void;
+  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
 }
 
 const CATEGORIES: Array<{ key: Category; label: string }> = [
@@ -49,7 +49,7 @@ const dataRequirement = (item: ManifestIndicatorDto) => {
  * P3 指标目录（S-03.01-01 / S-03.01-03）。
  *
  * 所有条目、四个元信息字段、计数全部来自 manifest，页面不保存任何指标副本。
- * 105 条按分类分组；分类首次展开时才挂载行（首屏只渲染趋势 24 行），
+ * 全量条目按分类分组；分类首次展开时才挂载行（首屏只渲染已展开分类的行），
  * 计数则由 manifest 同源计算、一次性渲染。
  */
 export function CatalogPage({ onNavigate }: Props) {
@@ -58,6 +58,7 @@ export function CatalogPage({ onNavigate }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [summaryId, setSummaryId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const [expanded, setExpanded] = useState<Set<Category>>(() => new Set(["trend"]));
 
   useEffect(() => {
@@ -133,6 +134,42 @@ export function CatalogPage({ onNavigate }: Props) {
     [items, query],
   );
 
+  /** S-08.01-02：可添加 = status ∈ {normal, beta}，与注册表运行时同源，不写死。 */
+  const addableCount = useMemo(
+    () => items.filter((item) => item.status === "normal" || item.status === "beta").length,
+    [items],
+  );
+  const searchEmpty = results !== null && results.length === 0;
+  const lastEmptyLog = useRef("");
+
+  useEffect(() => {
+    if (!searchEmpty) return;
+    const key = query.trim();
+    if (lastEmptyLog.current === key) return;
+    lastEmptyLog.current = key;
+    console.info("[empty.search]", {
+      scope: "indicator",
+      query: key.slice(0, 30),
+      total,
+      addable: addableCount,
+    });
+  }, [searchEmpty, query, total, addableCount]);
+
+  const clearSearch = () => {
+    setQuery("");
+    setShowAll(false);
+  };
+
+  const browseAll = () => {
+    setQuery("");
+    setShowAll(true);
+  };
+
+  const changeQuery = (value: string) => {
+    setQuery(value);
+    setShowAll(false);
+  };
+
   const active = activeId ? items.find((item) => item.id === activeId) : undefined;
 
   const toggleCategory = (key: Category) => {
@@ -177,6 +214,11 @@ export function CatalogPage({ onNavigate }: Props) {
             {item.isCompletion && <span className="tag tag--beta">补全口径</span>}
             {item.completeness === "beta" && <span className="tag tag--accent">beta</span>}
             {planned && <span className="tag tag--muted">规划中</span>}
+            {planned && (
+              <span className="tag tag--muted" data-catalog-not-addable={item.id}>
+                暂不可添加
+              </span>
+            )}
             {planned && item.specStatus !== "manualComplete" && (
               <span className="tag tag--accent" data-catalog-spec-pending={item.id}>
                 口径待定
@@ -242,16 +284,61 @@ export function CatalogPage({ onNavigate }: Props) {
             data-catalog-search-input="1"
             placeholder="搜代码 / 名称 / 拼音，如 MACD / md / junxian"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            disabled={!manifest}
+            onChange={(event) => changeQuery(event.target.value)}
             style={{ width: "100%", marginBottom: 12 }}
           />
 
           {results ? (
-            <section data-catalog-search="">
+            results.length === 0 ? (
+              <section className="catalog-empty" data-catalog-empty="indicator" role="status">
+                <div className="catalog-empty__title" data-catalog-empty-title="1">
+                  未找到指标 “{query.trim().slice(0, 30)}”
+                </div>
+                <p className="catalog-empty__desc" data-catalog-empty-desc="1">
+                  仅搜索目录内{" "}
+                  <span className="mono" data-catalog-empty-total={total}>
+                    {total}
+                  </span>{" "}
+                  个指标（其中{" "}
+                  <span className="mono" data-catalog-empty-addable={addableCount}>
+                    {addableCount}
+                  </span>{" "}
+                  个可添加）
+                </p>
+                <div className="catalog-empty__actions">
+                  <button type="button" className="btn" onClick={clearSearch}>
+                    清空
+                  </button>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    data-catalog-browse-all="1"
+                    onClick={browseAll}
+                  >
+                    浏览全部指标
+                  </button>
+                </div>
+              </section>
+            ) : (
+              <section data-catalog-search="">
+                <div className="caption" data-catalog-search-scope="1">
+                  仅搜索目录内 {total} 个指标（其中 {addableCount} 个可添加）
+                </div>
+                <div className="caption" style={{ marginBottom: 6 }}>
+                  找到 {results.length} / {total} 条
+                </div>
+                <ul className="catalog-rows">{results.map(renderRow)}</ul>
+              </section>
+            )
+          ) : showAll ? (
+            <section data-catalog-all="1">
               <div className="caption" style={{ marginBottom: 6 }}>
-                找到 {results.length} / {total} 条
+                全部 {total} 条 · 可添加 {addableCount} · 规划中 {plannedCount}
               </div>
-              <ul className="catalog-rows">{results.map(renderRow)}</ul>
+              <ul className="catalog-rows">
+                {[...items].sort((a, b) => a.id.localeCompare(b.id)).map(renderRow)}
+              </ul>
             </section>
           ) : (
             groups.map((group) => (
@@ -283,7 +370,7 @@ export function CatalogPage({ onNavigate }: Props) {
 
         <main className="catalog-detail" style={{ padding: "20px 24px", overflow: "auto" }}>
           {error && <div className="error-box">{error.message}</div>}
-          {!manifest && !error && <div className="caption">正在载入指标注册表…</div>}
+          {!manifest && !error && <div className="caption" data-catalog-loading="1">目录加载中…</div>}
           {manifest && !active && <div className="caption">从左侧列表选择一个指标查看口径。</div>}
           {active && (
             <>

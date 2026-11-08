@@ -3,6 +3,7 @@ import { MarketPage } from "./pages/market/MarketPage";
 import { CatalogPage } from "./pages/catalog/CatalogPage";
 import { WorkbenchPage } from "./pages/workbench/WorkbenchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
+import { DatasourcePage } from "./pages/datasource/DatasourcePage";
 import { ipc, isTauriRuntime } from "./lib/ipc";
 import { loadDisplaySettings } from "./lib/settings";
 import {
@@ -14,7 +15,7 @@ import {
   type ThemeMode,
 } from "./lib/theme";
 
-type Route = "workbench" | "market" | "catalog" | "settings";
+type Route = "workbench" | "market" | "catalog" | "settings" | "datasource";
 
 interface Location {
   route: Route;
@@ -27,6 +28,7 @@ const routeFromHash = (): Location => {
   const hash = window.location.hash;
   if (hash.startsWith("#/catalog")) return { route: "catalog", code: null };
   if (hash.startsWith("#/settings")) return { route: "settings", code: null };
+  if (hash.startsWith("#/datasource")) return { route: "datasource", code: null };
   const match = hash.match(/^#\/workbench(?:\/([^/?#]+))?/);
   if (match) {
     return {
@@ -206,6 +208,10 @@ export default function App() {
 
   if (location.route === "settings") {
     return <SettingsPage onNavigate={navigate} />;
+  }
+
+  if (location.route === "datasource") {
+    return <DatasourcePage onNavigate={navigate} />;
   }
 
   if (location.route === "market") {

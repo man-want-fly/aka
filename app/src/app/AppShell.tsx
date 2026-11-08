@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type RouteKey = "workbench" | "market" | "catalog" | "settings";
+export type RouteKey = "workbench" | "market" | "catalog" | "settings" | "datasource";
 
 interface Props {
   children: ReactNode;
@@ -29,6 +29,13 @@ const NAV: Array<{ key: string; label: string; enabled: boolean; route?: RouteKe
     enabled: true,
     route: "catalog",
     icon: "M4 4h12v12H4zM4 9h12M9 4v12",
+  },
+  {
+    key: "datasource",
+    label: "数据源",
+    enabled: true,
+    route: "datasource",
+    icon: "M4 5c0-1.1 2.7-2 6-2s6 .9 6 2v10c0 1.1-2.7 2-6 2s-6-.9-6-2V5zM4 5c0 1.1 2.7 2 6 2s6-.9 6-2M4 10c0 1.1 2.7 2 6 2s6-.9 6-2",
   },
   {
     key: "settings",

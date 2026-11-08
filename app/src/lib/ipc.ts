@@ -5,12 +5,14 @@ import type {
   CalcRequest,
   CalcResponse,
   DatasetManifestDto,
+  DatasourceStatusDto,
   DiagBuildInfo,
   DiagFaultsDto,
   GetBarsRequest,
   ManifestResponse,
   MarketSnapshotDto,
   PositionDto,
+  QualityReportDto,
   RegistryResponse,
   SecurityDto,
   TelemetrySummary,
@@ -66,6 +68,16 @@ export const ipc = {
   /** S-02.08-01：数据集 manifest；provider 不提供时返回 null。 */
   datasetManifest: (): Promise<DatasetManifestDto | null> =>
     invoke<DatasetManifestDto | null>("dataset_manifest"),
+
+  /** S-07.01-01：P9 数据源状态；每次手动「重新检查」重新探测。 */
+  datasourceStatus: (): Promise<DatasourceStatusDto> =>
+    invoke<DatasourceStatusDto>("datasource_status"),
+
+  /** S-07.05-01：最近一次质量报告；从未扫描过返回 null。 */
+  qualityReport: (): Promise<QualityReportDto | null> =>
+    invoke<QualityReportDto | null>("quality_report"),
+
+  qualityScan: (): Promise<QualityReportDto> => invoke<QualityReportDto>("quality_scan"),
 
   calcIndicators: (req: CalcRequest): Promise<CalcResponse> =>
     invoke<CalcResponse>("calc_indicators", { req }),

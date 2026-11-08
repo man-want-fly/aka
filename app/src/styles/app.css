@@ -1852,6 +1852,34 @@ mark {
   opacity: 0.55;
 }
 
+/* S-08.01-02：P3 指标搜索无结果（不复用通用空态文案） */
+.catalog-empty {
+  margin: 18px 6px;
+  padding: 22px 16px;
+  border: 1px dashed var(--line2);
+  border-radius: var(--r2);
+  text-align: center;
+}
+
+.catalog-empty__title {
+  margin-bottom: 6px;
+  color: var(--text2);
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.catalog-empty__desc {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.catalog-empty__actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
 .catalog-row__head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -2053,4 +2081,479 @@ mark {
 .wl-hint--error {
   color: var(--warn);
   font-size: 11.5px;
+}
+
+/* ---------------- P9 数据源状态（S-07.01-01） ---------------- */
+.datasource {
+  padding: 24px 28px;
+  overflow: auto;
+}
+
+.ds-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.ds-head h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.ds-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ds-refresh,
+.ds-detail,
+.ds-copy,
+.ds-missing button,
+.ds-error button {
+  background: transparent;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  color: var(--text2);
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ds-refresh:disabled,
+.ds-copy:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ds-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.ds-error button {
+  margin-left: auto;
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.ds-card {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.ds-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ds-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ds-card-title h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.ds-badge {
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ds-badge--ok {
+  color: var(--down);
+  border-color: var(--down);
+}
+
+.ds-badge--warn {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.ds-badge--bad {
+  color: var(--up);
+  border-color: var(--up);
+}
+
+.ds-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.ds-summary-sep {
+  color: var(--faint);
+}
+
+.ds-detail {
+  margin-left: 6px;
+}
+
+.ds-missing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line2);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  margin-bottom: 14px;
+}
+
+.ds-cap {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface2);
+}
+
+.ds-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--faint);
+}
+
+.ds-dot--ok {
+  background: var(--down);
+}
+
+.ds-dot--warn {
+  background: var(--warn);
+}
+
+.ds-dot--bad {
+  background: var(--up);
+}
+
+.ds-cap-body {
+  min-width: 0;
+}
+
+.ds-cap-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.ds-cap-state {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.ds-cap-state--ok {
+  color: var(--down);
+}
+
+.ds-cap-state--warn {
+  color: var(--warn);
+}
+
+.ds-cap-state--bad {
+  color: var(--up);
+}
+
+.ds-cap-tag {
+  padding: 0 5px;
+  border: 1px solid var(--line2);
+  border-radius: 3px;
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.ds-cap-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.ds-ops {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.ds-op {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ds-op span {
+  color: var(--muted);
+}
+
+.ds-op-note {
+  flex-basis: 100%;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.ds-version {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.ds-version-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 12px;
+}
+
+.ds-version-row > span {
+  color: var(--muted);
+}
+
+.ds-version-row > b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.ds-loading {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ds-card--tushare .ds-card-head {
+  margin-bottom: 8px;
+}
+
+/* ---------------- P9 历史回填（S-07.04-01，全禁用） ---------------- */
+.ds-backfill-note {
+  margin: -4px 0 12px;
+}
+
+.bf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.bf-table th {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+}
+
+.bf-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bf-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.bf-action-cell {
+  text-align: right;
+}
+
+.bf-action-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.bf-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 禁用按钮不派发点击，用覆盖层承接点击只弹说明。 */
+.bf-click-catcher {
+  position: absolute;
+  inset: 0;
+  cursor: not-allowed;
+}
+
+.bf-footnotes {
+  margin: 10px 0 0;
+  padding-left: 16px;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.bf-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 60;
+  padding: 8px 14px;
+  border: 1px solid var(--line2);
+  border-radius: 6px;
+  background: var(--surface2);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  color: var(--text2);
+  font-size: 12px;
+}
+
+/* ---------------- P9 数据质量（S-07.05-01） ---------------- */
+.ds-stale {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.ds-stale button {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--warn);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.qa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.qa-table th {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.qa-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.qa-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.qa-treatment {
+  color: var(--muted);
+}
+
+.qa-status {
+  margin-left: 6px;
+  font-size: 11.5px;
+}
+
+.qa-status--ok {
+  color: var(--down);
+}
+
+.qa-status--info {
+  color: var(--text2);
+}
+
+.qa-status--warn {
+  color: var(--warn);
+}
+
+.qa-status--bad {
+  color: var(--up);
+}
+
+.qa-code {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--line2);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.qa-example-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.qa-none {
+  color: var(--faint);
+}
+
+.qa-example-list {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--line2);
+  border-radius: 6px;
+  list-style: none;
+  font-size: 11.5px;
+}
+
+.qa-example-list li {
+  display: flex;
+  gap: 16px;
+  padding: 2px 0;
+  color: var(--text2);
 }

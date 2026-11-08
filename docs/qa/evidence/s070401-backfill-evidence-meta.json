@@ -1,0 +1,16 @@
+{
+  "suite": "S-07.04-01 backfill-plans",
+  "commit": "048f16b",
+  "command": "npm run typecheck && grep（禁词/IPC）",
+  "environment": "macOS 本机；AKA-dev2 worktree / dev2",
+  "result": {
+    "ok": true,
+    "card": "S-07.04-01",
+    "layers": {
+      "data": "1/1",
+      "render": "6/6"
+    },
+    "scope": "本批 AC 范围 = 两套方案展示、按钮全禁用、toast 去重、禁词 0 命中、断网静态可用；启用分支与任务队列本期不做",
+    "blocked": []
+  }
+}

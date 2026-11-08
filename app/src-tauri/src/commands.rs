@@ -3,9 +3,9 @@
 
 use app_core::{
     AppError, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
-    DatasetManifest, GetBarsRequest, IndicatorFavoritesResponse, ListSecuritiesRequest, Manifest,
-    MarketSnapshotDto, PositionDto, QualityReportDto, RegistryRequest, RegistryResponse,
-    SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
+    DatasetManifest, DatasourceStatusDto, GetBarsRequest, IndicatorFavoritesResponse,
+    ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto, QualityReportDto,
+    RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
 };
 use serde_json::Value;
 use tauri::State;
@@ -92,6 +92,14 @@ pub async fn dataset_manifest(
     state: State<'_, AppState>,
 ) -> Result<Option<DatasetManifest>, AppError> {
     Ok(state.core.dataset_manifest())
+}
+
+/// S-07.01-01：P9 首卡数据源探测；每次调用都重新探测，不做自动轮询。
+#[tauri::command]
+pub async fn datasource_status(
+    state: State<'_, AppState>,
+) -> Result<DatasourceStatusDto, AppError> {
+    Ok(state.core.datasource_status().await)
 }
 
 #[tauri::command]

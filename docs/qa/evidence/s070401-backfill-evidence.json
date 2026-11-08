@@ -1,0 +1,68 @@
+{
+  "suite": "S-07.04-01 backfill-plans",
+  "startedAt": "2026-11-08T07:08:00+08:00",
+  "finishedAt": "2026-11-08T07:12:00+08:00",
+  "ok": true,
+  "checks": [
+    {
+      "id": "no-task-row-schema",
+      "ac": "AC-07.04-01（补1）",
+      "card": "S-07.04-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "state.db migrations 001-004 无 task/queue/job 表；BackfillSection 不 import ipc、不 invoke，点击只改本地 toast 状态，无 DB 写入路径"
+    },
+    {
+      "id": "two-plans-four-fields",
+      "ac": "AC-07.04-01",
+      "card": "S-07.04-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "方案 A/B 两行，均渲染区间（最近 60 个交易日 / 最近 3 年）、调用次数（≈124 次 / ≈1452 次）、预计耗时（≈2.2 小时 / ≈26.2 小时）、复权处理（复权因子按日合并）"
+    },
+    {
+      "id": "all-buttons-disabled",
+      "ac": "AC-07.04-01",
+      "card": "S-07.04-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "两个「回填」按钮均带 disabled 属性，--muted 文字 + 0.4 透明度 + 锁图标，无可用态分支"
+    },
+    {
+      "id": "click-toast-once",
+      "ac": "AC-07.04-01（补1）",
+      "card": "S-07.04-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "覆盖层承接禁用按钮点击，toast 文案「本期不提供历史回填，仅使用内置模拟数据」；2 秒内重复点击直接忽略，不叠加"
+    },
+    {
+      "id": "no-progress-queue-countdown",
+      "ac": "AC-07.04-01（补1）",
+      "card": "S-07.04-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "区块内无进度条、无任务行、无倒计时、无预计完成时间控件；备注显式写「不排队、不预约」"
+    },
+    {
+      "id": "copy-scan-zero",
+      "ac": "AC-07.04-02",
+      "card": "S-07.04-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "grep app/src + app/content：「即将上线」「敬请期待」「稍后推出」命中 0"
+    },
+    {
+      "id": "offline-static-plans",
+      "ac": "AC-07.04-02（补1）",
+      "card": "S-07.04-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "方案数值为模块内常量，渲染不依赖任何 IPC/网络；断网时表格照常完整显示，无网络错误提示分支"
+    }
+  ],
+  "context": {
+    "commit": "048f16b",
+    "scope": "dev2 参考证据（§0.1 双线口径）：合并后须按合并 commit 重签。本批 AC 范围 = 回填区块渲染、全禁用、点击 toast、文案扫描、断网静态显示；不做任何启用分支或任务队列"
+  }
+}
