@@ -35,6 +35,10 @@ jobs:
         run: node app/scripts/verify_sign_coverage.mjs --check
       - name: verify:gate-log（结构 / 枚举 / 40 位 SHA / 与 verify:sign 对齐）
         run: node app/scripts/verify_gate_log.mjs
+      - name: verify:delivery:selftest（交付规范反例 + 变异验证，第 29 条）
+        run: node app/scripts/verify_delivery_selftest.mjs
+      - name: verify:delivery（规范结构 / 状态表 / 已交付签字 / 提交信息）
+        run: node app/scripts/verify_delivery.mjs
       - name: verify:sign-impact（已签卡面被改必须申报失效）
         env:
           BASE: ${{ github.event.before || github.event.pull_request.base.sha }}
