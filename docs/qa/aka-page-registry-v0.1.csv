@@ -8,4 +8,4 @@ P6,指数与板块页,absent,,,,S-04.01-01,由 S-04.01-01/02、S-04.02-01/02 共
 P7,搜索浮层,absent,,,,S-05.01-01,2026-11-08 页面层单列 W-100 派 dev B；解阻 P14/P15/P18 标的侧
 P8,设置页,exists,app/src/pages/settings/SettingsPage.tsx,SettingsPage,,
 P9,数据源状态页,exists,app/src/pages/datasource/DatasourcePage.tsx,数据源状态,S-07.01-01,2026-11-08 已并入 main（d996c6f）：探测 4+4 能力、版本 6 字段、质量区与历史回填区；含 P10 摘要
-P10,已安装摘要页,absent,,,,S-07.03-01,2026-11-08 页面层+生成器单列 W-101 派 dev B；步骤②写 index_members 256 解阻 P11
+P10,已安装摘要页,exists,app/src/pages/install/InstallPage.tsx,InstallPage,S-07.03-01,2026-11-08 dev B W-101：5 步进度/断点续装/已安装摘要；生成器落 dataset.db，index_members 256

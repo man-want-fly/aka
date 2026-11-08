@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AppShell } from "../../app/AppShell";
+import { AppShell, type RouteKey } from "../../app/AppShell";
 import { FavoritesStrip } from "../../features/catalog/FavoritesStrip";
 import { addIndicatorToChart, chartStateOf, readLastCode } from "../../features/catalog/chartLink";
 import { useFavorites } from "../../features/catalog/useFavorites";
@@ -15,7 +15,7 @@ import type { AppError, Category, ManifestIndicatorDto, ManifestResponse } from 
 
 interface Props {
   onNavigate: (
-    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource",
+    key: RouteKey,
   ) => void;
   /** S-03.01-04：目录「在工作台查看」复用既有路由，把最近标的带过去。 */
   onOpenWorkbench?: (code: string) => void;

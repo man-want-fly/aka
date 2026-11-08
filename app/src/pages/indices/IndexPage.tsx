@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { KeyboardEvent } from "react";
-import { AppShell } from "../../app/AppShell";
+import { AppShell, type RouteKey } from "../../app/AppShell";
 import { SimBadge } from "../../components/SimBadge";
 import { StateCard } from "../../components/StateCard";
 
@@ -48,7 +48,7 @@ const LIMIT_CARDS: Array<{ key: string; label: string }> = [
   { key: "oneWord", label: "一字涨停家数" },
 ];
 
-type NavKey = "workbench" | "market" | "catalog" | "settings" | "datasource" | "indices";
+type NavKey = RouteKey;
 
 interface Props {
   onNavigate: (key: NavKey) => void;

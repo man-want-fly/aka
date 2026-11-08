@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { AppShell } from "../../app/AppShell";
+import { AppShell, type RouteKey } from "../../app/AppShell";
 import { CandleChart, type ChartViewport } from "../../components/CandleChart";
 import { IndicatorReadouts } from "../../components/IndicatorReadouts";
 import { ParamPanel } from "../../components/ParamPanel";
@@ -94,7 +94,7 @@ interface Props {
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
   onNavigate: (
-    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource",
+    key: RouteKey,
   ) => void;
   /** S-08.02-03：只读浏览下禁用指标计算，K 线/行情表照常可看 */
   readOnly?: boolean;

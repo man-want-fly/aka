@@ -11,6 +11,7 @@ pub mod mock;
 pub mod provider;
 pub mod sha256;
 pub mod sim_dataset;
+pub mod sim_seed;
 pub mod tushare;
 pub mod types;
 

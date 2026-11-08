@@ -2,6 +2,7 @@
 //! 新增命令必须保持在这个形状，超过 15 行说明业务该下沉到 app-core。
 
 use app_core::core::{EVENT_CALC_PANIC, EVENT_CALC_TIMEOUT};
+use app_core::sim_install::{self, SimInstallReport, SimInstallStatus};
 use app_core::{
     AppError, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
     DatasetManifest, DatasourceStatusDto, DataHealthDto, ErrorCode, GetBarsRequest,
@@ -605,6 +606,103 @@ pub async fn export_diagnostics(
 #[tauri::command]
 pub async fn reveal_diagnostics(path: String) -> Result<(), AppError> {
     crate::diagnostics::reveal(&path)
+}
+
+/// S-07.03-01：首装数据集固定 seed 42，与 manifest 的 `seed` 字段一致。
+const SIM_SEED: u64 = 42;
+
+fn sim_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, AppError> {
+    use tauri::Manager;
+    app.path()
+        .home_dir()
+        .map(|home| home.join("Library/Application Support/aka"))
+        .map_err(|err| AppError::internal(format!("无法解析 home 目录：{err}")))
+}
+
+#[tauri::command]
+pub async fn sim_install_status(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<SimInstallStatus, AppError> {
+    tracked!(state, "sim_install_status", {
+        Ok(sim_install::status(&sim_data_dir(&app)?, SIM_SEED))
+    })
+}
+
+/// 启动安装：后台线程跑 5 步，最多等 2s 让哨兵落盘后返回当前状态；进度靠 P10 轮询。
+#[tauri::command]
+pub async fn sim_install_start(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<SimInstallStatus, AppError> {
+    tracked!(state, "sim_install_start", {
+        let dir = sim_data_dir(&app)?;
+        let current = sim_install::status(&dir, SIM_SEED);
+        if current.state == "installing" {
+            return Ok(current);
+        }
+        let (tx, rx) = std::sync::mpsc::channel();
+        let worker_dir = dir.clone();
+        std::thread::spawn(move || {
+            let _ = tx.send(sim_install::install(&worker_dir, SIM_SEED));
+        });
+        wait_for_sim_start(&dir, &rx)
+    })
+}
+
+/// 已安装页「重建」：删除旧 seed 目录后从步骤①重跑，`data_version` +1。
+#[tauri::command]
+pub async fn sim_install_rebuild(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<SimInstallStatus, AppError> {
+    tracked!(state, "sim_install_rebuild", {
+        let dir = sim_data_dir(&app)?;
+        let current = sim_install::status(&dir, SIM_SEED);
+        if current.state == "installing" {
+            return Ok(current);
+        }
+        let (tx, rx) = std::sync::mpsc::channel();
+        let worker_dir = dir.clone();
+        std::thread::spawn(move || {
+            let _ = tx.send(sim_install::rebuild(&worker_dir, SIM_SEED));
+        });
+        wait_for_sim_start(&dir, &rx)
+    })
+}
+
+/// 启动后最多等 2s：哨兵一落盘就返回（前端继续轮询）；若安装线程已报错，
+/// 直接把错误抛给 IPC（例如 E_DISK_INSUFFICIENT，此时按卡面要求不会创建 `.installing`）。
+fn wait_for_sim_start(
+    dir: &std::path::Path,
+    rx: &std::sync::mpsc::Receiver<Result<SimInstallReport, app_core::sim_install::SimErrorInfo>>,
+) -> Result<SimInstallStatus, AppError> {
+    let mut status = sim_install::status(dir, SIM_SEED);
+    for _ in 0..200 {
+        if let Ok(result) = rx.try_recv() {
+            if let Err(error) = result {
+                return Err(AppError::internal(format!("{}：{}", error.code, error.message)));
+            }
+            return Ok(sim_install::status(dir, SIM_SEED));
+        }
+        if status.state != "not_installed" {
+            return Ok(status);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        status = sim_install::status(dir, SIM_SEED);
+    }
+    Ok(status)
+}
+
+/// 仅供下一张卡（P11/P12/P13）读同一份口径；W-101 不替下游签 AC。
+#[tauri::command]
+pub async fn sim_install_report(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Option<SimInstallReport>, AppError> {
+    tracked!(state, "sim_install_report", {
+        Ok(sim_install::status(&sim_data_dir(&app)?, SIM_SEED).installed)
+    })
 }
 
 #[cfg(test)]

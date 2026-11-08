@@ -16,7 +16,7 @@ import { QualitySection } from "./QualitySection";
 
 interface Props {
   onNavigate: (
-    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource",
+    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource" | "install",
   ) => void;
 }
 
@@ -306,7 +306,7 @@ export function DatasourcePage({ onNavigate }: Props) {
           {!version && state !== "probe_failed" && (
             <div className="ds-missing" data-ds-missing="1">
               <span>未安装样本包</span>
-              <button type="button" onClick={() => onNavigate("settings")}>
+              <button type="button" onClick={() => onNavigate("install")}>
                 去环境页生成
               </button>
             </div>

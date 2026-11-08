@@ -81,6 +81,8 @@ dependencies = [
  "data-provider",
  "data-store",
  "indicator-core",
+ "libc",
+ "rusqlite",
  "serde",
  "serde_json",
  "tokio",

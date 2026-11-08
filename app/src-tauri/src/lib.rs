@@ -236,6 +236,10 @@ pub fn run() {
         commands::telemetry_note,
         commands::export_diagnostics,
         commands::reveal_diagnostics,
+        commands::sim_install_status,
+        commands::sim_install_start,
+        commands::sim_install_rebuild,
+        commands::sim_install_report,
     ]);
     #[cfg(not(debug_assertions))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -274,6 +278,10 @@ pub fn run() {
         commands::telemetry_note,
         commands::export_diagnostics,
         commands::reveal_diagnostics,
+        commands::sim_install_status,
+        commands::sim_install_start,
+        commands::sim_install_rebuild,
+        commands::sim_install_report,
     ]);
     builder
         .run(tauri::generate_context!())

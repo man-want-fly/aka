@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { AppShell } from "../../app/AppShell";
+import { AppShell, type RouteKey } from "../../app/AppShell";
 import { SimBadge } from "../../components/SimBadge";
 import { StateCard } from "../../components/StateCard";
 import {
@@ -166,7 +166,7 @@ const SELECTED_KEY = "aka.market.selected";
 
 interface Props {
   onNavigate: (
-    key: "workbench" | "catalog" | "market" | "indices" | "settings" | "datasource",
+    key: RouteKey,
   ) => void;
   onOpenSecurity: (security: string) => void;
   /** S-08.02-03：只读浏览下不落盘视图状态，避免无谓的“设置未保存”提示 */

@@ -23,6 +23,8 @@ import type {
   QualityReportDto,
   RegistryResponse,
   SecurityDto,
+  SimInstallReportDto,
+  SimInstallStatusDto,
   TelemetrySummary,
   WatchToggleResult,
   WatchlistDto,
@@ -206,4 +208,19 @@ export const ipc = {
 
   deletePosition: (security: string): Promise<void> =>
     invoke<void>("position_delete", { security }),
+
+  /** S-07.03-01：P10 首装状态（读取 `.installing` / install-report，不做重活）。 */
+  simInstallStatus: (): Promise<SimInstallStatusDto> =>
+    invoke<SimInstallStatusDto>("sim_install_status"),
+
+  /** S-07.03-01：启动/续装，返回已落哨兵的当前状态；进度由 P10 轮询。 */
+  simInstallStart: (): Promise<SimInstallStatusDto> =>
+    invoke<SimInstallStatusDto>("sim_install_start"),
+
+  /** S-07.03-01：删除旧 seed 目录后重建，data_version +1。 */
+  simInstallRebuild: (): Promise<SimInstallStatusDto> =>
+    invoke<SimInstallStatusDto>("sim_install_rebuild"),
+
+  simInstallReport: (): Promise<SimInstallReportDto | null> =>
+    invoke<SimInstallReportDto | null>("sim_install_report"),
 };

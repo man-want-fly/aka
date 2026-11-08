@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AppShell } from "../../app/AppShell";
+import { AppShell, type RouteKey } from "../../app/AppShell";
 import { formatAmount, formatPct, formatPrice, formatVolume } from "../../lib/format";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import { runSettingsDiagnostics } from "../../features/settings/diag";
@@ -19,7 +19,7 @@ import { loadColorMode, loadThemeMode } from "../../lib/theme";
 const DATA_DIR = "~/Library/Application Support/AKA/data/sim";
 interface Props {
   onNavigate: (
-    key: "workbench" | "market" | "indices" | "catalog" | "settings" | "datasource",
+    key: RouteKey,
   ) => void;
 }
 
