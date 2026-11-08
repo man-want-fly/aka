@@ -19,6 +19,8 @@ export interface S080202Check {
   id: string;
   card: string;
   ac: string;
+  /** 该条断言对象所在层：DOM 文本/元素 = render，日志/telemetry/计时 = runtime。 */
+  layer: "data" | "render" | "runtime";
   passed: boolean;
   detail: string;
 }
@@ -71,8 +73,14 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
     appActive: false,
     checks: [],
   };
-  const push = (id: string, ac: string, passed: boolean, detail: string) => {
-    report.checks.push({ id, card: "S-08.02-02", ac, passed, detail });
+  const push = (
+    id: string,
+    ac: string,
+    layer: S080202Check["layer"],
+    passed: boolean,
+    detail: string,
+  ) => {
+    report.checks.push({ id, card: "S-08.02-02", ac, layer, passed, detail });
   };
   const fail = async (
     code: "E_ENGINE_PANIC" | "E_DATA_UNAVAILABLE" | "E_TIMEOUT",
@@ -98,6 +106,7 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
   push(
     "P06-R1",
     "AC-08.02-02",
+    "render",
     textOf(panic.querySelector("[data-calc-error-title]")) === "引擎异常" &&
       textOf(panic.querySelector("[data-calc-error-code]")) === "E_ENGINE_PANIC" &&
       traceOf(panic).length > 0 &&
@@ -120,11 +129,12 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
     push(
       "P06-R2",
       "AC-08.02-02（补2）",
+      "render",
       before && gone === true,
       `切到 ${codes[1]} 后错误卡消失=${gone === true}`,
     );
   } else {
-    push("P06-R2", "AC-08.02-02（补2）", false, "标的不足 2 个，无法验证切标的清理");
+    push("P06-R2", "AC-08.02-02（补2）", "render", false, "标的不足 2 个，无法验证切标的清理");
   }
 
   // ③ 连续 3 次失败才出现「导出诊断包」，且每次 panic 都落 calc.panic。
@@ -134,11 +144,21 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
   node = await fail("E_ENGINE_PANIC", "panic", traceOf(node));
   const panicAfter = (await ipc.telemetryDump(200)).counts["calc.panic"] ?? 0;
   const exportButton = node.querySelector("[data-calc-export]");
+  // R3 同时断两层：渲染层（第 3 次失败后导出按钮出现）与运行层（每次 panic 都落日志），
+  // 拆成两条各自计层，避免一条绿地把运行层事实带走。
   push(
     "P06-R3",
     "AC-08.02-02",
-    exportButton !== null && panicAfter - panicBefore === 3,
-    `第 3 次连续失败后导出按钮=${exportButton !== null}，calc.panic 新增 ${panicAfter - panicBefore} 条`,
+    "render",
+    exportButton !== null,
+    `第 3 次连续失败后导出按钮=${exportButton !== null}`,
+  );
+  push(
+    "P06-R3-log",
+    "AC-08.02-02",
+    "runtime",
+    panicAfter - panicBefore === 3,
+    `连续 3 次 panic 后 calc.panic 新增 ${panicAfter - panicBefore} 条（应为 3）`,
   );
 
   // ④ 数据不可用：标题与「查看数据源状态」入口。
@@ -146,6 +166,7 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
   push(
     "P06-R4",
     "AC-08.02-02",
+    "render",
     textOf(data.querySelector("[data-calc-error-title]")) === "数据不可用" &&
       data.querySelector("[data-calc-goto-ds]") !== null,
     `标题=${textOf(data.querySelector("[data-calc-error-title]"))}，数据源入口=${data.querySelector("[data-calc-goto-ds]") !== null}`,
@@ -158,16 +179,22 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
   const wallMs = Math.round(performance.now() - started);
   const timeoutAfter = (await ipc.telemetryDump(200)).counts["calc.timeout"] ?? 0;
   const elapsed = Number(timeout.querySelector("[data-calc-error-elapsed]")?.textContent?.match(/\d+/)?.[0] ?? 0);
+  // R5 同样跨两层：页面显示的耗时（render）与真实墙钟 + calc.timeout 增量（runtime）分开。
   push(
     "P06-R5",
     "AC-08.02-02",
+    "render",
     textOf(timeout.querySelector("[data-calc-error-title]")) === "计算超时" &&
       elapsed >= 7_000 &&
-      elapsed <= 9_500 &&
-      wallMs >= 7_000 &&
-      wallMs <= 12_000 &&
-      timeoutAfter - timeoutBefore === 1,
-    `标题=计算超时，elapsed=${elapsed}ms，wall=${wallMs}ms，calc.timeout 新增 ${timeoutAfter - timeoutBefore} 条`,
+      elapsed <= 9_500,
+    `标题=计算超时，elapsed=${elapsed}ms`,
+  );
+  push(
+    "P06-R5-run",
+    "AC-08.02-02",
+    "runtime",
+    wallMs >= 7_000 && wallMs <= 12_000 && timeoutAfter - timeoutBefore === 1,
+    `wall=${wallMs}ms，calc.timeout 新增 ${timeoutAfter - timeoutBefore} 条（应为 1）`,
   );
 
   // ⑥ 注入关闭后恢复正常：错误卡消失。
@@ -177,7 +204,7 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
     () => (document.querySelector("[data-calc-error]") === null ? true : null),
     5_000,
   ).catch(() => false);
-  push("P06-R6", "AC-08.02-02", recovered === true, `注入关闭后错误卡消失=${recovered === true}`);
+  push("P06-R6", "AC-08.02-02", "render", recovered === true, `注入关闭后错误卡消失=${recovered === true}`);
 
   // R-EV-02：env 与聚焦状态由 diag.ts 统一产出；env 采集失败也照常落 dump（由 verify 判 failed）。
   // meta.dump / meta.reproduce 由 evidence-run.sh 写入，套件出口只负责顶层 env / windowFocused / appActive。
