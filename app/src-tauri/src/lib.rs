@@ -44,6 +44,7 @@ fn faults_from_args(args: &[String]) -> DiagFaults {
         dataset_empty: diag_flag(args, "--empty-dataset"),
         corrupt_db: diag_flag(args, "--corrupt-db"),
         read_only_db: diag_flag(args, "--readonly-db"),
+        manifest_corrupt: diag_flag(args, "--corrupt-manifest"),
     }
 }
 
@@ -179,6 +180,7 @@ pub fn run() {
         commands::bar_provenance,
         commands::dataset_manifest,
         commands::datasource_status,
+        commands::data_health_check,
         commands::calc_indicators,
         commands::telemetry_dump,
         commands::market_snapshot,
@@ -217,6 +219,7 @@ pub fn run() {
         commands::bar_provenance,
         commands::dataset_manifest,
         commands::datasource_status,
+        commands::data_health_check,
         commands::calc_indicators,
         commands::telemetry_dump,
         commands::market_snapshot,

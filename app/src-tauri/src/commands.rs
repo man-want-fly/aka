@@ -3,7 +3,8 @@
 
 use app_core::{
     AppError, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
-    DatasetManifest, DatasourceStatusDto, GetBarsRequest, IndicatorFavoritesResponse,
+    DatasetManifest, DatasourceStatusDto, DataHealthDto, GetBarsRequest,
+    IndicatorFavoritesResponse,
     ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto, QualityReportDto,
     RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary, WatchToggleResult, WatchlistDto,
 };
@@ -134,6 +135,19 @@ pub async fn datasource_status(
     })
 }
 
+/// S-07.01-02：P9 健康检查 6 项；只读、0 网络，每次点击都重跑。
+#[tauri::command]
+pub async fn data_health_check(
+    state: State<'_, AppState>,
+) -> Result<DataHealthDto, AppError> {
+    tracked!(state, "data_health_check", {
+        Ok(state
+            .core
+            .data_health_check(state.faults().manifest_corrupt)
+            .await)
+    })
+}
+
 #[tauri::command]
 pub async fn calc_indicators(
     state: State<'_, AppState>,
@@ -209,6 +223,8 @@ pub async fn dataset_regenerate(
 ) -> Result<Vec<SecurityDto>, AppError> {
     tracked!(state, "dataset_regenerate", {
         state.set_dataset_empty(false);
+        // 重建后 manifest 恢复可读（清掉 S-07.01-02 的损坏注入）。
+        state.set_manifest_corrupt(false);
         Ok(state.core.list_securities(&req))
     })
 }

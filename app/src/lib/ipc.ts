@@ -7,6 +7,7 @@ import type {
   CalcRequest,
   CalcResponse,
   DatasetManifestDto,
+  DataHealthDto,
   DatasourceStatusDto,
   DiagnosticsConfigSnapshot,
   DiagnosticsExportDto,
@@ -91,6 +92,10 @@ export const ipc = {
   /** S-07.01-01：P9 数据源状态；每次手动「重新检查」重新探测。 */
   datasourceStatus: (): Promise<DatasourceStatusDto> =>
     invoke<DatasourceStatusDto>("datasource_status"),
+
+  /** S-07.01-02：P9 健康检查 6 项；每次点击都重跑，无轮询。 */
+  dataHealthCheck: (): Promise<DataHealthDto> =>
+    invoke<DataHealthDto>("data_health_check"),
 
   /** S-07.05-01：最近一次质量报告；从未扫描过返回 null。 */
   qualityReport: (): Promise<QualityReportDto | null> =>

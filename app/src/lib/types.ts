@@ -306,6 +306,30 @@ export interface DatasourceStatusDto {
   errorCode: string | null;
 }
 
+/** S-07.01-02：健康检查单项结果 */
+export type DataHealthStatus = "PASS" | "FAIL" | "SKIP";
+
+export interface DataHealthItemDto {
+  key: string;
+  labelZh: string;
+  status: DataHealthStatus;
+  durationMs: number;
+  errorCode: string | null;
+  detail: string | null;
+  advice: string | null;
+}
+
+/** S-07.01-02：P9 健康检查汇总（6 项） */
+export interface DataHealthDto {
+  items: DataHealthItemDto[];
+  passed: number;
+  total: number;
+  durationMs: number;
+  /** epoch 毫秒，界面按本地时区格式化 */
+  checkedAt: number;
+  datasetId: string | null;
+}
+
 /** S-07.05-01：质量检查报告 */
 export interface QualityExampleDto {
   security: string;

@@ -567,3 +567,115 @@ export async function runS060302Diagnostics() {
   await ipc.diagWriteNamed("s060302-evidence.json", JSON.stringify(report, null, 2));
   return report;
 }
+
+/** P07：S-07.01-02 健康检查 6 项 + tushare 禁用卡；只读、0 网络、不轮询。 */
+export async function runS070102Diagnostics() {
+  const report = { ...baseReport("s070102"), card: "S-07.01-02" };
+  const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
+    report.checks.push({ id, card: "S-07.01-02", ac, layer, passed, detail });
+  };
+  await waitFor(() => q("[data-health-section]"));
+
+  const button = q<HTMLButtonElement>("[data-health-check]");
+  push(
+    "P07-R1",
+    "AC-07.01-02",
+    "render",
+    button !== null && !button.disabled,
+    `健康检查按钮可用=${Boolean(button && !button.disabled)}`,
+  );
+
+  const countBefore = (await ipc.telemetryDump(200)).counts["health.check"] ?? 0;
+  const externalBefore = externalResourceCount();
+  const started = performance.now();
+  // 防重入：结果回来前连点 3 次，只能记 1 条 health.check。
+  button?.click();
+  button?.click();
+  button?.click();
+  await waitFor(() => q("[data-health-table], [data-health-error]"), 8_000, 50);
+  const elapsed = Math.round(performance.now() - started);
+  const countAfter = (await ipc.telemetryDump(200)).counts["health.check"] ?? 0;
+  const externalAfter = externalResourceCount();
+
+  const error = q<HTMLElement>("[data-health-error]")?.textContent?.trim() ?? "";
+  const rows = qa<HTMLElement>("[data-health-row]");
+  const statuses = rows.map((row) => row.dataset.healthStatus ?? "");
+  const summary = (q<HTMLElement>("[data-health-summary]")?.textContent ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  push(
+    "P07-R2",
+    "AC-07.01-02",
+    "render",
+    rows.length === 6 && statuses.every((status) => ["PASS", "FAIL", "SKIP"].includes(status)),
+    `${rows.length} 行 / ${statuses.join(",")}`,
+  );
+  push(
+    "P07-R3",
+    "AC-07.01-02",
+    "render",
+    /^\d\/6 通过 · 总耗时 \d+ ms · \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(summary),
+    `汇总「${summary}」`,
+  );
+  push(
+    "P07-R4",
+    "AC-07.01-02",
+    "runtime",
+    error === "" && elapsed <= 1_500 && countAfter - countBefore === 1,
+    `耗时 ${elapsed} ms / 错误「${error}」/ health.check 新增 ${countAfter - countBefore} 条（期望 1）`,
+  );
+
+  // AC-07.01-02（补3）：--corrupt-manifest 注入时 ②FAIL → ③~⑥SKIP、汇总 1/6。
+  const rebuild = q<HTMLElement>("[data-health-rebuild]");
+  const chainPassed = rebuild
+    ? statuses[0] === "PASS" &&
+      statuses[1] === "FAIL" &&
+      statuses.slice(2).every((status) => status === "SKIP") &&
+      summary.startsWith("1/6")
+    : statuses.every((status) => status === "PASS");
+  push(
+    "P07-R5",
+    "AC-07.01-02(补3)",
+    "render",
+    chainPassed,
+    rebuild ? `②FAIL、③~⑥SKIP、汇总「${summary}」` : "默认数据集全部 PASS（注入链由 --corrupt-manifest 覆盖）",
+  );
+
+  const caps = qa<HTMLElement>("[data-tushare-cap]");
+  const actions = qa<HTMLButtonElement>("[data-tushare-action]");
+  const tushareSummary = q<HTMLElement>("[data-tushare-summary]")?.textContent?.trim() ?? "";
+  const pageText = document.querySelector("main")?.textContent ?? document.body.textContent ?? "";
+  const forbidden = ["已连接", "同步中", "即将上线", "敬请期待", "倒计时"].filter((word) =>
+    pageText.includes(word),
+  );
+  push(
+    "P07-R6",
+    "AC-07.01-03",
+    "render",
+    caps.length === 4 &&
+      caps.every((cap) => cap.dataset.tushareAvailable === "0") &&
+      /^0\/4/.test(tushareSummary) &&
+      actions.length === 4 &&
+      actions.every(
+        (action) => action.disabled && (action.title ?? "").includes("本期仅支持模拟数据"),
+      ) &&
+      forbidden.length === 0,
+    `能力 ${caps.length} 项 0/4 / 按钮 ${actions.length} 个全禁用 / 禁用词「${forbidden.join(
+      "、",
+    ) || "无"}」`,
+  );
+
+  push(
+    "P07-R7",
+    "AC-07.01-03",
+    "runtime",
+    externalAfter - externalBefore === 0,
+    `检查期间外部 http(s) 资源 ${externalAfter - externalBefore} 个`,
+  );
+
+  report.ok = report.checks.every((check) => check.passed);
+  report.finishedAt = new Date().toISOString();
+  await ipc.diagWriteNamed("s070102-evidence.json", JSON.stringify(report, null, 2));
+  return report;
+}

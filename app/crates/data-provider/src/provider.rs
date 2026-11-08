@@ -73,4 +73,10 @@ pub trait DataProvider: Send + Sync {
     fn dataset_manifest(&self) -> Option<crate::dataset_manifest::DatasetManifest> {
         None
     }
+
+    /// S-07.01-02 健康检查④：独立复算的 (sha256, 行数)。
+    /// 必须真的重算一遍，不能回读 `dataset_manifest()` 的缓存值；不支持时返回 `None`（该项 SKIP）。
+    fn dataset_digest(&self) -> Option<(String, u64)> {
+        None
+    }
 }

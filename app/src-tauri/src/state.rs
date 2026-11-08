@@ -12,6 +12,8 @@ pub struct DiagFaults {
     pub dataset_empty: bool,
     pub corrupt_db: bool,
     pub read_only_db: bool,
+    /// S-07.01-02：模拟 manifest 不可读（健康检查①/② FAIL 链取证）。
+    pub manifest_corrupt: bool,
 }
 
 /// 命令层唯一共享状态：一个进程内编排器。
@@ -43,5 +45,13 @@ impl AppState {
             .lock()
             .unwrap_or_else(|err| err.into_inner())
             .dataset_empty = empty;
+    }
+
+    /// 重建样本包后清除 manifest 损坏注入，否则健康检查无法恢复。
+    pub fn set_manifest_corrupt(&self, corrupt: bool) {
+        self.faults
+            .lock()
+            .unwrap_or_else(|err| err.into_inner())
+            .manifest_corrupt = corrupt;
     }
 }

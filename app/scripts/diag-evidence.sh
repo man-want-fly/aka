@@ -228,6 +228,22 @@ else:
     print(f"自选已有 {count} 条，无需注入")
 PY
     ;;
+  s070102)
+    TARGET="s070102"
+    JSON="$DIAG_DIR/s070102-evidence.json"
+    NAME="s070102-evidence"
+    FLAGS=""
+    FIXTURE="默认 state.db；P9 健康检查全 PASS 路径 + tushare 0/4 禁用卡；只读，不改库"
+    BAK=""
+    ;;
+  s070102-corrupt)
+    TARGET="s070102"
+    JSON="$DIAG_DIR/s070102-evidence.json"
+    NAME="s070102-corrupt-evidence"
+    FLAGS="--corrupt-manifest"
+    FIXTURE="默认 state.db；--corrupt-manifest 注入 manifest 不可解析，验证 ②FAIL → ③~⑥SKIP（1/6）与「重建样本包」入口；只读"
+    BAK=""
+    ;;
   *)
     echo "未知套件：$SUITE" >&2
     exit 2
