@@ -14,6 +14,7 @@ type Layer = "data" | "render";
 
 interface Check {
   id: string;
+  card: string;
   ac: string;
   layer: Layer;
   passed: boolean;
@@ -130,7 +131,7 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
   const startedAt = new Date().toISOString();
   const checks: Check[] = [];
   const push = (id: string, ac: string, layer: Layer, passed: boolean, detail: string) =>
-    checks.push({ id, ac, layer, passed, detail });
+    checks.push({ id, card: "S-01.03-01", ac, layer, passed, detail });
 
   let adj: AdjMode = readAdjMode();
 

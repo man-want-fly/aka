@@ -7,6 +7,7 @@ import { collectEvidenceEnv, collectFocus, type EvidenceEnv } from "../workbench
 
 export interface S080203Check {
   id: string;
+  card: string;
   ac: string;
   passed: boolean;
   detail: string;
@@ -88,7 +89,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     checks: [],
   };
   const push = (id: string, ac: string, passed: boolean, detail: string) => {
-    report.checks.push({ id, ac, passed, detail });
+    report.checks.push({ id, card: "S-08.02-03", ac, passed, detail });
   };
 
   // ① 错误卡字段：枚举值 + trace id + 数据集路径（AC-08.02-03）。
