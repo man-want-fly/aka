@@ -51,6 +51,14 @@ const gotoHash = async (hash: string, selector: string) => {
   await sleep(120);
 };
 
+/** 目录页状态（last_code/收藏）来自挂载时读取，须先离开再回来才会重挂载。 */
+const remountCatalog = async () => {
+  window.location.hash = "#/market";
+  await waitFor(() => q("[data-market-root], main"));
+  await sleep(150);
+  await gotoHash("#/catalog", "[data-catalog-root='p3']");
+};
+
 const readSubPlots = (): string[] => {
   try {
     const raw = window.localStorage.getItem("aka.workbench.subplots.v1");
@@ -104,7 +112,7 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
   // 阶段 2：有标的 + 默认副图满仓（VOL/M06/M01）
   window.localStorage.setItem("aka.last.code", "600519.SH");
   writeSubPlots(["VOL", "M06", "M01"]);
-  await gotoHash("#/catalog", "[data-catalog-root='p3']");
+  await remountCatalog();
   await expandAllCategories();
 
   const m03Add = q<HTMLButtonElement>('[data-catalog-add="M03"]');
@@ -147,7 +155,7 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
 
   // 阶段 3：留出副图空位后加入
   writeSubPlots(["VOL"]);
-  await gotoHash("#/catalog", "[data-catalog-root='p3']");
+  await remountCatalog();
   await expandAllCategories();
   const m03Before = readSubPlots().join(",");
   q<HTMLButtonElement>('[data-catalog-add="M03"]')?.click();
@@ -232,7 +240,7 @@ export async function runS030201Diagnostics() {
 
   // 规划项 chip：点击「加入图表」应被拒并保留 chip
   await ipc.setIndicatorFavorite("T06", true);
-  await gotoHash("#/catalog", "[data-catalog-root='p3']");
+  await remountCatalog();
   await waitFor(() => q('[data-fav-chip="T06"]'));
   const t06Chip = q<HTMLElement>('[data-fav-chip="T06"]');
   q<HTMLElement>('[data-fav-chip-add="T06"]')?.click();
