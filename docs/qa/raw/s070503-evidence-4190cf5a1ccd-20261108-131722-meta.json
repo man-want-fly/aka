@@ -1,0 +1,28 @@
+{
+  "suite": "s070503",
+  "label": "20261108-131722",
+  "runAt": "2026-11-08T13:17:29+08:00",
+  "commit": "4190cf5a1ccde2a249afed4dc84d54df676624e1",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s070503\" target/debug/aka-desktop",
+  "fixture": "默认 state.db；debug 注入 DIAGPROV.SZ（40 根，末根清空 batch_id/ingested_at）与 DIAGSUSP.SZ（120 根，80~99 停牌）；点击 600519.SH/DIAGSUSP.SZ/DIAGPROV.SZ 三根 bar；只读行情，不改库",
+  "buildMode": "dev",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
+  "formatScan": null,
+  "result": {
+    "ok": false,
+    "blocked": [
+      {
+        "ac": "AC-07.05-04",
+        "blocker": "run-s070503",
+        "reason": "套件异常中断：Attempted to assign to readonly property.",
+        "skipped": false
+      }
+    ],
+    "card": "S-07.05-03",
+    "layers": {
+      "runtime": "0/1"
+    },
+    "otherCards": []
+  }
+}

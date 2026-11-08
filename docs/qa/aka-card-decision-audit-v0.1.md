@@ -582,6 +582,15 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - 凡由脚本现算的「归属、映射、分区、计数、范围」类逻辑，必须至少配一条**会让它错的反例**并纳入 CI；反例要能证明「错法会被判红」，不能只证「正例能过」。
     - 反例与派生逻辑同文件、同提交；缺反例即视为该派生逻辑未交付（不可判定≠通过）。
     - 已发生两起：G5 分区派生无校验器覆盖（§4.7.59）、`verify_sign_impact.cardMap` 无反向用例导致 `c3dff46` 误报（§4.7.63 八）。
+30. **顶层汇总必须覆盖所有 `verification` 子块，缺一即红（2026-11-08 起）**：
+    - dump 的顶层 `ok` 必须等于「`checks[]` 全过 ∧ 全部 `verification` 子块 `ok`」。子块清单在门禁里显式声明（`s2`：`renderLayer`/`b2Render`/`b3Render`/`catalog`），**缺一个子块、子块缺布尔 `ok`、新增子块未纳入汇总口径，三者任一即 `failed`**；`verificationOk` 必须单列并与现算值一致。
+    - 反例必备（第 29 条）：删子块、把某子块 `ok` 置 `false` 而顶层仍 `true`、`verificationOk` 与现算不一致，三种错法都必须判红。
+    - 已发生两起：`b2Render` 的 `ok` 与 `failCount` 打架（§4.7.68 三）、`catalog` 整块未聚合导致 45 张目录卡全红而顶层 `ok=true`（§4.7.69 二）。同一个病：**汇总口径漏维度，等于给红证据发通行证**。
+31. **失败产物必须留痕；套件崩溃 → 断言「不可判」（2026-11-08 起）**：
+    - 失败的 dump（崩溃、中断、超时无产物、`error` 非空或显式 `blocked:true`）**必须**落到归档根 `docs/qa/raw/`，带失败原因（`blocked[].reason` 或 `error`）、`finishedAt`、`suite` 与配对 meta（`commit`/`dirty=false`）。它**可查、不可签、不判红**，且**单独计数、不得与可签证据混计**。
+    - 失败记录不得放证据根；正常证据允许带 `blocked[]`（被阻塞 AC 及其原因），**不能**据此判为失败记录 —— 判定只看 `blocked:true` 或 `error` 非空。
+    - 套件崩溃/未跑完时，相关 AC 记**「不可判」**：既不记 PASS，也不记 FAIL；对应补记为 `BLOCKED`。不得以「产物不完整」为由丢弃过程记录（丢进 `/tmp` 等于不留痕），也不得把不完整产物充作可签证据——两者是同一个病的两面。
+    - 失败记录**不构成对产品的判定**；修复或重跑后按正常取证重新判定，崩溃期间的「不可判」不得被追认成 PASS。
 
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
@@ -2566,6 +2575,30 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - 结论：兼容两处说法——**未聚焦确实不得签（`signable=false`），但不得记成产品失败**；把「不得签」放在 `signable` 上，`ok` 只回答产品问题，两者不再互相冒充。
 
 **四、落盘与 CI**：`64a5005`（dev A 六项修复，此前仅本地）+ `27c3cc2`（本条收紧与裁定）已推送；CI run `42449042673` **success**（macOS build/test/golden 双 job 绿，`head_sha=27c3cc2`）。`verify:evidence` 汇总：扫描 8 份、冻结 18 份、env 兼容 8 份、未聚焦 0 份、失败 0 项；门禁自测 36/36。工作区 `dirty=false`，BA 可开窗跑 `s2` + `s070503`（dump commit 只需等于或祖先于最终 `sign_commit`，第 25 条）。
+
+#### 4.7.69 失败产物留痕、`catalog` 汇总漏洞与「崩溃 → 不可判」（2026-11-08）
+
+**一、失败 dump 必须留痕（用户指出：这次方向反了）**
+- 现场：`s070503` 在 `OV-00` 崩溃（`Attempted to assign to readonly property.`），`env`/`verification` 均 `null`。该 dump 因「不完整」被排除在证据根外，只活在 `/tmp` 与聊天记录里 —— 有效的过程记录因为不完整而不留痕，与「拿失效东西冒充有效」是同一个病的两面。
+- 口径（已落为第 31 条）：失败 dump 入 `docs/qa/raw/`，必须带 `suite`、`finishedAt`、失败原因（`blocked[].reason` 或 `error`）、配对 meta（`commit`/`dirty=false`）；门禁**识别但不判红、不可签、单独计数**（汇总行 `失败记录 N 份`），且**不得进证据根**。
+- 判定只认 `blocked:true` 或 `error` 非空：正常证据允许带 `blocked[]`（被阻塞 AC 及原因，如 `s080102-search-empty`），不得误杀。
+- 实现归属：**门禁识别与反例由 TL 本次落地；崩溃时落盘由 dev A 在 `evidence-run.sh` / `diag-evidence.sh` 失败分支实现**（与 `s070503` 修复同批，实跑即端到端证据，第 24 条）。
+- 首次落库：把仍留在 `/tmp` 的本次崩溃产物原样入库为 `docs/qa/raw/s070503-evidence-4190cf5a1ccd-20261108-131722.json`（+ meta，`commit=4190cf5`、`dirty=false`），审计链由此接上；未改一字。
+
+**二、`catalog` 汇总漏洞（第二个「漏维度」事故）**
+- 现场：`s2` dump 顶层 `ok=true`，但 `verification.catalog` 全红（`rootPresent=false`、`itemCount=24`、45 个目标中大量缺失、`betaCount=0/2`），整份证据显示通过。
+- 根因：顶层 `ok` 只聚合 `checks[]`，不聚合 `verification` 子块；`catalog` 采集还停留在旧 P4 契约（`data-catalog-root='p4'`、`data-catalog-beta`、未展开懒挂载分类），真实页面是 P3（`data-catalog-root='p3'`、`data-catalog-status='beta'`、分类懒挂载、行内 `button.catalog-row__select`）。**先按采集契约过期判，不得据此判产品 bug**（同 §4.7.67 的四项定性）。
+- 修法（第 30 条）：`diag.ts` 顶层 `ok = checksOk && verificationOk`，并单列 `checksOk`/`verificationOk`/`catalogOk`；`verify:evidence` 对 `s2` 校验子块齐备、`verificationOk` 与现算一致、顶层 `ok` 等于「checks ∧ 全部子块」；缺子块、缺布尔 `ok`、新增子块未纳入，三者任一即红。
+- 旧证据处置：`4190cf5` 入库的 `s2-evidence` 在新口径下**不可签**（其 `catalog` 为红），证据根副本移除，`docs/qa/raw/s2-evidence-7dd88d6b34c3-20261108-131001.json` 保留作过程记录。**`S-02.06-01` 维持「不可判」，不签**；待 dev A 修完 catalog 采集后由 BA 重跑 `s2`（W-90）。
+- 反例：删 `catalog` 子块 / `catalog.ok=false` 而顶层仍 `true` / `verificationOk` 与现算不一致 / 未知子块无布尔 `ok` —— 四例均纳入 `verify_evidence_selftest`。
+
+**三、BA 处置核准**
+- `AC-07.05-04` 记**「不可判」**（不记 PASS、不记 FAIL）——核准；补1 维持 `BLOCKED`——核准；失败产物未进证据根——核准（按本条一，此后应进 `raw/`，已由本次首次落库补上）。
+- 「套件崩溃 → 断言不可判」写入第 31 条，不再逐次临时议；崩溃期间的不可判**不得被追认成 PASS**。
+
+**四、落盘与自测**：`verify_evidence_selftest` **53/53**（新增：汇总口径 5 例、失败记录 6 例、`blocked[]` 误杀 1 例）；`verify:evidence` 汇总：扫描 8 份、冻结 18 份、env 兼容 8 份、失败记录 1 份、失败 0 项。**本提交只含门禁与文档**：`diag.ts` 的 catalog 重写与顶层聚合由 dev A 在 W-90 批次提交（其在途文件 `s070503Diag.ts` / `ipc.ts` / `CatalogPage.tsx` 未被本提交触碰），避免同一工作树两方混写。
+
+
 
 
 

@@ -1885,3 +1885,22 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
    - **`s2` schema 分支**：TL 查 dump 含 10 个 schema 键、后处理 `checks>0` 且 `suite=s2`；仍 `exit 2` 或 `checks=0` → 未完成。
    - **`s070503` 超时**：240s 内产出 dump，或明确 `blocked` 原因；仍超时且无 dump → 未完成，不得以「大概跑完了」记 PASS。
    - **通用**：以上任一项不过，`W-89` 退回，BA 停跑，不签任何卡。
+
+### W-90（dev A 修 / BA 唯一执行 / TL 验收）失败产物落盘、`catalog` 采集契约与顶层汇总
+
+> 依据 §4.7.69、制度第 30/31 条。`4190cf5` 的 `s2-evidence` 已判不可签并移出证据根（`catalog` 子块红），`S-02.06-01` 维持「不可判」。
+
+1. **`s070503` 崩溃**：`Attempted to assign to readonly property.` 只跑到 `OV-00`，`env`/`verification` 为 `null`。定位到具体赋值点并说明根因；**不得用 `try/catch` 吞掉后继续跑**，也不得把该套件改成「跳过即通过」。
+2. **失败 dump 落盘（第 31 条，dev A 实现）**：`evidence-run.sh` / `diag-evidence.sh` 的失败分支必须在退出前写出
+   `docs/qa/raw/<suite>-evidence-<commit12>-<stamp>.json` 与同名 `-meta.json`，且：
+   - dump 带 `suite`、`finishedAt`、`error`（非空字符串）或 `blocked: true`，以及 `blocked[].reason`；
+   - meta 带 `commit`（构建期注入值，40 位）与 `dirty=false`；
+   - **不得写进 `docs/qa/evidence/`**（门禁会判红：失败记录不得充作可签证据）。
+3. **`catalog` 采集契约**：按真实 P3 页面取值 —— 根 `[data-catalog-root='p3']`、beta `[data-catalog-status='beta']`、分类全部展开后再计数、选择按钮 `button.catalog-row__select`、以 `[data-catalog-detail][data-catalog-active]` 确认选中切换。禁止再按旧 P4 契约或「点行容器即选中」判定。
+4. **顶层汇总（第 30 条）**：`s2` payload 顶层 `ok = checksOk && verificationOk`，并单列 `checksOk` / `verificationOk` / `catalogOk`；`verification` 四块（`renderLayer`/`b2Render`/`b3Render`/`catalog`）必须齐备且各有布尔 `ok`。新增任何子块必须同时进 `verificationOk`。
+5. **禁区**：不改 `verify_evidence.mjs` 的判据与白名单；不改 `signable`/`focusOk` 口径；不提交 `/tmp` 之外的临时产物。
+6. **验收（TL 验产物，BA 执行主路径）**：
+   - BA 完整重跑 `s2`：dump 必须 `verificationOk=true`、`catalog.ok=true`、`verification.catalog.itemCount` 等于 manifest 已实现数；顶层 `ok` 与子块派生一致；`verify:evidence` failed=0。不满足 → `S-02.06-01` 继续不可判，不得签。
+   - BA 重跑 `s070503`：若仍在 240s 内无 dump，`docs/qa/raw/` 必须出现合规失败记录（`失败记录 N 份` 递增）且门禁 failed=0；若跑通，按正常证据入库。
+   - TL 反例：把一份合规 dump 的 `verification.catalog.ok` 改成 `false` 而顶层 `ok` 保持 `true` → `verify:evidence` 必须 failed；把失败记录复制进 `docs/qa/evidence/` → 必须 failed。
+   - 任一项不过，`W-90` 退回，`S-02.06-01` / `S-07.05-03` 均不签。
