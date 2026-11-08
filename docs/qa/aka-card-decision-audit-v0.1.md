@@ -2564,6 +2564,8 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
   - `verify:evidence` 对 `s2` dump 校验 `ok === assertionsOk`、`signable === (assertionsOk && focusOk)`、`focusOk` 与顶层 `windowFocused`/`appActive` 同源；派生不一致即红；`focusOk=false` 只输出「不可判定」WARN，不判证据失败。
 - 结论：兼容两处说法——**未聚焦确实不得签（`signable=false`），但不得记成产品失败**；把「不得签」放在 `signable` 上，`ok` 只回答产品问题，两者不再互相冒充。
 
+**四、落盘与 CI**：`64a5005`（dev A 六项修复，此前仅本地）+ `27c3cc2`（本条收紧与裁定）已推送；CI run `42449042673` **success**（macOS build/test/golden 双 job 绿，`head_sha=27c3cc2`）。`verify:evidence` 汇总：扫描 8 份、冻结 18 份、env 兼容 8 份、未聚焦 0 份、失败 0 项；门禁自测 36/36。工作区 `dirty=false`，BA 可开窗跑 `s2` + `s070503`（dump commit 只需等于或祖先于最终 `sign_commit`，第 25 条）。
+
 
 
 ---
