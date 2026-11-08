@@ -1843,7 +1843,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 > 依据 §4.7.60 与制度第 23 条。目标：本机不再靠 `open /tmp/*.command`，任何人照抄一条命令即可复现。
 
 1. **入口**：`app/scripts/evidence-run.sh <suite>`；先跑 `--check`（必须输出 `EVIDENCE_OK`：branch=main、dirty=false、真 Node、electron=none）。
-2. **重跑清单与期限**（全部在 `main` 干净 tip 上，dev2 dump 不作依据）：
+2. **重跑清单与期限**（全部在 `main` 干净树 `dirty=false` 上；dump 的 `commit` 需等于或祖先于最终 `sign_commit`，main 后续前移本身不触发重跑——第 25 条）：
    - `S-07.01-01` 13 项、`S-07.04-01` 7 项、`S-07.05-01` 9 项 → 2026-11-09 18:00，TL 签；
    - `S-02.06-01` s2（补齐 `runtime`/`build` 五项）→ 2026-11-09 18:00，签字对象 `2aa8ece` 或包含它的后续 tip；
    - `S-01.01-01` e01 19 项 → 2026-11-10 18:00，TL 签；
@@ -1853,7 +1853,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 4. **脚本硬化**：`verify:evidence` 增加对 meta `runtime`/`build`/`dump` 三项非空的硬校验（防「脚本只有外壳」），W-88 内完成。
 5. **P04 文案**：关于页 `44-105` → `45-105`（`M=45` 派生），dev B 本轮改，不涉及签字。
 6. **套件入口（已完成 `c365665`）**：`diag-evidence.sh` 补 `s2`（`S-02.06-01`）与 `s070503`（`S-07.05-03`）两个 case；`evidence-run.sh` 增加未知套件硬拒绝（`grep -qE "^  <suite>\)"` 不匹配即 `exit 2`），`--check` 同样走这条。**用法固定为 `evidence-run.sh <suite> [--check]`：套件名第一位，`--check` 必须是第二个参数**；`--check` 只验分支/干净度/真 Node/套件存在，不构建、不取证。误把 `--check` 当套件名会先白烧一次构建（BA 已踩），前置校验就是防这个。
-7. **推送顺序（2026-11-08 定）**：TL 先跑 `verify_sign_impact --base origin/main --head HEAD`（本批 PASS）→ TL 代推 `b5b8e35`/`c365665`/`33d1ec5`（不改写）→ CI 绿 → BA 在同一 tip 跑 `s2` + `s070503`。预演红则退回 dev A 本地修，TL 不代改。
+7. **推送顺序（2026-11-08 定）**：TL 先跑 `verify_sign_impact --base origin/main --head HEAD`（本批 PASS）→ TL 代推 `b5b8e35`/`c365665`/`33d1ec5`（不改写）→ CI 绿 → BA 在干净树跑 `s2` + `s070503`，dump 绑 `7af41c8`。之后 `main` 前移**不要求重跑**；唯一重跑判据是 `git diff --name-only <dump>..<sign>` 与取证文件集求交非空。取证窗口只要求「无并发写同一工作区」，不要求主干冻结。预演红则退回 dev A 本地修，TL 不代改。
 8. **`S-07.05-03` 证据两行**：`AC-07.05-04=PASS`、`补1=BLOCKED`（blocker `S-07.05-01`）；不得合并成一行，不得预填 PASS。
-9. **首次端到端记录（BA 填，制度第 24 条）**：日期 / tip / suite / dump 路径 / dump sha256 / meta 五项是否齐 / 结论。未填此记录前，链路只算「候选」。
-10. **验收**：连续两次 `--check` 均过；一次完整跑产出 `docs/qa/evidence/raw/<name>-<commit12>-<label>.json`；meta 五项齐全。
+9. **首次端到端记录（BA 填，制度第 24 条）**：日期 / tip / suite / dump 路径 / dump sha256 / meta 五项是否齐 / dump `commit` 与最终 `sign_commit` 的 relation / 取证文件集在 `commit..sign` 间是否有变动 / 结论。未填此记录前，链路只算「候选」。
+10. **验收**：连续两次 `--check` 均过；一次完整跑产出 `docs/qa/evidence/raw/<name>-<commit12>-<label>.json`；meta 五项齐全；meta 的 `commit` 对 `sign_commit` 判出 `relation=equal|ancestor`，且取证文件集在 `commit..sign_commit` 间无变动（有变动即重跑）。

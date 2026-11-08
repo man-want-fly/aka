@@ -554,12 +554,20 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
 22. **交付计数双口径（2026-11-08 起，B 案）**：`已交付` 保留「实现成立」口径，但台账与任何对外宣读必须**同时**给出「已交付 N 张，其中 M 张无有效签字；可放行 N−M 张」，**禁止单读已交付数或单读占比**。无有效签字的已交付只计「实现进度」，**不计可放行**，不得作为放行、结项或对外承诺的依据；每张无签卡必须在跟踪表登记「分类 / 缺什么 / 责任人 / 期限」，逾期未签则降 `条件交付` 并同步人日。当前基线：已交付 **21**、无签 **6**、可放行 **15**（详见 §4.7.59）。
 23. **运行层 GUI 取证单一链路（2026-11-08 起）**：
     - `a` **谁跑**：**BA 为唯一取证执行人**；dev 只交「开发自测参考」，不产出可签证据；TL 只复核与签字。BA 缺席时由 TL 指定交叉执行（dev A 跑 dev B 的卡、dev B 跑 dev A 的卡），meta 记 `runner`；**任何 dev 不得给自己的卡取证**。
-    - `b` **在哪跑**：只在 `main` 主树、干净工作区（`git status --porcelain` 为空、`dirty=false`），dump 的 `commit` 必须是被签 commit。**`dev2`/worktree 的 dump 一律只作参考、不计证据**，合并后按第 19 条在 main tip 重跑；未合并的卡不可签。
+    - `b` **在哪跑**：只在 `main` 主树、干净工作区（`git status --porcelain` 为空、`dirty=false`）；**dump 的 `commit` 必须等于 `sign_commit`，或是它的祖先**（不要求等于取证当时的 `main` tip）。**`dev2`/worktree 的 dump 一律只作参考、不计证据**；合并后按第 25 条判是否重跑；未合并的卡不可签。
     - `c` **怎么留痕**：入口固定为 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本必须：自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测到 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项（`runtime`/`build`/`command`/`dump`/`commit`+`dirty=false`）并落固定路径 `docs/qa/evidence/` 与 `raw/<name>-<commit12>-<label>.json`，缺一 `exit 2`。**禁止 `open /tmp/*.command` 之类人工步骤**；meta 必须写 `reproduce` 字段，下一个人照抄即可复现。
 24. **工具/链路的端到端门槛与归属证据（2026-11-08 起）**：
     - `a` 脚本、套件入口、取证链路等**工具类改动，必须至少端到端跑通一次并留产物**才算通过；`--check`、`bash -n`、语法检查只算前置，**不算主路径通过**。
     - `b` 套件名必须能在 `diag-evidence.sh` 找到对应 `case` 分支；`evidence-run.sh` 对未知套件直接 `exit 2`，不得进入构建/取证。
     - `c` **归属以证据为准**：文件/改动归属必须落到提交、hunk 卡号或作者记录；禁止按口述、印象或「应该是谁」推测。口述与证据冲突时以证据为准，并由记录方更正。
+25. **取证 commit 的祖先关系与重跑判据（2026-11-08 起）**：
+    - `a` dump 的 `commit` 必须**等于** `sign_commit`，或是它的**祖先**；**不要求等于取证当时的 `main` tip**。台账按第 16 条记 `relation=equal|ancestor`，`ancestor_check` 为真即可。
+    - `b` **唯一的重跑判据**：被取证的那组文件在 dump commit 与最终 `sign_commit` 之间发生改动。判定：取 `git diff --name-only <dump>..<sign>` 与取证文件集求交，**非空才重跑**；`main` 前移本身不是重跑理由。
+    - `c` 取证窗口的约束是**不得有并发写同一工作区**（保证 `dirty=false` 快照），**不是「主干冻结」**。dev A 在窗口期不在主树提交、dev B 守 `dev2`，属本轮人工协调；制度只要求快照一致性。
+26. **取证前置：先提交，再取证；验证方不得与被验证对象共用可写工作区（2026-11-08 起）**：
+    - `a` **所有文档与脚本改动必须在开工取证前提交并推送**。任何未提交改动都会让 `dirty=true`，直接挡住取证（`evidence-run.sh` 退出 2）。**签字方/制度维护方不得让验证方等待自己的工作区**。已发生三次同类事故（`evidence-run.sh` 未提交挡取证、8 文件归属判错、审计未提交挡取证），一律按本条追责提交方，不追责 BA。
+    - `b` **验证方（BA）在取证期间不得执行写操作**；发现工作区不干净应**直接停手上报**，禁止 `--force`、禁止替签字方提交、禁止在脏树上取证。
+    - `c` 取证前固定顺序：提交并推送 → CI 绿 → `--check` 输出 `EVIDENCE_OK` → 才开始构建取证。缺任一步不得开跑。
 
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
@@ -2282,7 +2290,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **三、合并后重新成立的事实**
 - 基线：`verify:constants`（模块 19 + 反例 18、漂移 0）、`verify:index-pd`（74 行 / 207.9 对 207.9）、`verify:evidence`（失败 0）、`verify:r03`、`verify:format`、`verify:docs`（failed=0/skipped=0、74 卡 / 10 页）、`verify:gate-log`（56 行）全绿；共用基线文件未被 dev2 改动，数字保持。
 - CI：合并 tip `d996c6f` 的 run **`42433408456` 为红**（详见七）；后续收口提交 `2accf94` 的 run `42434355191` **success**（macOS build/test/golden + 签字台账两 job 均绿），**新 tip 已转绿**。签名一律以对应 run 的 `head_sha` 为准（第 16 条）。
-- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 19 条，证据 commit 必须是被签 tip 本身，故三卡置 `待签`、`gate_c=FAIL`，由 BA 在合并后的干净 tip 上重跑（13/7/9 项）后 TL 签（执行人按 §4.7.60），**不用旧 dump 凑签**。
+- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 25 条，重跑判据不是「main 前移」，而是**取证文件集在 dump..sign 之间是否变动**——`git diff --name-only <dump>..<sign>` 与取证文件集求交非空，这三张确实命中（`DatasourcePage.tsx`/`app.css`），故必须重跑，三卡置 `待签`、`gate_c=FAIL`，由 BA 在干净树重跑（13/7/9 项）后 TL 签（执行人按 §4.7.60），**不用旧 dump 凑签**。
 
 **四、`S-08.01-02` 的异常（需 BA 判）**
 台账记为 `Blocked`（理由：标的侧 AC 依赖 P7 搜索浮层），但 `dev2` 已实现指标侧空态（`CatalogPage.tsx`，`a60a504`），且 `IndicatorDrawer.tsx` 注释写「搜索无结果空态并入 S-08.01-02」。代码与台账口径冲突：要么拆卡（指标侧可交付、标的侧继续 Blocked），要么整卡继续等 P7。已置池内 `待BA复核`，**不签、不结项**。
@@ -2350,7 +2358,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **背景**：CI 用真 Node 所以永远绿；本机 PATH 的 `node` 是 Electron 39.2.7 垫片，`rollup.darwin-x64.node` 无签名导致 `vite build` 失败。结果是运行层证据靠人肉 `open /tmp/aka-batch-evidence.command`：`s20501`、`s207` 手动跑，dev B 的 P01–P04 五套 diag 一条未出、`telemetry` 停在 09:41。这是结构问题。
 
 1. **谁跑**：**BA 为唯一取证执行人**；dev 只交「开发自测参考」，不产出可签证据；TL 只复核与签字。BA 缺席时由 TL 指定交叉执行（dev A 跑 dev B 的卡、dev B 跑 dev A 的卡），meta 记 `runner`；**任何 dev 不得给自己的卡取证**。
-2. **在哪跑**：只在 `main` 主树、干净工作区（`dirty=false`），dump 的 `commit` 必须是被签 commit。**`dev2`/worktree 的 dump 一律只作参考、不计证据**；合并后按第 19 条在 main tip 重跑。未合并的卡不可签。
+2. **在哪跑**：只在 `main` 主树、干净工作区（`dirty=false`），dump 的 `commit` 必须**等于 `sign_commit`，或是它的祖先**（不要求等于取证当时的 `main` tip）。**`dev2`/worktree 的 dump 一律只作参考、不计证据**；合并后按第 25 条判是否重跑（仅当取证文件集在 dump..sign 间变动才重跑）。未合并的卡不可签。
 3. **怎么留痕**：入口固定 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项并落固定路径 `docs/qa/evidence/<name>.json|-meta.json` 与 `raw/<name>-<commit12>-<label>.json|-meta.json`，缺一 `exit 2`；meta 写 `reproduce`。**禁止 `open /tmp/*.command` 之类人工步骤。**
 4. **旧证据处置**：`s20501`、`s207` 已签且卡面未变 → 按第 21 条维持原签，不因合并本身强制重跑；3 张待签与 `S-02.08-01` 必须重跑；`dev2` dump 一律不作签字依据。
 5. **环境固化**：meta 记录 `EVIDENCE_NODE` 绝对路径与 `node -v`；交接时先跑 `--check`（验分支、干净度、真 Node），不构建。
@@ -2370,8 +2378,28 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **三、推送与执行顺序（定）**
 1. TL 先做 sign-impact 预演：`verify_sign_impact --base origin/main --head HEAD`。本批结果 **PASS（未击中已签卡）**；`verify:constants`（含分区反例）、`verify:gate-log`、`verify:sign`、`verify:docs`、`verify:evidence` 本地全绿。
 2. 预演绿 → **TL 代推** `b5b8e35`/`c365665`/`33d1ec5`（不改写、不 rebase、不 squash）；预演红 → 退回 dev A 在本地补 `Sign-Invalidates` 或修正后重推，TL 不代改。
-3. 推送后 CI 在该 tip 绿 → BA 按第 23 条在**同一干净 tip** 跑 `s2` 与 `s070503`；`dev2`/开发期 dump 不作证据。
+3. 推送后 CI 在该 tip 绿 → BA 按第 23 条在**干净树**跑 `s2` 与 `s070503`，dump 绑 `7af41c8`；之后 `main` 前移**不要求重跑**，只有取证文件集在 `7af41c8..sign` 间被改动才重跑（第 25 条）；`dev2`/开发期 dump 不作证据。取证窗口只要求「无并发写同一工作区」，不要求主干冻结。
 4. 跑完 TL 才签相关卡。`S-07.05-03` 证据**分两行登记**：`AC-07.05-04=PASS`、`补1=BLOCKED`（blocker `S-07.05-01`），**不得合并成一行，也不得预填 PASS**（PASS 以 BA 的 s070503 dump 为准）。
+
+#### 4.7.62 更正：取证 commit 的祖先规则与重跑判据（2026-11-08，制度第 25 条）
+
+**一、我的错误**
+- 我上一条要求「BA 开跑前 `main` 又动，就必须在新 tip 重跑」。这与第 16 条冲突：第 16 条只要求 `signed_sha` 是 `run.headSha` 的祖先，本身就是为「被取消/后续提交的 run」设计的。
+
+**二、改后的口径（第 25 条）**
+1. `dump.commit` 必须**等于** `sign_commit`，或是它的**祖先**；**不要求等于取证当时的 `main` tip**。台账 `relation` 记 `equal` 或 `ancestor`。
+2. **唯一重跑判据**：取证文件集在 `dump.commit..sign_commit` 之间被改动。判定命令：`git diff --name-only <dump>..<sign>` 与取证文件集求交，非空才重跑。`main` 前移本身不是重跑理由。
+3. **取证窗口的约束**是「不得有并发写同一工作区」（保证快照一致、`dirty=false`），**不是「主干冻结」**。把取证写成全局写锁会瘫痪整条主干。
+
+**三、为什么原规则不可行**
+- 活跃仓库任何提交都会让 `main` 前移；若把「main 前移」当重跑条件，取证永远追不上签，等于给主树加全局写锁。
+- 真正要保证的是「dump 绑的代码 = 被签代码」，这与「main 前进」是两件事，不能混。
+
+**四、本轮人工协调（不是制度）**
+- 取证窗口期已口头约定 dev A 不在主树提交、dev B 守 `dev2`，保证 `dirty=false`；这只是本轮配合，制度落点是第 25 条 `c`（无并发写同一工作区）。
+
+**五、连带更正**
+- §4.7.58 三、§4.7.60 第 2 条、§4.7.61 三.3 已按第 25 条改写；`W-88` 第 2/7/9/10 项同步更新。
 
 ---
 
