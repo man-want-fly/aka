@@ -233,7 +233,7 @@ const PATTERNS = [
   { id: "tr-value-wrong", re: /TR\[1\]=1\.2|TR\[2\]=max\(0\.7,0\.2,0\.5\)/g, files: [CARDS], workorder: "W-02", desc: "TR 中间量算错" },
   { id: "row-count-60000", re: /60,000/g, files: [CARDS], workorder: "W-21", desc: "行数应为 62,400" },
   { id: "row-count-240000", re: /240,000/g, files: [CARDS], workorder: "W-21", desc: "行数应为 62,400" },
-  { id: "implemented-84", re: /已实现[^\n]{0,12}84|84\s*个已实现|展示\s*84\s*个已实现/g, files: [CARDS], workorder: "W-13/W-18", desc: "已实现应为 44" },
+  { id: "implemented-84", re: /已实现[^\n]{0,12}84|84\s*个已实现|展示\s*84\s*个已实现/g, files: [CARDS], workorder: "W-13/W-18", desc: "已实现应为 45（normal 43 + beta 2）" },
   { id: "birth-79818", re: /79\s*完整\s*\/\s*18|79\/18/g, files: [CARDS], workorder: "W-07", desc: "完整/部分应为 78/19" },
   { id: "denom-120", re: /security_count\s*=\s*120[^\n]{0,24}含\s*8\s*个指数|分母仍为\s*N（120）/g, files: [CARDS], workorder: "W-08", desc: "广度分母应为 112" },
   { id: "param-2-200", re: /2~200/g, files: [CARDS, PRD], workorder: "W-20", desc: "周期上限应为 500" },

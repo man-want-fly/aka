@@ -106,6 +106,64 @@ export default function App() {
           setLocation({ route: "workbench", code: null });
           return;
         }
+        // S-03.01-04 / S-03.02-01 / S-03.03-02 目录侧取证：直接进目录页。
+        if (target === "s030104" || target === "s030201" || target === "s030302-catalog") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          if (target === "s030104") {
+            window.localStorage.removeItem("aka.last.code");
+          } else {
+            window.localStorage.setItem("aka.last.code", "600519.SH");
+          }
+          if (window.location.hash.startsWith("#/catalog")) return;
+          window.location.hash = "#/catalog";
+          setLocation({ route: "catalog", code: null });
+          return;
+        }
+        // S-03.03-02 工作台侧取证：图例「?」与抽屉来源。
+        if (target === "s030302") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          if (window.location.hash.startsWith("#/workbench")) return;
+          window.location.hash = "#/workbench";
+          setLocation({ route: "workbench", code: null });
+          return;
+        }
+        // S-06.03-01 关于页取证：直接进设置页。
+        if (target === "s060301" || target === "s060302") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          sessionStorage.setItem("aka.s0602.diag.done", "1");
+          if (window.location.hash.startsWith("#/settings")) return;
+          window.location.hash = "#/settings";
+          setLocation({ route: "settings", code: null });
+          return;
+        }
+        // S-08.02-02 计算错误态取证：直接进工作台。
+        if (target === "s080202") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          sessionStorage.setItem("aka.s0602.diag.done", "1");
+          if (window.location.hash.startsWith("#/workbench")) return;
+          window.location.hash = "#/workbench";
+          setLocation({ route: "workbench", code: null });
+          return;
+        }
+        // S-07.01-02 数据源健康检查取证：直接进数据源页。
+        if (target === "s070102") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          sessionStorage.setItem("aka.s0602.diag.done", "1");
+          if (window.location.hash.startsWith("#/datasource")) return;
+          window.location.hash = "#/datasource";
+          setLocation({ route: "datasource", code: null });
+          return;
+        }
         // S-03.01-01 指标目录取证：直接进目录页，并占住 S2/抽屉的 once 位。
         if (target === "catalog") {
           sessionStorage.setItem("aka.s2.diag.once", "1");
@@ -198,13 +256,18 @@ export default function App() {
     if (openTimer.current !== null) window.clearTimeout(openTimer.current);
     openTimer.current = window.setTimeout(() => {
       openTimer.current = null;
+      try {
+        window.localStorage.setItem("aka.last.code", code);
+      } catch {
+        // 最近标的只用于目录页引导，不影响路由
+      }
       window.location.hash = `#/workbench/${encodeURIComponent(code)}`;
       setLocation({ route: "workbench", code });
     }, 50);
   };
 
   if (location.route === "catalog") {
-    return <CatalogPage onNavigate={navigate} />;
+    return <CatalogPage onNavigate={navigate} onOpenWorkbench={openSecurity} />;
   }
 
   if (location.route === "settings") {

@@ -17,7 +17,8 @@ use indicator_core::{
 
 use crate::dto::{
     BarDto, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
-    DatasetVersionDto, DatasourceCapabilityDto, DatasourceOpsDto, DatasourceStatusDto,
+    DatasetVersionDto, DataHealthDto, DataHealthItemDto, DatasourceCapabilityDto, DatasourceOpsDto,
+    DatasourceStatusDto,
     GetBarsRequest, IndicatorFavoriteDto, IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto,
     ListSecuritiesRequest, MarketRowDto,
     MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto,
@@ -37,6 +38,12 @@ use crate::telemetry::{
 pub const EVENT_QUALITY_SCAN: &str = "quality.scan";
 /// S-07.01-01：数据源探测事件（各能力状态）。
 pub const EVENT_DATASOURCE_PROBE: &str = "datasource.probe";
+/// S-07.01-02：健康检查事件（通过数 / 总耗时）。
+pub const EVENT_HEALTH_CHECK: &str = "health.check";
+/// S-08.02-02：计算超时（trace id / 指标 / 参数哈希）。
+pub const EVENT_CALC_TIMEOUT: &str = "calc.timeout";
+/// S-08.02-02：引擎异常（trace id / 指标）。
+pub const EVENT_CALC_PANIC: &str = "calc.panic";
 
 /// 自选上限（跨分组按标的去重计数）
 pub const WATCHLIST_LIMIT: i64 = 500;
@@ -124,11 +131,18 @@ fn push_flag(flags: &mut Vec<String>, flag: &str) {
     }
 }
 
-/// 首装默认收藏：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / CCI。
-/// W-51：默认 8 项必须全部 `status=normal`。注册表内量能类 D01~D15 全为 `planned`，
-/// 因此本批不含量能项；量能项须先由单独立项把指标升为 `normal`，不能靠默认集硬塞。
+fn yes_no(flag: bool) -> &'static str {
+    if flag {
+        "✓"
+    } else {
+        "—"
+    }
+}
+
+/// 首装默认收藏：SMA / EMA / BOLL / MACD / RSI / KDJ / ATR / OBV。
+/// W-51：默认 8 项必须全部 `status=normal`；D01（OBV）已实现且为 normal。
 pub const DEFAULT_INDICATOR_FAVORITES: [&str; 8] =
-    ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "M05"];
+    ["T01", "T02", "T09", "M06", "M01", "M02", "V01", "D01"];
 
 fn favorite_status(status: &str) -> &'static str {
     match status {
@@ -1071,7 +1085,234 @@ impl AppCore {
         status
     }
 
-    /// 读取缓存报告；`stale` 由当前 dataset_id 现算，不依赖缓存内的旧标志。
+    /// S-07.01-02：P9 健康检查 6 项（只读、0 网络）。
+    /// ①失败 → ②~⑥ SKIP；②失败 → ③~⑥ SKIP；④必须由 provider 独立复算，不得回读 manifest 缓存。
+    pub async fn data_health_check(&self, manifest_corrupt: bool) -> DataHealthDto {
+        let total_started = Instant::now();
+        let checked_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .unwrap_or(0);
+        let manifest = self.dataset_manifest();
+
+        let skip = |key: &str, label: &str| DataHealthItemDto {
+            key: key.to_string(),
+            label_zh: label.to_string(),
+            status: "SKIP",
+            duration_ms: 0,
+            error_code: None,
+            detail: Some("前置检查未通过，已跳过".to_string()),
+            advice: None,
+        };
+
+        // 统一出口：落 `health.check`（只记汇总，不记 dataset 明细）。
+        let finish = |report: DataHealthDto| {
+            self.telemetry.emit(
+                EVENT_HEALTH_CHECK,
+                vec![
+                    ("passed", serde_json::json!(report.passed)),
+                    ("total", serde_json::json!(report.total)),
+                    ("durationMs", serde_json::json!(report.duration_ms)),
+                ],
+            );
+            report
+        };
+
+        let mut items: Vec<DataHealthItemDto> = Vec::with_capacity(6);
+        let step = Instant::now();
+        let present = manifest.is_some();
+        items.push(DataHealthItemDto {
+            key: "dataset_present".to_string(),
+            label_zh: "数据集存在".to_string(),
+            status: if present { "PASS" } else { "FAIL" },
+            duration_ms: step.elapsed().as_millis() as u64,
+            error_code: if present { None } else { Some("E_DATASET_MISSING") },
+            detail: Some(if present {
+                "模拟数据源已装配".to_string()
+            } else {
+                "未装配任何数据集".to_string()
+            }),
+            advice: if present { None } else { Some("去设置页重建样本包") },
+        });
+
+        if !present {
+            for (key, label) in [
+                ("manifest_parse", "manifest 可解析"),
+                ("data_readable", "数据可读"),
+                ("sha256_match", "sha256 匹配"),
+                ("sample_rows", "行数抽检"),
+                ("required_tables", "必需表齐全"),
+            ] {
+                items.push(skip(key, label));
+            }
+            return finish(DataHealthDto {
+                items,
+                passed: 0,
+                total: 6,
+                duration_ms: total_started.elapsed().as_millis() as u64,
+                checked_at,
+                dataset_id: None,
+            });
+        }
+        let manifest = manifest.expect("present 分支已判定 manifest 存在");
+
+        let step = Instant::now();
+        let parse_ok = !manifest_corrupt
+            && !manifest.dataset_id.trim().is_empty()
+            && manifest.row_count > 0
+            && Date::parse(&manifest.coverage_start).is_some()
+            && Date::parse(&manifest.coverage_end).is_some()
+            && manifest.sha256.len() == 64
+            && manifest.sha256.chars().all(|ch| ch.is_ascii_hexdigit());
+        items.push(DataHealthItemDto {
+            key: "manifest_parse".to_string(),
+            label_zh: "manifest 可解析".to_string(),
+            status: if parse_ok { "PASS" } else { "FAIL" },
+            duration_ms: step.elapsed().as_millis() as u64,
+            error_code: if parse_ok { None } else { Some("E_MANIFEST_CORRUPT") },
+            detail: Some(if manifest_corrupt {
+                "manifest 不可解析（故障注入）".to_string()
+            } else if parse_ok {
+                format!(
+                    "{} · {} 行 · {} ~ {}",
+                    manifest.dataset_id, manifest.row_count, manifest.coverage_start, manifest.coverage_end
+                )
+            } else {
+                "dataset_id / 行数 / 区间 / sha256 至少一项不合法".to_string()
+            }),
+            advice: if parse_ok { None } else { Some("去设置页重建样本包") },
+        });
+
+        if !parse_ok {
+            for (key, label) in [
+                ("data_readable", "数据可读"),
+                ("sha256_match", "sha256 匹配"),
+                ("sample_rows", "行数抽检"),
+                ("required_tables", "必需表齐全"),
+            ] {
+                items.push(skip(key, label));
+            }
+            return finish(DataHealthDto {
+                items,
+                passed: 1,
+                total: 6,
+                duration_ms: total_started.elapsed().as_millis() as u64,
+                checked_at,
+                dataset_id: Some(manifest.dataset_id.clone()),
+            });
+        }
+
+        // ③ 数据可读：真的取第一只标的的日线，不看能力自报。
+        let step = Instant::now();
+        let first = self.securities.first().map(|sec| sec.code.clone());
+        let batch = match first.as_deref() {
+            Some(code) => self.daily_batch(code, Adjust::None).await.ok(),
+            None => None,
+        };
+        let readable = batch.as_ref().map(|batch| !batch.rows.is_empty()).unwrap_or(false);
+        items.push(DataHealthItemDto {
+            key: "data_readable".to_string(),
+            label_zh: "数据可读".to_string(),
+            status: if readable { "PASS" } else { "FAIL" },
+            duration_ms: step.elapsed().as_millis() as u64,
+            error_code: if readable { None } else { Some("E_DATA_UNREADABLE") },
+            detail: Some(match (first.as_deref(), &batch) {
+                (Some(code), Some(batch)) => format!("{} · {} 行", code, batch.rows.len()),
+                (Some(code), None) => format!("{code} 日线读取失败"),
+                (None, _) => "标的主表为空".to_string(),
+            }),
+            advice: if readable { None } else { Some("去设置页重建样本包") },
+        });
+
+        // ④ sha256 匹配：provider 独立重算，禁止回读缓存。
+        let step = Instant::now();
+        match self.provider.dataset_digest() {
+            Some((sha, rows)) => {
+                let matched = sha == manifest.sha256 && rows == manifest.row_count;
+                items.push(DataHealthItemDto {
+                    key: "sha256_match".to_string(),
+                    label_zh: "sha256 匹配".to_string(),
+                    status: if matched { "PASS" } else { "FAIL" },
+                    duration_ms: step.elapsed().as_millis() as u64,
+                    error_code: if matched { None } else { Some("E_SHA_MISMATCH") },
+                    detail: Some(format!(
+                        "复算 {}/{} 行，manifest {}/{} 行",
+                        &sha[..12.min(sha.len())],
+                        rows,
+                        &manifest.sha256[..12.min(manifest.sha256.len())],
+                        manifest.row_count
+                    )),
+                    advice: if matched { None } else { Some("数据可能已损坏，建议重建样本包") },
+                });
+            }
+            None => items.push(skip("sha256_match", "sha256 匹配")),
+        }
+
+        // ⑤ 行数抽检：最近 5 个交易日必须存在、按日递增且开高低收合法。
+        let step = Instant::now();
+        let sample_ok = batch
+            .as_ref()
+            .map(|batch| {
+                let rows = &batch.rows;
+                rows.len() >= 5
+                    && rows.windows(2).all(|pair| pair[0].date < pair[1].date)
+                    && rows.iter().rev().take(5).all(|row| {
+                        row.high >= row.low
+                            && row.high >= row.open
+                            && row.high >= row.close
+                            && row.low <= row.open
+                            && row.low <= row.close
+                            && row.volume >= 0.0
+                    })
+            })
+            .unwrap_or(false);
+        items.push(DataHealthItemDto {
+            key: "sample_rows".to_string(),
+            label_zh: "行数抽检".to_string(),
+            status: if sample_ok { "PASS" } else { "FAIL" },
+            duration_ms: step.elapsed().as_millis() as u64,
+            error_code: if sample_ok { None } else { Some("E_SAMPLE_ROWS") },
+            detail: Some(match &batch {
+                Some(batch) if batch.rows.len() >= 5 => {
+                    let tail = &batch.rows[batch.rows.len() - 5..];
+                    format!("最近 5 个交易日 {} ~ {}", tail[0].date.iso(), tail[4].date.iso())
+                }
+                Some(batch) => format!("仅有 {} 行，不足 5 日", batch.rows.len()),
+                None => "无日线可抽检".to_string(),
+            }),
+            advice: if sample_ok { None } else { Some("去设置页重建样本包") },
+        });
+
+        // ⑥ 必需表齐全：主数据 / 日线 / 复权因子 / 交易日历四项能力。
+        let step = Instant::now();
+        let caps = self.provider.capabilities();
+        let tables_ok = caps.securities && caps.daily_bars && caps.adjust_factors && caps.trading_calendar;
+        items.push(DataHealthItemDto {
+            key: "required_tables".to_string(),
+            label_zh: "必需表齐全".to_string(),
+            status: if tables_ok { "PASS" } else { "FAIL" },
+            duration_ms: step.elapsed().as_millis() as u64,
+            error_code: if tables_ok { None } else { Some("E_REQUIRED_TABLE_MISSING") },
+            detail: Some(format!(
+                "主数据 {} / 日线 {} / 复权 {} / 日历 {}",
+                yes_no(caps.securities),
+                yes_no(caps.daily_bars),
+                yes_no(caps.adjust_factors),
+                yes_no(caps.trading_calendar)
+            )),
+            advice: if tables_ok { None } else { Some("数据源能力缺失，检查 provider 配置") },
+        });
+
+        let passed = items.iter().filter(|item| item.status == "PASS").count() as u32;
+        finish(DataHealthDto {
+            items,
+            passed,
+            total: 6,
+            duration_ms: total_started.elapsed().as_millis() as u64,
+            checked_at,
+            dataset_id: Some(manifest.dataset_id.clone()),
+        })
+    }
     pub fn quality_report(&self) -> Option<QualityReportDto> {
         let current = self.current_dataset_id();
         let mut guard = self.quality_report.lock().ok()?;
@@ -2274,6 +2515,50 @@ mod tests {
             .find(|cap| cap.key == "trading_calendar")
             .unwrap();
         assert!(!calendar.available, "日历查询为空时必须判不可用");
+    }
+
+    #[tokio::test]
+    async fn health_check_all_six_pass_on_mock() {
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core.data_health_check(false).await;
+
+        assert_eq!(report.total, 6);
+        assert_eq!(report.passed, 6);
+        let keys: Vec<&str> = report.items.iter().map(|item| item.key.as_str()).collect();
+        assert_eq!(
+            keys,
+            vec![
+                "dataset_present",
+                "manifest_parse",
+                "data_readable",
+                "sha256_match",
+                "sample_rows",
+                "required_tables",
+            ]
+        );
+        assert!(report.items.iter().all(|item| item.status == "PASS"));
+        assert!(report.items.iter().all(|item| item.error_code.is_none()));
+        assert!(report.checked_at > 0);
+        assert!(report.dataset_id.is_some());
+
+        let events = core.telemetry().summary(10);
+        assert!(
+            events.recent.iter().any(|event| event.name == EVENT_HEALTH_CHECK),
+            "健康检查必须落 health.check 事件"
+        );
+    }
+
+    /// AC-07.01-02（补3）：manifest 损坏 → ②FAIL、③~⑥SKIP、汇总 1/6。
+    #[tokio::test]
+    async fn health_check_corrupt_manifest_fails_at_step_two() {
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core.data_health_check(true).await;
+
+        assert_eq!(report.items[0].status, "PASS", "样本包仍在，①应通过");
+        assert_eq!(report.items[1].status, "FAIL");
+        assert_eq!(report.items[1].error_code, Some("E_MANIFEST_CORRUPT"));
+        assert!(report.items[2..].iter().all(|item| item.status == "SKIP"));
+        assert_eq!(report.passed, 1);
     }
 
     #[tokio::test]

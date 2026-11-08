@@ -2,6 +2,10 @@ import { execSync } from "node:child_process";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+// S-06.03-01：关于页版本/构建号；缺失时回落 dev。
+const appVersion = process.env.npm_package_version ?? "0.0.0";
+const buildNo = process.env.AKA_BUILD_NO ?? "dev";
+
 // R-EV-02：commit/dirty 必须构建期注入（typings 见 src/vite-env.d.ts）。
 // 禁止在 diag.ts 里手写；define 缺失时降级为空串/true，让 verify:evidence 失败而不是自证通过。
 const git = (command: string): string => {
@@ -28,6 +32,8 @@ const BUILD_AT = new Date().toISOString();
 export default defineConfig({
   plugins: [react()],
   define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+    __BUILD_NO__: JSON.stringify(buildNo),
     __AKA_BUILD_COMMIT__: JSON.stringify(BUILD_COMMIT),
     __AKA_BUILD_DIRTY__: JSON.stringify(BUILD_DIRTY),
     __AKA_BUILD_AT__: JSON.stringify(BUILD_AT),

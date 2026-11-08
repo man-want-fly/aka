@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "../../app/AppShell";
 import { formatRowCount } from "../../features/workbench/datasetOverview";
+import { runS070102Diagnostics } from "../../features/qa/batchDiag";
 import { formatDateTime } from "../../lib/datetime";
 import { formatFixed } from "../../lib/format";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
-import type { DatasourceCapabilityDto, DatasourceStatusDto } from "../../lib/types";
+import type {
+  DataHealthDto,
+  DataHealthStatus,
+  DatasourceCapabilityDto,
+  DatasourceStatusDto,
+} from "../../lib/types";
 import { BackfillSection } from "./BackfillSection";
 import { QualitySection } from "./QualitySection";
 
@@ -29,6 +35,46 @@ const STATE_TONE: Record<DatasourceStatusDto["state"], "ok" | "warn" | "bad"> = 
 };
 
 const MISSING = "—";
+
+/** S-07.01-02：tushare 卡 4 项能力（口径固定 0/4，不随运行时变化）。 */
+const TUSHARE_CAPS = [
+  { key: "dailyBars", labelZh: "日线" },
+  { key: "adjustFactors", labelZh: "复权" },
+  { key: "securities", labelZh: "主数据" },
+  { key: "tradingCalendar", labelZh: "交易日历" },
+] as const;
+
+/** S-07.01-02：4 个操作按钮保留但禁用（隐藏会让用户以为产品没有这个能力）。 */
+const TUSHARE_ACTIONS = [
+  { key: "connect", labelZh: "连接" },
+  { key: "sync", labelZh: "同步" },
+  { key: "verify", labelZh: "校验" },
+  { key: "switch", labelZh: "切换" },
+] as const;
+
+const TUSHARE_DISABLED_REASON = "本期仅支持模拟数据（Mock）";
+
+const HEALTH_TEXT: Record<DataHealthStatus, string> = {
+  PASS: "通过",
+  FAIL: "失败",
+  SKIP: "跳过",
+};
+
+const HEALTH_TONE: Record<DataHealthStatus, "ok" | "warn" | "bad"> = {
+  PASS: "ok",
+  FAIL: "bad",
+  SKIP: "warn",
+};
+
+/** epoch 毫秒 → 本地时区 `YYYY-MM-DD HH:mm:ss`。 */
+function formatCheckTime(epochMs: number): string {
+  if (!Number.isFinite(epochMs) || epochMs <= 0) return MISSING;
+  const date = new Date(epochMs);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
+    date.getHours(),
+  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
 
 function capTone(cap: DatasourceCapabilityDto): "ok" | "warn" | "bad" {
   if (cap.available) return "ok";
@@ -68,6 +114,11 @@ export function DatasourcePage({ onNavigate }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [shaCopied, setShaCopied] = useState(false);
+  const [health, setHealth] = useState<DataHealthDto | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [healthError, setHealthError] = useState<string | null>(null);
+  const [rebuilding, setRebuilding] = useState(false);
+  const checkingRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!isTauriRuntime()) {
@@ -91,6 +142,27 @@ export function DatasourcePage({ onNavigate }: Props) {
     void load();
   }, [load]);
 
+  // S-07.01-02 取证：AKA_DIAG_TARGET=s070102 时在 P9 自跑一次。
+  useEffect(() => {
+    if (!isTauriRuntime() || loading) return;
+    if (sessionStorage.getItem("aka.s070102.diag.done") === "1") return;
+    let alive = true;
+    void (async () => {
+      const target = await ipc.diagTarget().catch(() => "");
+      if (target !== "s070102" || !alive) return;
+      if (!(await ipc.diagEnabled().catch(() => false))) return;
+      sessionStorage.setItem("aka.s070102.diag.done", "1");
+      try {
+        await runS070102Diagnostics();
+      } catch (err) {
+        console.error("[s070102.diag]", describeError(err).message);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [loading]);
+
   const state = status?.state ?? (error ? "probe_failed" : null);
   const version = status?.version ?? null;
 
@@ -109,6 +181,64 @@ export function DatasourcePage({ onNavigate }: Props) {
       window.setTimeout(() => setShaCopied(false), 1_500);
     }
   };
+
+  /** S-07.01-02：手动触发、不轮询；ref 防重入保证连续点击只执行一次。 */
+  const checkHealth = async () => {
+    if (checkingRef.current) return;
+    if (!isTauriRuntime()) {
+      setHealthError("当前不在桌面运行环境，无法执行健康检查");
+      return;
+    }
+    checkingRef.current = true;
+    setChecking(true);
+    setHealthError(null);
+    try {
+      setHealth(await ipc.dataHealthCheck());
+    } catch (err) {
+      const info = describeError(err);
+      setHealthError(`${info.code} · ${info.message}`);
+    } finally {
+      checkingRef.current = false;
+      setChecking(false);
+    }
+  };
+
+  /** AC-07.01-02（补3）：「重建样本包」→ 重新探测 + 重跑健康检查。 */
+  const rebuildDataset = async () => {
+    if (rebuilding || checkingRef.current) return;
+    setRebuilding(true);
+    setHealthError(null);
+    try {
+      await ipc.datasetRegenerate();
+      await load();
+      setHealth(await ipc.dataHealthCheck());
+    } catch (err) {
+      const info = describeError(err);
+      setHealthError(`${info.code} · ${info.message}`);
+    } finally {
+      setRebuilding(false);
+    }
+  };
+
+  const healthState = !health
+    ? checking
+      ? "检查中"
+      : "尚未检查"
+    : health.passed === health.total
+      ? "正常"
+      : health.items.some((item) => item.status === "SKIP")
+        ? "前置失败"
+        : "部分失败";
+  const healthTone =
+    healthState === "正常"
+      ? "ok"
+      : health && healthState !== "检查中"
+        ? "bad"
+        : "warn";
+  const brokenPrefix = health?.items.some(
+    (item) =>
+      item.status === "FAIL" && (item.key === "dataset_present" || item.key === "manifest_parse"),
+  );
 
   return (
     <AppShell active="datasource" onNavigate={onNavigate}>
@@ -269,6 +399,126 @@ export function DatasourcePage({ onNavigate }: Props) {
           </div>
         </section>
 
+        {/* S-07.01-02：健康检查 6 项（只读、0 网络、仅手动触发） */}
+        <section className="ds-card ds-health" data-health-section="1">
+          <header className="ds-card-head">
+            <div className="ds-card-title">
+              <h2>健康检查</h2>
+              <span
+                className={`ds-badge ds-badge--${healthTone}`}
+                data-health-state={healthState}
+              >
+                {healthState}
+              </span>
+            </div>
+            <div className="ds-summary">
+              {health ? (
+                <span data-health-summary="1">
+                  {health.passed}/{health.total} 通过
+                  <span className="ds-summary-sep"> · </span>
+                  总耗时 {formatFixed(health.durationMs, 0)} ms
+                  <span className="ds-summary-sep"> · </span>
+                  {formatCheckTime(health.checkedAt)}
+                </span>
+              ) : (
+                <span>{checking ? "检查中…" : "尚未检查"}</span>
+              )}
+              <button
+                type="button"
+                className="ds-refresh"
+                data-health-check="1"
+                disabled={checking || rebuilding}
+                onClick={() => void checkHealth()}
+              >
+                {checking ? "检查中…" : "健康检查"}
+              </button>
+            </div>
+          </header>
+
+          {healthError && (
+            <div className="ds-error" data-health-error="1" role="alert">
+              <span>健康检查失败：{healthError}</span>
+              <button type="button" onClick={() => void checkHealth()}>
+                重试
+              </button>
+            </div>
+          )}
+
+          {!health && !healthError && (
+            <p className="ds-loading" data-health-empty="1">
+              健康检查只读、不联网，仅在你点击时执行一次；不轮询、不上报。
+            </p>
+          )}
+
+          {health && (
+            <>
+              <table className="qa-table" data-health-table="1">
+                <thead>
+                  <tr>
+                    <th scope="col">检查项</th>
+                    <th scope="col">结果</th>
+                    <th scope="col">耗时</th>
+                    <th scope="col">详情</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {health.items.map((item) => (
+                    <tr
+                      key={item.key}
+                      data-health-row={item.key}
+                      data-health-status={item.status}
+                    >
+                      <td>{item.labelZh}</td>
+                      <td>
+                        <span
+                          className={`ds-dot ds-dot--${HEALTH_TONE[item.status]}`}
+                          aria-hidden="true"
+                        />
+                        <span className={`qa-status qa-status--${HEALTH_TONE[item.status]}`}>
+                          {HEALTH_TEXT[item.status]}
+                        </span>
+                        {item.errorCode && (
+                          <code className="qa-code" data-health-code={item.key}>
+                            {item.errorCode}
+                          </code>
+                        )}
+                      </td>
+                      <td className="mono">
+                        {item.status === "SKIP" ? MISSING : `${item.durationMs} ms`}
+                      </td>
+                      <td className="qa-treatment">
+                        {item.detail ?? MISSING}
+                        {item.advice && (
+                          <span className="ds-cap-note">建议：{item.advice}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {brokenPrefix && (
+                <div className="ds-missing" data-health-rebuild-box="1">
+                  <span>manifest 不可解析，样本包可能已损坏。</span>
+                  <button
+                    type="button"
+                    data-health-rebuild="1"
+                    disabled={rebuilding || checking}
+                    onClick={() => void rebuildDataset()}
+                  >
+                    {rebuilding ? "重建中…" : "重建样本包"}
+                  </button>
+                </div>
+              )}
+
+              <p className="ds-op-note" data-health-note="1">
+                行数抽检只覆盖最近 5 个交易日，不做全表扫描；单项超过 1.5s 标 FAIL 并附
+                E_TIMEOUT。
+              </p>
+            </>
+          )}
+        </section>
+
         <section className="ds-card ds-card--tushare" data-datasource-card="tushare">
           <header className="ds-card-head">
             <div className="ds-card-title">
@@ -281,7 +531,31 @@ export function DatasourcePage({ onNavigate }: Props) {
               {status ? `${status.tushareEnabled}/${status.tushareTotal}` : "0/4"} 已启用
             </span>
           </header>
-          <p className="ds-op-note">离线 MVP 不联网；健康检查与启用交互在 S-07.01-02。</p>
+          <p className="ds-op-note" data-tushare-reason="1">
+            接入需要 token、积分限流、字段映射差异，改造工作量约 8.5 人周；本期不联网。
+          </p>
+          <ul className="ds-tushare-caps" data-tushare-caps="1">
+            {TUSHARE_CAPS.map((cap) => (
+              <li key={cap.key} data-tushare-cap={cap.key} data-tushare-available="0">
+                <span>{cap.labelZh}</span>
+                <span className="ds-cap-tag">未启用</span>
+              </li>
+            ))}
+          </ul>
+          <div className="ds-tushare-actions" data-tushare-actions="1">
+            {TUSHARE_ACTIONS.map((action) => (
+              <button
+                key={action.key}
+                type="button"
+                className="ds-tushare-button"
+                data-tushare-action={action.key}
+                disabled
+                title={TUSHARE_DISABLED_REASON}
+              >
+                {action.labelZh}
+              </button>
+            ))}
+          </div>
         </section>
 
         <QualitySection />

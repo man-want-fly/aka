@@ -7,11 +7,15 @@ import type {
   CalcRequest,
   CalcResponse,
   DatasetManifestDto,
+  DataHealthDto,
   DatasourceStatusDto,
+  DiagnosticsConfigSnapshot,
+  DiagnosticsExportDto,
   DiagBuildInfo,
   DiagEnvDto,
   DiagFaultsDto,
   GetBarsRequest,
+  IndicatorFavoritesResponse,
   ManifestResponse,
   MarketSnapshotDto,
   PositionDto,
@@ -81,6 +85,20 @@ export const ipc = {
   indicatorManifest: (): Promise<ManifestResponse> =>
     invoke<ManifestResponse>("indicator_manifest"),
 
+  /** S-03.02-01：首装首次读取写入默认 8 个收藏，后续读取幂等。 */
+  indicatorFavorites: (): Promise<IndicatorFavoritesResponse> =>
+    invoke<IndicatorFavoritesResponse>("indicator_favorites"),
+
+  /** S-03.02-01：收藏/取消收藏，返回最新完整列表。 */
+  setIndicatorFavorite: (
+    indicatorId: string,
+    favorited: boolean,
+  ): Promise<IndicatorFavoritesResponse> =>
+    invoke<IndicatorFavoritesResponse>("set_indicator_favorite", {
+      indicatorId,
+      favorited,
+    }),
+
   /** S-02.08-01：数据集 manifest；provider 不提供时返回 null。 */
   datasetManifest: (): Promise<DatasetManifestDto | null> =>
     invoke<DatasetManifestDto | null>("dataset_manifest"),
@@ -88,6 +106,10 @@ export const ipc = {
   /** S-07.01-01：P9 数据源状态；每次手动「重新检查」重新探测。 */
   datasourceStatus: (): Promise<DatasourceStatusDto> =>
     invoke<DatasourceStatusDto>("datasource_status"),
+
+  /** S-07.01-02：P9 健康检查 6 项；每次点击都重跑，无轮询。 */
+  dataHealthCheck: (): Promise<DataHealthDto> =>
+    invoke<DataHealthDto>("data_health_check"),
 
   /** S-07.05-01：最近一次质量报告；从未扫描过返回 null。 */
   qualityReport: (): Promise<QualityReportDto | null> =>
@@ -123,6 +145,17 @@ export const ipc = {
 
   diagWriteNamed: (name: string, payload: string): Promise<string> =>
     invoke<string>("diag_write_named", { name, payload }),
+
+  /** S-06.03-02：一键导出诊断包（后端强制白名单与隐私排除，0 网络）。 */
+  exportDiagnostics: (config: DiagnosticsConfigSnapshot): Promise<DiagnosticsExportDto> =>
+    invoke<DiagnosticsExportDto>("export_diagnostics", { config }),
+
+  /** S-08.02-02：设置下一次计算的故障注入（仅 debug + AKA_DIAG=1）。 */
+  diagSetInject: (kind: string): Promise<string> =>
+    invoke<string>("diag_set_inject", { kind }),
+
+  revealDiagnostics: (path: string): Promise<void> =>
+    invoke<void>("reveal_diagnostics", { path }),
 
   /** S-02.02-02：前端写入运行日志（如 switch.period_ms），落 telemetry.jsonl */
   telemetryNote: (name: string, fields?: Record<string, unknown>): Promise<void> =>

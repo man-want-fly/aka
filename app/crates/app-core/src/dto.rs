@@ -514,3 +514,30 @@ pub struct PositionDto {
     pub updated_at: i64,
 }
 
+
+// ---------- E-07 数据源健康检查（S-07.01-02） ----------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataHealthItemDto {
+    pub key: String,
+    pub label_zh: String,
+    /// PASS / FAIL / SKIP
+    pub status: &'static str,
+    pub duration_ms: u64,
+    pub error_code: Option<&'static str>,
+    pub detail: Option<String>,
+    pub advice: Option<&'static str>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataHealthDto {
+    pub items: Vec<DataHealthItemDto>,
+    pub passed: u32,
+    pub total: u32,
+    pub duration_ms: u64,
+    /// 检查完成时间（epoch ms）；页面按本地时区渲染。
+    pub checked_at: i64,
+    pub dataset_id: Option<String>,
+}

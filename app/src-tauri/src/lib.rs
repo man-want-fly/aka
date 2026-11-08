@@ -1,4 +1,5 @@
 mod commands;
+mod diagnostics;
 mod state;
 
 use tauri::Manager;
@@ -6,7 +7,7 @@ use tauri::Manager;
 use app_core::{AppCore, Telemetry};
 use data_store::state_db::StateDb;
 
-use crate::state::{AppState, DiagFaults};
+use crate::state::{AppState, DiagFaults, InjectKind};
 
 /// 与架构图一致：`~/Library/Application Support/aka/state.db`。
 fn state_db_path(app: &tauri::App) -> Option<std::path::PathBuf> {
@@ -43,6 +44,16 @@ fn faults_from_args(args: &[String]) -> DiagFaults {
         dataset_empty: diag_flag(args, "--empty-dataset"),
         corrupt_db: diag_flag(args, "--corrupt-db"),
         read_only_db: diag_flag(args, "--readonly-db"),
+        manifest_corrupt: diag_flag(args, "--corrupt-manifest"),
+        // S-08.02-02：`--inject=timeout|panic|data`；生效一次后自动回落 none。
+        inject: if diag_enabled() {
+            args.iter()
+                .find_map(|arg| arg.strip_prefix("--inject="))
+                .map(InjectKind::parse)
+                .unwrap_or_default()
+        } else {
+            InjectKind::None
+        },
     }
 }
 
@@ -87,6 +98,8 @@ pub fn run() {
         .setup(move |app| {
             #[cfg(debug_assertions)]
             cleanup_stale_diag_temp();
+            // S-06.03-02：上次导出中途崩溃留下的临时目录，启动时清掉。
+            diagnostics::cleanup_stale_temp();
             let faults = {
                 #[cfg(debug_assertions)]
                 {
@@ -144,6 +157,12 @@ pub fn run() {
                 None => core,
             };
             app.manage(AppState::with_diag(core, db_path, faults));
+            // S-06.03-02：真实启动日志（诊断包 `app.log` 的来源），不伪造、不上传。
+            diagnostics::append_app_log(&format!(
+                "[startup] version={} build={}",
+                env!("CARGO_PKG_VERSION"),
+                std::env::var("AKA_BUILD_NO").unwrap_or_else(|_| "dev".to_string())
+            ));
             // 取证运行：窗口被遮挡时 WKWebView 会节流/挂起定时器，诊断会卡在 await 上。
             // 只在 debug 构建且 AKA_DIAG=1 时把窗口钉到最前，正常启动与发布构建不受影响。
             #[cfg(debug_assertions)]
@@ -170,6 +189,7 @@ pub fn run() {
         commands::bar_provenance,
         commands::dataset_manifest,
         commands::datasource_status,
+        commands::data_health_check,
         commands::calc_indicators,
         commands::telemetry_dump,
         commands::market_snapshot,
@@ -181,6 +201,7 @@ pub fn run() {
         commands::dataset_regenerate,
         commands::storage_rebuild,
         commands::diag_faults,
+        commands::diag_set_inject,
         commands::view_state_get,
         commands::view_state_set,
         commands::positions_read,
@@ -193,6 +214,8 @@ pub fn run() {
         commands::diag_write,
         commands::diag_write_named,
         commands::telemetry_note,
+        commands::export_diagnostics,
+        commands::reveal_diagnostics,
     ]);
     #[cfg(not(debug_assertions))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -207,6 +230,7 @@ pub fn run() {
         commands::bar_provenance,
         commands::dataset_manifest,
         commands::datasource_status,
+        commands::data_health_check,
         commands::calc_indicators,
         commands::telemetry_dump,
         commands::market_snapshot,
@@ -226,6 +250,8 @@ pub fn run() {
         commands::diag_target,
         commands::diag_build_info,
         commands::telemetry_note,
+        commands::export_diagnostics,
+        commands::reveal_diagnostics,
     ]);
     builder
         .run(tauri::generate_context!())

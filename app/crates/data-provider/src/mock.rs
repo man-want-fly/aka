@@ -357,6 +357,22 @@ impl DataProvider for MockProvider {
         )
     }
 
+    /// 健康检查④：绕过 manifest 缓存，按同一规范重算全量 CSV 的 sha256 与行数。
+    fn dataset_digest(&self) -> Option<(String, u64)> {
+        let mut csv = String::new();
+        let mut rows = 0_u64;
+        for security in &self.securities {
+            if is_diag_only(&security.code) {
+                continue;
+            }
+            if let Some(bars) = self.raw_bars(&security.code) {
+                rows += bars.len() as u64;
+                csv.push_str(&canonical_csv(&bars));
+            }
+        }
+        Some((sha256_hex(csv.as_bytes()), rows))
+    }
+
     fn capabilities(&self) -> Capabilities {
         Capabilities {
             securities: true,

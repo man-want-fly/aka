@@ -40,6 +40,8 @@ interface Props {
   units: Record<string, string>;
   /** 当前复权口径：除权日 tooltip 的措辞按它区分（AC-02.07-03 补3） */
   adjMode: "none" | "qfq" | "hfq";
+  /** S-03.03-02：图例「?」深链入口（只读，不改图表配置）。 */
+  onOpenIndicatorDetail?: (indicatorId: string) => void;
   /** S-07.05-03：主图单根 K 线点击（位移 ≤4px 视为点击），入参为 bars 绝对下标 */
   onCandleClick?: (index: number) => void;
 }
@@ -192,6 +194,7 @@ export function CandleChart({
   subLabels,
   units,
   adjMode,
+  onOpenIndicatorDetail,
   onCandleClick,
 }: Props) {
   const [hover, setHover] = useState<number | null>(null);
@@ -1209,6 +1212,37 @@ export function CandleChart({
                 >
                   {panel.title}
                 </text>
+                {panel.kind !== "volume" && onOpenIndicatorDetail && (
+                  <g
+                    className="legend-help"
+                    data-legend-help={panel.id}
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: "pointer" }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenIndicatorDetail(panel.id);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onOpenIndicatorDetail(panel.id);
+                      }
+                    }}
+                  >
+                    <circle cx={LEFT + 9} cy={panel.top + 11} r={6} fill="var(--line)" />
+                    <text
+                      x={LEFT + 9}
+                      y={panel.top + 14}
+                      textAnchor="middle"
+                      fontSize={9}
+                      fill="var(--muted)"
+                    >
+                      ?
+                    </text>
+                  </g>
+                )}
                 {panel.kind !== "volume" && (
                   <text
                     data-panel-remove={panel.id}
@@ -1440,7 +1474,7 @@ export function CandleChart({
 
           {/* 图例：0 叠加时整块隐藏，不占位（S-02.02-02） */}
           {overlayIds.length > 0 && (
-            <g className="mono" fontSize={9.5} data-overlay-legend="1">
+            <g className="mono legend-group" fontSize={9.5} data-overlay-legend="1">
               <text x={RIGHT - 100} y={24} fill="var(--muted)">
                 {view.subPanels.map((panel) => panel.id).join(" / ")}
               </text>
@@ -1450,16 +1484,47 @@ export function CandleChart({
                   .join(" / ")}
               </text>
               {view.overlayLines.map((line, index) => (
-                <text
-                  key={`legend-${line.id}`}
-                  data-legend-line={`${line.indicatorId}.${line.key}`}
-                  x={RIGHT - 300}
-                  y={24 + index * 11}
-                  fill={line.color}
-                  fontSize={9}
-                >
-                  {line.label}
-                </text>
+                <g key={`legend-${line.id}`}>
+                  <text
+                    data-legend-line={`${line.indicatorId}.${line.key}`}
+                    x={RIGHT - 300}
+                    y={24 + index * 11}
+                    fill={line.color}
+                    fontSize={9}
+                  >
+                    {line.label}
+                  </text>
+                  {onOpenIndicatorDetail && (
+                    <g
+                      className="legend-help"
+                      data-legend-help={line.indicatorId}
+                      role="button"
+                      tabIndex={0}
+                      style={{ cursor: "pointer" }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenIndicatorDetail(line.indicatorId);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onOpenIndicatorDetail(line.indicatorId);
+                        }
+                      }}
+                    >
+                      <circle cx={RIGHT - 300 + line.label.length * 5.4 + 8} cy={24 + index * 11 - 3} r={5} fill="var(--line)" />
+                      <text
+                        x={RIGHT - 300 + line.label.length * 5.4 + 8}
+                        y={24 + index * 11}
+                        textAnchor="middle"
+                        fontSize={8}
+                        fill="var(--muted)"
+                      >
+                        ?
+                      </text>
+                    </g>
+                  )}
+                </g>
               ))}
             </g>
           )}

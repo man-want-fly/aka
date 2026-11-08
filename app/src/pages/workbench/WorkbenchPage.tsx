@@ -15,6 +15,7 @@ import { Watchlist } from "../../components/Watchlist";
 import { StarButton } from "../../components/StarButton";
 import { IndicatorDrawer } from "../../features/workbench/IndicatorDrawer";
 import { runDrawerDiagnostics } from "../../features/workbench/drawerDiag";
+import { writeLastCode } from "../../features/catalog/chartLink";
 import {
   B2_OVERLAY_CHOICES,
   B1_OVERLAY_CHOICES,
@@ -58,11 +59,13 @@ import { runS20202Diagnostics } from "../../features/workbench/s20202Diag";
 import { runS20101Diagnostics } from "../../features/workbench/s20101Diag";
 import { runS207Diagnostics } from "../../features/workbench/s207Diag";
 import { runS070503Diagnostics } from "../../features/workbench/s070503Diag";
+import { runS080202Diagnostics } from "../../features/workbench/s080202Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
 import { runRestartDiagnostics, restartDiagStage } from "../../features/workbench/restartDiag";
 import { runWatchlistDiagnostics, watchlistDiagStage } from "../../features/watchlist/watchlistDiag";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
+import { runS030302WorkbenchDiagnostics } from "../../features/qa/batchDiag";
 import type {
   AppError,
   BarProvenanceDto,
@@ -135,6 +138,21 @@ const RANGES = [
 
 /** 输入静默 120ms 后才发请求：连续输入（典型间隔 40ms）只保留最后一次，避免抖动请求 */
 const REQUEST_DEBOUNCE_MS = 120;
+
+/** S-08.02-02：错误标题只认三类，其余归「计算失败」。 */
+const CALC_ERROR_TITLES: Record<string, string> = {
+  E_TIMEOUT: "计算超时",
+  E_ENGINE_PANIC: "引擎异常",
+  E_DATA_UNAVAILABLE: "数据不可用",
+};
+
+function calcErrorMeta(failure: AppError): { traceId: string | null; elapsedMs: number | null } {
+  const details = (failure.details ?? {}) as Record<string, unknown>;
+  return {
+    traceId: typeof details.traceId === "string" ? details.traceId : null,
+    elapsedMs: typeof details.elapsedMs === "number" ? details.elapsedMs : null,
+  };
+}
 
 /** AC-02.05-04 补3：把后端 E_INSUFFICIENT_DATA 的 details 转成副图内联文案 */
 function noticesFrom(error: AppError, manifest: ManifestResponse | null) {
@@ -213,6 +231,11 @@ export function WorkbenchPage({
     [manifest],
   );
   const [activeCode, setActiveCode] = useState(initialCode ?? "300750.SZ");
+
+  // S-03.01-04：工作台每次带到某只标的，都刷新目录页可用的最近标的。
+  useEffect(() => {
+    writeLastCode(activeCode);
+  }, [activeCode]);
   // S-02.02-02：复权口径本地持久化（chart.adj），默认前复权
   const [adj, setAdj] = useState<"none" | "qfq" | "hfq">(() => {
     try {
@@ -375,6 +398,36 @@ export function WorkbenchPage({
     setDrawerOpen(false);
     window.requestAnimationFrame(() => drawerTriggerRef.current?.focus());
   }, []);
+  // S-03.03-02：从抽屉深链返回时恢复抽屉，视口/副图由各自持久化恢复
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem("aka.workbench.drawer.return") === "1") {
+        window.sessionStorage.removeItem("aka.workbench.drawer.return");
+        setDrawerOpen(true);
+      }
+    } catch {
+      // 返回态只影响体验，存储不可用时不阻断工作台
+    }
+  }, []);
+  // S-03.03-02：图例「?」/ 抽屉来源取证
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s030302" || !(await ipc.diagEnabled()) || !alive) return;
+      if (window.sessionStorage.getItem("aka.batch.s030302.done") === "1") return;
+      window.sessionStorage.setItem("aka.batch.s030302.done", "1");
+      try {
+        await runS030302WorkbenchDiagnostics();
+      } catch (err) {
+        console.error("[s030302.diag]", describeError(err).message);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [bars, setBars] = useState<BarsResponse | null>(null);
   const [calc, setCalc] = useState<CalcResponse | null>(null);
   // S-07.05-03：主图 K 线点击 → 六字段溯源浮层（复用 S-07.05-02 的 bar_provenance，不新增 IPC）
@@ -444,6 +497,11 @@ export function WorkbenchPage({
       .catch(() => undefined);
   }, [loading]);
   const [error, setError] = useState<AppError | null>(null);
+  // S-08.02-02：错误态独立于数据不足内联提示；连续失败 3 次才出「导出诊断包」。
+  const [retryNonce, setRetryNonce] = useState(0);
+  const [failureStreak, setFailureStreak] = useState(0);
+  const failureStreakRef = useRef(0);
+  const [exportHint, setExportHint] = useState<string | null>(null);
   // S-01.02-01：报价头星标与自选同源；写库失败必须回滚并给出错误条。
   const [watched, setWatched] = useState(false);
   const [watchBusy, setWatchBusy] = useState(false);
@@ -706,6 +764,14 @@ export function WorkbenchPage({
     return () => window.removeEventListener("keydown", onKey);
   }, [initialCode, onNavigate]);
 
+  // S-08.02-02 补2：切标的后旧错误立即消失，不等下一次请求回来。
+  useEffect(() => {
+    setError(null);
+    setExportHint(null);
+    failureStreakRef.current = 0;
+    setFailureStreak(0);
+  }, [activeCode]);
+
   useEffect(() => {
     if (!isTauriRuntime()) return;
     let cancelled = false;
@@ -783,6 +849,8 @@ export function WorkbenchPage({
             calcRef.current = calcResult.value;
             setCalcNotices(noticesForBars(nextBars.bars.length, subIds, manifest));
             setError(null);
+            failureStreakRef.current = 0;
+            setFailureStreak(0);
           } else {
             setCalc(null);
             calcRef.current = null;
@@ -796,6 +864,8 @@ export function WorkbenchPage({
             } else {
               setCalcNotices(null);
               setError(failure);
+              failureStreakRef.current += 1;
+              setFailureStreak(failureStreakRef.current);
             }
           }
 
@@ -863,7 +933,59 @@ export function WorkbenchPage({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeCode, adj, appliedParams, dateFrom, dateTo, timeframe]);
+  }, [activeCode, adj, appliedParams, dateFrom, dateTo, retryNonce, timeframe]);
+
+  /** S-08.02-02：重试 / 降低参数 / 导出诊断包（连续失败 3 次后可见）。 */
+  const retryCalc = useCallback(() => {
+    setExportHint(null);
+    setRetryNonce((value) => value + 1);
+  }, []);
+
+  const reduceCalcParams = useCallback(() => {
+    setParams(DEFAULT_PARAMS);
+    setAppliedParams(DEFAULT_PARAMS);
+    writeSessionParams(DEFAULT_PARAMS);
+    setParamTimeout(false);
+    setRetryNonce((value) => value + 1);
+  }, []);
+
+  const exportCalcDiagnostics = useCallback(async () => {
+    try {
+      const result = await ipc.exportDiagnostics({});
+      setExportHint(`诊断包已导出：${result.path}`);
+    } catch (err) {
+      const info = describeError(err);
+      setExportHint(`导出失败：${info.code} · ${info.message}`);
+    }
+  }, []);
+
+  // S-08.02-02 取证：AKA_DIAG_TARGET=s080202 时在真实工作台跑错误态。
+  useEffect(() => {
+    if (!isTauriRuntime() || securities.length < 2 || !activeCode) return;
+    if (window.sessionStorage.getItem("aka.s080202.diag.done") === "1") return;
+    let alive = true;
+    (async () => {
+      const enabled = await ipc.diagEnabled();
+      const target = await ipc.diagTarget();
+      if (!enabled || !alive || target !== "s080202") return;
+      window.sessionStorage.setItem("aka.s080202.diag.done", "1");
+      try {
+        await runS080202Diagnostics({
+          codes: securities.map((item) => item.code),
+          setInject: async (kind) => {
+            await ipc.diagSetInject(kind);
+          },
+          trigger: () => setRetryNonce((value) => value + 1),
+          setCode: setActiveCode,
+        });
+      } catch (err) {
+        console.error("[s080202.diag]", describeError(err).message);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [activeCode, securities]);
 
   // S2 实机取证：仅 AKA_DIAG=1 且已有标的列表时自跑一次
   useEffect(() => {
@@ -1683,7 +1805,7 @@ export function WorkbenchPage({
 
   return (
     <AppShell active="workbench" onNavigate={onNavigate}>
-      <div className="workbench">
+      <div className="workbench" data-workbench-root="1">
         {datasourceIssue && (
           <div className="watch-error-bar" data-wb-datasource-entry="1" role="alert">
             <span>数据源必需能力不可用（{datasourceIssue}）</span>
@@ -2016,7 +2138,52 @@ export function WorkbenchPage({
               </span>
             </div>
 
-            {error && <div className="error-box">{error.message}</div>}
+            {error && (
+              <div className="calc-error" data-calc-error={error.code} role="alert">
+                <div className="calc-error-head">
+                  <strong data-calc-error-title>
+                    {CALC_ERROR_TITLES[error.code] ?? "计算失败"}
+                  </strong>
+                  <code className="qa-code" data-calc-error-code>
+                    {error.code}
+                  </code>
+                  {calcErrorMeta(error).traceId && (
+                    <span className="calc-error-trace" data-calc-error-trace>
+                      trace {calcErrorMeta(error).traceId}
+                    </span>
+                  )}
+                  {calcErrorMeta(error).elapsedMs !== null && (
+                    <span className="calc-error-elapsed" data-calc-error-elapsed>
+                      耗时 {calcErrorMeta(error).elapsedMs} ms
+                    </span>
+                  )}
+                </div>
+                <p className="calc-error-message">{error.message}</p>
+                <div className="calc-error-actions">
+                  <button type="button" data-calc-retry onClick={retryCalc}>
+                    重试
+                  </button>
+                  <button type="button" data-calc-reduce onClick={reduceCalcParams}>
+                    降低参数
+                  </button>
+                  {error.code === "E_DATA_UNAVAILABLE" && (
+                    <button type="button" data-calc-goto-ds onClick={() => onNavigate("datasource")}>
+                      查看数据源状态
+                    </button>
+                  )}
+                  {failureStreak >= 3 && (
+                    <button type="button" data-calc-export onClick={() => void exportCalcDiagnostics()}>
+                      导出诊断包
+                    </button>
+                  )}
+                </div>
+                {exportHint && (
+                  <p className="calc-error-hint" data-calc-export-hint>
+                    {exportHint}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="chart-card">
               {paramsIssue && (
@@ -2067,6 +2234,10 @@ export function WorkbenchPage({
                     subLabels={subLabels}
                     units={units}
                     adjMode={adj}
+                    onOpenIndicatorDetail={(indicatorId) => {
+                      // S-03.03-02：图例「?」进入 P4，返回仍回工作台并保留副图/缩放
+                      window.location.hash = `#/catalog/${encodeURIComponent(indicatorId)}?from=chart&code=${encodeURIComponent(activeCode)}`;
+                    }}
                     onCandleClick={openProvenance}
                   />
                   <IndicatorReadouts
@@ -2183,6 +2354,7 @@ export function WorkbenchPage({
                 subIds={subIds}
                 subCount={subPlots.length}
                 hasTarget={Boolean(security)}
+                activeCode={activeCode}
                 onAddMain={(id) =>
                   setOverlayIds((prev) =>
                     prev.includes(id) || prev.length >= MAX_MAIN_OVERLAYS

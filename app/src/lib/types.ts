@@ -132,6 +132,23 @@ export interface ManifestIndicatorDto {
   defaultParamsText: string;
 }
 
+/** S-03.02-01：收藏 chip；`offline` = 注册表已移除，灰显但保留。 */
+export interface IndicatorFavoriteDto {
+  indicatorId: string;
+  abbr: string;
+  nameZh: string;
+  status: "normal" | "beta" | "planned" | "offline";
+  panel: string;
+  paramSummary: string;
+  isDefault: boolean;
+  addedAt: number;
+  sortOrder: number;
+}
+
+export interface IndicatorFavoritesResponse {
+  favorites: IndicatorFavoriteDto[];
+}
+
 /** 指标目录的单一事实来源；前端指标列表一律由它生成。 */
 export interface ManifestResponse {
   schemaVersion: number;
@@ -287,6 +304,30 @@ export interface DatasourceStatusDto {
   tushareTotal: number;
   checkedAt: number;
   errorCode: string | null;
+}
+
+/** S-07.01-02：健康检查单项结果 */
+export type DataHealthStatus = "PASS" | "FAIL" | "SKIP";
+
+export interface DataHealthItemDto {
+  key: string;
+  labelZh: string;
+  status: DataHealthStatus;
+  durationMs: number;
+  errorCode: string | null;
+  detail: string | null;
+  advice: string | null;
+}
+
+/** S-07.01-02：P9 健康检查汇总（6 项） */
+export interface DataHealthDto {
+  items: DataHealthItemDto[];
+  passed: number;
+  total: number;
+  durationMs: number;
+  /** epoch 毫秒，界面按本地时区格式化 */
+  checkedAt: number;
+  datasetId: string | null;
 }
 
 /** S-07.05-01：质量检查报告 */
@@ -496,4 +537,28 @@ export interface PositionDto {
   costPrice: number;
   shares: number;
   updatedAt: number;
+}
+
+/** S-06.03-02：诊断包导出结果；`noLog` 为真时包内是 `README.txt`。 */
+export interface DiagnosticsExportDto {
+  path: string;
+  fileName: string;
+  bytes: number;
+  included: string[];
+  noLog: boolean;
+  logTruncated: boolean;
+  crashedLogsIncluded: boolean;
+  excluded: string[];
+}
+
+/** 配置快照白名单；后端只认这 8 个键，其余字段一律丢弃。 */
+export interface DiagnosticsConfigSnapshot {
+  theme_mode?: string | null;
+  color_direction?: string | null;
+  density?: string | null;
+  crosshair?: string | null;
+  candle_hollow?: string | null;
+  subchart_height?: string | null;
+  insufficient_hint?: string | null;
+  dataset_id?: string | null;
 }

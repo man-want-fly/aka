@@ -173,6 +173,50 @@ else:
     print(f"自选已有 {count} 条，无需注入")
 PY
     ;;
+  s060302)
+    TARGET="s060302"
+    JSON="$DIAG_DIR/s060302-evidence.json"
+    NAME="s060302-evidence"
+    FIXTURE="默认 state.db；自选注入 600519.SH 供隐私 grep 反证；关于页点导出，落 ~/Downloads/aka-diagnostics-*.zip；取证后 .backup 还原"
+    BAK="/tmp/aka-state-s060302-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    python3 - "$DB" <<'PY'
+import sqlite3, sys
+conn = sqlite3.connect(sys.argv[1])
+count = conn.execute("SELECT COUNT(*) FROM watchlist_items").fetchone()[0]
+if count == 0:
+    conn.execute(
+        "INSERT OR REPLACE INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?,?,?,?)",
+        ("600519.SH", None, 0, 1700000000),
+    )
+    conn.commit()
+    print("fixture 已注入 1 条 600519.SH")
+else:
+    print(f"自选已有 {count} 条，无需注入")
+PY
+    ;;
+  s070102)
+    TARGET="s070102"
+    JSON="$DIAG_DIR/s070102-evidence.json"
+    NAME="s070102-evidence"
+    FIXTURE="默认 state.db；P9 健康检查全 PASS 路径 + tushare 0/4 禁用卡；只读，不改库"
+    BAK=""
+    ;;
+  s070102-corrupt)
+    TARGET="s070102"
+    JSON="$DIAG_DIR/s070102-evidence.json"
+    NAME="s070102-corrupt-evidence"
+    FLAGS="--corrupt-manifest"
+    FIXTURE="默认 state.db；--corrupt-manifest 注入 manifest 不可解析，验证 ②FAIL → ③~⑥SKIP（1/6）与「重建样本包」入口；只读"
+    BAK=""
+    ;;
+  s080202)
+    TARGET="s080202"
+    JSON="$DIAG_DIR/s080202-evidence.json"
+    NAME="s080202-evidence"
+    FIXTURE="默认 state.db；工作台真实计算 + diag_set_inject 注入（panic×3 / data / timeout 8s），关闭注入后恢复；不改库"
+    BAK=""
+    ;;
   *)
     echo "未知套件：$SUITE" >&2
     exit 2

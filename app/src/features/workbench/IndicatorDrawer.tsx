@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { StateCard } from "../../components/StateCard";
+import { FavoritesStrip } from "../catalog/FavoritesStrip";
+import { useFavorites } from "../catalog/useFavorites";
 import { Highlight, PANEL_LABEL, searchIndicators } from "../indicators/search";
 import { MAX_MAIN_OVERLAYS, MAX_SUBPLOTS } from "./model";
 import type { AppError, Category, ManifestIndicatorDto, ManifestResponse } from "../../lib/types";
@@ -26,15 +28,17 @@ export interface IndicatorDrawerProps {
   subCount: number;
   /** 当前工作台是否已有有效标的；无标的不允许把指标加进图表 */
   hasTarget: boolean;
+  /** S-03.03-02：抽屉来源深链需要带标的，返回时恢复抽屉 */
+  activeCode: string | null;
   onAddMain: (id: string) => void;
   onAddSub: (id: string) => void;
   onClose: () => void;
 }
 
 /**
- * S-02.04-01 指标抽屉：105 条目录（44 可选 + 61 规划中置灰），
+ * S-02.04-01 指标抽屉：全量目录（可添加 + 规划中置灰），
  * 分类计数由 manifest 现算，搜索命中规划中条目时给「该指标规划中」提示。
- * 搜索无结果空态并入 S-08.01-02，不再单独实现。
+ * S-03.02-01：顶部收藏区与目录页共用同一份后端收藏 DTO。
  */
 export function IndicatorDrawer({
   manifest,
@@ -45,6 +49,7 @@ export function IndicatorDrawer({
   subIds,
   subCount,
   hasTarget,
+  activeCode,
   onAddMain,
   onAddSub,
   onClose,
@@ -73,6 +78,8 @@ export function IndicatorDrawer({
   }, [query]);
 
   const items = manifest?.indicators ?? [];
+  const favoritesState = useFavorites(manifest !== null && !loading);
+  const manifestById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
 
   const counts = useMemo(() => {
     const map = new Map<Category, number>();
@@ -152,6 +159,23 @@ export function IndicatorDrawer({
           ×
         </button>
       </header>
+
+      <div style={{ padding: "0 12px", maxHeight: 210, overflow: "auto" }}>
+        <FavoritesStrip
+          favorites={favoritesState.favorites}
+          manifestById={manifestById}
+          busyId={favoritesState.busyId}
+          onToggleFavorite={(id, favorited) => void favoritesState.toggle(id, favorited)}
+          onAdd={pick}
+          onOpenDetail={(id) => {
+            window.location.hash = `#/catalog/${encodeURIComponent(id)}?from=drawer${
+              activeCode ? `&code=${encodeURIComponent(activeCode)}` : ""
+            }`;
+            onClose();
+          }}
+          hint={hint}
+        />
+      </div>
 
       <div className="ind-drawer__search">
         <input
