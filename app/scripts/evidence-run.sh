@@ -33,6 +33,10 @@ fi
 "$NODE_BIN" -e 'process.exit(process.versions.electron ? 1 : 0)' \
   || fail "EVIDENCE_NODE 是 Electron 垫片，不是真 Node"
 
+# 套件必须真实存在：diag-evidence.sh 的 case 分支是唯一事实源（W-88：s2 曾为空壳，禁再犯）。
+grep -qE "^  ${SUITE}\)" "$APP_DIR/scripts/diag-evidence.sh" \
+  || fail "未知套件 ${SUITE}（diag-evidence.sh 无对应 case；先补分支再跑）"
+
 if [ "$MODE" = "--check" ]; then
   echo "EVIDENCE_OK: branch=main commit=${commit:0:12} node=$("$NODE_BIN" -v) electron=none"
   exit 0

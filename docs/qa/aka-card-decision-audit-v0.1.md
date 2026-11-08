@@ -556,6 +556,10 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - `a` **谁跑**：**BA 为唯一取证执行人**；dev 只交「开发自测参考」，不产出可签证据；TL 只复核与签字。BA 缺席时由 TL 指定交叉执行（dev A 跑 dev B 的卡、dev B 跑 dev A 的卡），meta 记 `runner`；**任何 dev 不得给自己的卡取证**。
     - `b` **在哪跑**：只在 `main` 主树、干净工作区（`git status --porcelain` 为空、`dirty=false`），dump 的 `commit` 必须是被签 commit。**`dev2`/worktree 的 dump 一律只作参考、不计证据**，合并后按第 19 条在 main tip 重跑；未合并的卡不可签。
     - `c` **怎么留痕**：入口固定为 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本必须：自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测到 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项（`runtime`/`build`/`command`/`dump`/`commit`+`dirty=false`）并落固定路径 `docs/qa/evidence/` 与 `raw/<name>-<commit12>-<label>.json`，缺一 `exit 2`。**禁止 `open /tmp/*.command` 之类人工步骤**；meta 必须写 `reproduce` 字段，下一个人照抄即可复现。
+24. **工具/链路的端到端门槛与归属证据（2026-11-08 起）**：
+    - `a` 脚本、套件入口、取证链路等**工具类改动，必须至少端到端跑通一次并留产物**才算通过；`--check`、`bash -n`、语法检查只算前置，**不算主路径通过**。
+    - `b` 套件名必须能在 `diag-evidence.sh` 找到对应 `case` 分支；`evidence-run.sh` 对未知套件直接 `exit 2`，不得进入构建/取证。
+    - `c` **归属以证据为准**：文件/改动归属必须落到提交、hunk 卡号或作者记录；禁止按口述、印象或「应该是谁」推测。口述与证据冲突时以证据为准，并由记录方更正。
 
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
@@ -2350,6 +2354,24 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 3. **怎么留痕**：入口固定 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项并落固定路径 `docs/qa/evidence/<name>.json|-meta.json` 与 `raw/<name>-<commit12>-<label>.json|-meta.json`，缺一 `exit 2`；meta 写 `reproduce`。**禁止 `open /tmp/*.command` 之类人工步骤。**
 4. **旧证据处置**：`s20501`、`s207` 已签且卡面未变 → 按第 21 条维持原签，不因合并本身强制重跑；3 张待签与 `S-02.08-01` 必须重跑；`dev2` dump 一律不作签字依据。
 5. **环境固化**：meta 记录 `EVIDENCE_NODE` 绝对路径与 `node -v`；交接时先跑 `--check`（验分支、干净度、真 Node），不构建。
+
+#### 4.7.61 两处更正：`S-07.05-03` 归属与取证链路空壳（2026-11-08）
+
+**一、归属更正（我错）**
+- 事实：主树那 5 个未提交文件 + `core.rs`/`mock.rs` + 新增 `s070503Diag.ts` 共 8 个文件，是 **dev A 的 `S-07.05-03`**，已提交 `b5b8e35`（逐段 hunk 带卡号）。**dev B 无此改动。**
+- 我的错误：上一条按口述把「越过 worktree 边界」记成「dev B 新批」，未先比对 hunk/卡号。更正：归属以提交、hunk 卡号、作者记录为准，**不以口述或推测为准**（制度第 24 条 `c`）。
+- 处置：`b5b8e35` 不改写，按正常提交进入本次推送；台账/工单按 dev A 归位。
+
+**二、取证链路空壳更正**
+- 事实：`diag-evidence.sh` 原先没有 `s2` case，`evidence-run.sh s2` 主路径**从未端到端跑过**；我上一条写「实测 `--check` 在脏树上 `exit 2`」只验了前置，不构成链路通过。
+- dev A 已在 `c365665` 补 `s2`、`s070503` 两个 case（含 fixture 说明）。
+- 本轮把「套件必须存在」做成硬校验：`evidence-run.sh` 用 `grep -qE "^  ${SUITE}\)"` 匹配 `diag-evidence.sh` 的 case，不匹配直接 `exit 2`，`--check` 同样走这条。链路有效性仍以 BA 在推后干净 tip 的**首次完整跑**（dump + meta 五项）为准（制度第 24 条 `a`）。
+
+**三、推送与执行顺序（定）**
+1. TL 先做 sign-impact 预演：`verify_sign_impact --base origin/main --head HEAD`。本批结果 **PASS（未击中已签卡）**；`verify:constants`（含分区反例）、`verify:gate-log`、`verify:sign`、`verify:docs`、`verify:evidence` 本地全绿。
+2. 预演绿 → **TL 代推** `b5b8e35`/`c365665`/`33d1ec5`（不改写、不 rebase、不 squash）；预演红 → 退回 dev A 在本地补 `Sign-Invalidates` 或修正后重推，TL 不代改。
+3. 推送后 CI 在该 tip 绿 → BA 按第 23 条在**同一干净 tip** 跑 `s2` 与 `s070503`；`dev2`/开发期 dump 不作证据。
+4. 跑完 TL 才签相关卡。`S-07.05-03` 证据**分两行登记**：`AC-07.05-04=PASS`、`补1=BLOCKED`（blocker `S-07.05-01`），**不得合并成一行，也不得预填 PASS**（PASS 以 BA 的 s070503 dump 为准）。
 
 ---
 
