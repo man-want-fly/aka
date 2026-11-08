@@ -1,0 +1,94 @@
+{
+  "suite": "s070102",
+  "ok": true,
+  "finishedAt": "2026-11-08T10:38:22.326Z",
+  "checks": [
+    {
+      "id": "P07-R1",
+      "card": "S-07.01-02",
+      "ac": "AC-07.01-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "健康检查按钮可用=true"
+    },
+    {
+      "id": "P07-R2",
+      "card": "S-07.01-02",
+      "ac": "AC-07.01-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "6 行 / PASS,FAIL,SKIP,SKIP,SKIP,SKIP"
+    },
+    {
+      "id": "P07-R3",
+      "card": "S-07.01-02",
+      "ac": "AC-07.01-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "汇总「1/6 通过 · 总耗时 0 ms · 2026-11-08 18:38:22」"
+    },
+    {
+      "id": "P07-R4",
+      "card": "S-07.01-02",
+      "ac": "AC-07.01-02",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "耗时 56 ms / 错误「」/ health.check 新增 1 条（期望 1）"
+    },
+    {
+      "id": "P07-R5",
+      "card": "S-07.01-02",
+      "ac": "AC-07.01-02（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "②FAIL、③~⑥SKIP、汇总「1/6 通过 · 总耗时 0 ms · 2026-11-08 18:38:22」"
+    },
+    {
+      "id": "P07-R6",
+      "card": "S-07.01-02",
+      "ac": "AC-07.01-03",
+      "layer": "render",
+      "passed": true,
+      "detail": "能力 4 项 0/4 / 按钮 4 个全禁用 / 禁用词「无」"
+    },
+    {
+      "id": "P07-R7",
+      "card": "S-07.01-02",
+      "ac": "AC-07.01-03",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "检查期间外部 http(s) 资源 0 个"
+    }
+  ],
+  "card": "S-07.01-02",
+  "env": {
+    "commit": "ba00f209672f1e5c885633475515d3dd10278e03",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-08T10:37:59.508Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+        "sha256": "8fa9de1b72e453b477a746ec541acd10f3e65f9995934fc6f574790248b76e32"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s070102\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}

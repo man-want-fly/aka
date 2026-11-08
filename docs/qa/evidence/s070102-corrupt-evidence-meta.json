@@ -1,0 +1,48 @@
+{
+  "suite": "s070102",
+  "label": "20261108-183817",
+  "runAt": "2026-11-08T18:38:23+08:00",
+  "commit": "ba00f209672f1e5c885633475515d3dd10278e03",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s070102\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+  "fixture": "默认 state.db；--corrupt-manifest 注入 manifest 不可解析，验证 ②FAIL → ③~⑥SKIP（1/6）与「重建样本包」入口；只读",
+  "buildMode": "dev",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "blocked": [],
+    "card": "S-07.01-02",
+    "layers": {
+      "render": "5/5",
+      "runtime": "2/2"
+    },
+    "otherCards": []
+  },
+  "dump": {
+    "archived": "docs/qa/raw/s070102-corrupt-evidence-ba00f209672f-20261108-183817.json",
+    "sha256": "91e0c7a46f03cf8bbcd2b4d89eeb4ec8b76764532c9f4568a6f75aab6c003e68",
+    "finishedAt": "2026-11-08T10:38:22.326Z"
+  },
+  "runtime": {
+    "launchMode": "cargo+custom-protocol",
+    "node": "v22.21.1",
+    "os": "macos",
+    "arch": "x86_64",
+    "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+    "electron": "none"
+  },
+  "build": {
+    "entry": "dist/index.html",
+    "builtAt": "2026-11-08T10:37:59.508Z",
+    "cargoProfile": "dev",
+    "features": [
+      "tauri/custom-protocol"
+    ],
+    "binary": {
+      "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+      "sha256": "8fa9de1b72e453b477a746ec541acd10f3e65f9995934fc6f574790248b76e32"
+    }
+  },
+  "reproduce": "app/scripts/evidence-run.sh s070102-corrupt"
+}

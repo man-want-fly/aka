@@ -1,0 +1,48 @@
+{
+  "suite": "",
+  "label": "20261108-193004",
+  "runAt": "2026-11-08T19:30:20+08:00",
+  "commit": "9de7e0d5f5d9fb41f89e95a31af7fdd2372c8da6",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s080202\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+  "fixture": "默认 state.db；工作台真实计算 + diag_set_inject 注入（panic×3 / data / timeout 8s），关闭注入后恢复；不改库",
+  "buildMode": "dev",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "blocked": [],
+    "card": "S-08.02-02",
+    "layers": {
+      "render": "6/6",
+      "runtime": "2/2"
+    },
+    "otherCards": []
+  },
+  "dump": {
+    "archived": "docs/qa/raw/s080202-evidence-9de7e0d5f5d9-20261108-193004.json",
+    "sha256": "6b464f93e971d4159e8f9a2df72dcf7afb6657b2c6963b0bfc4f72409781a00e",
+    "finishedAt": "2026-11-08T11:30:18.162Z"
+  },
+  "runtime": {
+    "launchMode": "cargo+custom-protocol",
+    "node": "v22.21.1",
+    "os": "macos",
+    "arch": "x86_64",
+    "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+    "electron": "none"
+  },
+  "build": {
+    "entry": "dist/index.html",
+    "builtAt": "2026-11-08T11:29:51.866Z",
+    "cargoProfile": "dev",
+    "features": [
+      "tauri/custom-protocol"
+    ],
+    "binary": {
+      "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+      "sha256": "ca0dff1d9ad59331d4acb446db8d760c1b7e0565960a74ee84f43479a6aae4f9"
+    }
+  },
+  "reproduce": "app/scripts/evidence-run.sh s080202"
+}
