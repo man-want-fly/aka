@@ -97,16 +97,37 @@ for path in (binary, dist_index, evidence_path):
         print(f"EVIDENCE_FAIL: 缺产物 {path}", file=sys.stderr)
         sys.exit(2)
 
+# R-EV-02：finishedAt 只从 dump 内读，缺失回退落盘时刻；不允许在 meta 里手写。
+try:
+    dump = json.load(open(evidence_path, encoding="utf-8"))
+except (OSError, ValueError):
+    dump = {}
+finished_at = dump.get("finishedAt") if isinstance(dump.get("finishedAt"), str) else ""
+if not finished_at.strip():
+    finished_at = mtime_iso(evidence_path)
+
 stamp = commit[:12]
 raw_json = os.path.join(raw_dir, f"{name}-{stamp}-{label}.json")
 raw_meta = os.path.join(raw_dir, f"{name}-{stamp}-{label}-meta.json")
 shutil.copy2(evidence_path, raw_json)
 
+try:
+    rustv = subprocess.check_output(["rustc", "-vV"], text=True)
+    host_target = next(
+        (line.split(":", 1)[1].strip() for line in rustv.splitlines() if line.startswith("host:")),
+        "unknown",
+    )
+except Exception:
+    host_target = "unknown"
+
 meta["runtime"] = {
     "os": platform.system(),
     "arch": platform.machine(),
     "node": subprocess.check_output([node_bin, "-v"], text=True).strip(),
-    "electron": None,
+    # 本产品是 Tauri（WebKit WebView）宿主，从不跑在 Electron 里；
+    # 显式写 "none" 表示「不适用」，与「字段缺失」是两回事（第 19 条）。
+    "electron": "none",
+    "hostTarget": f"tauri-webkit ({host_target})",
     "launch": "target/debug/aka-desktop --features tauri/custom-protocol（AKA_DIAG=1）",
 }
 meta["build"] = {
@@ -122,6 +143,7 @@ meta["build"] = {
 meta["dump"] = {
     "archived": os.path.relpath(raw_json, root),
     "sha256": sha256(raw_json),
+    "finishedAt": finished_at,
 }
 meta["command"] = meta.get("command", "")
 meta["reproduce"] = f"app/scripts/evidence-run.sh {suite}"
@@ -136,10 +158,16 @@ missing = [
     for key, value in {
         "commit": meta.get("commit"),
         "dirty=false": meta.get("dirty") is False,
-        "runtime": meta["runtime"].get("node") and meta["runtime"].get("os"),
+        "runtime": (
+            meta["runtime"].get("node")
+            and meta["runtime"].get("os")
+            and meta["runtime"].get("hostTarget")
+            and "electron" in meta["runtime"]
+            and meta["runtime"]["electron"] is not None
+        ),
         "build": meta["build"].get("binarySha256") and meta["build"].get("distIndexSha256"),
         "command": meta["command"],
-        "dump": meta["dump"].get("sha256"),
+        "dump": meta["dump"].get("sha256") and meta["dump"].get("finishedAt"),
     }.items()
     if not value
 ]

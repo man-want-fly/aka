@@ -544,11 +544,11 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
 18. **已签卡面改动与失效申报（2026-11-08 起）**：已签字卡面**只允许 BA 改**；任何提交若 diff 击中已签卡（故事卡分节或 `sign_scope` 中的文件路径），提交信息必须带 `Sign-Invalidates: S-xx.xx-xx, ...`，且与 `verify:sign-impact` 实算集合**完全一致**；漏报、多报、非法卡号一律红。TL 在批次边界重签，重签前旧签字按规则 8 失效。失效集合由工具现算，不允许维护「哪些卡已签」的人手名单。**trailer 由工具生成**：提交前跑 `npm run verify:sign-impact -- --staged --print-trailer`，把输出原样粘进提交信息（或走 `git commit -F`）；校验按**集合相等**，不要求字节/顺序一致——工具输出就是全量，少一个即红，因此不存在「应付得过去的最小集合」。
 19. **运行层证据最低可核条件（2026-11-08 起，R-EV-02）**：任何「真机 / 运行层」结论必须同时给出下列五项，缺一记 `failed`，**不得用 CI、数据层或渲染层结论代偿**：
     - `commit` + `dirty=false`（工作区干净，证据与所签 commit 同源）；
-    - `runtime`：启动方式（枚举 `tauri-dev` / `tauri-build` / `cargo+custom-protocol` / 其他）、`node` 或 `electron` 版本、`os` / `arch`；
+    - `runtime`：`launchMode`（枚举 `tauri-dev` / `tauri-build` / `cargo+custom-protocol` / 其他）、`node` 版本、`os` / `arch`、`hostTarget`（Tauri WebKit 的 platform / Rust triple）、`electron`。**`electron` 必须显式写 `"none"`**，语义是「非 Electron 宿主，本产品 Tauri WebKit 下必然如此」，**记 `none` 通过**；真实 Node 证据不得因「没有 Electron」被判红，也不得为过门禁伪造 electron 版本。**字段缺失仍 `FAIL`** ——「明示不适用」与「没写」必须分开判；
     - `build`：前端入口文件名与构建时间、cargo profile、features、二进制路径 + `sha256`；
     - `command`：完整启动命令与环境变量（`AKA_DIAG`、`AKA_DIAG_TARGET` 等）；
-    - `dump`：原始 JSON 路径 + `finishedAt`，并复制入库 `docs/qa/evidence/`，不得只留在 `~/Library`。
-    - 机器约束：`diag.ts` 统一写 `env` 块，`commit` 由构建期注入（define），禁止手写；`verify:evidence` 校验 `env` 五项非空。
+    - `dump`：原始 JSON 路径 + `finishedAt`，并复制入库：当次落 `docs/qa/evidence/`、归档落 `docs/qa/raw/`（第 27 条单一常量），不得只留在 `~/Library`。
+    - 机器约束：`diag.ts` 统一写 `env` 块，`commit` 由构建期注入（define），禁止手写；`verify:evidence` 校验 `env` 五项非空（`electron` 允许显式 `"none"`，缺失仍 `failed`）。
 20. **未分配池与自取（2026-11-08 起）**：产品批准的可排池（当前 A 组 22 张，花名册 `aka-dispatch-pool-v0.1.csv`）允许 dev **自行取卡、不等 TL 分配**；取卡须同时满足机械资格——未开始/未分配、AC 不引用 `absent` 页面、上游无 `Blocked`、不与其他 dev 占用冲突。取卡当天只报 `Pxx` 与预计人日，**TL 不写 gate-log**（第 14 条边界前不进场）；批次边界由 TL 一次性追认，每卡一行：`owner=dev X`、`workorder=W-86#Pxx`、`note` 以 `【dev自取|Pxx|取卡 YYYY-MM-DD】` 开头，并记池快照 commit。签字规则不变，仍在合并 tip 一次签。补池归 TL、在边界做；池空或撞缺页由 TL 三选一（换卡 / 降 `Blocked` / 补页面依赖），dev 不得自行扩池或改卡状态。
 21. **签后取证违规、结论不变的处理（2026-11-08 起，替代「一律重签」）**：签字已绑 commit、卡面与 AC 均未变，事后认定取证过程违规（计数错误、以 CI/源码代偿运行层、证据只在 `~/Library` 等），但按原始 dump 独立重核后**结论不变** → **不重签**，维持原 `sign_commit`，在同一行 `note` 追加「更正注记」，至少写四项：① 日期与引用条（如 `§4.7.56`）；② 原表述；③ 更正后表述；④ 重核依据（dump 路径 + `finishedAt`）与复核人；末句固定写「结论不变，不重签」。**只有下列三种情形才重签**：`a` 卡面或 AC 改动；`b` 被测 commit 变化（签字对象本身变了）；`c` 重核结论改变（PASS↔FAIL）。更正注记**只追加、不覆盖**原文。若原签字未绑 commit，或违规已导致结论无法独立重核，则按失效处理，在批次边界重签。
 22. **交付计数双口径（2026-11-08 起，B 案）**：`已交付` 保留「实现成立」口径，但台账与任何对外宣读必须**同时**给出「已交付 N 张，其中 M 张无有效签字；可放行 N−M 张」，**禁止单读已交付数或单读占比**。无有效签字的已交付只计「实现进度」，**不计可放行**，不得作为放行、结项或对外承诺的依据；每张无签卡必须在跟踪表登记「分类 / 缺什么 / 责任人 / 期限」，逾期未签则降 `条件交付` 并同步人日。当前基线：已交付 **21**、无签 **6**、可放行 **15**（详见 §4.7.59）。
@@ -2489,6 +2489,20 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 
 **三、第四次「未跟踪/未提交挡取证」**
 - 本次 `evidence-layout.json` 未跟踪即 `dirty=true`，BA 一步未动。已补进第 26 条 `a`：未跟踪文件同样算脏，生成物必须提交为配置或落 `/tmp`。
+
+#### 4.7.66 更正：`electron=none` 是合法值，不是缺失（2026-11-08）
+
+**一、BA 提的判据矛盾（我错，BA 对）**
+- 本产品是 Tauri（WebKit WebView），从不跑在 Electron 里；此前出现 Electron 只是终端 `node` 被换成 Trae 垫片，那正是要挡的。
+- 原 `W-89` 写「`runtime` 含 `node` + `electron` + `os/arch`」配「缺字段 FAIL」，会让**真实 Node 的合法证据因「没有 Electron」永久判不过**，还会逼执行人伪造 electron 版本——规则在惩罚正确行为。
+
+**二、改后的口径（第 19 条 `runtime`）**
+- `runtime` 记：`launchMode`、`node`、`os`/`arch`、`hostTarget`（Tauri WebKit 的 platform / Rust triple）、`electron`。
+- `electron` 必须**显式**写 `"none"`，语义「非 Electron 宿主，不适用」，**记 `none` 通过**；字段**缺失仍 FAIL**。「明示不适用」与「没写」必须分开判。
+- `evidence-run.sh` 已同步：`electron: "none"`，`hostTarget: tauri-webkit (<rustc host triple>)`，五项判据改为「`node`/`os`/`hostTarget` 非空 + `electron` 键存在且非 null」。
+
+**三、`--check` 的边界**
+- BA 说得对：`s070503 --check` 只验分支/干净度/真 Node/套件存在，**不验 240s 内能否写出 dump**；超时结论只认完整跑，仍归 `W-89` 第 5 项。
 
 ---
 

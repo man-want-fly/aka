@@ -1798,7 +1798,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 
 ### W-84（dev B / QA）运行层证据补环境块并按第 19 条重取证
 
-1. **`diag.ts` 统一写 `env` 块**：`commit`（构建期 define，不手写）、`dirty`、`runtime{launchMode,node,electron,os,arch}`、`build{entryFile,builtAt,cargoProfile,features,binaryPath,binarySha256}`、`command`、`dump{path,finishedAt}`。所有 `s20xxx` / `s207` 证据共用，禁止各写一套。
+1. **`diag.ts` 统一写 `env` 块**：`commit`（构建期 define，不手写）、`dirty`、`runtime{launchMode,node,os,arch,hostTarget,electron}`、`build{entryFile,builtAt,cargoProfile,features,binaryPath,binarySha256}`、`command`、`dump{path,finishedAt}`。`electron` **必须显式写 `"none"`**（Tauri WebKit 宿主，非 Electron），记 `none` 通过；**字段缺失仍 FAIL**。所有 `s20xxx` / `s207` 证据共用，禁止各写一套。
 2. **`verify:evidence`**：扫描 `docs/qa/evidence/*.json`，`env` 五项任一为空即红；`dirty=true` 直接红。
 3. **重取两份证据并入库**：`s20501`（10 项，非 11）与 `s207`（18 项）在记录环境后重跑，dump 复制到 `docs/qa/evidence/`，提交信息写明 commit 与 `dirty=false`。
 4. **构建路径必须写清**：本终端 `node` 是 Electron 垫片（Electron 39.2.7），`vite build` 因 `@rollup/rollup-darwin-x64.node` 未签名报 `mapped file has no cdhash`；实际可用路径（真实 Node / 预构建 dist / 其他）必须写进证据 `command`，不得只写「真机」。
@@ -1866,9 +1866,9 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 
 1. **归档路径**：归档从 `docs/qa/evidence/raw/` 改到 `docs/qa/raw/`；路径常量单一来源，`evidence-run.sh` 与 `verify_evidence.mjs` 同源引用（第 27 条）。
 2. **`meta.dump`**：补 `finishedAt`（与 dump 内 `finishedAt` 一致），第 19 条第五项可取。
-3. **`env` 块与注入**：`diag.ts` 写 `env`，`commit` 构建期 `define` 注入；`verify:evidence` 校验 env 五项、缺一 failed（第 28 条）。
+3. **`env` 块与注入**：`diag.ts` 写 `env`，`commit` 构建期 `define` 注入；`verify:evidence` 校验 env 五项、缺一 failed（第 28 条）。`runtime.electron` 允许显式 `"none"`（Tauri WebKit 必然如此），**缺失才 failed**。
 4. **`s2` schema 分支**：后处理按 `build/dataset/engine/debounce/cold/warm/batchCompute/timeframes/verification/telemetry` 解析，不再套 `ok/checks[]/blocked`，否则必 `exit 2`。
-5. **`s070503` 超时**：查清是套件未跑完还是等待路径不对；查清前不得重跑。
+5. **`s070503` 超时**：查清是套件未跑完还是等待路径不对；查清前不得重跑。**`--check` 只验前置，不验 240s 内能否写出 dump**，超时结论只认完整跑的结果。
 6. **`S-02.06-01` 现状**：5 项过 2 项、`suite=null`、`checks=0`；`s2` 三项运行时未过（MACD 副图、悬停取值、B2 渲染），先判真 bug / 环境问题。**真 bug 则重签不只是重跑。**
 7. **运行时三项未过（`colorOk` / `macdCount` / `shownSma` / `b2Render`）的判据前置**：
    - dump 必须记 `windowFocused` / `appActive`（含取值时间）；缺字段即该 check `不可判定=FAIL`，**不得记「环境问题」**。
@@ -1878,6 +1878,7 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
    - **归档路径**：BA 完整跑 `s2`（不是 `--check`）；TL 查 `docs/qa/raw/` 有新产物、`docs/qa/evidence/` 下无子目录、`verify:evidence` failed=0。不过 → 证据作废，W-89 未完成。
    - **`meta.dump.finishedAt`**：TL 用 `jq -r '.dump.finishedAt'` 验非空且与 dump 内 `finishedAt` 相等；缺失/不等 → 未完成。
    - **`env` 注入**：TL 查 `vite.config.*` 确为 `define` 注入 + 产物 `commit` 与 `git rev-parse HEAD` 一致；**反例**：手改 `meta.commit` 为上游 commit 后 `verify:evidence` 必须 failed，仍 PASS → 未完成。
+   - **`runtime`**：`node`/`os`/`arch`/`hostTarget` 齐全，`electron` 显式为 `"none"`（记通过）；任一项**缺失** → `failed`。**不得因「没有 Electron」判红**，也不得为过门禁伪造 electron 版本。
    - **`s2` schema 分支**：TL 查 dump 含 10 个 schema 键、后处理 `checks>0` 且 `suite=s2`；仍 `exit 2` 或 `checks=0` → 未完成。
    - **`s070503` 超时**：240s 内产出 dump，或明确 `blocked` 原因；仍超时且无 dump → 未完成，不得以「大概跑完了」记 PASS。
    - **通用**：以上任一项不过，`W-89` 退回，BA 停跑，不签任何卡。
