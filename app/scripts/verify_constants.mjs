@@ -130,45 +130,56 @@ check(
  * .SH 且 688/689 开头 → 科，其余 .SH（含上证指数）→ 沪；
  * .SZ 且 300 开头 → 创，其余 .SZ（含深证成指/创业板指）→ 深。
  */
-const mockBlock = (marker) => {
-  const start = mockSrc.indexOf(marker);
+const mockBlock = (src, marker) => {
+  const start = src.indexOf(marker);
   if (start < 0) return null;
-  const end = mockSrc.indexOf("];", start);
-  return end < 0 ? null : mockSrc.slice(start, end);
+  const end = src.indexOf("];", start);
+  return end < 0 ? null : src.slice(start, end);
 };
-const knownBlock = mockBlock("let known:");
-const groupsBlock = mockBlock("let groups:");
-const knownCodes = [...(knownBlock ?? "").matchAll(/\("(\d{6}\.(?:SH|SZ))"\s*,/g)].map((m) => m[1]);
-const indexCodes = [
-  ...mockSrc.matchAll(/make_security\("(\d{6}\.(?:SH|SZ))",\s*"[^"]+",\s*Board::Index/g),
-].map((m) => m[1]);
-const groupEntries = [...(groupsBlock ?? "").matchAll(/\("(\d{3})",\s*(\d+),\s*Board::/g)].map(
-  (m) => ({ prefix: m[1], count: Number(m[2]) }),
-);
-if (knownCodes.length === 0 || indexCodes.length === 0 || groupEntries.length === 0) {
-  console.error(
-    "mock_partition_unparsable: mock.rs 的 known / groups / 指数注册（拒绝空转）",
-  );
-  process.exit(2);
-}
 const classifyByExchange = (code) => {
   const [num, market] = code.split(".");
   if (market === "SH") return num.startsWith("688") || num.startsWith("689") ? "star" : "sh";
   return num.startsWith("300") ? "chinext" : "sz";
 };
-const partition = { sh: 0, sz: 0, chinext: 0, star: 0 };
-for (const code of [...knownCodes, ...indexCodes]) {
-  partition[classifyByExchange(code)] += 1;
-}
-for (const { prefix, count } of groupEntries) {
-  const code = `${prefix}.${prefix === "601" || prefix === "688" ? "SH" : "SZ"}`;
-  partition[classifyByExchange(code)] += count;
+/** 从 mock.rs 文本现算分区计数；不可解析时返回 null（调用方拒绝空转）。 */
+const computePartition = (src) => {
+  const knownBlock = mockBlock(src, "let known:");
+  const groupsBlock = mockBlock(src, "let groups:");
+  const knownCodes = [...(knownBlock ?? "").matchAll(/\("(\d{6}\.(?:SH|SZ))"\s*,/g)].map((m) => m[1]);
+  const indexCodes = [
+    ...src.matchAll(/make_security\("(\d{6}\.(?:SH|SZ))",\s*"[^"]+",\s*Board::Index/g),
+  ].map((m) => m[1]);
+  const groupEntries = [...(groupsBlock ?? "").matchAll(/\("(\d{3})",\s*(\d+),\s*Board::/g)].map(
+    (m) => ({ prefix: m[1], count: Number(m[2]) }),
+  );
+  if (knownCodes.length === 0 || indexCodes.length === 0 || groupEntries.length === 0) return null;
+  const partition = { sh: 0, sz: 0, chinext: 0, star: 0 };
+  for (const code of [...knownCodes, ...indexCodes]) partition[classifyByExchange(code)] += 1;
+  for (const { prefix, count } of groupEntries) {
+    partition[classifyByExchange(`${prefix}.${prefix === "601" || prefix === "688" ? "SH" : "SZ"}`)] +=
+      count;
+  }
+  return partition;
+};
+const fmtPartition = (p) => `沪 ${p.sh} / 深 ${p.sz} / 创 ${p.chinext} / 科 ${p.star}`;
+const partition = computePartition(mockSrc);
+if (!partition) {
+  console.error("mock_partition_unparsable: mock.rs 的 known / groups / 指数注册（拒绝空转）");
+  process.exit(2);
 }
 check(
   "分区计数（指数按交易所归主板）｜脚本自动｜mock.rs known/groups/指数注册",
-  `沪 ${partition.sh} / 深 ${partition.sz} / 创 ${partition.chinext} / 科 ${partition.star}`,
+  fmtPartition(partition),
   "沪 48 / 深 46 / 创 17 / 科 9",
 );
+// 反向用例（W-29）：把生成组 40→41，派生结果必须随之变化；若不变说明校验器写死或按 Board 分组。
+const mutatedMockSrc = mockSrc.replace(/\("601",\s*40,\s*Board::ShMain\)/, '("601", 41, Board::ShMain)');
+const mutatedPartition = computePartition(mutatedMockSrc);
+if (!mutatedPartition || fmtPartition(mutatedPartition) === "沪 48 / 深 46 / 创 17 / 科 9") {
+  failures.push("分区计数反例: 生成组 40→41 后派生结果未变，校验器未真正派生");
+} else {
+  passes.push(`分区计数反例（601 组 40→41 后 ${fmtPartition(mutatedPartition)} ≠ 沪 48 / 深 46 / 创 17 / 科 9）: 校验有效`);
+}
 
 // ---------- 3. 裁定结果（W-24 正向断言，防止被悄悄改回去） ----------
 const betaSet = items

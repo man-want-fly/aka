@@ -110,7 +110,7 @@ const clickElement = (element: Element | null) => {
 
 /**
  * S-02.04-01 指标抽屉取证：
- * 数据层看 manifest（105 / 44 / 61 / 四字段齐全），渲染层看抽屉 DOM
+ * 数据层看 manifest（105 / 45 / 60 / 四字段齐全），渲染层看抽屉 DOM
  * （分类计数、搜索命中、规划中提示、无结果空态、Esc 关闭与焦点回归）。
  */
 export async function runDrawerDiagnostics(manifest: ManifestResponse) {

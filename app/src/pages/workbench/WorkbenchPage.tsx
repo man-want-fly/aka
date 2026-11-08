@@ -58,6 +58,7 @@ import { runS203Diagnostics } from "../../features/workbench/s203Diag";
 import { runS20202Diagnostics } from "../../features/workbench/s20202Diag";
 import { runS20101Diagnostics } from "../../features/workbench/s20101Diag";
 import { runS207Diagnostics } from "../../features/workbench/s207Diag";
+import { runS070503Diagnostics } from "../../features/workbench/s070503Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
 import { runRestartDiagnostics, restartDiagStage } from "../../features/workbench/restartDiag";
 import { runWatchlistDiagnostics, watchlistDiagStage } from "../../features/watchlist/watchlistDiag";
@@ -66,6 +67,7 @@ import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import { runS030302WorkbenchDiagnostics } from "../../features/qa/batchDiag";
 import type {
   AppError,
+  BarProvenanceDto,
   BarsResponse,
   CalcResponse,
   ManifestResponse,
@@ -163,6 +165,30 @@ function noticesForBars(len: number, subIds: string[], manifest: ManifestRespons
     }
   }
   return Object.keys(notices).length > 0 ? notices : null;
+}
+
+/**
+ * S-07.05-03：六字段溯源展示口径。
+ * 缺失（后端 missingFields 命中或值为空）一律显示「缺失」；
+ * quality_flags 只认四个枚举，其余不展示，空集显示「无」。
+ */
+const PROVENANCE_FLAGS = ["EX_RIGHTS", "SUSPENDED", "ZERO_VOLUME", "PRICE_ANOMALY"];
+const PROVENANCE_MISSING = "缺失";
+
+function provText(value: string | null, missing: Set<string>, field: string): string {
+  if (!value || missing.has(field)) return PROVENANCE_MISSING;
+  return value;
+}
+
+function provTime(value: number | null, missing: Set<string>): string {
+  if (value === null || !Number.isFinite(value) || missing.has("ingestedAt")) {
+    return PROVENANCE_MISSING;
+  }
+  const date = new Date(value * 1000);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
+    date.getHours(),
+  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 export function WorkbenchPage({
@@ -388,6 +414,12 @@ export function WorkbenchPage({
   }, []);
   const [bars, setBars] = useState<BarsResponse | null>(null);
   const [calc, setCalc] = useState<CalcResponse | null>(null);
+  // S-07.05-03：主图 K 线点击 → 六字段溯源浮层（复用 S-07.05-02 的 bar_provenance，不新增 IPC）
+  const [provSel, setProvSel] = useState<{ index: number; date: string } | null>(null);
+  const [provData, setProvData] = useState<BarProvenanceDto | null>(null);
+  const [provLoading, setProvLoading] = useState(false);
+  const [provError, setProvError] = useState<string | null>(null);
+  const provToken = useRef(0);
   // 供 diag 逐根比对读取「当前渲染帧」的引擎结果（effect 闭包不会随后续 render 更新）
   const calcRef = useRef<CalcResponse | null>(null);
   const barsRef = useRef<BarsResponse | null>(null);
@@ -513,9 +545,73 @@ export function WorkbenchPage({
   const diagStarted = useRef(false);
   const activeCodeRef = useRef(activeCode);
   activeCodeRef.current = activeCode;
+  const timeframeRef = useRef(timeframe);
+  timeframeRef.current = timeframe;
   const [diagStatus, setDiagStatus] = useState<string | null>(null);
   /** S-07.01-01（补1）：必需能力缺口文案；非空时工作台入口出现「查看数据源状态」。 */
   const [datasourceIssue, setDatasourceIssue] = useState<string | null>(null);
+
+  // S-07.05-03：浮层关闭（ESC / 点外 / 切标的 / 切周期 / 切复权均清空，不保留上一条）
+  const closeProvenance = useCallback(() => {
+    provToken.current += 1;
+    setProvSel(null);
+    setProvData(null);
+    setProvError(null);
+    setProvLoading(false);
+  }, []);
+
+  const openProvenance = useCallback(
+    (index: number) => {
+      const bar = barsRef.current?.bars[index];
+      if (!bar) return;
+      const token = provToken.current + 1;
+      provToken.current = token;
+      setProvSel({ index, date: bar.date });
+      setProvData(null);
+      setProvError(null);
+      setProvLoading(true);
+      ipc
+        .barProvenance({
+          security: activeCodeRef.current,
+          date: bar.date,
+          timeframe,
+          adj,
+        })
+        .then((data) => {
+          if (provToken.current !== token) return;
+          setProvData(data);
+          setProvLoading(false);
+        })
+        .catch((err) => {
+          if (provToken.current !== token) return;
+          setProvError(describeError(err).message);
+          setProvLoading(false);
+        });
+    },
+    [adj, timeframe],
+  );
+
+  useEffect(() => {
+    closeProvenance();
+  }, [activeCode, timeframe, adj, closeProvenance]);
+
+  useEffect(() => {
+    if (!provSel) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeProvenance();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (target?.closest("[data-provenance='1']")) return;
+      closeProvenance();
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointerDown, true);
+    };
+  }, [provSel, closeProvenance]);
 
   const drainSamples = useCallback(() => {
     const items = diagSamples.current;
@@ -828,7 +924,9 @@ export function WorkbenchPage({
             diagPhase.current = phase;
           },
           setCode: setActiveCode,
-          setParams: setAppliedParams,
+          // 走真实用户输入路径：params → 120ms 防抖 → appliedParams（S-02.05-01）。
+          // 直接写 appliedParams 会与 params 防抖互相触发，连键会被测成 2 个批次。
+          setParams,
           setTimeframe,
           nextSample,
           drainSamples,
@@ -1006,6 +1104,40 @@ export function WorkbenchPage({
       alive = false;
     };
   }, [manifest, datasetManifest]);
+
+  // S-07.05-03 溯源浮层取证：AKA_DIAG_TARGET=s070503 时自跑一次
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || securities.length === 0) return;
+    if (window.sessionStorage.getItem("aka.s070503.diag.done") === "1") return;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if (target !== "s070503" || !alive) return;
+      window.sessionStorage.setItem("aka.s070503.diag.done", "1");
+      setDiagStatus("S-07.05-03 取证：运行中");
+      try {
+        await new Promise((resolve) => window.setTimeout(resolve, 600));
+        const report = await runS070503Diagnostics({
+          getBars: () => barsRef.current,
+          getActiveCode: () => activeCodeRef.current,
+          getTimeframe: () => timeframeRef.current,
+          setCode: setActiveCode,
+          setTimeframe,
+        });
+        if (!alive) return;
+        const passed = report.checks.filter((check) => check.passed).length;
+        setDiagStatus(
+          `S-07.05-03 取证：${report.ok ? "全绿" : "有红项"}（${passed}/${report.checks.length}）`,
+        );
+        (window as unknown as Record<string, unknown>).__AKA_S070503_EVIDENCE__ = report;
+      } catch (err) {
+        setDiagStatus(`S-07.05-03 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, securities]);
 
   // S-02.03-01 副图取证：AKA_DIAG_TARGET=s203 时自跑；两轮验证「布局/拖拽」与「重启恢复」
   useEffect(() => {
@@ -1547,6 +1679,12 @@ export function WorkbenchPage({
     };
   }, []);
 
+  // S-07.05-03：浮层字段派生（缺失集合 / 允许的质量标记）
+  const missingFields = new Set(provData?.missingFields ?? []);
+  const flagsText = (provData?.qualityFlags ?? [])
+    .filter((flag) => PROVENANCE_FLAGS.includes(flag))
+    .join("、");
+
   return (
     <AppShell active="workbench" onNavigate={onNavigate}>
       <div className="workbench" data-workbench-root="1">
@@ -1937,6 +2075,7 @@ export function WorkbenchPage({
                       // S-03.03-02：图例「?」进入 P4，返回仍回工作台并保留副图/缩放
                       window.location.hash = `#/catalog/${encodeURIComponent(indicatorId)}?from=chart&code=${encodeURIComponent(activeCode)}`;
                     }}
+                    onCandleClick={openProvenance}
                   />
                   <IndicatorReadouts
                     series={calc?.series ?? []}
@@ -1946,6 +2085,79 @@ export function WorkbenchPage({
                     subCount={subPlots.length}
                     units={units}
                   />
+                  {provSel && (
+                    <div
+                      className="prov-overlay"
+                      data-provenance="1"
+                      data-provenance-date={provSel.date}
+                      role="dialog"
+                      aria-label="K 线溯源"
+                    >
+                      <div className="prov-overlay__head">
+                        <span>K 线溯源 · {provSel.date}</span>
+                        <button
+                          type="button"
+                          className="prov-overlay__close"
+                          data-provenance-close="1"
+                          aria-label="关闭溯源浮层"
+                          onClick={closeProvenance}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {provLoading && <div className="prov-overlay__hint">读取中…</div>}
+                      {provError && (
+                        <div className="prov-overlay__hint" data-provenance-error="1">
+                          读取失败：{provError}
+                        </div>
+                      )}
+                      {provData && (
+                        <dl className="prov-overlay__list">
+                          <div>
+                            <dt>provider</dt>
+                            <dd data-prov-field="provider">
+                              {provText(provData.provider, missingFields, "provider")}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>batch_id</dt>
+                            <dd data-prov-field="batchId">
+                              {provText(provData.batchId, missingFields, "batchId")}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>ingested_at</dt>
+                            <dd data-prov-field="ingestedAt">
+                              {provTime(provData.ingestedAt, missingFields)}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>dataset_id</dt>
+                            <dd data-prov-field="datasetId">
+                              {provText(provData.datasetId, missingFields, "datasetId")}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>adj_mode</dt>
+                            <dd data-prov-field="adjMode">
+                              {provText(provData.adjMode, missingFields, "adjMode")}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>quality_flags</dt>
+                            <dd data-prov-field="qualityFlags">
+                              {flagsText || "无"}
+                            </dd>
+                          </div>
+                        </dl>
+                      )}
+                      {provData && provData.errorCode && (
+                        <div className="prov-overlay__hint" data-provenance-missing="1">
+                          {provData.errorCode}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   </ChartCrashBoundary>
                 </>
               ) : (

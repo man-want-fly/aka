@@ -172,7 +172,8 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
     }`,
   );
 
-  // 手册覆盖度：61 条规划项不得残留占位公式；覆盖分层由 specStatus 承载
+  // 手册覆盖度：60 条规划项不得残留占位公式；覆盖分层由 specStatus 承载
+  // 计数从 manifest 现算（normal 43 + beta 2 = 45 已实现；planned 60；合计 105）
   const plannedItems = items.filter((item) => item.status === "planned");
   const placeholder = plannedItems.filter(
     (item) => item.formulaSummary.includes("待《技术指标全能手册》核定") || item.formulaSummary.includes("待手册核定"),
@@ -182,9 +183,9 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
     "D-06",
     "S-03.01-01(手册)",
     "data",
-    plannedItems.length === 61 &&
+    plannedItems.length === 60 &&
       placeholder.length === 0 &&
-      bySpec("manualComplete") === 48 &&
+      bySpec("manualComplete") === 47 &&
       bySpec("partial") === 9 &&
       bySpec("productDefined") === 4 &&
       plannedItems.every((item) => item.notes.includes("手册")),

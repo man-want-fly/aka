@@ -181,6 +181,36 @@ export interface BarDto {
   adjFactor: number;
   source: string;
   quality: string[];
+  /** S-07.05-02 行级溯源批次；缺失为 null，浮层显示「缺失」 */
+  batchId?: string | null;
+  /** 入库时间（epoch 秒）；缺失为 null */
+  ingestedAt?: number | null;
+}
+
+/** S-07.05-02 / S-07.05-03：单根 K 线溯源请求（复用既有 bar_provenance，不新增 IPC） */
+export interface BarProvenanceRequest {
+  security: string;
+  /** 交易日 YYYY-MM-DD */
+  date: string;
+  timeframe: string;
+  adj: string;
+}
+
+/** 六类字段 + 复权前后价；缺失字段由后端 missingFields / errorCode 判定 */
+export interface BarProvenanceDto {
+  security: string;
+  date: string;
+  provider: string;
+  batchId: string | null;
+  ingestedAt: number | null;
+  datasetId: string;
+  adjMode: string;
+  qualityFlags: string[];
+  rawClose: number;
+  close: number;
+  adjFactor: number;
+  missingFields: string[];
+  errorCode: string | null;
 }
 
 export interface ProvenanceDto {

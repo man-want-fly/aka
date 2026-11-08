@@ -551,6 +551,12 @@ Gate A 统一复跑：`node app/scripts/verify_constants.mjs --docs` → PASS 21
     - 机器约束：`diag.ts` 统一写 `env` 块，`commit` 由构建期注入（define），禁止手写；`verify:evidence` 校验 `env` 五项非空。
 20. **未分配池与自取（2026-11-08 起）**：产品批准的可排池（当前 A 组 22 张，花名册 `aka-dispatch-pool-v0.1.csv`）允许 dev **自行取卡、不等 TL 分配**；取卡须同时满足机械资格——未开始/未分配、AC 不引用 `absent` 页面、上游无 `Blocked`、不与其他 dev 占用冲突。取卡当天只报 `Pxx` 与预计人日，**TL 不写 gate-log**（第 14 条边界前不进场）；批次边界由 TL 一次性追认，每卡一行：`owner=dev X`、`workorder=W-86#Pxx`、`note` 以 `【dev自取|Pxx|取卡 YYYY-MM-DD】` 开头，并记池快照 commit。签字规则不变，仍在合并 tip 一次签。补池归 TL、在边界做；池空或撞缺页由 TL 三选一（换卡 / 降 `Blocked` / 补页面依赖），dev 不得自行扩池或改卡状态。
 21. **签后取证违规、结论不变的处理（2026-11-08 起，替代「一律重签」）**：签字已绑 commit、卡面与 AC 均未变，事后认定取证过程违规（计数错误、以 CI/源码代偿运行层、证据只在 `~/Library` 等），但按原始 dump 独立重核后**结论不变** → **不重签**，维持原 `sign_commit`，在同一行 `note` 追加「更正注记」，至少写四项：① 日期与引用条（如 `§4.7.56`）；② 原表述；③ 更正后表述；④ 重核依据（dump 路径 + `finishedAt`）与复核人；末句固定写「结论不变，不重签」。**只有下列三种情形才重签**：`a` 卡面或 AC 改动；`b` 被测 commit 变化（签字对象本身变了）；`c` 重核结论改变（PASS↔FAIL）。更正注记**只追加、不覆盖**原文。若原签字未绑 commit，或违规已导致结论无法独立重核，则按失效处理，在批次边界重签。
+22. **交付计数双口径（2026-11-08 起，B 案）**：`已交付` 保留「实现成立」口径，但台账与任何对外宣读必须**同时**给出「已交付 N 张，其中 M 张无有效签字；可放行 N−M 张」，**禁止单读已交付数或单读占比**。无有效签字的已交付只计「实现进度」，**不计可放行**，不得作为放行、结项或对外承诺的依据；每张无签卡必须在跟踪表登记「分类 / 缺什么 / 责任人 / 期限」，逾期未签则降 `条件交付` 并同步人日。当前基线：已交付 **21**、无签 **6**、可放行 **15**（详见 §4.7.59）。
+23. **运行层 GUI 取证单一链路（2026-11-08 起）**：
+    - `a` **谁跑**：**BA 为唯一取证执行人**；dev 只交「开发自测参考」，不产出可签证据；TL 只复核与签字。BA 缺席时由 TL 指定交叉执行（dev A 跑 dev B 的卡、dev B 跑 dev A 的卡），meta 记 `runner`；**任何 dev 不得给自己的卡取证**。
+    - `b` **在哪跑**：只在 `main` 主树、干净工作区（`git status --porcelain` 为空、`dirty=false`），dump 的 `commit` 必须是被签 commit。**`dev2`/worktree 的 dump 一律只作参考、不计证据**，合并后按第 19 条在 main tip 重跑；未合并的卡不可签。
+    - `c` **怎么留痕**：入口固定为 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本必须：自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测到 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项（`runtime`/`build`/`command`/`dump`/`commit`+`dirty=false`）并落固定路径 `docs/qa/evidence/` 与 `raw/<name>-<commit12>-<label>.json`，缺一 `exit 2`。**禁止 `open /tmp/*.command` 之类人工步骤**；meta 必须写 `reproduce` 字段，下一个人照抄即可复现。
+
 
 #### 4.7.2 8 张卡的 diff 复核（`1fb9dd0` → `6367c09`）
 
@@ -2272,7 +2278,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **三、合并后重新成立的事实**
 - 基线：`verify:constants`（模块 19 + 反例 18、漂移 0）、`verify:index-pd`（74 行 / 207.9 对 207.9）、`verify:evidence`（失败 0）、`verify:r03`、`verify:format`、`verify:docs`（failed=0/skipped=0、74 卡 / 10 页）、`verify:gate-log`（56 行）全绿；共用基线文件未被 dev2 改动，数字保持。
 - CI：合并 tip `d996c6f` 的 run **`42433408456` 为红**（详见七）；后续收口提交 `2accf94` 的 run `42434355191` **success**（macOS build/test/golden + 签字台账两 job 均绿），**新 tip 已转绿**。签名一律以对应 run 的 `head_sha` 为准（第 16 条）。
-- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 19 条，证据 commit 必须是被签 tip 本身，故三卡置 `待签`、`gate_c=FAIL`，由 dev B 在合并后的干净 tip 上重跑（13/7/9 项）后 TL 签，**不用旧 dump 凑签**。
+- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 19 条，证据 commit 必须是被签 tip 本身，故三卡置 `待签`、`gate_c=FAIL`，由 BA 在合并后的干净 tip 上重跑（13/7/9 项）后 TL 签（执行人按 §4.7.60），**不用旧 dump 凑签**。
 
 **四、`S-08.01-02` 的异常（需 BA 判）**
 台账记为 `Blocked`（理由：标的侧 AC 依赖 P7 搜索浮层），但 `dev2` 已实现指标侧空态（`CatalogPage.tsx`，`a60a504`），且 `IndicatorDrawer.tsx` 注释写「搜索无结果空态并入 S-08.01-02」。代码与台账口径冲突：要么拆卡（指标侧可交付、标的侧继续 Blocked），要么整卡继续等 P7。已置池内 `待BA复核`，**不签、不结项**。
@@ -2290,9 +2296,60 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 
 **七、`S-02.08-01` 合并即失效（run `42433408456` 红）**
 - 红因：`dev2` 的 `a60a504` 修改了 `app/src/pages/workbench/WorkbenchPage.tsx`（「暂无数据」→「行情未加载」），该 basename 在 `S-02.08-01` 的 `sign_scope` 内 → 原签字 `1d02300` 失效；合并提交未申报 `Sign-Invalidates`，`verify:sign-impact` 按第 18 条判红。
-- 处置：合并提交已推送且禁止改写历史，**不 amend、不 force push**；`S-02.08-01` 在 gate-log 置 `待签`、`gate_c=FAIL`，保留原 `sign_commit`/`sign_scope` 供回溯，owner=TL、workorder=`W-83`。该失败 run 登记进 `aka-ci-sign-ledger-v0.1.csv`（note 标「非签字、仅登记」）。
-- 放行条件：dev B 在合并后的干净 tip 上重跑 `S-02.08-01` 证据，CI 在新 tip 绿后 TL 重签；重签前该卡不得标 `已交付`。
+- 处置：合并提交已推送且禁止改写历史，**不 amend、不 force push**；`S-02.08-01` 在 gate-log 置 `待签`、`gate_c=FAIL`。因 gate-log 规则要求 `gate_c=FAIL` 行不得留 `sign_commit`，原签 `1d02300` 与 `sign_scope` **只存该行 note 供回溯**；owner=TL、workorder=`W-83`。该失败 run 只作事故记录（不写签字台账——`verify_sign_coverage` 拒收 `conclusion≠success` 的行）。
+- 放行条件：BA 在合并后的干净 tip 上重跑 `S-02.08-01` 证据，CI 在新 tip 绿后 TL 重签；重签前该卡不得标 `已交付`。
 - 教训：合并分支前应先跑 `verify:sign-impact` 对**待并入 diff** 预演，而不是等合并 tip CI 报警；该预演列入 `W-83` 后续窗口动作。
+
+#### 4.7.59 交付计数口径（B）、无签交付跟踪与 G5 收口（2026-11-08）
+
+**一、裁定：B 案 + 双数字强制披露（制度第 22 条）**
+
+- `已交付` 保留「实现成立」口径；**任何台账、汇报、看板必须同时写「已交付 21 张，其中 6 张无有效签字；可放行 15 张」**，禁止单读 21 或单读 28.4%。
+- 无签交付只计「实现进度」，**不计可放行**，不得作为放行、结项、对外承诺的依据。
+
+| 口径 | 卡数 | 人日 | 卡占比 | 人日占比 |
+|---|---|---|---|---|
+| 已交付（实现成立） | 21 | 59.5 | 28.4% | 28.6% |
+| 其中：无有效签字 | 6 | 16.5 | 8.1% | 7.9% |
+| **可放行（有效签字）** | **15** | **43.0** | **20.3%** | **20.7%** |
+
+**二、6 张无签交付跟踪表**
+
+| 卡 | 分类 | 实现/证据 | 缺什么、怎么签 | 责任 | 期限 |
+|---|---|---|---|---|---|
+| `S-01.01-01` | **可补签**（本轮由「无签可绑」转入） | `8daf2e2` + e01 19/19；Gate A/B/C 全 PASS | e01 19 项在干净 tip 重跑 → TL 签 | BA 执行 / TL 签 | 2026-11-10 18:00 |
+| `S-01.01-02` | 无签可绑（**TL 追认**） | e01 19/19；Gate 列 `N/A`，从未进 B/C | 无签字对象；追认为「无签（追认）」，永久不进可放行 | TL 追认 / BA 记账 | 2026-11-08（本裁定即生效） |
+| `S-02.02-01` | 无签可绑（**TL 追认**） | s2 §4 缓存/聚合；Gate 列 `N/A` | 同上 | TL 追认 / BA 记账 | 2026-11-08（本裁定即生效） |
+| `S-07.01-01` | 待重签 | `7b4f87e` 已在 main；13 项 | main tip 重跑 13 项 → TL 签 | BA 执行 / TL 签 | 2026-11-09 18:00 |
+| `S-07.04-01` | 待重签 | `048f16b` 已在 main；7 项 | main tip 重跑 7 项 → TL 签 | BA 执行 / TL 签 | 2026-11-09 18:00 |
+| `S-07.05-01` | 待重签 | `689528a` 已在 main；9 项 | main tip 重跑 9 项 → TL 签 | BA 执行 / TL 签 | 2026-11-09 18:00 |
+
+**三、追认效力与收敛**
+- `S-01.01-02`、`S-02.02-01` 自本裁定起标「无签（追认）」；只作实现进度，**永久不进可放行**。若产品要求可放行，须先入 Gate B/C 清单并补签，不得以追认代替签字。
+- 3 张待重签 + 1 张可补签**逾期未签 → 降 `条件交付`**，从 21 中移出并同步人日；不得长期挂账。
+
+**四、`S-01.01-01` 的 G5 收口（Gate A 不再永久 FAIL）**
+- `verify_constants.mjs` 的分区派生在 `ca4774a` 已实现（W-29），但缺审计要求的反向用例。本轮补：`computePartition(src)` 纯函数 + 反例「`601` 组 40→41 → 沪 49/深 46/创 17/科 9」；若派生写死或按 Board 分组，反例必 FAIL。实测正向 PASS、反例 PASS、模块数反例 PASS，结论 PASS。
+- 卡面裸写 `48/46/17/9` 已由 BA 在 W-29 改为引用（复核卡内已无该组裸写）；四个数字**未过期**，保持冻结值，派生只作校验方式。
+- 因此 gate-log：`S-01.01-01` `gate_a` FAIL→**PASS**、`gate_b` FAIL→**PASS**（D-4/D-5 已裁、W-22 已改），`gate_c` 维持 PASS；该卡从「无签可绑」转「可补签」，但**证据停在 `8daf2e2`，仍不可签**。
+
+**五、`S-02.06-01` 重签未放行（证据五项仍缺两项）**
+- dev A 已交 `2aa8ece`（`dirty=false`）+ 三项硬指标，但 meta 缺第 19 条五项中的 `runtime`（node/electron、os/arch）与 `build`（前端构建时间、二进制 sha256）；W-81 第 2 步明确要求 `process.versions` 与 build 产物时间。按第 19 条**缺一记 FAIL，不签**。
+- 产品口述的 `e0b07bc` 早于证据 commit `2aa8ece`，签它等于签一个不含证据的对象；重签对象应为 `2aa8ece`（或包含它的后续干净 tip，`relation=ancestor`）。
+- 补件路径：按第 23 条 `app/scripts/evidence-run.sh s2` 重跑一次，meta 自动补齐 `runtime`/`build`/`dump`；对应 run 绿后 TL 签。
+
+**六、P04「44-105」**
+- `44` 是旧口径；现以 `M=45` 派生，关于页应写 `45-105`。dev B 复核后改卡面/文案，不涉及签字，不得保留 `44`。
+
+#### 4.7.60 运行层 GUI 取证：固定一条链路（2026-11-08 定，制度第 23 条）
+
+**背景**：CI 用真 Node 所以永远绿；本机 PATH 的 `node` 是 Electron 39.2.7 垫片，`rollup.darwin-x64.node` 无签名导致 `vite build` 失败。结果是运行层证据靠人肉 `open /tmp/aka-batch-evidence.command`：`s20501`、`s207` 手动跑，dev B 的 P01–P04 五套 diag 一条未出、`telemetry` 停在 09:41。这是结构问题。
+
+1. **谁跑**：**BA 为唯一取证执行人**；dev 只交「开发自测参考」，不产出可签证据；TL 只复核与签字。BA 缺席时由 TL 指定交叉执行（dev A 跑 dev B 的卡、dev B 跑 dev A 的卡），meta 记 `runner`；**任何 dev 不得给自己的卡取证**。
+2. **在哪跑**：只在 `main` 主树、干净工作区（`dirty=false`），dump 的 `commit` 必须是被签 commit。**`dev2`/worktree 的 dump 一律只作参考、不计证据**；合并后按第 19 条在 main tip 重跑。未合并的卡不可签。
+3. **怎么留痕**：入口固定 `app/scripts/evidence-run.sh <suite>`（`--check` 只验前置）。脚本自选真 Node（`EVIDENCE_NODE` 或 `npx -y node@22`，检测 Electron 垫片即失败）→ `tsc --noEmit` + `NODE_ENV=development vite build` + `cargo build -p aka-desktop --features tauri/custom-protocol` → 调 `diag-evidence.sh <suite>` → 补齐第 19 条五项并落固定路径 `docs/qa/evidence/<name>.json|-meta.json` 与 `raw/<name>-<commit12>-<label>.json|-meta.json`，缺一 `exit 2`；meta 写 `reproduce`。**禁止 `open /tmp/*.command` 之类人工步骤。**
+4. **旧证据处置**：`s20501`、`s207` 已签且卡面未变 → 按第 21 条维持原签，不因合并本身强制重跑；3 张待签与 `S-02.08-01` 必须重跑；`dev2` dump 一律不作签字依据。
+5. **环境固化**：meta 记录 `EVIDENCE_NODE` 绝对路径与 `node -v`；交接时先跑 `--check`（验分支、干净度、真 Node），不构建。
 
 ---
 

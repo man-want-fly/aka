@@ -1,0 +1,5426 @@
+{
+  "schemaVersion": 1,
+  "kind": "aka-s2-evidence",
+  "generatedAt": "2026-11-08T01:41:37.827Z",
+  "build": {
+    "buildProfile": "dev",
+    "optLevel": "1",
+    "lto": "false",
+    "codegenUnits": "256",
+    "debug": "2",
+    "targetTriple": "x86_64-apple-darwin"
+  },
+  "dataset": {
+    "datasetId": "sim-default",
+    "barCount": 520,
+    "instanceCount": 50,
+    "payloadBytes": 678215,
+    "indicatorSet": "workbench-default",
+    "timeframe": "D",
+    "adj": "qfq"
+  },
+  "engine": {
+    "engineVersion": "aka-engine-0.1.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
+    "hardwareConcurrency": 8
+  },
+  "debounce": {
+    "target": "1→12→120（台账判据）+ 1→12→60（成功单次 compute 佐证）",
+    "computeCountSemantics": "compute.count 每次 calc 请求发 1 条；字段 count=本批新增实算条数（cache miss，去重后）、instances=批内实例总数（本项目 50）、skip=批内去重跳过（6）、cacheHit=全命中；热缓存 count=0 不等于没算过。连键断言的是「请求只发 1 次」，不是「只算 1 个实例」",
+    "burst120": {
+      "label": "1→12→120",
+      "inputs": [
+        1,
+        12,
+        120
+      ],
+      "inputGapMs": 40,
+      "quietMs": 120,
+      "requestsIssued": 1,
+      "computeCountEvents": 1,
+      "computeEvent": {
+        "tsMs": 1794102044567,
+        "name": "indicator.compute",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{\"period\":120}|2023-01-02~2024-12-27",
+          "computeMs": 0.013727999999999999,
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T05",
+          "paramsHash": "ea09afd3fecd201d",
+          "security": "300750.SZ",
+          "timeframe": "D"
+        }
+      },
+      "computeCountEvent": {
+        "tsMs": 1794102044568,
+        "count": 5,
+        "instances": 50,
+        "skip": 6,
+        "cacheHit": false,
+        "fields": {
+          "cacheHit": false,
+          "count": 5,
+          "instances": 50,
+          "skip": 6
+        }
+      },
+      "samples": [
+        {
+          "phase": "debounce",
+          "security": "300750.SZ",
+          "timeframe": "D",
+          "adj": "qfq",
+          "barsMs": 13,
+          "calcMs": 28,
+          "totalMs": 41,
+          "cacheHit": false,
+          "computedMs": 0.15,
+          "barCount": 520,
+          "seriesHash": "da0ce4f2",
+          "seriesPoints": 38642
+        }
+      ],
+      "passed": true
+    },
+    "burst60": {
+      "label": "1→12→60",
+      "inputs": [
+        1,
+        12,
+        60
+      ],
+      "inputGapMs": 40,
+      "quietMs": 120,
+      "requestsIssued": 1,
+      "computeCountEvents": 1,
+      "computeEvent": {
+        "tsMs": 1794102045993,
+        "name": "indicator.compute",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|300750.SZ|D|qfq|T05|{\"period\":60}|2023-01-02~2024-12-27",
+          "computeMs": 0.017782,
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T05",
+          "paramsHash": "0d154e14a228d636",
+          "security": "300750.SZ",
+          "timeframe": "D"
+        }
+      },
+      "computeCountEvent": {
+        "tsMs": 1794102046014,
+        "count": 5,
+        "instances": 50,
+        "skip": 6,
+        "cacheHit": false,
+        "fields": {
+          "cacheHit": false,
+          "count": 5,
+          "instances": 50,
+          "skip": 6
+        }
+      },
+      "samples": [
+        {
+          "phase": "debounce",
+          "security": "300750.SZ",
+          "timeframe": "D",
+          "adj": "qfq",
+          "barsMs": 11,
+          "calcMs": 47.999999999999545,
+          "totalMs": 55.999999999999545,
+          "cacheHit": false,
+          "computedMs": 0.13,
+          "barCount": 520,
+          "seriesHash": "c84fa833",
+          "seriesPoints": 39182
+        }
+      ],
+      "passed": true
+    },
+    "telemetry": {
+      "computeCount": 125,
+      "indicatorCompute": 1374
+    }
+  },
+  "cold": {
+    "targetCount": 30,
+    "sampleCount": 30,
+    "codes": [
+      "600519.SH",
+      "002594.SZ",
+      "601318.SH",
+      "600036.SH",
+      "000858.SZ",
+      "688981.SH",
+      "300059.SZ",
+      "601899.SH",
+      "002415.SZ",
+      "600030.SH",
+      "601012.SH",
+      "000651.SZ",
+      "600900.SH",
+      "000001.SH",
+      "399001.SZ",
+      "399006.SZ",
+      "601000.SH",
+      "601001.SH",
+      "601002.SH",
+      "601003.SH",
+      "601004.SH",
+      "601005.SH",
+      "601006.SH",
+      "601007.SH",
+      "601008.SH",
+      "601009.SH",
+      "601010.SH",
+      "601011.SH",
+      "601013.SH",
+      "601014.SH"
+    ],
+    "allMiss": true,
+    "p95CalcMs": 107,
+    "p95TotalMs": 114,
+    "p95BarsMs": 12,
+    "maxTotalMs": 136,
+    "telemetryColdSamples": 1374,
+    "telemetryColdP95Ms": 0.1,
+    "computeCount": {
+      "tsMs": 1794102052954,
+      "count": 44,
+      "instances": 50,
+      "skip": 6,
+      "cacheHit": false,
+      "fields": {
+        "cacheHit": false,
+        "count": 44,
+        "instances": 50,
+        "skip": 6
+      }
+    },
+    "samples": [
+      {
+        "security": "600519.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 25,
+        "totalMs": 34,
+        "cacheHit": false,
+        "computedMs": 1.61,
+        "barCount": 520,
+        "seriesHash": "95c14bfe",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "002594.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 24,
+        "totalMs": 33,
+        "cacheHit": false,
+        "computedMs": 1.55,
+        "barCount": 520,
+        "seriesHash": "ef23792e",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601318.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 25,
+        "totalMs": 34,
+        "cacheHit": false,
+        "computedMs": 1.84,
+        "barCount": 520,
+        "seriesHash": "2897f0ae",
+        "seriesPoints": 39540
+      },
+      {
+        "security": "600036.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 23,
+        "totalMs": 33,
+        "cacheHit": false,
+        "computedMs": 1.51,
+        "barCount": 520,
+        "seriesHash": "a229e4b2",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "000858.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 24,
+        "totalMs": 33,
+        "cacheHit": false,
+        "computedMs": 1.45,
+        "barCount": 520,
+        "seriesHash": "8c629b00",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "688981.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 47,
+        "totalMs": 55,
+        "cacheHit": false,
+        "computedMs": 1.51,
+        "barCount": 520,
+        "seriesHash": "746c7682",
+        "seriesPoints": 39541
+      },
+      {
+        "security": "300059.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 128,
+        "totalMs": 136,
+        "cacheHit": false,
+        "computedMs": 1.78,
+        "barCount": 520,
+        "seriesHash": "2fdc0b03",
+        "seriesPoints": 39539
+      },
+      {
+        "security": "601899.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 107,
+        "totalMs": 114,
+        "cacheHit": false,
+        "computedMs": 1.55,
+        "barCount": 520,
+        "seriesHash": "2700a7a0",
+        "seriesPoints": 39547
+      },
+      {
+        "security": "002415.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 101,
+        "totalMs": 109,
+        "cacheHit": false,
+        "computedMs": 1.56,
+        "barCount": 520,
+        "seriesHash": "23a23d2c",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "600030.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 99,
+        "totalMs": 106,
+        "cacheHit": false,
+        "computedMs": 1.51,
+        "barCount": 520,
+        "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 25,
+        "totalMs": 33,
+        "cacheHit": false,
+        "computedMs": 1.61,
+        "barCount": 520,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 25,
+        "totalMs": 33,
+        "cacheHit": false,
+        "computedMs": 1.64,
+        "barCount": 520,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 47,
+        "totalMs": 56,
+        "cacheHit": false,
+        "computedMs": 1.65,
+        "barCount": 520,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 46,
+        "totalMs": 54,
+        "cacheHit": false,
+        "computedMs": 1.51,
+        "barCount": 520,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 25,
+        "totalMs": 33,
+        "cacheHit": false,
+        "computedMs": 1.54,
+        "barCount": 520,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 46,
+        "totalMs": 54,
+        "cacheHit": false,
+        "computedMs": 1.53,
+        "barCount": 520,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 55,
+        "totalMs": 62,
+        "cacheHit": false,
+        "computedMs": 1.63,
+        "barCount": 520,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 24,
+        "totalMs": 31,
+        "cacheHit": false,
+        "computedMs": 1.49,
+        "barCount": 520,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 23,
+        "totalMs": 31,
+        "cacheHit": false,
+        "computedMs": 1.63,
+        "barCount": 520,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 34,
+        "totalMs": 41,
+        "cacheHit": false,
+        "computedMs": 1.49,
+        "barCount": 520,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 31,
+        "totalMs": 40,
+        "cacheHit": false,
+        "computedMs": 1.83,
+        "barCount": 520,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 22,
+        "totalMs": 30,
+        "cacheHit": false,
+        "computedMs": 1.62,
+        "barCount": 520,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 36,
+        "totalMs": 43,
+        "cacheHit": false,
+        "computedMs": 1.47,
+        "barCount": 520,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 24,
+        "totalMs": 31,
+        "cacheHit": false,
+        "computedMs": 1.47,
+        "barCount": 520,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 53,
+        "totalMs": 60,
+        "cacheHit": false,
+        "computedMs": 1.56,
+        "barCount": 520,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 24,
+        "totalMs": 31,
+        "cacheHit": false,
+        "computedMs": 1.88,
+        "barCount": 520,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 24,
+        "totalMs": 32,
+        "cacheHit": false,
+        "computedMs": 1.36,
+        "barCount": 520,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 24,
+        "totalMs": 33,
+        "cacheHit": false,
+        "computedMs": 1.54,
+        "barCount": 520,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 24,
+        "totalMs": 32,
+        "cacheHit": false,
+        "computedMs": 1.51,
+        "barCount": 520,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 34,
+        "totalMs": 41,
+        "cacheHit": false,
+        "computedMs": 1.48,
+        "barCount": 520,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      }
+    ]
+  },
+  "warm": {
+    "targetCount": 30,
+    "batchCount": 3,
+    "criterion": "口径 R-S0-07-01：每批 30 连续热切回 × 3 批（≥90），批间不插冷算；全部 cacheHit 且逐点一致，判定取 max ≤ 120ms",
+    "sampleCount": 90,
+    "allCacheHit": true,
+    "allPointwiseMatch": true,
+    "p50TotalMs": 27,
+    "p50CalcMs": 19,
+    "p95TotalMs": 57,
+    "maxTotalMs": 66,
+    "maxCalcMs": 60,
+    "batchMaxTotalMs": [
+      58,
+      57,
+      66
+    ],
+    "computeCount": {
+      "tsMs": 1794102069422,
+      "count": 0,
+      "instances": 50,
+      "skip": 6,
+      "cacheHit": true,
+      "fields": {
+        "cacheHit": true,
+        "count": 0,
+        "instances": 50,
+        "skip": 6
+      }
+    },
+    "samples": [
+      {
+        "security": "600519.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "95c14bfe",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "002594.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "ef23792e",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601318.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 36,
+        "totalMs": 43,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2897f0ae",
+        "seriesPoints": 39540
+      },
+      {
+        "security": "600036.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "a229e4b2",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "000858.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 32,
+        "totalMs": 39,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8c629b00",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "688981.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "746c7682",
+        "seriesPoints": 39541
+      },
+      {
+        "security": "300059.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2fdc0b03",
+        "seriesPoints": 39539
+      },
+      {
+        "security": "601899.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 32,
+        "totalMs": 39,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2700a7a0",
+        "seriesPoints": 39547
+      },
+      {
+        "security": "002415.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 50,
+        "totalMs": 58,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "23a23d2c",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "600030.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 13,
+        "totalMs": 19,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 36,
+        "totalMs": 43,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 36,
+        "totalMs": 43,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 25,
+        "totalMs": 33,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 22,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 22,
+        "totalMs": 30,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 44,
+        "totalMs": 51,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 22,
+        "totalMs": 30,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 31,
+        "totalMs": 38,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 15,
+        "totalMs": 23,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 45,
+        "totalMs": 52,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 38,
+        "totalMs": 45,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "batch": 1,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 22,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "600519.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 43,
+        "totalMs": 50,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "95c14bfe",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "002594.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 24,
+        "totalMs": 31,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "ef23792e",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601318.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 23,
+        "totalMs": 31,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2897f0ae",
+        "seriesPoints": 39540
+      },
+      {
+        "security": "600036.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "a229e4b2",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "000858.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 50,
+        "totalMs": 56,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8c629b00",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "688981.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "746c7682",
+        "seriesPoints": 39541
+      },
+      {
+        "security": "300059.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 23,
+        "totalMs": 30,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2fdc0b03",
+        "seriesPoints": 39539
+      },
+      {
+        "security": "601899.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2700a7a0",
+        "seriesPoints": 39547
+      },
+      {
+        "security": "002415.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 38,
+        "totalMs": 45,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "23a23d2c",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "600030.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 15,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 13,
+        "totalMs": 19,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 33,
+        "totalMs": 39,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 21,
+        "calcMs": 25,
+        "totalMs": 32,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 22,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 25,
+        "totalMs": 33,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 18,
+        "totalMs": 26,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 27,
+        "totalMs": 35,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 37,
+        "totalMs": 45,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 17,
+        "totalMs": 25,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 49,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 17,
+        "totalMs": 24,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 17,
+        "totalMs": 25,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 18,
+        "totalMs": 27,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 12,
+        "calcMs": 28,
+        "totalMs": 37,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 16,
+        "totalMs": 25,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 15,
+        "calcMs": 19,
+        "totalMs": 27,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 49,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 37,
+        "totalMs": 44,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "batch": 2,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 46,
+        "totalMs": 53,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "600519.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "95c14bfe",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "002594.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 12,
+        "totalMs": 18,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "ef23792e",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601318.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 7,
+        "calcMs": 40,
+        "totalMs": 48,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2897f0ae",
+        "seriesPoints": 39540
+      },
+      {
+        "security": "600036.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 21,
+        "totalMs": 28,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "a229e4b2",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "000858.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 34,
+        "totalMs": 41,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8c629b00",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "688981.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "746c7682",
+        "seriesPoints": 39541
+      },
+      {
+        "security": "300059.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 60,
+        "totalMs": 66,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2fdc0b03",
+        "seriesPoints": 39539
+      },
+      {
+        "security": "601899.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 45,
+        "totalMs": 53,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "2700a7a0",
+        "seriesPoints": 39547
+      },
+      {
+        "security": "002415.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 13,
+        "totalMs": 19,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "23a23d2c",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "600030.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 13,
+        "totalMs": 19,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "63506b3f",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601012.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 50,
+        "totalMs": 57,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "879e4403",
+        "seriesPoints": 39542
+      },
+      {
+        "security": "000651.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 22,
+        "totalMs": 29,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "93337d6e",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "600900.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 13,
+        "totalMs": 19,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9bc6c50b",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "000001.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b2574d87",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "399001.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 13,
+        "totalMs": 19,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f2022a9f",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "399006.SZ",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 43,
+        "totalMs": 50,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "f12a6dba",
+        "seriesPoints": 39538
+      },
+      {
+        "security": "601000.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 43,
+        "totalMs": 50,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "afe11848",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601001.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3c203aa6",
+        "seriesPoints": 39548
+      },
+      {
+        "security": "601002.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 16,
+        "calcMs": 20,
+        "totalMs": 27,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8b803503",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601003.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 42,
+        "totalMs": 49,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "42986894",
+        "seriesPoints": 39543
+      },
+      {
+        "security": "601004.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 40,
+        "totalMs": 46,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "3835785e",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601005.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 15,
+        "totalMs": 21,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "1a5cd922",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601006.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "09fca578",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601007.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 11,
+        "calcMs": 47,
+        "totalMs": 55,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "8f282914",
+        "seriesPoints": 39546
+      },
+      {
+        "security": "601008.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 30,
+        "totalMs": 37,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "9a12c5b1",
+        "seriesPoints": 39545
+      },
+      {
+        "security": "601009.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "7535988b",
+        "seriesPoints": 39553
+      },
+      {
+        "security": "601010.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 13,
+        "totalMs": 19,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "b1c48363",
+        "seriesPoints": 39551
+      },
+      {
+        "security": "601011.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 10,
+        "calcMs": 14,
+        "totalMs": 20,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "78d9983a",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601013.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 47,
+        "totalMs": 54,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "02e13699",
+        "seriesPoints": 39544
+      },
+      {
+        "security": "601014.SH",
+        "batch": 3,
+        "timeframe": "D",
+        "adj": "qfq",
+        "barsMs": 9,
+        "calcMs": 23,
+        "totalMs": 32,
+        "engineMs": 0,
+        "cacheHit": true,
+        "matchesCold": true,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      }
+    ]
+  },
+  "batchCompute": {
+    "criterion": "count=本批新增实算（cache miss、去重后）；instances=批内实例总数 50；skip=批内去重 6；冷缓存 count=44、热缓存 count=0；count=0 且 instances>0 为全命中，不是零批次",
+    "cold": {
+      "tsMs": 1794102052954,
+      "count": 44,
+      "instances": 50,
+      "skip": 6,
+      "cacheHit": false,
+      "fields": {
+        "cacheHit": false,
+        "count": 44,
+        "instances": 50,
+        "skip": 6
+      }
+    },
+    "warm": {
+      "tsMs": 1794102069422,
+      "count": 0,
+      "instances": 50,
+      "skip": 6,
+      "cacheHit": true,
+      "fields": {
+        "cacheHit": true,
+        "count": 0,
+        "instances": 50,
+        "skip": 6
+      }
+    },
+    "coldOk": true,
+    "warmOk": true
+  },
+  "timeframes": {
+    "uiOrder": [
+      "W",
+      "D"
+    ],
+    "wCold": true,
+    "uiSamples": [
+      {
+        "timeframe": "W",
+        "security": "601014.SH",
+        "barCount": 104,
+        "cacheHit": false,
+        "barsMs": 9,
+        "calcMs": 9,
+        "totalMs": 11,
+        "seriesHash": "86e66051",
+        "seriesPoints": 6671
+      },
+      {
+        "timeframe": "D",
+        "security": "601014.SH",
+        "barCount": 520,
+        "cacheHit": true,
+        "barsMs": 7,
+        "calcMs": 16,
+        "totalMs": 24,
+        "seriesHash": "4ed20a27",
+        "seriesPoints": 39545
+      }
+    ],
+    "aggregationOrdered": true,
+    "barProbes": [
+      {
+        "timeframe": "D",
+        "barCount": 520,
+        "datasetId": "sim-default"
+      },
+      {
+        "timeframe": "W",
+        "barCount": 104,
+        "datasetId": "sim-default"
+      },
+      {
+        "timeframe": "M",
+        "barCount": 24,
+        "datasetId": "sim-default"
+      }
+    ],
+    "monthlyNote": "当前模拟数据集仅 520 根日线（≈24 个月）；M 周期按 warmup+1 门：T02/T04/T05/M06 共 4 项不可算，T01/T03/T19/T20/T21/T22/E13 共 7 项可算；本次 M 只取证到行情层聚合"
+  },
+  "verification": {
+    "renderLayer": {
+      "chartPresent": true,
+      "overlays": [
+        "T09",
+        "T09",
+        "T09",
+        "T24",
+        "T24"
+      ],
+      "overlayCount": 5,
+      "macd": [
+        "dif",
+        "dea",
+        "hist"
+      ],
+      "macdCount": 3,
+      "macdHistCount": 0,
+      "colorSamples": {
+        "posToken": "rgb(228, 72, 63)",
+        "negToken": "rgb(23, 166, 115)",
+        "upCandleStroke": "rgb(228, 72, 63)",
+        "downCandleStroke": "rgb(23, 166, 115)",
+        "histPosFill": "",
+        "histNegFill": "",
+        "chgFirst": "neg|rgb(23, 166, 115)|▼ −1.01%",
+        "chgSecond": "neg|rgb(23, 166, 115)|▼ −1.64%",
+        "chgPos": "pos|rgb(228, 72, 63)|▲ +2.65%"
+      },
+      "colorOk": false,
+      "statisticalReadouts": [
+        "T21-r2",
+        "E13-bias6",
+        "E13-bias12",
+        "E13-bias24"
+      ],
+      "statisticalReadoutCount": 4,
+      "statisticalUnits": [
+        "无量纲",
+        "%",
+        "%",
+        "%"
+      ],
+      "t21Text": "R² 0.00无量纲",
+      "t21TwoDecimals": true,
+      "readoutHost": 0,
+      "hoverIndex": "",
+      "maTooltipCount": 5,
+      "maTooltip": [
+        {
+          "id": "ov-T09-upper",
+          "value": "240.66227141879688",
+          "unit": "元",
+          "text": "T09·upper 240.66 元"
+        },
+        {
+          "id": "ov-T09-middle",
+          "value": "235.50899999999993",
+          "unit": "元",
+          "text": "T09·middle 235.51 元"
+        },
+        {
+          "id": "ov-T09-lower",
+          "value": "230.35572858120298",
+          "unit": "元",
+          "text": "T09·lower 230.36 元"
+        },
+        {
+          "id": "ov-T24-hhv",
+          "value": "242.09",
+          "unit": "元",
+          "text": "T24·hhv 242.09 元"
+        },
+        {
+          "id": "ov-T24-llv",
+          "value": "230.02",
+          "unit": "元",
+          "text": "T24·llv 230.02 元"
+        }
+      ],
+      "decimalsOk": true,
+      "tooltipParity": {
+        "tolerance": 0,
+        "enginePoints": 520,
+        "sampled": 120,
+        "samples": [
+          {
+            "bar": 400,
+            "hoverIndex": 0,
+            "engineSma": 253.59650000000002,
+            "shownSma": "",
+            "engineDif": -3.5790420613091385,
+            "shownDif": "-3.5790420613091385",
+            "ok": false
+          },
+          {
+            "bar": 401,
+            "hoverIndex": 1,
+            "engineSma": 253.4185,
+            "shownSma": "",
+            "engineDif": -2.714171402032491,
+            "shownDif": "-2.714171402032491",
+            "ok": false
+          },
+          {
+            "bar": 402,
+            "hoverIndex": 2,
+            "engineSma": 253.45999999999998,
+            "shownSma": "",
+            "engineDif": -2.2848377356244782,
+            "shownDif": "-2.2848377356244782",
+            "ok": false
+          },
+          {
+            "bar": 403,
+            "hoverIndex": 3,
+            "engineSma": 253.2815,
+            "shownSma": "",
+            "engineDif": -2.093139418801968,
+            "shownDif": "-2.093139418801968",
+            "ok": false
+          },
+          {
+            "bar": 404,
+            "hoverIndex": 4,
+            "engineSma": 253.63150000000002,
+            "shownSma": "",
+            "engineDif": -1.6949354450088094,
+            "shownDif": "-1.6949354450088094",
+            "ok": false
+          },
+          {
+            "bar": 405,
+            "hoverIndex": 5,
+            "engineSma": 254.0945,
+            "shownSma": "",
+            "engineDif": -1.1562293636038703,
+            "shownDif": "-1.1562293636038703",
+            "ok": false
+          },
+          {
+            "bar": 406,
+            "hoverIndex": 6,
+            "engineSma": 254.671,
+            "shownSma": "",
+            "engineDif": -0.9307903612084374,
+            "shownDif": "-0.9307903612084374",
+            "ok": false
+          },
+          {
+            "bar": 407,
+            "hoverIndex": 7,
+            "engineSma": 254.6815,
+            "shownSma": "",
+            "engineDif": -0.946178147238129,
+            "shownDif": "-0.946178147238129",
+            "ok": false
+          },
+          {
+            "bar": 408,
+            "hoverIndex": 8,
+            "engineSma": 254.6435,
+            "shownSma": "",
+            "engineDif": -0.8732634138170852,
+            "shownDif": "-0.8732634138170852",
+            "ok": false
+          },
+          {
+            "bar": 409,
+            "hoverIndex": 9,
+            "engineSma": 254.4115,
+            "shownSma": "",
+            "engineDif": -1.0861847661075217,
+            "shownDif": "-1.0861847661075217",
+            "ok": false
+          },
+          {
+            "bar": 410,
+            "hoverIndex": 10,
+            "engineSma": 254.46749999999997,
+            "shownSma": "",
+            "engineDif": -1.0116794464934173,
+            "shownDif": "-1.0116794464934173",
+            "ok": false
+          },
+          {
+            "bar": 411,
+            "hoverIndex": 11,
+            "engineSma": 254.57799999999997,
+            "shownSma": "",
+            "engineDif": -1.047874088431172,
+            "shownDif": "-1.047874088431172",
+            "ok": false
+          },
+          {
+            "bar": 412,
+            "hoverIndex": 12,
+            "engineSma": 255.04199999999997,
+            "shownSma": "",
+            "engineDif": -0.5082787328162794,
+            "shownDif": "-0.5082787328162794",
+            "ok": false
+          },
+          {
+            "bar": 413,
+            "hoverIndex": 13,
+            "engineSma": 255.70149999999995,
+            "shownSma": "",
+            "engineDif": 0.21543020657225043,
+            "shownDif": "0.21543020657225043",
+            "ok": false
+          },
+          {
+            "bar": 414,
+            "hoverIndex": 14,
+            "engineSma": 256.53749999999997,
+            "shownSma": "",
+            "engineDif": 1.0216929914883508,
+            "shownDif": "1.0216929914883508",
+            "ok": false
+          },
+          {
+            "bar": 415,
+            "hoverIndex": 15,
+            "engineSma": 257.02199999999993,
+            "shownSma": "",
+            "engineDif": 1.3090875609640875,
+            "shownDif": "1.3090875609640875",
+            "ok": false
+          },
+          {
+            "bar": 416,
+            "hoverIndex": 16,
+            "engineSma": 257.3539999999999,
+            "shownSma": "",
+            "engineDif": 1.0438942742460426,
+            "shownDif": "1.0438942742460426",
+            "ok": false
+          },
+          {
+            "bar": 417,
+            "hoverIndex": 17,
+            "engineSma": 257.73699999999997,
+            "shownSma": "",
+            "engineDif": 0.9462768071678624,
+            "shownDif": "0.9462768071678624",
+            "ok": false
+          },
+          {
+            "bar": 418,
+            "hoverIndex": 18,
+            "engineSma": 257.823,
+            "shownSma": "",
+            "engineDif": 0.7233995687770403,
+            "shownDif": "0.7233995687770403",
+            "ok": false
+          },
+          {
+            "bar": 419,
+            "hoverIndex": 19,
+            "engineSma": 258.19399999999996,
+            "shownSma": "",
+            "engineDif": 0.1775738171172634,
+            "shownDif": "0.1775738171172634",
+            "ok": false
+          },
+          {
+            "bar": 420,
+            "hoverIndex": 20,
+            "engineSma": 258.072,
+            "shownSma": "",
+            "engineDif": -0.37813096058903284,
+            "shownDif": "-0.37813096058903284",
+            "ok": false
+          },
+          {
+            "bar": 421,
+            "hoverIndex": 21,
+            "engineSma": 257.5755,
+            "shownSma": "",
+            "engineDif": -0.8698297925744214,
+            "shownDif": "-0.8698297925744214",
+            "ok": false
+          },
+          {
+            "bar": 422,
+            "hoverIndex": 22,
+            "engineSma": 257.17299999999994,
+            "shownSma": "",
+            "engineDif": -1.3743820992002895,
+            "shownDif": "-1.3743820992002895",
+            "ok": false
+          },
+          {
+            "bar": 423,
+            "hoverIndex": 23,
+            "engineSma": 256.95599999999996,
+            "shownSma": "",
+            "engineDif": -1.6287819736313907,
+            "shownDif": "-1.6287819736313907",
+            "ok": false
+          },
+          {
+            "bar": 424,
+            "hoverIndex": 24,
+            "engineSma": 256.3924999999999,
+            "shownSma": "",
+            "engineDif": -2.138197465295292,
+            "shownDif": "-2.138197465295292",
+            "ok": false
+          },
+          {
+            "bar": 425,
+            "hoverIndex": 25,
+            "engineSma": 255.34699999999992,
+            "shownSma": "",
+            "engineDif": -3.0745406856553643,
+            "shownDif": "-3.0745406856553643",
+            "ok": false
+          },
+          {
+            "bar": 426,
+            "hoverIndex": 26,
+            "engineSma": 253.8044999999999,
+            "shownSma": "",
+            "engineDif": -4.775840465873017,
+            "shownDif": "-4.775840465873017",
+            "ok": false
+          },
+          {
+            "bar": 427,
+            "hoverIndex": 27,
+            "engineSma": 252.78949999999992,
+            "shownSma": "",
+            "engineDif": -5.415367752757277,
+            "shownDif": "-5.415367752757277",
+            "ok": false
+          },
+          {
+            "bar": 428,
+            "hoverIndex": 28,
+            "engineSma": 251.6264999999999,
+            "shownSma": "",
+            "engineDif": -6.0166456242163235,
+            "shownDif": "-6.0166456242163235",
+            "ok": false
+          },
+          {
+            "bar": 429,
+            "hoverIndex": 29,
+            "engineSma": 250.7514999999999,
+            "shownSma": "",
+            "engineDif": -6.239679334057882,
+            "shownDif": "-6.239679334057882",
+            "ok": false
+          },
+          {
+            "bar": 430,
+            "hoverIndex": 30,
+            "engineSma": 249.7289999999999,
+            "shownSma": "",
+            "engineDif": -6.349695154200873,
+            "shownDif": "-6.349695154200873",
+            "ok": false
+          },
+          {
+            "bar": 431,
+            "hoverIndex": 31,
+            "engineSma": 248.3539999999999,
+            "shownSma": "",
+            "engineDif": -7.032018715233704,
+            "shownDif": "-7.032018715233704",
+            "ok": false
+          },
+          {
+            "bar": 432,
+            "hoverIndex": 32,
+            "engineSma": 246.83899999999988,
+            "shownSma": "",
+            "engineDif": -7.153816163732529,
+            "shownDif": "-7.153816163732529",
+            "ok": false
+          },
+          {
+            "bar": 433,
+            "hoverIndex": 33,
+            "engineSma": 244.90449999999993,
+            "shownSma": "",
+            "engineDif": -7.541847598724644,
+            "shownDif": "-7.541847598724644",
+            "ok": false
+          },
+          {
+            "bar": 434,
+            "hoverIndex": 34,
+            "engineSma": 243.02399999999994,
+            "shownSma": "",
+            "engineDif": -7.4320506022230575,
+            "shownDif": "-7.4320506022230575",
+            "ok": false
+          },
+          {
+            "bar": 435,
+            "hoverIndex": 35,
+            "engineSma": 241.16749999999993,
+            "shownSma": "",
+            "engineDif": -7.555690555366027,
+            "shownDif": "-7.555690555366027",
+            "ok": false
+          },
+          {
+            "bar": 436,
+            "hoverIndex": 36,
+            "engineSma": 239.74899999999994,
+            "shownSma": "",
+            "engineDif": -7.343092905488106,
+            "shownDif": "-7.343092905488106",
+            "ok": false
+          },
+          {
+            "bar": 437,
+            "hoverIndex": 37,
+            "engineSma": 238.56199999999995,
+            "shownSma": "",
+            "engineDif": -6.60144981335597,
+            "shownDif": "-6.60144981335597",
+            "ok": false
+          },
+          {
+            "bar": 438,
+            "hoverIndex": 38,
+            "engineSma": 237.39149999999995,
+            "shownSma": "",
+            "engineDif": -6.054447962672896,
+            "shownDif": "-6.054447962672896",
+            "ok": false
+          },
+          {
+            "bar": 439,
+            "hoverIndex": 39,
+            "engineSma": 236.50599999999994,
+            "shownSma": "",
+            "engineDif": -5.46515080942919,
+            "shownDif": "-5.46515080942919",
+            "ok": false
+          },
+          {
+            "bar": 440,
+            "hoverIndex": 40,
+            "engineSma": 236.05049999999997,
+            "shownSma": "",
+            "engineDif": -4.3811698396863505,
+            "shownDif": "-4.3811698396863505",
+            "ok": false
+          },
+          {
+            "bar": 441,
+            "hoverIndex": 41,
+            "engineSma": 235.81649999999996,
+            "shownSma": "",
+            "engineDif": -3.1892056059597564,
+            "shownDif": "-3.1892056059597564",
+            "ok": false
+          },
+          {
+            "bar": 442,
+            "hoverIndex": 42,
+            "engineSma": 235.49099999999993,
+            "shownSma": "",
+            "engineDif": -2.494199945849658,
+            "shownDif": "-2.494199945849658",
+            "ok": false
+          },
+          {
+            "bar": 443,
+            "hoverIndex": 43,
+            "engineSma": 235.27949999999996,
+            "shownSma": "",
+            "engineDif": -1.6141334036454396,
+            "shownDif": "-1.6141334036454396",
+            "ok": false
+          },
+          {
+            "bar": 444,
+            "hoverIndex": 44,
+            "engineSma": 235.37549999999996,
+            "shownSma": "",
+            "engineDif": -0.7442905753812283,
+            "shownDif": "-0.7442905753812283",
+            "ok": false
+          },
+          {
+            "bar": 445,
+            "hoverIndex": 45,
+            "engineSma": 235.64199999999997,
+            "shownSma": "",
+            "engineDif": -0.34388048969978513,
+            "shownDif": "-0.34388048969978513",
+            "ok": false
+          },
+          {
+            "bar": 446,
+            "hoverIndex": 46,
+            "engineSma": 236.62149999999997,
+            "shownSma": "",
+            "engineDif": 0.10856479668535712,
+            "shownDif": "0.10856479668535712",
+            "ok": false
+          },
+          {
+            "bar": 447,
+            "hoverIndex": 47,
+            "engineSma": 237.63799999999998,
+            "shownSma": "",
+            "engineDif": 1.1598132142613622,
+            "shownDif": "1.1598132142613622",
+            "ok": false
+          },
+          {
+            "bar": 448,
+            "hoverIndex": 48,
+            "engineSma": 238.52399999999997,
+            "shownSma": "",
+            "engineDif": 1.6000811970999962,
+            "shownDif": "1.6000811970999962",
+            "ok": false
+          },
+          {
+            "bar": 449,
+            "hoverIndex": 49,
+            "engineSma": 239.27849999999998,
+            "shownSma": "",
+            "engineDif": 1.8964725660237036,
+            "shownDif": "1.8964725660237036",
+            "ok": false
+          },
+          {
+            "bar": 450,
+            "hoverIndex": 50,
+            "engineSma": 240.3935,
+            "shownSma": "",
+            "engineDif": 2.6758507318069746,
+            "shownDif": "2.6758507318069746",
+            "ok": false
+          },
+          {
+            "bar": 451,
+            "hoverIndex": 51,
+            "engineSma": 241.5295,
+            "shownSma": "",
+            "engineDif": 2.620994870448442,
+            "shownDif": "2.620994870448442",
+            "ok": false
+          },
+          {
+            "bar": 452,
+            "hoverIndex": 52,
+            "engineSma": 242.04450000000003,
+            "shownSma": "",
+            "engineDif": 1.8900280859601821,
+            "shownDif": "1.8900280859601821",
+            "ok": false
+          },
+          {
+            "bar": 453,
+            "hoverIndex": 53,
+            "engineSma": 242.773,
+            "shownSma": "",
+            "engineDif": 1.2622902566778293,
+            "shownDif": "1.2622902566778293",
+            "ok": false
+          },
+          {
+            "bar": 454,
+            "hoverIndex": 54,
+            "engineSma": 243.173,
+            "shownSma": "",
+            "engineDif": 0.5598484786739277,
+            "shownDif": "0.5598484786739277",
+            "ok": false
+          },
+          {
+            "bar": 455,
+            "hoverIndex": 55,
+            "engineSma": 243.91199999999998,
+            "shownSma": "",
+            "engineDif": 0.2496180431589039,
+            "shownDif": "0.2496180431589039",
+            "ok": false
+          },
+          {
+            "bar": 456,
+            "hoverIndex": 56,
+            "engineSma": 244.2515,
+            "shownSma": "",
+            "engineDif": -0.41030173444582374,
+            "shownDif": "-0.41030173444582374",
+            "ok": false
+          },
+          {
+            "bar": 457,
+            "hoverIndex": 57,
+            "engineSma": 244.36999999999998,
+            "shownSma": "",
+            "engineDif": -0.7838536771908764,
+            "shownDif": "-0.7838536771908764",
+            "ok": false
+          },
+          {
+            "bar": 458,
+            "hoverIndex": 58,
+            "engineSma": 244.42399999999998,
+            "shownSma": "",
+            "engineDif": -1.279783504957635,
+            "shownDif": "-1.279783504957635",
+            "ok": false
+          },
+          {
+            "bar": 459,
+            "hoverIndex": 59,
+            "engineSma": 244.44249999999997,
+            "shownSma": "",
+            "engineDif": -1.6186483728095027,
+            "shownDif": "-1.6186483728095027",
+            "ok": false
+          },
+          {
+            "bar": 460,
+            "hoverIndex": 60,
+            "engineSma": 244.17649999999998,
+            "shownSma": "",
+            "engineDif": -1.7595977892426617,
+            "shownDif": "-1.7595977892426617",
+            "ok": false
+          },
+          {
+            "bar": 461,
+            "hoverIndex": 61,
+            "engineSma": 243.90899999999996,
+            "shownSma": "",
+            "engineDif": -1.5596054768840872,
+            "shownDif": "-1.5596054768840872",
+            "ok": false
+          },
+          {
+            "bar": 462,
+            "hoverIndex": 62,
+            "engineSma": 243.66549999999998,
+            "shownSma": "",
+            "engineDif": -1.6220661384050743,
+            "shownDif": "-1.6220661384050743",
+            "ok": false
+          },
+          {
+            "bar": 463,
+            "hoverIndex": 63,
+            "engineSma": 243.15249999999997,
+            "shownSma": "",
+            "engineDif": -1.775366472777307,
+            "shownDif": "-1.775366472777307",
+            "ok": false
+          },
+          {
+            "bar": 464,
+            "hoverIndex": 64,
+            "engineSma": 242.65399999999994,
+            "shownSma": "",
+            "engineDif": -1.6901702507295795,
+            "shownDif": "-1.6901702507295795",
+            "ok": false
+          },
+          {
+            "bar": 465,
+            "hoverIndex": 65,
+            "engineSma": 242.32199999999995,
+            "shownSma": "",
+            "engineDif": -1.6280914984046717,
+            "shownDif": "-1.6280914984046717",
+            "ok": false
+          },
+          {
+            "bar": 466,
+            "hoverIndex": 66,
+            "engineSma": 241.58399999999992,
+            "shownSma": "",
+            "engineDif": -2.0738350229546256,
+            "shownDif": "-2.0738350229546256",
+            "ok": false
+          },
+          {
+            "bar": 467,
+            "hoverIndex": 67,
+            "engineSma": 240.3774999999999,
+            "shownSma": "",
+            "engineDif": -2.448889521984313,
+            "shownDif": "-2.448889521984313",
+            "ok": false
+          },
+          {
+            "bar": 468,
+            "hoverIndex": 68,
+            "engineSma": 239.51299999999992,
+            "shownSma": "",
+            "engineDif": -2.5393294910590214,
+            "shownDif": "-2.5393294910590214",
+            "ok": false
+          },
+          {
+            "bar": 469,
+            "hoverIndex": 69,
+            "engineSma": 238.7039999999999,
+            "shownSma": "",
+            "engineDif": -2.5230151706354036,
+            "shownDif": "-2.5230151706354036",
+            "ok": false
+          },
+          {
+            "bar": 470,
+            "hoverIndex": 70,
+            "engineSma": 237.62549999999993,
+            "shownSma": "",
+            "engineDif": -2.3426775672193685,
+            "shownDif": "-2.3426775672193685",
+            "ok": false
+          },
+          {
+            "bar": 471,
+            "hoverIndex": 71,
+            "engineSma": 237.00599999999991,
+            "shownSma": "",
+            "engineDif": -2.0773683045176767,
+            "shownDif": "-2.0773683045176767",
+            "ok": false
+          },
+          {
+            "bar": 472,
+            "hoverIndex": 72,
+            "engineSma": 236.6184999999999,
+            "shownSma": "",
+            "engineDif": -2.133808417164289,
+            "shownDif": "-2.133808417164289",
+            "ok": false
+          },
+          {
+            "bar": 473,
+            "hoverIndex": 73,
+            "engineSma": 236.1559999999999,
+            "shownSma": "",
+            "engineDif": -2.3068733667630568,
+            "shownDif": "-2.3068733667630568",
+            "ok": false
+          },
+          {
+            "bar": 474,
+            "hoverIndex": 74,
+            "engineSma": 235.9514999999999,
+            "shownSma": "",
+            "engineDif": -2.2007917931807413,
+            "shownDif": "-2.2007917931807413",
+            "ok": false
+          },
+          {
+            "bar": 475,
+            "hoverIndex": 75,
+            "engineSma": 235.6599999999999,
+            "shownSma": "",
+            "engineDif": -1.9849068931583531,
+            "shownDif": "-1.9849068931583531",
+            "ok": false
+          },
+          {
+            "bar": 476,
+            "hoverIndex": 76,
+            "engineSma": 235.50899999999993,
+            "shownSma": "",
+            "engineDif": -1.9830038302557966,
+            "shownDif": "-1.9830038302557966",
+            "ok": false
+          },
+          {
+            "bar": 477,
+            "hoverIndex": 77,
+            "engineSma": 235.2829999999999,
+            "shownSma": "",
+            "engineDif": -1.939769193164011,
+            "shownDif": "-1.939769193164011",
+            "ok": false
+          },
+          {
+            "bar": 478,
+            "hoverIndex": 78,
+            "engineSma": 235.23149999999993,
+            "shownSma": "",
+            "engineDif": -1.8175794439534343,
+            "shownDif": "-1.8175794439534343",
+            "ok": false
+          },
+          {
+            "bar": 479,
+            "hoverIndex": 79,
+            "engineSma": 235.2039999999999,
+            "shownSma": "",
+            "engineDif": -1.6277432650112473,
+            "shownDif": "-1.6277432650112473",
+            "ok": false
+          },
+          {
+            "bar": 480,
+            "hoverIndex": 80,
+            "engineSma": 235.1974999999999,
+            "shownSma": "",
+            "engineDif": -1.3208602955834579,
+            "shownDif": "-1.3208602955834579",
+            "ok": false
+          },
+          {
+            "bar": 481,
+            "hoverIndex": 81,
+            "engineSma": 235.2534999999999,
+            "shownSma": "",
+            "engineDif": -0.6752869116091631,
+            "shownDif": "-0.6752869116091631",
+            "ok": false
+          },
+          {
+            "bar": 482,
+            "hoverIndex": 82,
+            "engineSma": 235.91149999999988,
+            "shownSma": "",
+            "engineDif": 0.5617325420642487,
+            "shownDif": "0.5617325420642487",
+            "ok": false
+          },
+          {
+            "bar": 483,
+            "hoverIndex": 83,
+            "engineSma": 236.8514999999999,
+            "shownSma": "",
+            "engineDif": 1.8515713443204334,
+            "shownDif": "1.8515713443204334",
+            "ok": false
+          },
+          {
+            "bar": 484,
+            "hoverIndex": 84,
+            "engineSma": 237.87499999999991,
+            "shownSma": "",
+            "engineDif": 3.15931888062579,
+            "shownDif": "3.15931888062579",
+            "ok": false
+          },
+          {
+            "bar": 485,
+            "hoverIndex": 85,
+            "engineSma": 238.92549999999991,
+            "shownSma": "",
+            "engineDif": 4.167049071399191,
+            "shownDif": "4.167049071399191",
+            "ok": false
+          },
+          {
+            "bar": 486,
+            "hoverIndex": 86,
+            "engineSma": 240.12949999999992,
+            "shownSma": "",
+            "engineDif": 4.641059345407996,
+            "shownDif": "4.641059345407996",
+            "ok": false
+          },
+          {
+            "bar": 487,
+            "hoverIndex": 87,
+            "engineSma": 241.39499999999992,
+            "shownSma": "",
+            "engineDif": 5.0082063196837225,
+            "shownDif": "5.0082063196837225",
+            "ok": false
+          },
+          {
+            "bar": 488,
+            "hoverIndex": 88,
+            "engineSma": 242.61749999999992,
+            "shownSma": "",
+            "engineDif": 5.345678093607091,
+            "shownDif": "5.345678093607091",
+            "ok": false
+          },
+          {
+            "bar": 489,
+            "hoverIndex": 89,
+            "engineSma": 244.08399999999992,
+            "shownSma": "",
+            "engineDif": 5.996681015129894,
+            "shownDif": "5.996681015129894",
+            "ok": false
+          },
+          {
+            "bar": 490,
+            "hoverIndex": 90,
+            "engineSma": 245.23499999999996,
+            "shownSma": "",
+            "engineDif": 6.073829389369877,
+            "shownDif": "6.073829389369877",
+            "ok": false
+          },
+          {
+            "bar": 491,
+            "hoverIndex": 91,
+            "engineSma": 246.69699999999995,
+            "shownSma": "",
+            "engineDif": 6.658560116887031,
+            "shownDif": "6.658560116887031",
+            "ok": false
+          },
+          {
+            "bar": 492,
+            "hoverIndex": 92,
+            "engineSma": 248.61649999999995,
+            "shownSma": "",
+            "engineDif": 7.482738776715195,
+            "shownDif": "7.482738776715195",
+            "ok": false
+          },
+          {
+            "bar": 493,
+            "hoverIndex": 93,
+            "engineSma": 250.48699999999994,
+            "shownSma": "",
+            "engineDif": 7.811850390236202,
+            "shownDif": "7.811850390236202",
+            "ok": false
+          },
+          {
+            "bar": 494,
+            "hoverIndex": 94,
+            "engineSma": 252.51849999999996,
+            "shownSma": "",
+            "engineDif": 8.452928145670228,
+            "shownDif": "8.452928145670228",
+            "ok": false
+          },
+          {
+            "bar": 495,
+            "hoverIndex": 95,
+            "engineSma": 254.81349999999992,
+            "shownSma": "",
+            "engineDif": 9.386958544991217,
+            "shownDif": "9.386958544991217",
+            "ok": false
+          },
+          {
+            "bar": 496,
+            "hoverIndex": 96,
+            "engineSma": 257.01399999999995,
+            "shownSma": "",
+            "engineDif": 9.67114807671004,
+            "shownDif": "9.67114807671004",
+            "ok": false
+          },
+          {
+            "bar": 497,
+            "hoverIndex": 97,
+            "engineSma": 259.28399999999993,
+            "shownSma": "",
+            "engineDif": 9.913619669062825,
+            "shownDif": "9.913619669062825",
+            "ok": false
+          },
+          {
+            "bar": 498,
+            "hoverIndex": 98,
+            "engineSma": 261.7579999999999,
+            "shownSma": "",
+            "engineDif": 10.3822954788086,
+            "shownDif": "10.3822954788086",
+            "ok": false
+          },
+          {
+            "bar": 499,
+            "hoverIndex": 99,
+            "engineSma": 264.6869999999999,
+            "shownSma": "",
+            "engineDif": 11.430491107768262,
+            "shownDif": "11.430491107768262",
+            "ok": false
+          },
+          {
+            "bar": 500,
+            "hoverIndex": 100,
+            "engineSma": 267.6429999999999,
+            "shownSma": "",
+            "engineDif": 12.304143055155293,
+            "shownDif": "12.304143055155293",
+            "ok": false
+          },
+          {
+            "bar": 501,
+            "hoverIndex": 101,
+            "engineSma": 270.4849999999999,
+            "shownSma": "",
+            "engineDif": 13.056615172849945,
+            "shownDif": "13.056615172849945",
+            "ok": false
+          },
+          {
+            "bar": 502,
+            "hoverIndex": 102,
+            "engineSma": 272.54649999999987,
+            "shownSma": "",
+            "engineDif": 12.975656117791914,
+            "shownDif": "12.975656117791914",
+            "ok": false
+          },
+          {
+            "bar": 503,
+            "hoverIndex": 103,
+            "engineSma": 274.58799999999985,
+            "shownSma": "",
+            "engineDif": 13.059512628868447,
+            "shownDif": "13.059512628868447",
+            "ok": false
+          },
+          {
+            "bar": 504,
+            "hoverIndex": 104,
+            "engineSma": 275.85649999999987,
+            "shownSma": "",
+            "engineDif": 12.06140006485299,
+            "shownDif": "12.06140006485299",
+            "ok": false
+          },
+          {
+            "bar": 505,
+            "hoverIndex": 105,
+            "engineSma": 277.04299999999984,
+            "shownSma": "",
+            "engineDif": 11.03027027749215,
+            "shownDif": "11.03027027749215",
+            "ok": false
+          },
+          {
+            "bar": 506,
+            "hoverIndex": 106,
+            "engineSma": 278.38199999999983,
+            "shownSma": "",
+            "engineDif": 10.071974628961641,
+            "shownDif": "10.071974628961641",
+            "ok": false
+          },
+          {
+            "bar": 507,
+            "hoverIndex": 107,
+            "engineSma": 279.6624999999998,
+            "shownSma": "",
+            "engineDif": 9.161720492603422,
+            "shownDif": "9.161720492603422",
+            "ok": false
+          },
+          {
+            "bar": 508,
+            "hoverIndex": 108,
+            "engineSma": 281.2784999999998,
+            "shownSma": "",
+            "engineDif": 8.986316590982597,
+            "shownDif": "8.986316590982597",
+            "ok": false
+          },
+          {
+            "bar": 509,
+            "hoverIndex": 109,
+            "engineSma": 282.5554999999998,
+            "shownSma": "",
+            "engineDif": 8.653150382123158,
+            "shownDif": "8.653150382123158",
+            "ok": false
+          },
+          {
+            "bar": 510,
+            "hoverIndex": 110,
+            "engineSma": 283.72299999999984,
+            "shownSma": "",
+            "engineDif": 7.754252065983962,
+            "shownDif": "7.754252065983962",
+            "ok": false
+          },
+          {
+            "bar": 511,
+            "hoverIndex": 111,
+            "engineSma": 284.8609999999998,
+            "shownSma": "",
+            "engineDif": 7.508058205009036,
+            "shownDif": "7.508058205009036",
+            "ok": false
+          },
+          {
+            "bar": 512,
+            "hoverIndex": 112,
+            "engineSma": 286.1514999999998,
+            "shownSma": "",
+            "engineDif": 7.914851525270706,
+            "shownDif": "7.914851525270706",
+            "ok": false
+          },
+          {
+            "bar": 513,
+            "hoverIndex": 113,
+            "engineSma": 287.3254999999998,
+            "shownSma": "",
+            "engineDif": 7.726158525187714,
+            "shownDif": "7.726158525187714",
+            "ok": false
+          },
+          {
+            "bar": 514,
+            "hoverIndex": 114,
+            "engineSma": 288.10099999999983,
+            "shownSma": "",
+            "engineDif": 7.32674197497812,
+            "shownDif": "7.32674197497812",
+            "ok": false
+          },
+          {
+            "bar": 515,
+            "hoverIndex": 115,
+            "engineSma": 288.1999999999998,
+            "shownSma": "",
+            "engineDif": 6.379088074101958,
+            "shownDif": "6.379088074101958",
+            "ok": false
+          },
+          {
+            "bar": 516,
+            "hoverIndex": 116,
+            "engineSma": 288.8014999999998,
+            "shownSma": "",
+            "engineDif": 6.025010652343099,
+            "shownDif": "6.025010652343099",
+            "ok": false
+          },
+          {
+            "bar": 517,
+            "hoverIndex": 117,
+            "engineSma": 289.4749999999998,
+            "shownSma": "",
+            "engineDif": 5.923838761764614,
+            "shownDif": "5.923838761764614",
+            "ok": false
+          },
+          {
+            "bar": 518,
+            "hoverIndex": 118,
+            "engineSma": 290.11949999999985,
+            "shownSma": "",
+            "engineDif": 6.122478006903805,
+            "shownDif": "6.122478006903805",
+            "ok": false
+          },
+          {
+            "bar": 519,
+            "hoverIndex": 119,
+            "engineSma": 290.21849999999984,
+            "shownSma": "",
+            "engineDif": 6.1373380649826,
+            "shownDif": "6.1373380649826",
+            "ok": false
+          }
+        ],
+        "mismatches": [
+          400,
+          401,
+          402,
+          403,
+          404,
+          405,
+          406,
+          407,
+          408,
+          409,
+          410,
+          411,
+          412,
+          413,
+          414,
+          415,
+          416,
+          417,
+          418,
+          419,
+          420,
+          421,
+          422,
+          423,
+          424,
+          425,
+          426,
+          427,
+          428,
+          429,
+          430,
+          431,
+          432,
+          433,
+          434,
+          435,
+          436,
+          437,
+          438,
+          439,
+          440,
+          441,
+          442,
+          443,
+          444,
+          445,
+          446,
+          447,
+          448,
+          449,
+          450,
+          451,
+          452,
+          453,
+          454,
+          455,
+          456,
+          457,
+          458,
+          459,
+          460,
+          461,
+          462,
+          463,
+          464,
+          465,
+          466,
+          467,
+          468,
+          469,
+          470,
+          471,
+          472,
+          473,
+          474,
+          475,
+          476,
+          477,
+          478,
+          479,
+          480,
+          481,
+          482,
+          483,
+          484,
+          485,
+          486,
+          487,
+          488,
+          489,
+          490,
+          491,
+          492,
+          493,
+          494,
+          495,
+          496,
+          497,
+          498,
+          499,
+          500,
+          501,
+          502,
+          503,
+          504,
+          505,
+          506,
+          507,
+          508,
+          509,
+          510,
+          511,
+          512,
+          513,
+          514,
+          515,
+          516,
+          517,
+          518,
+          519
+        ],
+        "ok": false
+      },
+      "hoverError": null,
+      "ok": false
+    },
+    "b2Render": {
+      "cardCount": 8,
+      "clauseCount": 63,
+      "failCount": 6,
+      "dataLimitedCount": 1,
+      "cards": [
+        {
+          "card": "S-03.05-01",
+          "ac": "AC-03.05-05",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T09 三轨可见",
+              "status": "pass",
+              "detail": {
+                "nodes": 3,
+                "blocks": [
+                  1,
+                  1,
+                  1
+                ]
+              }
+            },
+            {
+              "clause": "T09 中轨虚线、上下轨实线（虚实可区分）",
+              "status": "pass",
+              "detail": {
+                "middleDash": "4px, 3px",
+                "expected": "4px, 3px",
+                "upper": "none",
+                "lower": "none"
+              }
+            },
+            {
+              "clause": "T09 upper 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T09 middle 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T09 lower 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T09 图例三线齐全且颜色=线色",
+              "status": "pass",
+              "detail": {
+                "legendKeys": [
+                  "upper",
+                  "middle",
+                  "lower"
+                ],
+                "legendByKey": [
+                  [
+                    "upper",
+                    "rgb(228, 72, 63)"
+                  ],
+                  [
+                    "middle",
+                    "rgb(79, 163, 199)"
+                  ],
+                  [
+                    "lower",
+                    "rgb(23, 166, 115)"
+                  ]
+                ],
+                "strokeByKey": [
+                  [
+                    "upper",
+                    "rgb(228, 72, 63)"
+                  ],
+                  [
+                    "middle",
+                    "rgb(79, 163, 199)"
+                  ],
+                  [
+                    "lower",
+                    "rgb(23, 166, 115)"
+                  ]
+                ]
+              }
+            },
+            {
+              "clause": "T09 读数条 3 条",
+              "status": "pass",
+              "detail": {
+                "count": 3
+              }
+            },
+            {
+              "clause": "切标的后不残留旧线",
+              "status": "pass",
+              "detail": {
+                "switched": true,
+                "afterPaths": 3,
+                "awayDiffers": true,
+                "backMatches": true,
+                "stableAfter": true,
+                "candlesSame": true,
+                "candleCount": 120,
+                "axisSame": true,
+                "axisBeforeA": [
+                  "211.65",
+                  "236.41",
+                  "261.17",
+                  "285.93",
+                  "310.69",
+                  "成交量",
+                  "MACD 需要 34 根，当前 520 根",
+                  "MACD(12,26,9)",
+                  "×",
+                  "12-27",
+                  "12-27",
+                  "12-27"
+                ],
+                "axisAfterA": [
+                  "211.65",
+                  "236.41",
+                  "261.17",
+                  "285.93",
+                  "310.69",
+                  "成交量",
+                  "MACD 需要 34 根，当前 520 根",
+                  "MACD(12,26,9)",
+                  "×",
+                  "12-27",
+                  "12-27",
+                  "12-27"
+                ],
+                "toA": {
+                  "max": 0,
+                  "mean": 0
+                },
+                "toB": {
+                  "max": 0.9988,
+                  "mean": 0.2788
+                },
+                "beforeA": [
+                  1764,
+                  1783,
+                  1786
+                ],
+                "awayB": [
+                  1770,
+                  1786,
+                  1786
+                ],
+                "afterA": [
+                  1764,
+                  1783,
+                  1786
+                ],
+                "pointsA": [
+                  120,
+                  120,
+                  120
+                ],
+                "pointsBack": [
+                  120,
+                  120,
+                  120
+                ],
+                "backSameAsAway": [
+                  false,
+                  false,
+                  false
+                ]
+              }
+            },
+            {
+              "clause": "T09 负控：错误虚实值必须被判红",
+              "status": "pass",
+              "detail": {
+                "injected": "6px, 4px",
+                "expected": "4px, 3px"
+              }
+            },
+            {
+              "clause": "T09 负控：旧线值必须被判残留",
+              "status": "pass",
+              "detail": {
+                "awayEqualsA": [
+                  false,
+                  false,
+                  false
+                ]
+              }
+            },
+            {
+              "clause": "T09 负控：回切未重绘（仍显示 B 线）必须被判红",
+              "status": "pass",
+              "detail": {
+                "staleToA": {
+                  "max": 0.9988,
+                  "mean": 0.2788
+                },
+                "staleToB": {
+                  "max": 0,
+                  "mean": 0
+                }
+              }
+            }
+          ],
+          "ok": true
+        },
+        {
+          "card": "S-03.05-02",
+          "ac": "AC-03.05-10",
+          "kind": "sub",
+          "clauses": [
+            {
+              "clause": "V01 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V01 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V02 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "V02 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V09 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V09 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V10 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V10 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "ATR 以元显示",
+              "status": "pass",
+              "detail": {
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "ATRP 以比值显示",
+              "status": "pass",
+              "detail": {
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "切标的后读数与当前引擎一致（旧值不残留）",
+              "status": "pass",
+              "detail": {
+                "readout": "7.263738808394929",
+                "expectLast": 7.263738808394929
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-03",
+          "ac": "AC-03.05-16",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T13 两轨可见",
+              "status": "fail",
+              "detail": {
+                "nodes": 0
+              }
+            },
+            {
+              "clause": "T13 仅显示激活侧",
+              "status": "pass",
+              "detail": {
+                "long": 277.1451659810958,
+                "short": null
+              }
+            },
+            {
+              "clause": "T13 翻转根有标记",
+              "status": "fail",
+              "detail": {
+                "markers": 0,
+                "flips": 10
+              }
+            },
+            {
+              "clause": "T13 翻转后新侧不继承旧侧值",
+              "status": "pass",
+              "detail": {
+                "flipBars": 5,
+                "carryOver": 0,
+                "staleSide": 0
+              }
+            },
+            {
+              "clause": "T13 long NaN 段断开",
+              "status": "fail",
+              "detail": {
+                "segments": 0,
+                "runs": 3
+              }
+            },
+            {
+              "clause": "T13 short NaN 段断开",
+              "status": "fail",
+              "detail": {
+                "segments": 0,
+                "runs": 3
+              }
+            },
+            {
+              "clause": "T13 读数条 2 条",
+              "status": "fail",
+              "detail": {
+                "count": 0
+              }
+            }
+          ],
+          "ok": false,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-04",
+          "ac": "AC-03.05-20",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T15 云带按多空着色",
+              "status": "pass",
+              "detail": {
+                "count": 3,
+                "signs": [
+                  "pos",
+                  "neg"
+                ],
+                "fills": [
+                  "rgb(228, 72, 63)",
+                  "rgb(23, 166, 115)",
+                  "rgb(228, 72, 63)"
+                ]
+              }
+            },
+            {
+              "clause": "T15 先行带在最后一根截断（不越过未来区）",
+              "status": "pass",
+              "detail": {
+                "lastA": 519,
+                "lastB": 519,
+                "bars": 520
+              }
+            },
+            {
+              "clause": "T15 迟行线 26 根留白（位移在尾端）",
+              "status": "pass",
+              "detail": {
+                "tailNaN": 26,
+                "headFinite": 26
+              }
+            },
+            {
+              "clause": "T15 图例五线齐全",
+              "status": "pass",
+              "detail": {
+                "legendCount": 5
+              }
+            },
+            {
+              "clause": "T15 tenkan NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 kijun NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 senkouA NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 senkouB NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 chikou NaN 段断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "T15 读数条 5 条",
+              "status": "pass",
+              "detail": {
+                "count": 5
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-05",
+          "ac": "AC-03.05-24",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T16 以点列显示",
+              "status": "pass",
+              "detail": {
+                "dots": 120
+              }
+            },
+            {
+              "clause": "T16 点不连成线",
+              "status": "pass",
+              "detail": {
+                "lines": 0
+              }
+            },
+            {
+              "clause": "T16 反转箭头数量与方向正确",
+              "status": "pass",
+              "detail": {
+                "arrows": 9,
+                "expectedFlips": 9,
+                "up": 5,
+                "expectedUp": 5,
+                "down": 4,
+                "expectedDown": 4
+              }
+            },
+            {
+              "clause": "T16 多空颜色正确（红涨绿跌）",
+              "status": "pass",
+              "detail": {
+                "colors": [
+                  "rgb(23, 166, 115)",
+                  "rgb(228, 72, 63)"
+                ],
+                "rise": "rgb(228, 72, 63)",
+                "fall": "rgb(23, 166, 115)",
+                "hasBull": true,
+                "hasBear": true,
+                "upArrowColors": [
+                  "rgb(228, 72, 63)"
+                ],
+                "downArrowColors": [
+                  "rgb(23, 166, 115)"
+                ]
+              }
+            },
+            {
+              "clause": "T16 读数条 1 条",
+              "status": "pass",
+              "detail": {
+                "count": 1
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-06",
+          "ac": "AC-03.05-27",
+          "kind": "overlay",
+          "selected": true,
+          "clauses": [
+            {
+              "clause": "T23 三线可见",
+              "status": "pass",
+              "detail": {
+                "nodes": 3
+              }
+            },
+            {
+              "clause": "T23 首根无值",
+              "status": "pass",
+              "detail": {
+                "first": null
+              }
+            },
+            {
+              "clause": "T23 切周期后三线重算",
+              "status": "pass",
+              "detail": {
+                "weeklyBars": 104,
+                "dailyBars": 520,
+                "weeklyLasts": [
+                  290.26,
+                  299.66999999999996,
+                  281.03
+                ],
+                "dailyLasts": [
+                  294.7733333333333,
+                  300.66666666666663,
+                  290.8166666666666
+                ],
+                "differ": [
+                  "pivot",
+                  "r1",
+                  "s1"
+                ]
+              }
+            },
+            {
+              "clause": "T23 切周期后旧线不残留",
+              "status": "pass",
+              "detail": {
+                "nodes": 3,
+                "residual": 0
+              }
+            },
+            {
+              "clause": "T23 读数标签不重叠",
+              "status": "pass",
+              "detail": {
+                "count": 3,
+                "overlap": 0
+              }
+            }
+          ],
+          "ok": true,
+          "dataLimited": 0
+        },
+        {
+          "card": "S-03.05-07",
+          "ac": "AC-03.05-31",
+          "kind": "sub",
+          "clauses": [
+            {
+              "clause": "V03 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "元"
+              }
+            },
+            {
+              "clause": "V03 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V04 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "V04 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "V05 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1,
+                "unit": "无量纲"
+              }
+            },
+            {
+              "clause": "V05 数据不足处断开",
+              "status": "pass",
+              "detail": {
+                "segments": 1,
+                "runs": 1
+              }
+            },
+            {
+              "clause": "带宽以比值显示",
+              "status": "pass",
+              "detail": {
+                "unit": "无量纲",
+                "text": "V04·width 0.08 无量纲"
+              }
+            },
+            {
+              "clause": "%B 保留两位小数",
+              "status": "pass",
+              "detail": {
+                "text": "V05·percentB 0.75 无量纲",
+                "decimals": 2,
+                "value": "0.7490034868843555"
+              }
+            },
+            {
+              "clause": "零带宽段显示 —",
+              "status": "n/a",
+              "detail": "窗口内零带宽根 = 0（无样本时由 NaN→— 路径覆盖）"
+            }
+          ],
+          "ok": true,
+          "dataLimited": 1
+        },
+        {
+          "card": "S-03.05-08",
+          "ac": "AC-03.05-35",
+          "kind": "sub",
+          "clauses": [
+            {
+              "clause": "V08 0 轴可见",
+              "status": "fail",
+              "detail": {
+                "zeroAxis": 0
+              }
+            },
+            {
+              "clause": "V08 正负分色",
+              "status": "pass",
+              "detail": {
+                "posStroke": "rgb(228, 72, 63)",
+                "negStroke": "rgb(23, 166, 115)"
+              }
+            },
+            {
+              "clause": "V08 正负路径按符号断开",
+              "status": "pass",
+              "detail": {
+                "posSegments": 28,
+                "negSegments": 28,
+                "posRuns": 28,
+                "negRuns": 28
+              }
+            },
+            {
+              "clause": "V08 读数与单位",
+              "status": "pass",
+              "detail": {
+                "count": 1
+              }
+            },
+            {
+              "clause": "切标的后不残留",
+              "status": "pass",
+              "detail": {
+                "switched": true,
+                "nodes": 2,
+                "readout": "3.7170940079507164",
+                "expectLast": 3.7170940079507164
+              }
+            }
+          ],
+          "ok": false,
+          "dataLimited": 0
+        }
+      ],
+      "ok": false
+    },
+    "b3Render": {
+      "cardCount": 13,
+      "optionsCount": 24,
+      "missing": [],
+      "expect": {
+        "M01": 1,
+        "M02": 3,
+        "M04": 1,
+        "M05": 1,
+        "M08": 2,
+        "M09": 1,
+        "M10": 1,
+        "M19": 2,
+        "M20": 2,
+        "M21": 1,
+        "M24": 1,
+        "M25": 2,
+        "M26": 1
+      },
+      "cards": [
+        {
+          "id": "M01",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M02",
+          "nodes": 3,
+          "paintCount": 3,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)",
+            "rgb(217, 163, 64)",
+            "rgb(139, 92, 246)"
+          ],
+          "readouts": 3,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M04",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(23, 166, 115)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M05",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M08",
+          "nodes": 2,
+          "paintCount": 2,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)",
+            "rgb(217, 163, 64)"
+          ],
+          "readouts": 2,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M09",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M10",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M19",
+          "nodes": 2,
+          "paintCount": 2,
+          "paintOk": true,
+          "paints": [
+            "rgb(228, 72, 63)",
+            "rgb(23, 166, 115)"
+          ],
+          "readouts": 2,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M20",
+          "nodes": 2,
+          "paintCount": 2,
+          "paintOk": true,
+          "paints": [
+            "rgb(228, 72, 63)",
+            "rgb(23, 166, 115)"
+          ],
+          "readouts": 2,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M21",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M24",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        },
+        {
+          "id": "M25",
+          "nodes": 2,
+          "paintCount": 2,
+          "paintOk": true,
+          "paints": [
+            "rgb(79, 163, 199)",
+            "rgb(228, 72, 63)"
+          ],
+          "readouts": 2,
+          "readoutOk": true,
+          "triColor": {
+            "fillCount": 120,
+            "unique": [
+              "rgb(228, 72, 63)",
+              "rgb(79, 163, 199)",
+              "rgb(23, 166, 115)"
+            ],
+            "ok": true
+          },
+          "ok": true
+        },
+        {
+          "id": "M26",
+          "nodes": 1,
+          "paintCount": 1,
+          "paintOk": true,
+          "paints": [
+            "rgb(217, 163, 64)"
+          ],
+          "readouts": 1,
+          "readoutOk": true,
+          "triColor": null,
+          "ok": true
+        }
+      ],
+      "ok": true
+    },
+    "catalog": {
+      "route": "#/catalog",
+      "rootPresent": false,
+      "itemCount": 24,
+      "itemCountOk": false,
+      "betaIds": [],
+      "betaCount": 0,
+      "expectedBetaCount": 2,
+      "targetIds": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T19",
+        "T20",
+        "T21",
+        "T22",
+        "E13",
+        "M06",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T23",
+        "T24",
+        "V01",
+        "V02",
+        "V03",
+        "V04",
+        "V05",
+        "V07",
+        "V08",
+        "V09",
+        "V10",
+        "M01",
+        "M02",
+        "M04",
+        "M05",
+        "M08",
+        "M09",
+        "M10",
+        "M19",
+        "M20",
+        "M21",
+        "M24",
+        "M25",
+        "M26",
+        "D01"
+      ],
+      "cards": [
+        {
+          "id": "T01",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T02",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=59"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T03",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T04",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=59"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T05",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=89"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T19",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T20",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T21",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T22",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "E13",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M06",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "T08",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T09",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=2"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T10",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=2"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T11",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "T12",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=2"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=20"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T13",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=2"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=14"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T14",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=2"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=22"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T15",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=4"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=77"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T16",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=3"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=1"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T23",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": false,
+              "detail": "rows=1 expected=0"
+            },
+            "warmup": {
+              "ok": false,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=1"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": false
+        },
+        {
+          "id": "T24",
+          "clauses": {
+            "formula": {
+              "ok": true,
+              "detail": "N 日算术平均"
+            },
+            "params": {
+              "ok": true,
+              "detail": "rows=1 expected=1"
+            },
+            "warmup": {
+              "ok": true,
+              "detail": "text=\"至少 20 根 K 线（首个有效值下标 19，0 基）\" expected=19"
+            },
+            "boundary": {
+              "ok": true,
+              "detail": "N 日算术平均；前 N-1 根为 NaN；引擎 warmup=N-1。"
+            }
+          },
+          "ok": true
+        },
+        {
+          "id": "V01",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "V02",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "V03",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "V04",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "V05",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "V07",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "V08",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "V09",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "V10",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M01",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M02",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M04",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M05",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M08",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M09",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M10",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M19",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M20",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M21",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M24",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M25",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "M26",
+          "ok": false,
+          "reason": "条目缺失"
+        },
+        {
+          "id": "D01",
+          "ok": false,
+          "reason": "条目缺失"
+        }
+      ],
+      "ok": false
+    }
+  },
+  "telemetry": {
+    "path": "/Users/sixmillion/Library/Application Support/aka/logs/telemetry.jsonl",
+    "total": 9124,
+    "counts": {
+      "cache.hit": 4126,
+      "cache.miss": 1374,
+      "compute.count": 125,
+      "compute.skip": 750,
+      "datasource.probe": 1,
+      "indicator.cold_ms": 1374,
+      "indicator.compute": 1374
+    },
+    "coldSamples": 1374,
+    "coldP95Ms": 0.1,
+    "recent": [
+      {
+        "tsMs": 1794102069420,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M06|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M06",
+          "paramsHash": "cc530a4de7afed5c",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069420,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T08|{\"pct\":2.5,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T08",
+          "paramsHash": "84688a996eb80282",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069420,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T09|{\"mult\":2,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T09",
+          "paramsHash": "ef0bde338da0f104",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069420,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T10|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T10",
+          "paramsHash": "2058501d9d30925e",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T11|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T11",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T12|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T12",
+          "paramsHash": "2058501d9d30925e",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T13|{\"mult\":3.5,\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T13",
+          "paramsHash": "0c36bf4e54fbc39f",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T14|{\"mult\":3.0,\"period\":22}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T14",
+          "paramsHash": "e91a1244413544bd",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T15|{\"displacement\":26,\"kijun\":26,\"senkou\":52,\"tenkan\":9}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T15",
+          "paramsHash": "0f10292179b46ef7",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T16|{\"increment\":0.02,\"max\":0.2,\"step\":0.02}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T16",
+          "paramsHash": "ded8d99ed383318c",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T23|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T23",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T24|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "T24",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V01|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V01",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V02|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V02",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V03|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V03",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V04|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V04",
+          "paramsHash": "2058501d9d30925e",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V05|{\"mult\":2.0,\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V05",
+          "paramsHash": "2058501d9d30925e",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V07|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V07",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V08|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V08",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V09|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V09",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|V10|{}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "V10",
+          "paramsHash": "08f44b07b5901a25",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M01|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M01",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M02|{\"d\":3,\"k\":3,\"period\":9}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M02",
+          "paramsHash": "0c81daa36611fd84",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M04|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M04",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M05|{\"period\":20}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M05",
+          "paramsHash": "e928aa148d72e042",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M08|{\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M08",
+          "paramsHash": "cc530a4de7afed5c",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M09|{\"period\":12}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M09",
+          "paramsHash": "cfa02f147f1dc3d1",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M10|{\"period\":10}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M10",
+          "paramsHash": "cf992b147f179e57",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M19|{\"period\":25}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M19",
+          "paramsHash": "e932a6148d7b2dfb",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M20|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M20",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M21|{\"period\":14}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M21",
+          "paramsHash": "cfa62b147f2228b3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069421,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M24|{\"ema\":9,\"sum\":25}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M24",
+          "paramsHash": "b8792a32c607c003",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069422,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M25|{\"ema\":13,\"fast\":12,\"signal\":9,\"slow\":26}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M25",
+          "paramsHash": "90a59b7e0edb97d3",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069422,
+        "name": "cache.hit",
+        "fields": {
+          "adj": "qfq",
+          "barCount": 520,
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|M26|{\"period\":7}|2023-01-02~2024-12-27",
+          "datasetGeneration": 1,
+          "datasetId": "sim-default",
+          "indicatorId": "M26",
+          "paramsHash": "a8ce3752702ce95d",
+          "security": "601014.SH",
+          "timeframe": "D"
+        }
+      },
+      {
+        "tsMs": 1794102069422,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T19|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T19",
+          "instanceId": "b1x-T19",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794102069422,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T20|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T20",
+          "instanceId": "b1x-T20",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794102069422,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T21|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T21",
+          "instanceId": "b1x-T21",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794102069422,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|T22|{\"period\":20}|2023-01-02~2024-12-27",
+          "indicatorId": "T22",
+          "instanceId": "b1x-T22",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794102069422,
+        "name": "compute.skip",
+        "fields": {
+          "cacheKey": "v2|aka-engine-0.1.0|sim-default|601014.SH|D|qfq|E13|{\"period1\":6,\"period2\":12,\"period3\":24}|2023-01-02~2024-12-27",
+          "indicatorId": "E13",
+          "instanceId": "b1x-E13",
+          "reason": "duplicateKey"
+        }
+      },
+      {
+        "tsMs": 1794102069422,
+        "name": "compute.count",
+        "fields": {
+          "cacheHit": true,
+          "count": 0,
+          "instances": 50,
+          "skip": 6
+        }
+      }
+    ]
+  },
+  "notes": [
+    "渲染层 DOM 断言未通过，见 verification.renderLayer",
+    "B2 渲染层 8 卡断言未通过，见 verification.b2Render",
+    "口径页 DOM 断言未通过，见 verification.catalog"
+  ]
+}

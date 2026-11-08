@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AppError,
+  BarProvenanceDto,
+  BarProvenanceRequest,
   BarsResponse,
   CalcRequest,
   CalcResponse,
@@ -93,6 +95,10 @@ export const ipc = {
     invoke<QualityReportDto | null>("quality_report"),
 
   qualityScan: (): Promise<QualityReportDto> => invoke<QualityReportDto>("quality_scan"),
+
+  /** S-07.05-02：单根 K 线溯源（S-07.05-03 浮层复用此 IPC，不新增命令） */
+  barProvenance: (req: BarProvenanceRequest): Promise<BarProvenanceDto> =>
+    invoke<BarProvenanceDto>("bar_provenance", { req }),
 
   calcIndicators: (req: CalcRequest): Promise<CalcResponse> =>
     invoke<CalcResponse>("calc_indicators", { req }),

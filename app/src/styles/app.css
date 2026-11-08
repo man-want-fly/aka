@@ -851,6 +851,76 @@ select {
   color: var(--muted);
 }
 
+/* S-07.05-03：K 线点击后的六字段溯源浮层（右上角，ESC / 点外关闭） */
+.prov-overlay {
+  position: absolute;
+  top: 34px;
+  right: 12px;
+  z-index: 4;
+  min-width: 232px;
+  max-width: 320px;
+  padding: 8px 10px 10px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--shadow) 26%, transparent);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text2);
+}
+
+.prov-overlay__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+
+.prov-overlay__close {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.prov-overlay__close:hover {
+  color: var(--text);
+}
+
+.prov-overlay__hint {
+  color: var(--muted);
+  padding: 2px 0;
+}
+
+.prov-overlay__list {
+  margin: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.prov-overlay__list > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.prov-overlay__list dt {
+  color: var(--muted);
+}
+
+.prov-overlay__list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
 .watermark {
   position: absolute;
   right: 12px;

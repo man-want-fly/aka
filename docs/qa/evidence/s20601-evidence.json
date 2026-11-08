@@ -1,0 +1,36 @@
+{
+  "checks": [
+    {
+      "id": "s20601-event-count-burst120",
+      "card": "S-02.06-01",
+      "ac": "AC-02.06-01",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "1→12→120 连键一次切换：requestsIssued=1、compute.count=1（dump.debounce.burst120）"
+    },
+    {
+      "id": "s20601-event-count-burst60",
+      "card": "S-02.06-01",
+      "ac": "AC-02.06-01",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "1→12→60 连键一次切换：requestsIssued=1、compute.count=1（dump.debounce.burst60）"
+    },
+    {
+      "id": "s20601-batch-cold",
+      "card": "S-02.06-01",
+      "ac": "AC-02.06-01",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "冷缓存：count=44、instances=50、skip=6、cacheHit=false（dump.cold.computeCount 原文）"
+    },
+    {
+      "id": "s20601-batch-warm",
+      "card": "S-02.06-01",
+      "ac": "AC-02.06-01",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "热缓存：count=0、instances=50、skip=6、cacheHit=true（dump.warm.computeCount 原文；instances>0 表示非零批次）"
+    }
+  ]
+}
