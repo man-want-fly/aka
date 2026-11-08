@@ -210,6 +210,14 @@
 - 改动走分支或 `git worktree`；确需热修，先提交推送并重定 tip，不得在窗口内用未提交改动取证。
 - **不合格判定**：取证时 `git status --porcelain` 非空、或 dump 的 `commit`/`dirty` 与 tip 不一致 → 本次取证作废，窗口重开。
 
+### 5.7 页面注册表由 BA 单一维护
+
+- `docs/qa/aka-page-registry-v0.1.csv` 属台账，**只由 BA 写**；`status`、`anchor_file`、`anchor_text` 三列不得由 dev 改动。
+- dev 交付页面或生成器时，只提供锚点三件套（`page_id`、`anchor_file`、`anchor_text`），写进工单或提交说明；`exists` 的判定由 BA 在合并后跑 `verify:docs`（含 `verify:card-pages`）命中锚点再落表。
+- 合并方合入 dev 批次时**剥离该文件的改动**；注册表作为独立 `docs(qa)` 提交，不与代码混在同一提交。
+- 理由：`exists` 是页面层门禁结论，dev 自己写等于自证交付；且与 dev 不得改台账/签字的既有分工一致（§6）。
+- **不合格判定**：dev 提交含注册表三列改动 → 合并前剥离；已合入的恢复至合入前状态，由 BA 重写。
+
 ---
 
 ## 6. 审查边界
