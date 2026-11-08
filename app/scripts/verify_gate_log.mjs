@@ -38,7 +38,7 @@ const COLUMNS = [
 const STATUS = new Set(["已交付", "条件交付", "渲染层已具备", "数值层已具备", "未开始", "待签", "已结项", "Blocked", "Blocked-AC"]);
 const GATE = { gate_a: new Set(["PASS", "FAIL", "N/A"]), gate_b: new Set(["PASS", "FAIL", ""]), gate_c: new Set(["PASS", "FAIL", ""]) };
 const SOURCE_PREFIX = new Set(["BA", "dev", "TL", "CI", "自动化", "合并"]);
-const OWNER = /^(TL|BA|dev A|开发)(;(TL|BA|dev A|开发))*$/;
+const OWNER = /^(TL|BA|dev A|dev B|开发)(;(TL|BA|dev A|dev B|开发))*$/;
 const CARD_ID = /^S-\d{2}\.\d{2}-\d{2}$/;
 const FIX = process.argv.includes("--fix");
 

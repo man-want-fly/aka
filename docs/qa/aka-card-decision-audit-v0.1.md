@@ -2257,6 +2257,43 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **五、`dev2` 合并窗口（写进 `W-83`）。**
 窗口不再「等报再排」：**预检 = P01–P04 全部完成当日；执行 = 同一日 18:00 前**，TL 主责、BA 在场；提前完成则窗口前移。P05–P10 的唯一闸口是这次合并，逾期即整线停，TL 当日书面说明。
 
+#### 4.7.58 `dev2` 并入 `main`：清单、合并、基线与完整性核对（2026-11-08）
+
+**一、合并前清单（已报产品）**
+- 分支：仅 `main`、`dev2`；worktree 两个（`AKA`、`AKA-dev2`）。`origin` 远端同样只有这两条，无其他本地分支、无未推送提交。
+- `dev2`：领先 `main` **9 个提交**、落后 7 个（`dc239b0` 之后 main 的文档提交）。含 4 张卡：`S-07.01-01`（`7b4f87e`+证据 `739d523`）、`S-07.04-01`（`048f16b`+`996b7b9`）、`S-07.05-01`（`689528a`+`8274f27`）、`S-08.01-02`（`a60a504`+`cb5ec5e`）。台账这 4 张均记 `未开始`（BA 未回填，见四）。
+- `dev2` worktree 有**未提交 WIP**：改 7 个文件、新增 `app/src/features/catalog/{FavoritesStrip,catalogDiag,chartLink,crossPageDiag,useFavorites}`。未进任何提交，**不参与合并**，原样保留；归 dev 自行处置。
+- 共用文件 `app/bench`、`manifest/indicators.json`：两侧均未改动，**无 §0.1 基线冲突**。`git merge-tree` 预检冲突 0。
+
+**二、合并**
+- 策略：`git merge --no-ff origin/dev2`（保留分支拓扑，便于回溯 4 张卡的独立提交与证据）。**未 rebase、未 squash、未 force push、未改写任何已推送历史。**
+- 结果：merge commit `d996c6f`，冲突 0，已推送。main 现为 `d996c6f`。
+
+**三、合并后重新成立的事实**
+- 基线：`verify:constants`（模块 19 + 反例 18、漂移 0）、`verify:index-pd`（74 行 / 207.9 对 207.9）、`verify:evidence`（失败 0）、`verify:r03`、`verify:format`、`verify:docs`（failed=0/skipped=0、74 卡 / 10 页）、`verify:gate-log`（56 行）全绿；共用基线文件未被 dev2 改动，数字保持。
+- CI：合并 tip `d996c6f` 的 run **`42433408456` 为红**（详见七）；签名一律以该 run 的 `head_sha` 为准（第 16 条）。
+- **证据重签未直接放行**：三张卡的 dump 分别停在 `7b4f87e`/`048f16b`/`689528a`，而合并 tip 上 `DatasourcePage.tsx`、`app.css` 被后续 dev2 提交改过（如 `a60a504` 改「暂无数据版本」→「暂无版本」）。按第 19 条，证据 commit 必须是被签 tip 本身，故三卡置 `待签`、`gate_c=FAIL`，由 dev B 在 `d996c6f` 上重跑（13/7/9 项）后 TL 签，**不用旧 dump 凑签**。
+
+**四、`S-08.01-02` 的异常（需 BA 判）**
+台账记为 `Blocked`（理由：标的侧 AC 依赖 P7 搜索浮层），但 `dev2` 已实现指标侧空态（`CatalogPage.tsx`，`a60a504`），且 `IndicatorDrawer.tsx` 注释写「搜索无结果空态并入 S-08.01-02」。代码与台账口径冲突：要么拆卡（指标侧可交付、标的侧继续 Blocked），要么整卡继续等 P7。已置池内 `待BA复核`，**不签、不结项**。
+
+**五、解池**
+- 立即可取（代码已在 main）：`P05 S-06.03-02`、`P06 S-08.02-02`、`P07 S-07.01-02`、`P09 S-08.02-03`、`P10 S-01.03-01`。`P05`/`P06` 的上游卡签字未完成**不阻断开工**，只阻断其自身交付前的上游签字闭环。
+- 出池：`P08 S-07.05-01`、`P21 S-07.01-01`、`P22 S-07.04-01` 转 `已交付待签`；`P18 S-08.01-02` 转 `待BA复核`。
+- 取卡顺序不变（§4.7.55），dev B 做完 P01–P04 直接接 P05–P07。
+
+**六、完整性核对（逐卡，不看分支状态）**
+- 台账 `已交付/条件交付` 23 张：实现锚点全部存在于 `main`；台账所记交付 commit 均为 `main` 祖先，无一张离线。
+- 另有 3 张（`S-07.01-01`、`S-07.04-01`、`S-07.05-01`）交付记录在 `W-83` 而非台账：代码均在 `main`（`BackfillSection.tsx`、`QualitySection.tsx`、`DatasourcePage` 探测区），**代码无缺失，缺的是台账回填与 tip 重签**。
+- 3 张结项卡（`S-08.01-01`、`S-08.01-03`、`S-08.02-01`）以宿主卡形式在 `main`，符合结项口径。
+- **结论：`main` 上无「有交付记录但无实现」的卡。** 唯一状态异常是 `S-08.01-02`（实现已在 main、台账仍 Blocked），属口径问题，不属丢代码。
+
+**七、`S-02.08-01` 合并即失效（run `42433408456` 红）**
+- 红因：`dev2` 的 `a60a504` 修改了 `app/src/pages/workbench/WorkbenchPage.tsx`（「暂无数据」→「行情未加载」），该 basename 在 `S-02.08-01` 的 `sign_scope` 内 → 原签字 `1d02300` 失效；合并提交未申报 `Sign-Invalidates`，`verify:sign-impact` 按第 18 条判红。
+- 处置：合并提交已推送且禁止改写历史，**不 amend、不 force push**；`S-02.08-01` 在 gate-log 置 `待签`、`gate_c=FAIL`，保留原 `sign_commit`/`sign_scope` 供回溯，owner=TL、workorder=`W-83`。该失败 run 登记进 `aka-ci-sign-ledger-v0.1.csv`（note 标「非签字、仅登记」）。
+- 放行条件：dev B 在合并后的干净 tip 上重跑 `S-02.08-01` 证据，CI 在新 tip 绿后 TL 重签；重签前该卡不得标 `已交付`。
+- 教训：合并分支前应先跑 `verify:sign-impact` 对**待并入 diff** 预演，而不是等合并 tip CI 报警；该预演列入 `W-83` 后续窗口动作。
+
 ---
 
 ## 5. 拍板事项：11 条的最终状态

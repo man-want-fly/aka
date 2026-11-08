@@ -7,5 +7,5 @@ P5,自选页,exists,app/src/components/Watchlist.tsx,Watchlist,S-01.02-01,作为
 P6,指数与板块页,absent,,,,S-04.01-01,由 S-04.01-01/02、S-04.02-01/02 共同承载；E-04 无 S-04.03-01，原 owner 为错号
 P7,搜索浮层,absent,,,,S-05.01-01,
 P8,设置页,exists,app/src/pages/settings/SettingsPage.tsx,SettingsPage,,
-P9,数据源状态页,absent,,,,S-07.01-01,dev2 有实现，main 未合入
+P9,数据源状态页,exists,app/src/pages/datasource/DatasourcePage.tsx,数据源状态,S-07.01-01,2026-11-08 已并入 main（d996c6f）：探测 4+4 能力、版本 6 字段、质量区与历史回填区；含 P10 摘要
 P10,已安装摘要页,absent,,,,S-07.03-01,
