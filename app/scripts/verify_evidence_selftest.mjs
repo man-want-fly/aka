@@ -108,7 +108,22 @@ const baseEvidence = () => ({
   // 第 30 条：顶层汇总覆盖全部 verification 子块。
   verification: {
     renderLayer: { ok: true },
-    b2Render: { assertionsOk: true, focusOk: true, signable: true, ok: true },
+    b2Render: {
+      assertionsOk: true,
+      focusOk: true,
+      signable: true,
+      ok: true,
+      // W-93：latency 七字段只校验存在与类型，不设阈值、不参与 ok / signable。
+      latency: {
+        scope: "warm 热切回（30 标的 × 3 批；maxMs=单次回切 max，p95Ms=跨样本 P95）",
+        sample: 90,
+        cacheHit: true,
+        pointwiseEqual: true,
+        maxMs: 291,
+        p95Ms: 31,
+        advisory: "maxMs 与 p95Ms 不是同一统计量，不得互相比较或折算；不设阈值、不参与 ok 与 signable。",
+      },
+    },
     b3Render: { ok: true },
     catalog: { ok: true },
   },
@@ -203,6 +218,22 @@ const cases = [
   ["b2Render.ok 混入聚焦（assertionsOk=true 却 ok=false）", (evidence) => { evidence.verification.b2Render.ok = false; }, 1],
   ["b2Render.signable 派生不一致", (evidence) => { evidence.verification.b2Render.signable = false; }, 1],
   ["b2Render.focusOk 与顶层聚焦不一致", (evidence) => { evidence.verification.b2Render.focusOk = false; }, 1],
+  // W-93：latency 只校验字段存在/类型，不设阈值、不参与 ok / signable。
+  ["缺 b2Render.latency（字段化丢失）", (evidence) => { delete evidence.verification.b2Render.latency; }, 1],
+  ["b2Render.latency.maxMs 非数字", (evidence) => { evidence.verification.b2Render.latency.maxMs = "291ms"; }, 1],
+  ["b2Render.latency.sample 非数字", (evidence) => { evidence.verification.b2Render.latency.sample = null; }, 1],
+  ["b2Render.latency.cacheHit 非布尔", (evidence) => { evidence.verification.b2Render.latency.cacheHit = "true"; }, 1],
+  ["b2Render.latency.pointwiseEqual 非布尔", (evidence) => { evidence.verification.b2Render.latency.pointwiseEqual = 1; }, 1],
+  ["b2Render.latency.p95Ms 既非数字也非 null", (evidence) => { evidence.verification.b2Render.latency.p95Ms = "31ms"; }, 1],
+  ["b2Render.latency.advisory 为空", (evidence) => { evidence.verification.b2Render.latency.advisory = "  "; }, 1],
+  ["b2Render.latency.scope 为空", (evidence) => { evidence.verification.b2Render.latency.scope = ""; }, 1],
+  ["b2Render.latency.p95Ms=null（无样本但类型合法）不判红", (evidence) => {
+    evidence.verification.b2Render.latency.p95Ms = null;
+  }, 0],
+  ["latency 超阈值不判红（不设阈值）", (evidence) => {
+    evidence.verification.b2Render.latency.maxMs = 9999;
+    evidence.verification.b2Render.latency.p95Ms = 9999;
+  }, 0],
   ["未聚焦：断言通过但 signable=false（记不可判定，不判证据失败）", (evidence) => {
     evidence.windowFocused = false;
     evidence.verification.b2Render.focusOk = false;

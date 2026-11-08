@@ -754,6 +754,32 @@ for (const { full, rel } of evidenceFiles) {
         if (b2.focusOk === false) {
           focusNotes.push(`${file}: b2Render.focusOk=false → 不可判定，不得据此签（第 10 条）`);
         }
+        // W-93：latency 只做字段化留档——门禁只校验字段存在与类型，
+        // **不设阈值**、不参与 ok / signable（maxMs 与 p95Ms 不是同一统计量）。
+        const latency = b2.latency;
+        if (!latency || typeof latency !== "object" || Array.isArray(latency)) {
+          problems.push("b2Render.latency 缺失（W-93 七字段必须字段化，缺键 = 无法追因）");
+        } else {
+          if (typeof latency.scope !== "string" || latency.scope.trim() === "") {
+            problems.push("b2Render.latency.scope 必须为非空字符串（口径说明不可省）");
+          }
+          for (const key of ["sample", "maxMs"]) {
+            if (typeof latency[key] !== "number" || !Number.isFinite(latency[key])) {
+              problems.push(`b2Render.latency.${key} 必须为有限数字`);
+            }
+          }
+          if (latency.p95Ms !== null && (typeof latency.p95Ms !== "number" || !Number.isFinite(latency.p95Ms))) {
+            problems.push("b2Render.latency.p95Ms 必须为有限数字或 null");
+          }
+          for (const key of ["cacheHit", "pointwiseEqual"]) {
+            if (typeof latency[key] !== "boolean") {
+              problems.push(`b2Render.latency.${key} 必须为布尔`);
+            }
+          }
+          if (typeof latency.advisory !== "string" || latency.advisory.trim() === "") {
+            problems.push("b2Render.latency.advisory 必须为非空字符串（须写明不设阈值、不可互相折算）");
+          }
+        }
       }
 
       // 第 30 条：顶层 ok 必须覆盖全部 verification 子块——漏一个维度就等于让红证据显示通过。

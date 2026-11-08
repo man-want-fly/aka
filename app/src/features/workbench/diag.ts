@@ -2018,7 +2018,22 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   await sleep(600);
 
   const renderLayer = await collectRenderChecks(hooks);
-  const b2Render = await collectB2RenderChecks(hooks);
+  // W-93：b2Render.latency 只做字段化留档，**不设阈值**、不参与 ok / signable。
+  // 291ms（回切样本 90 的单次 max）与 P95=31ms（跨样本 P95）不是同一统计量，
+  // 加阈值就会被人拿来互相比较、折算成「变快了」，得出假结论。
+  const b2Render: Record<string, unknown> = {
+    ...(await collectB2RenderChecks(hooks)),
+    latency: {
+      scope: "warm 热切回（30 标的 × 3 批；maxMs=单次回切 max，p95Ms=跨样本 P95）",
+      sample: warm.length,
+      cacheHit: warmAllHit,
+      pointwiseEqual: warmAllMatch,
+      maxMs: round2(warmMaxTotal),
+      p95Ms: warmP95 === null ? null : round2(warmP95),
+      advisory:
+        "仅供追因：maxMs 与 p95Ms 是不同统计量（单次样本 max vs 跨样本分位），不得互相比较或折算为「变快/变慢」；不设阈值、不参与 ok 与 signable。",
+    },
+  };
   const b3Render = await collectB3RenderChecks();
   const catalog = await collectCatalogCheck();
   if (!renderLayer.ok) notes.push("渲染层 DOM 断言未通过，见 verification.renderLayer");
