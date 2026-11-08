@@ -256,7 +256,8 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
     const mv7 = parseNumber(mv7Text);
     const pnl7 = parseNumber(pnl7Text);
     // 独立来源：手算 noneClose×100 与 (noneClose−1100)×100；另用「市值必须随口径变化」证到确实重取。
-    const shouldChange = Math.abs(noneClose - close) > 0.005;
+    // W-104：样本不足以证明重取时直接红，不静默跳过（跳过等于让这条断言退回「看着绿」）。
+    const sampleProvesRefetch = Math.abs(noneClose - close) > 0.005 && mv7Text !== mvBeforeAdjChange;
     push(
       "P10-R7",
       "AC-01.03-01(补4)",
@@ -269,8 +270,10 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
         near(pnl7, (noneClose - 1100) * 100) &&
         near(pnl7, (mv7 ?? Number.NaN) - 110_000) &&
         near(parseNumber(pct7Text), (noneClose / 1100 - 1) * 100) &&
-        (!shouldChange || mv7Text !== mvBeforeAdjChange),
-      `独立来源：手算 ${noneClose}×100=${(noneClose * 100).toFixed(2)}、恒等式 pnl=市值−110,000、口径变化后市值 ${mvBeforeAdjChange}→${mv7Text}（应不同）；DOM=${mv7Text} / ${pnl7Text} / ${pct7Text}`,
+        sampleProvesRefetch,
+      sampleProvesRefetch
+        ? `独立来源：手算 ${noneClose}×100=${(noneClose * 100).toFixed(2)}、恒等式 pnl=市值−110,000、口径变化后市值 ${mvBeforeAdjChange}→${mv7Text}（已变）；DOM=${mv7Text} / ${pnl7Text} / ${pct7Text}`
+        : `样本不足以证明重取：noneClose=${noneClose} / 前复权 close=${close}，市值 ${mvBeforeAdjChange}→${mv7Text}；需两者同时满足「口径价不同」且「市值已变」`,
     );
 
     // 补2：停牌标本（AKA_DIAG=1 注入）按停牌前收盘计市值并带徽标。
