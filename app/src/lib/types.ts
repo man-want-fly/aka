@@ -409,6 +409,18 @@ export interface DiagBuildInfo {
   targetTriple: string;
 }
 
+/** R-EV-02 运行环境：由 Rust 侧读取，禁止前端手写。 */
+export interface DiagEnvDto {
+  os: string;
+  arch: string;
+  /** 当前可执行文件绝对路径 */
+  binary: string;
+  /** 可执行文件 sha256（64 位小写 hex） */
+  binarySha256: string;
+  /** dump 落盘目录（Application Support/aka/diag） */
+  dumpDir: string;
+}
+
 /** QA 故障注入开关（仅 `AKA_DIAG=1` 启动时可信） */
 export interface DiagFaultsDto {
   datasetEmpty: boolean;

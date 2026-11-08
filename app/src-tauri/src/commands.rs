@@ -285,6 +285,55 @@ pub async fn diag_build_info() -> Result<DiagBuildInfo, AppError> {
     })
 }
 
+/// R-EV-02 运行环境：os/arch + 二进制绝对路径与 sha256 + dump 目录。
+/// 由 Rust 读取，前端只做组装；禁止任何手写路径（制度第 19 条）。
+#[cfg(debug_assertions)]
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagEnv {
+    os: &'static str,
+    arch: &'static str,
+    binary: String,
+    binary_sha256: String,
+    dump_dir: String,
+}
+
+#[cfg(debug_assertions)]
+#[tauri::command]
+pub async fn diag_env(app: tauri::AppHandle) -> Result<DiagEnv, AppError> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+    use tauri::Manager;
+
+    let binary = std::env::current_exe()
+        .map_err(|err| AppError::internal(format!("无法解析当前可执行文件：{err}")))?;
+    let mut file = std::fs::File::open(&binary)
+        .map_err(|err| AppError::internal(format!("无法读取当前可执行文件：{err}")))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 8192];
+    loop {
+        let read = file
+            .read(&mut buffer)
+            .map_err(|err| AppError::internal(format!("读取可执行文件失败：{err}")))?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    let dump_dir = app
+        .path()
+        .home_dir()
+        .map_err(|err| AppError::internal(format!("无法解析 home 目录：{err}")))?
+        .join("Library/Application Support/aka/diag");
+    Ok(DiagEnv {
+        os: std::env::consts::OS,
+        arch: std::env::consts::ARCH,
+        binary: binary.display().to_string(),
+        binary_sha256: format!("{:x}", hasher.finalize()),
+        dump_dir: dump_dir.display().to_string(),
+    })
+}
+
 /// 与 `app/Cargo.toml` 的 profile 对应；`diag_build_info_matches_profile` 单测守着同步。
 const DEV_OPT_LEVEL: &str = "1";
 const RELEASE_OPT_LEVEL: &str = "3";

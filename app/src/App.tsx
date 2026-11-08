@@ -173,7 +173,8 @@ export default function App() {
           setLocation({ route: "market", code: null });
           return;
         }
-        if (target !== "s2") return;
+        // W-89：s070503 也必须在工作台挂载才可能落 dump；缺这条会 240s 超时且一个文件都没有。
+        if (target !== "s2" && target !== "s070503") return;
         if (window.location.hash.startsWith("#/workbench")) return;
         window.location.hash = "#/workbench";
         setLocation({ route: "workbench", code: null });

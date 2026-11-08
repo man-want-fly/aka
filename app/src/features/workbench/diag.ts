@@ -17,6 +17,65 @@ import type { WorkbenchParams } from "./model";
 
 export type DiagPhase = "off" | "debounce" | "cold" | "warm" | "done";
 
+/** R-EV-02 运行层五项：commit/dirty 来自构建期 define，runtime/build 来自 Rust，command 由本函数拼装。 */
+export interface EvidenceEnv {
+  commit: string;
+  dirty: boolean;
+  runtime: {
+    launchMode: string;
+    node: string;
+    os: string;
+    arch: string;
+    hostTarget: string;
+    /** 本产品是 Tauri WebKit 宿主，必须显式写 "none"；缺键才 FAIL。 */
+    electron: string;
+  };
+  build: {
+    entry: string;
+    builtAt: string;
+    cargoProfile: string;
+    features: string[];
+    binary: { path: string; sha256: string };
+  };
+  command: string;
+}
+
+/**
+ * 采集 R-EV-02 env 块。任何一项读不到都抛错（而不是写空占位），
+ * 让运行层证据在 verify:evidence 处 failed，避免「自证通过」。
+ */
+export async function collectEvidenceEnv(targetHint = "s2"): Promise<EvidenceEnv> {
+  const [buildInfo, env] = await Promise.all([
+    ipc.diagBuildInfo(),
+    ipc.diagEnv(),
+  ]);
+  const commit = __AKA_BUILD_COMMIT__;
+  if (!commit) throw new Error("构建期 commit 未注入（vite define 缺失）");
+  const command = env.binary ? `AKA_DIAG=1 AKA_DIAG_TARGET="${targetHint}" ${env.binary}` : "";
+  return {
+    commit,
+    dirty: __AKA_BUILD_DIRTY__,
+    runtime: {
+      launchMode: "cargo+custom-protocol",
+      node: __AKA_BUILD_NODE__,
+      os: env.os,
+      arch: env.arch,
+      // Tauri WebKit 的 platform / Rust host triple；与 evidence-run.sh 的 meta 同口径。
+      hostTarget: `tauri-webkit(${buildInfo.targetTriple})`,
+      // 非 Electron 宿主：显式 none 记通过，字段缺失才 FAIL（第 19 条）。
+      electron: "none",
+    },
+    build: {
+      entry: __AKA_BUILD_ENTRY__,
+      builtAt: __AKA_BUILD_AT__,
+      cargoProfile: buildInfo.buildProfile,
+      features: __AKA_BUILD_FEATURES__,
+      binary: { path: env.binary, sha256: env.binarySha256 },
+    },
+    command,
+  };
+}
+
 export type TimeframeCode = "D" | "W" | "M";
 
 export interface DiagSample {
@@ -139,8 +198,52 @@ function resolveColor(variable: string): string {
   return color;
 }
 
+// W-89：取证前把主图叠加/副图归一化到产品默认基线。
+// 持久化的 overlayIds/subIds 会随上一次操作泄漏（BA 实测主图只剩 T09/T24、副图无 M06），
+// 导致 colorOk/macdCount/shownSma 全部假红；这不是产品缺陷，是取证状态未归一。
+const BASELINE_OVERLAYS = ["T01", "T09"];
+const BASELINE_SUBS = ["M06", "M01"];
+
+async function setMultiSelect(selector: string, ids: string[]): Promise<boolean> {
+  const select = document.querySelector<HTMLSelectElement>(selector);
+  if (!select) return false;
+  for (const option of Array.from(select.options)) option.selected = ids.includes(option.value);
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  await sleep(260);
+  return true;
+}
+
+/** 归一化到默认基线并在渲染稳定后返回；任一选择器缺失即 false（由调用方记入证据）。 */
+async function applyBaselineSelection(): Promise<boolean> {
+  const overlaysOk = await setMultiSelect("[data-b2-overlay-select]", BASELINE_OVERLAYS);
+  const subsOk = await setMultiSelect("[data-b2-sub-select]", BASELINE_SUBS);
+  if (!overlaysOk || !subsOk) return false;
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    if (
+      document.querySelectorAll("[data-overlay]").length >= 4 &&
+      document.querySelectorAll("[data-macd]").length >= 3 &&
+      document.querySelectorAll("[data-macd='hist'] rect").length >= 2
+    ) {
+      return true;
+    }
+    await sleep(100);
+  }
+  return false;
+}
+
+/** 窗口聚焦/应用激活：缺字段即「不可判定 = FAIL」，不许写成「环境问题」。 */
+export function collectFocus(): { windowFocused: boolean; appActive: boolean } {
+  return {
+    windowFocused: document.hasFocus(),
+    appActive: document.visibilityState === "visible" && !document.hidden,
+  };
+}
+
 /** 渲染层证据：直接读真实 DOM（Tauri WebView 内），不依赖截图权限。 */
 async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unknown>> {
+  // 先归一化基线，再采样；否则持久化选择会让 macd/shownSma 假红。
+  const baselineApplied = await applyBaselineSelection();
+  const focus = collectFocus();
   const attrs = (selector: string, name: string) =>
     Array.from(document.querySelectorAll(selector)).map(
       (element) => element.getAttribute(name) ?? "",
@@ -152,7 +255,8 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
     "[data-readout='T21-r2'], [data-readout^='E13-']",
     "data-readout",
   );
-  const readoutHost = document.querySelectorAll("[data-readout-host='1']").length;
+  // CandleChart 的读数宿主属性是 data-readout="1"（不是 data-readout-host）。
+  const readoutHost = document.querySelectorAll("[data-readout='1']").length;
 
   let tooltipBefore = attrs("[data-readout^='ma-'], [data-readout^='ov-']", "data-readout").length;
   let maEntries: Array<{ id: string; value: string; unit: string; text: string }> = [];
@@ -176,9 +280,7 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
       await sleep(160);
       tooltipBefore = attrs("[data-readout^='ma-'], [data-readout^='ov-']", "data-readout").length;
       hoverIndex =
-        document
-          .querySelector("[data-readout-host='1']")
-          ?.getAttribute("data-hover-index") ?? "";
+        document.querySelector("[data-readout='1']")?.getAttribute("data-hover-index") ?? "";
       maEntries = Array.from(
         document.querySelectorAll("[data-readout^='ma-'], [data-readout^='ov-']"),
       ).map(
@@ -238,15 +340,20 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
       }
       const upCandle = document.querySelector<SVGElement>("[data-candle='up']");
       const downCandle = document.querySelector<SVGElement>("[data-candle='down']");
-      const histPos = document.querySelector<SVGElement>("[data-hist='pos']");
-      const histNeg = document.querySelector<SVGElement>("[data-hist='neg']");
+      // MACD 柱实际契约是 [data-macd='hist'] 下的 rect（不是 data-hist='pos'/'neg'）：
+      // 正负柱共用同一组 rect，按最终 fill 区分。
+      const posToken = resolveColor("--pos");
+      const negToken = resolveColor("--neg");
+      const histFills = Array.from(
+        document.querySelectorAll<SVGElement>("[data-macd='hist'] rect"),
+      ).map((element) => getComputedStyle(element).fill);
       colorSamples = {
-        posToken: resolveColor("--pos"),
-        negToken: resolveColor("--neg"),
+        posToken,
+        negToken,
         upCandleStroke: upCandle ? getComputedStyle(upCandle).stroke : "",
         downCandleStroke: downCandle ? getComputedStyle(downCandle).stroke : "",
-        histPosFill: histPos ? getComputedStyle(histPos).fill : "",
-        histNegFill: histNeg ? getComputedStyle(histNeg).fill : "",
+        histPosFill: histFills.find((fill) => fill === posToken) ?? "",
+        histNegFill: histFills.find((fill) => fill === negToken) ?? "",
         chgFirst: `${chgFirst.sign}|${chgFirst.color}|${chgFirst.text}`,
         chgSecond: `${chgSecond.sign}|${chgSecond.color}|${chgSecond.text}`,
         chgPos: `${chgPos.sign}|${chgPos.color}|${chgPos.text}`,
@@ -290,7 +397,7 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
     const second = centerOf(1);
     const bandPx = first && second && Math.abs(second.x - first.x) > 0 ? Math.abs(second.x - first.x) : 1;
     const hoverIndexNow = () =>
-      Number(document.querySelector("[data-readout]")?.getAttribute("data-hover-index") ?? "-1");
+      Number(document.querySelector("[data-readout='1']")?.getAttribute("data-hover-index") ?? "-1");
     const rows: Array<Record<string, unknown>> = [];
     for (const visible of picks) {
       const center = centerOf(visible);
@@ -350,7 +457,7 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
   const t21TwoDecimals = /R² [-+]?\d+\.\d{2}(?!\d)/.test(t21Text);
   const overlayCount = overlays.length;
   const macdCount = macd.length;
-  const histCount = document.querySelectorAll("[data-hist]").length;
+  const histCount = document.querySelectorAll("[data-macd='hist'] rect").length;
   const posColor = colorSamples.posToken;
   const negColor = colorSamples.negToken;
   const chgEncoded = (sample: { sign: string; text: string; color: string }, direction: "pos" | "neg") =>
@@ -388,8 +495,13 @@ async function collectRenderChecks(hooks: DiagHooks): Promise<Record<string, unk
     decimalsOk,
     tooltipParity,
     hoverError,
+    baselineApplied,
+    focus,
     ok:
       Boolean(svg) &&
+      baselineApplied &&
+      focus.windowFocused &&
+      focus.appActive &&
       // S-02.02-02 起主图叠加容量 2（默认 SMA20 + BOLL，共 4 条输出线），不再是固定 8 线
       overlayCount >= 4 &&
       macdCount === 3 &&
@@ -421,6 +533,7 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
   const dataLimited = (clauses: Clause[]) =>
     clauses.filter((item) => item.status === "n/a").length;
 
+  const focus = collectFocus();
   const posColor = resolveColor("--pos");
   const negColor = resolveColor("--neg");
   const riseColor = resolveColor("--rise");
@@ -518,6 +631,14 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     const select = document.querySelector<HTMLSelectElement>("[data-b2-sub-select]");
     if (!select) return false;
     select.value = id;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(260);
+    return true;
+  };
+  const setSubs = async (ids: string[]) => {
+    const select = document.querySelector<HTMLSelectElement>("[data-b2-sub-select]");
+    if (!select) return false;
+    for (const option of Array.from(select.options)) option.selected = ids.includes(option.value);
     select.dispatchEvent(new Event("change", { bubbles: true }));
     await sleep(260);
     return true;
@@ -824,7 +945,8 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
 
   // S-03.05-03 / AC-03.05-16：仅显示激活侧、翻转根标记、翻转后不跳变、NaN 断开
   {
-    const selected = await setOverlays(["T10", "T12", "T13", "T14"]);
+    // 主图叠加容量 2：选 4 个会被 slice 成前两个，T13 不渲染（nodes=0 假红）。
+    const selected = await setOverlays(["T13", "T14"]);
     const long = valuesOf("T13", "long");
     const short = valuesOf("T13", "short");
     const start = windowStart();
@@ -1160,8 +1282,9 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     await setSub("V08");
     const start = windowStart();
     clauses.push(
-      pass("V08 0 轴可见", document.querySelectorAll("[data-sub-zero='1']").length === 1, {
-        zeroAxis: document.querySelectorAll("[data-sub-zero='1']").length,
+      // CandleChart 的 0 轴属性值是面板 id（data-sub-zero="V08"），不是固定的 "1"。
+      pass("V08 0 轴可见", document.querySelectorAll("[data-sub-zero='V08']").length === 1, {
+        zeroAxis: document.querySelectorAll("[data-sub-zero='V08']").length,
       }),
     );
     // `data-sub` 挂在 <g> 上，`data-sub-sign` 挂在两条 <path> 上，属性选择器不会继承
@@ -1209,9 +1332,9 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     cards.push({ card: "S-03.05-08", ac: "AC-03.05-35", kind: "sub", clauses, ok: verdict(clauses), dataLimited: dataLimited(clauses) });
   }
 
-  // 复位默认视图，避免取证改变用户看到的叠加/副图
-  await setOverlays(["T09", "T24"]);
-  await setSub("M06");
+  // 复位到产品默认基线（T01+T09 / M06+M01），避免取证改变视图并让下一次 renderLayer 状态泄漏
+  await setOverlays(BASELINE_OVERLAYS);
+  await setSubs(BASELINE_SUBS);
 
   const clauseCount = cards.reduce(
     (total, card) => total + ((card.clauses as Clause[] | undefined)?.length ?? 0),
@@ -1233,7 +1356,13 @@ async function collectB2RenderChecks(hooks: DiagHooks): Promise<Record<string, u
     failCount,
     dataLimitedCount,
     cards,
-    ok: cards.length === 8 && failCount === 0 && cards.every((item) => Boolean(item.ok)),
+    focus,
+    ok:
+      cards.length === 8 &&
+      failCount === 0 &&
+      cards.every((item) => Boolean(item.ok)) &&
+      focus.windowFocused &&
+      focus.appActive,
   };
 }
 
@@ -1684,9 +1813,55 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
   if (!b3Render.ok) notes.push("B3 渲染层 13 指标断言未通过，见 verification.b3Render");
   if (!catalog.ok) notes.push("口径页 DOM 断言未通过，见 verification.catalog");
 
+  // R-EV-02：env 由 diag.ts 统一写；commit 来自构建期 define，runtime/build 来自 Rust。
+  const env = await collectEvidenceEnv("s2");
+  const focus = collectFocus();
+  // 统一外层 checks（S-02.06-01 四项），供 diag-evidence.sh 按 schema 聚合归属。
+  const checks = [
+    {
+      id: "s20601-event-count-burst120",
+      card: "S-02.06-01",
+      ac: "AC-02.06-01",
+      layer: "runtime",
+      passed: burst120.passed && burst120.requestsIssued === 1,
+      detail: `连键 1→12→120：请求 ${burst120.requestsIssued} 次（应为 1）`,
+    },
+    {
+      id: "s20601-event-count-burst60",
+      card: "S-02.06-01",
+      ac: "AC-02.06-01",
+      layer: "runtime",
+      passed: burst60.passed && burst60.requestsIssued === 1,
+      detail: `连键 1→12→60：请求 ${burst60.requestsIssued} 次（应为 1）`,
+    },
+    {
+      id: "s20601-batch-cold",
+      card: "S-02.06-01",
+      ac: "AC-02.06-01",
+      layer: "runtime",
+      passed: coldBatchOk && coldAllMiss,
+      detail: `冷缓存批次 count/instances/skip=${JSON.stringify(coldComputeCount)}，全 miss=${coldAllMiss}`,
+    },
+    {
+      id: "s20601-batch-warm",
+      card: "S-02.06-01",
+      ac: "AC-02.06-01",
+      layer: "runtime",
+      passed: warmBatchOk && warmAllHit && warmAllMatch,
+      detail: `热缓存批次 count/instances/skip=${JSON.stringify(warmComputeCount)}，全命中=${warmAllHit}，逐点一致=${warmAllMatch}`,
+    },
+  ];
+  const ok = checks.every((item) => item.passed);
+
   const payload = {
     schemaVersion: 1,
     kind: "aka-s2-evidence",
+    suite: "s2",
+    ok,
+    checks,
+    env,
+    windowFocused: focus.windowFocused,
+    appActive: focus.appActive,
     generatedAt: new Date().toISOString(),
     // R-EV-02：dump 自带 finishedAt，供 evidence-run 回填到 meta.dump（禁止手写）
     finishedAt: new Date().toISOString(),

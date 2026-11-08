@@ -86,6 +86,24 @@ function layoutDir(key) {
 const EVIDENCE_DIR = dirArg
   ? path.resolve(dirArg.slice("--dir=".length))
   : layoutDir("evidenceRoot");
+// 归档根同源读取：子目录报错文案与归档路径断言都不得再硬编码 docs/qa/raw。
+const ARCHIVE_REL = path
+  .relative(ROOT, layoutDir("archiveRoot"))
+  .split(path.sep)
+  .join("/");
+// R-EV-02：s2 dump 的 schema 键（缺键说明是旧构建产物，不许静默通过）。
+const S2_SCHEMA_KEYS = [
+  "build",
+  "dataset",
+  "engine",
+  "debounce",
+  "cold",
+  "warm",
+  "batchCompute",
+  "timeframes",
+  "verification",
+  "telemetry",
+];
 
 const failures = [];
 const warnings = [];
@@ -264,7 +282,7 @@ const walk = (dir) => {
     const rel = path.relative(EVIDENCE_DIR, full).split(path.sep).join("/");
     if (entry.isDirectory()) {
       failures.push(
-        `${rel}: 证据根下出现子目录（跳过机制已删除；证据必须平铺，归档请移 docs/qa/raw/）`,
+        `${rel}: 证据根下出现子目录（跳过机制已删除；证据必须平铺，归档请移 ${ARCHIVE_REL}/）`,
       );
       continue;
     }
@@ -412,6 +430,115 @@ for (const { full, rel } of evidenceFiles) {
     failures.push(`${file}-meta: JSON 解析失败（${error.message}）`);
     continue;
   }
+  // R-EV-02 运行层五项 + dump 完整性 + 聚焦可判定性。
+  // 只对新格式（evidence-run.sh 统一入口产物，meta.reproduce 非空）生效：
+  // 旧证据没有被改写的义务，但新证据缺一项就必须 failed，不许「大概跑完了」。
+  if (typeof meta.reproduce === "string" && meta.reproduce.trim() !== "") {
+    const problems = [];
+    const env = evidence.env;
+    if (!env || typeof env !== "object" || Array.isArray(env)) {
+      problems.push("缺 env 块（R-EV-02 五项：commit/runtime/build/command/dirty）");
+    } else {
+      // 1) commit：必须构建期 define 注入，且与 meta.commit 相等（手改任一侧都要红）。
+      const envCommit = String(env.commit ?? "").trim();
+      if (!envCommit) {
+        problems.push("env.commit 为空（必须由构建期 define 注入）");
+      } else if (envCommit !== meta.commit) {
+        problems.push(
+          `env.commit=${envCommit} 与 meta.commit=${meta.commit} 不一致（commit 不得手写）`,
+        );
+      }
+      // 2) dirty：取证必须是干净树。
+      if (env.dirty !== false) {
+        problems.push(`env.dirty=${JSON.stringify(env.dirty)} 不是 false`);
+      }
+      // 3) runtime：launchMode/node/os/arch/hostTarget 非空 + electron 键存在且非 null。
+      // 本产品是 Tauri WebKit 宿主，electron 显式 "none" 记通过；缺失/undefined 仍 FAIL。
+      const runtime = env.runtime;
+      if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
+        problems.push("env.runtime 缺失");
+      } else {
+        for (const key of ["launchMode", "node", "os", "arch", "hostTarget"]) {
+          if (!String(runtime[key] ?? "").trim()) problems.push(`env.runtime.${key} 为空`);
+        }
+        if (!("electron" in runtime)) {
+          problems.push("env.runtime 缺键 electron（非 Electron 宿主须显式写 \"none\"）");
+        } else if (runtime.electron === null || runtime.electron === undefined) {
+          problems.push("env.runtime.electron 为 null（须显式写 \"none\"）");
+        } else if (!String(runtime.electron).trim()) {
+          problems.push("env.runtime.electron 为空（须显式写 \"none\"）");
+        }
+      }
+      // 4) build：入口/构建时刻/profile/features/二进制摘要。
+      const build = env.build;
+      if (!build || typeof build !== "object" || Array.isArray(build)) {
+        problems.push("env.build 缺失");
+      } else {
+        for (const key of ["entry", "builtAt", "cargoProfile"]) {
+          if (!String(build[key] ?? "").trim()) problems.push(`env.build.${key} 为空`);
+        }
+        if (!Array.isArray(build.features) || build.features.length === 0) {
+          problems.push("env.build.features 必须是非空数组");
+        }
+        const bin = build.binary;
+        if (!bin || typeof bin !== "object" || Array.isArray(bin)) {
+          problems.push("env.build.binary 缺失");
+        } else {
+          if (!String(bin.path ?? "").trim()) problems.push("env.build.binary.path 为空");
+          if (!/^[0-9a-f]{64}$/.test(String(bin.sha256 ?? ""))) {
+            problems.push("env.build.binary.sha256 不是 64 位小写 hex");
+          }
+        }
+      }
+      // 5) command：可复现命令。
+      if (!String(env.command ?? "").trim()) problems.push("env.command 为空");
+    }
+
+    // dump：归档落在归档根、摘要合法、finishedAt 与 dump 内值相等（禁止手写另一个时刻）。
+    const dump = meta.dump;
+    if (!dump || typeof dump !== "object" || Array.isArray(dump)) {
+      problems.push("meta.dump 缺失");
+    } else {
+      const archived = String(dump.archived ?? "").replace(/\\/g, "/");
+      if (!archived.startsWith(`${ARCHIVE_REL}/`)) {
+        problems.push(`meta.dump.archived=${JSON.stringify(archived)} 不在归档根 ${ARCHIVE_REL}/`);
+      }
+      if (!/^[0-9a-f]{64}$/.test(String(dump.sha256 ?? ""))) {
+        problems.push("meta.dump.sha256 不是 64 位小写 hex");
+      }
+      const finishedAt = String(dump.finishedAt ?? "");
+      if (!finishedAt.trim()) {
+        problems.push("meta.dump.finishedAt 为空");
+      } else if (finishedAt !== evidence.finishedAt) {
+        problems.push(
+          `meta.dump.finishedAt=${finishedAt} 与 dump 内 finishedAt=${evidence.finishedAt} 不一致`,
+        );
+      }
+    }
+
+    // 聚焦：缺字段 = 不可判定 = FAIL；false 也不放行（不许写成「环境问题」）。
+    for (const key of ["windowFocused", "appActive"]) {
+      if (typeof evidence[key] !== "boolean") {
+        problems.push(`dump 缺 ${key}（聚焦状态不可判定 = FAIL）`);
+      } else if (evidence[key] !== true) {
+        problems.push(`dump ${key}=false（窗口未聚焦/应用未激活，运行层不可判定 = FAIL）`);
+      }
+    }
+
+    // s2 schema：10 个键 + checks > 0（checks 数组已在上面统一断言）+ suite=s2。
+    if (evidence.kind === "aka-s2-evidence") {
+      const missingKeys = S2_SCHEMA_KEYS.filter((key) => !(key in evidence));
+      if (missingKeys.length > 0) {
+        problems.push(`s2 dump 缺 schema 键 [${missingKeys.join(", ")}]`);
+      }
+      if (evidence.suite !== "s2") {
+        problems.push(`s2 dump suite=${JSON.stringify(evidence.suite)} 不是 "s2"`);
+      }
+    }
+
+    for (const problem of problems) failures.push(`${file}: ${problem}`);
+  }
+
   const result = meta.result && typeof meta.result === "object" ? meta.result : {};
   if (!result.card) {
     failures.push(`${file}-meta: 缺 result.card，无法闭合归属`);

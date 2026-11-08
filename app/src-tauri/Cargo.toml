@@ -17,3 +17,5 @@ serde.workspace = true
 serde_json.workspace = true
 app-core = { path = "../crates/app-core" }
 data-store = { path = "../crates/data-store" }
+# R-EV-02：diag_env 计算二进制 sha256（仅 debug 构建注册）。
+sha2.workspace = true

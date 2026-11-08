@@ -186,6 +186,15 @@ AKA_DIAG=1 AKA_DIAG_TARGET="$TARGET" env $EXTRA_ENV "$APP_BIN" $FLAGS &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true; sleep 1; restore_db' EXIT
 
+# W-89：best-effort 前置聚焦。窗口未聚焦时运行层判「不可判定 = FAIL」，
+# 取证链路必须先尽力把窗口拉到前台（失败不阻断，由 dump 的 windowFocused/appActive 记录）。
+for _ in $(seq 1 16); do
+  if osascript -e 'tell application "System Events" to set frontmost of process "aka-desktop" to true' >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.5
+done
+
 ARCHIVED=0
 for _ in $(seq 1 240); do
   if [ -f "$JSON" ] && [ "$(stat -f %m "$JSON")" -gt "$before" ]; then
@@ -356,7 +365,25 @@ status = subprocess.check_output(
 )
 dirty = bool(status.strip())
 now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).isoformat(timespec="seconds")
-checks = d.get("checks", [])
+# W-89：按 schema 分支。s2 dump 是 build/dataset/engine/... 的专用 schema，
+# 只有新构建的 diag.ts 才会额外产出统一的 suite/ok/checks 外层；
+# 缺 checks 时给出精确原因并 exit 2，不许把旧产物当成「大概跑完了」。
+checks = d.get("checks")
+if not isinstance(checks, list) or not checks:
+    if d.get("kind") == "aka-s2-evidence" or d.get("suite") == "s2":
+        schema = ",".join(sorted(d.keys()))
+        print(
+            f"::error::s2 dump 缺 checks[]（实际 schema=[{schema}]）；"
+            "该产物来自 W-89 之前的 diag.ts，必须重新构建后再取证",
+            file=sys.stderr,
+        )
+    else:
+        print("::error::dump 缺 checks[]，无法聚合归属", file=sys.stderr)
+    sys.exit(2)
+bad = [i for i, c in enumerate(checks) if not isinstance(c, dict) or not c.get("card")]
+if bad:
+    print(f"::error::dump checks[{bad[0]}] 不是含 card 的对象", file=sys.stderr)
+    sys.exit(2)
 card_order = []
 card_stats = {}
 for check in checks:

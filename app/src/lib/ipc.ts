@@ -9,6 +9,7 @@ import type {
   DatasetManifestDto,
   DatasourceStatusDto,
   DiagBuildInfo,
+  DiagEnvDto,
   DiagFaultsDto,
   GetBarsRequest,
   ManifestResponse,
@@ -100,6 +101,9 @@ export const ipc = {
   diagFaults: (): Promise<DiagFaultsDto> => invoke<DiagFaultsDto>("diag_faults"),
 
   diagBuildInfo: (): Promise<DiagBuildInfo> => invoke<DiagBuildInfo>("diag_build_info"),
+
+  /** R-EV-02：运行环境（os/arch/二进制路径与 sha256/dump 目录），仅 debug 构建注册。 */
+  diagEnv: (): Promise<DiagEnvDto> => invoke<DiagEnvDto>("diag_env"),
 
   diagWrite: (payload: string): Promise<string> =>
     invoke<string>("diag_write", { payload }),

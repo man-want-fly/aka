@@ -9,6 +9,7 @@
 
 import { ipc } from "../../lib/ipc";
 import type { BarsResponse } from "../../lib/types";
+import { collectEvidenceEnv, collectFocus } from "./diag";
 
 interface Check {
   id: string;
@@ -304,10 +305,17 @@ export async function runS070503Diagnostics(hooks: {
     (document.body.textContent ?? "").includes("查看示例");
   push("OV-08", "render", !fabricated, `工作台内 P9 入口/「查看示例」= ${fabricated ? "存在（伪造）" : "不存在"}`);
 
+  // R-EV-02：env 与聚焦状态由 diag.ts 统一产出；env 采集失败也照常落 dump（由 verify 判 failed）。
+  const env = await collectEvidenceEnv("s070503").catch(() => null);
+  const focus = collectFocus();
+
   const report = {
     suite: "S-07.05-03 provenance overlay",
     card: CARD,
     ok: checks.every((check) => check.passed),
+    env,
+    windowFocused: focus.windowFocused,
+    appActive: focus.appActive,
     finishedAt: new Date().toISOString(),
     acVerdict: {
       "AC-07.05-04": checks.every((check) => check.passed) ? "PASS" : "FAIL",
