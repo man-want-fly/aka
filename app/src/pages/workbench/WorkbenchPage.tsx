@@ -45,6 +45,7 @@ import {
 } from "../../features/workbench/quote";
 import {
   runS2Diagnostics,
+  runS20602Diagnostics,
   seriesSignature,
   type DiagPhase,
   type DiagSample,
@@ -1064,6 +1065,81 @@ export function WorkbenchPage({
       } catch (err) {
         if (!alive) return;
         setDiagStatus(`S2 取证：失败 ${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [securities, nextSample, drainSamples]);
+
+  // W-111 / S-02.06-02 缓存回切取证：独立套件，AKA_DIAG_TARGET=s20602 时自跑一次。
+  useEffect(() => {
+    if (!isTauriRuntime() || securities.length === 0) return;
+    if (window.sessionStorage.getItem("aka.s20602.diag.once") === "1") return;
+    let alive = true;
+    (async () => {
+      const enabled = await ipc.diagEnabled();
+      const target = await ipc.diagTarget();
+      if (!enabled || !alive || target !== "s20602") return;
+      window.sessionStorage.setItem("aka.s20602.diag.once", "1");
+      setDiagStatus("S-02.06-02 取证：运行中");
+      try {
+        const report = await runS20602Diagnostics({
+          codes: securities.map((item) => item.code),
+          getActiveCode: () => activeCodeRef.current,
+          baseParams: DEFAULT_PARAMS,
+          setPhase: (phase) => {
+            diagPhase.current = phase;
+          },
+          setCode: setActiveCode,
+          setParams,
+          setTimeframe,
+          nextSample,
+          drainSamples,
+          telemetry: () => ipc.telemetryDump(200),
+          probeBars: async (tf) => {
+            const response = await ipc.getBars({
+              security: activeCodeRef.current,
+              timeframe: tf,
+              adj,
+              from: dateFrom || undefined,
+              to: dateTo || undefined,
+            });
+            return {
+              timeframe: response.timeframe,
+              barCount: response.bars.length,
+              datasetId: response.datasetId,
+            };
+          },
+          // 本套件落盘走 ipc.diagWriteNamed("s20602-evidence.json")，不碰 s2 dump
+          write: (payload) => ipc.diagWriteNamed("s20602-evidence.json", payload),
+          probePayload: () => {
+            const calc = calcRef.current;
+            if (!calc) return { datasetId: "", barCount: 0, instanceCount: 0, payloadBytes: 0 };
+            return {
+              datasetId: calc.datasetId,
+              barCount: calc.barCount,
+              instanceCount: calc.series.length,
+              payloadBytes: JSON.stringify(calc).length,
+            };
+          },
+          snapshot: () => ({
+            calc: calcRef.current,
+            barsLength: barsRef.current?.bars.length ?? 0,
+            windowSize: viewportRef.current
+              ? viewportRef.current.end - viewportRef.current.start + 1
+              : 0,
+            viewStart: viewportRef.current?.start ?? 0,
+            barsClose: (barsRef.current?.bars ?? []).map((bar) => bar.close),
+          }),
+        });
+        if (!alive) return;
+        const written = String(report.writtenTo ?? "");
+        setDiagStatus(`S-02.06-02 取证：完成 → ${written.split("/").slice(-2).join("/")}`);
+        (window as unknown as Record<string, unknown>).__AKA_S20602_EVIDENCE__ = report;
+      } catch (err) {
+        if (!alive) return;
+        setDiagStatus(`S-02.06-02 取证：失败 ${describeError(err).message}`);
       }
     })();
     return () => {
