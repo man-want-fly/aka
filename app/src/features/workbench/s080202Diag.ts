@@ -3,6 +3,7 @@
 //! 只通过 UI 与 `diag_set_inject` 驱动，不伪造 DOM 结果。
 
 import { ipc } from "../../lib/ipc";
+import { collectEvidenceEnv, collectFocus, type EvidenceEnv } from "./diag";
 
 export interface S080202Options {
   /** 设置下一次计算的故障注入；生效一次即回落 none。 */
@@ -27,6 +28,9 @@ export interface S080202Report {
   startedAt: string;
   finishedAt: string;
   ok: boolean;
+  env: EvidenceEnv | null;
+  windowFocused: boolean;
+  appActive: boolean;
   checks: S080202Check[];
 }
 
@@ -61,6 +65,9 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
     startedAt: new Date().toISOString(),
     finishedAt: "",
     ok: false,
+    env: null,
+    windowFocused: false,
+    appActive: false,
     checks: [],
   };
   const push = (id: string, ac: string, passed: boolean, detail: string) => {
@@ -171,6 +178,13 @@ export async function runS080202Diagnostics(options: S080202Options): Promise<S0
   ).catch(() => false);
   push("P06-R6", "AC-08.02-02", recovered === true, `注入关闭后错误卡消失=${recovered === true}`);
 
+  // R-EV-02：env 与聚焦状态由 diag.ts 统一产出；env 采集失败也照常落 dump（由 verify 判 failed）。
+  // meta.dump / meta.reproduce 由 evidence-run.sh 写入，套件出口只负责顶层 env / windowFocused / appActive。
+  const env = await collectEvidenceEnv("s080202").catch(() => null);
+  const focus = collectFocus();
+  report.env = env;
+  report.windowFocused = focus.windowFocused;
+  report.appActive = focus.appActive;
   report.ok = report.checks.every((check) => check.passed);
   report.finishedAt = new Date().toISOString();
   await ipc.diagWriteNamed("s080202-evidence.json", JSON.stringify(report, null, 2));
