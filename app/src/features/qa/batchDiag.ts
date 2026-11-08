@@ -1,6 +1,7 @@
 import { ipc } from "../../lib/ipc";
 import type { ManifestResponse } from "../../lib/types";
 import { collectEvidenceEnv, collectFocus } from "../workbench/diag";
+import { healthSummaryMismatch } from "./healthSummary";
 
 /**
  * P01–P04 本批取证：
@@ -623,12 +624,15 @@ export async function runS070102Diagnostics() {
     rows.length === 6 && statuses.every((status) => ["PASS", "FAIL", "SKIP"].includes(status)),
     `${rows.length} 行 / ${statuses.join(",")}`,
   );
+  // W-103：分子按注入场景断言——默认数据集 6/6，corrupt 场景 1/6；只校验分母会把 6/6 误判为通过。
+  const manifestCorrupt = (await ipc.diagFaults().catch(() => null))?.manifestCorrupt ?? false;
+  const summaryMismatch = healthSummaryMismatch(manifestCorrupt, summary);
   push(
     "P07-R3",
     "AC-07.01-02",
     "render",
-    /^\d\/6 通过 · 总耗时 \d+ ms · \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(summary),
-    `汇总「${summary}」`,
+    summaryMismatch === null,
+    `manifestCorrupt=${manifestCorrupt} · 汇总「${summary}」${summaryMismatch ? ` · ${summaryMismatch}` : ""}`,
   );
   push(
     "P07-R4",

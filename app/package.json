@@ -15,6 +15,7 @@
     "verify:ac-token:selftest": "node scripts/verify_ac_token.mjs --selftest",
     "verify:format": "node scripts/verify-number-format.mjs",
     "verify:r03": "node scripts/verify-r03-three-state.mjs",
+    "verify:p07-summary": "node scripts/verify-p07-summary.mjs",
     "verify:sign": "node scripts/verify_sign_coverage.mjs",
     "verify:sign:check": "node scripts/verify_sign_coverage.mjs --check",
     "verify:gate-log": "node scripts/verify_gate_log.mjs",

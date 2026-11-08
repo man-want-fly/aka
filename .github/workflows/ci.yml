@@ -112,6 +112,9 @@ jobs:
       - name: 涨跌幅三态判据负例（W-74，平盘/缺前收必红）
         run: npm run verify:r03
 
+      - name: P07 汇总分子判据负例（W-103，corrupt 场景 6/6 必红）
+        run: npm run verify:p07-summary
+
       # W-59：内容库已交付，本步骤转 required——内容缺失（exit 2）或不合格（exit 1）一律阻断。
       - name: 指标口径页门禁（W-03 / W-59，required）
         run: npm run verify:docs
