@@ -185,7 +185,7 @@ export async function runS20501Diagnostics(options: {
   await sleep(200);
   push(
     "R-04",
-    "AC-02.05-01 补2",
+    "AC-02.05-01（补2）",
     "render",
     invalidText("signal").includes("请输入数字") &&
       q<HTMLInputElement>("#macd-signal")?.getAttribute("aria-invalid") === "true",
@@ -222,7 +222,7 @@ export async function runS20501Diagnostics(options: {
   await sleep(160);
   push(
     "R-06",
-    "AC-02.05-01 补3",
+    "AC-02.05-01（补3）",
     "render",
     atMax === 500 && atMin === 2 && readNumber("#ma-period") === 3,
     `500 再 + = ${atMax} · 2 再 − = ${atMin} · 2 再 + = ${readNumber("#ma-period")}`,
@@ -235,7 +235,7 @@ export async function runS20501Diagnostics(options: {
   const bollAfter = [bollUpper(), bollLower()].join("|");
   push(
     "R-07",
-    "AC-02.05-01 补1",
+    "AC-02.05-01（补1）",
     "render",
     readText("#boll-mult") === "2.6" && bollAfter !== bollBefore,
     `2.55 失焦 → ${readText("#boll-mult")} · 上下轨重算=${bollAfter !== bollBefore} · 文案=${invalidText(
@@ -247,7 +247,7 @@ export async function runS20501Diagnostics(options: {
   await sleep(600);
   push(
     "R-08",
-    "AC-02.05-01 补5",
+    "AC-02.05-01（补5）",
     "render",
     [
       readNumber("#ma-period"),
@@ -281,7 +281,7 @@ export async function runS20501Diagnostics(options: {
   (window as unknown as Record<string, unknown>).__AKA_FORCE_PARAM_TIMEOUT__ = false;
   push(
     "RT-01",
-    "AC-02.05-01 补4",
+    "AC-02.05-01（补4）",
     "runtime",
     timedOut === true && afterTimeout === "9,20",
     `强制慢计算 → 提示=${timedOut === true} · 回退=${afterTimeout}（应为 9,20）`,

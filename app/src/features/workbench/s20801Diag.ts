@@ -87,7 +87,7 @@ export async function runS20801Diagnostics(options: { manifest: DatasetManifestD
   );
   push(
     "R-02",
-    "AC-02.08-01 补2",
+    "AC-02.08-01（补2）",
     "render",
     afterAdj.adj?.text === "不复权" && adjRest,
     `复权段=${afterAdj.adj?.text} · 其余 5 段不变=${adjRest}（calc 除外，切换会重算）`,
@@ -101,7 +101,7 @@ export async function runS20801Diagnostics(options: { manifest: DatasetManifestD
   );
   push(
     "R-03",
-    "AC-02.08-01 补2",
+    "AC-02.08-01（补2）",
     "render",
     afterTf.timeframe?.text === "周线" && tfRest,
     `周期段=${afterTf.timeframe?.text} · 其余 5 段不变=${tfRest}（calc 除外，切换会重算）`,
@@ -122,7 +122,7 @@ export async function runS20801Diagnostics(options: { manifest: DatasetManifestD
     const toast = q("[data-sha-copied]");
     push(
       "R-04",
-      "AC-02.08-01 补1",
+      "AC-02.08-01（补1）",
       "render",
       copied === m.sha256 && toast !== null,
       `剪贴板=${copied === m.sha256 ? "完整 64 位" : `不一致(${copied.length})`} · 提示=${toast?.textContent?.trim() ?? "无"}`,
@@ -156,7 +156,7 @@ export async function runS20801Diagnostics(options: { manifest: DatasetManifestD
   });
   push(
     "R-05",
-    "AC-02.08-01 补2",
+    "AC-02.08-01（补2）",
     "render",
     missingOk && missing.find((item) => item.key === "adj")?.text === "前复权",
     `缺失段=${missing.filter((item) => item.missing).map((item) => item.key).join("/")} · 缺失文案=${missing.find((item) => item.key === "rows")?.text}`,
@@ -169,13 +169,13 @@ export async function runS20801Diagnostics(options: { manifest: DatasetManifestD
   const height = footer ? Math.round(footer.getBoundingClientRect().height) : -1;
   push(
     "RT-01",
-    "AC-02.08-01 补2（窄屏单行横滚）",
+    "AC-02.08-01（补2）",
     "runtime",
     footerStyle?.flexWrap === "nowrap" &&
       footerStyle.overflowX === "auto" &&
       segmentStyle?.whiteSpace === "nowrap" &&
       height === 24,
-    `flexWrap=${footerStyle?.flexWrap} overflowX=${footerStyle?.overflowX} 段whiteSpace=${segmentStyle?.whiteSpace} 高度=${height}px`,
+    `窄屏单行横滚：flexWrap=${footerStyle?.flexWrap} overflowX=${footerStyle?.overflowX} 段whiteSpace=${segmentStyle?.whiteSpace} 高度=${height}px`,
   );
 
   // 还原默认口径，避免取证把页面留在不复权/周线

@@ -81,10 +81,10 @@ export async function runStarDiagnostics(): Promise<StarDiagReport> {
     const labelAdd = `加入自选：${code} ${name}`;
     push(
       "market-aria-empty",
-      "AC-01.02-01 / UI 无障碍",
+      "AC-01.02-01",
       "render",
       star.getAttribute("aria-label") === labelAdd,
-      `aria-label=${star.getAttribute("aria-label")}`,
+      `UI 无障碍：aria-label=${star.getAttribute("aria-label")}`,
     );
 
     // 第 1 次点击：乐观置实 + 落库 1 条未分组记录 + 无 toast。
@@ -156,10 +156,10 @@ export async function runStarDiagnostics(): Promise<StarDiagReport> {
     });
     push(
       "quote-aria-filled",
-      "AC-01.02-01 / UI 无障碍",
+      "AC-01.02-01",
       "render",
       headerStar.getAttribute("aria-label") === `移出自选：${code} ${name}`,
-      `aria-label=${headerStar.getAttribute("aria-label")}`,
+      `UI 无障碍：aria-label=${headerStar.getAttribute("aria-label")}`,
     );
 
     headerStar.click();

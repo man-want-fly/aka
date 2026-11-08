@@ -94,7 +94,7 @@ export async function runS20101Diagnostics(hooks: S20101Hooks) {
   const ten = deriveLimitPrices(10.0, "深主板");
   push(
     "D-01",
-    "AC-02.01-01 补2",
+    "AC-02.01-01（补2）",
     "data",
     ten !== null && ten.up === 11 && ten.down === 9,
     `主板 10% · 前收 10.00 → ${ten ? `${ten.up.toFixed(2)} / ${ten.down.toFixed(2)}` : "null"}`,
@@ -103,7 +103,7 @@ export async function runS20101Diagnostics(hooks: S20101Hooks) {
   const tenThree = deriveLimitPrices(10.03, "深主板");
   push(
     "D-02",
-    "AC-02.01-01 补3",
+    "AC-02.01-01（补3）",
     "data",
     tenThree !== null &&
       tenThree.up === 11.03 &&
@@ -117,7 +117,7 @@ export async function runS20101Diagnostics(hooks: S20101Hooks) {
 
   push(
     "D-03",
-    "AC-02.01-01 补2",
+    "AC-02.01-01（补2）",
     "data",
     showLimitApprox({ board: "深主板", isIndex: false, suspended: false, prices: ten }) ===
       true &&
@@ -133,7 +133,7 @@ export async function runS20101Diagnostics(hooks: S20101Hooks) {
   );
 
   // ---------------- 渲染层：真实 DOM ----------------
-  await attempt("R-01", "AC-02.01-01 补2", "render", async () => {
+  await attempt("R-01", "AC-02.01-01（补2）", "render", async () => {
     hooks.setCode(LIMIT_CODE_1000);
     await hooks.waitRendered(LIMIT_CODE_1000);
     const row = readLimitRow();
@@ -148,7 +148,7 @@ export async function runS20101Diagnostics(hooks: S20101Hooks) {
     return { passed, detail: `${LIMIT_CODE_1000} · ${describeRow(row)}` };
   });
 
-  await attempt("R-02", "AC-02.01-01 补3", "render", async () => {
+  await attempt("R-02", "AC-02.01-01（补3）", "render", async () => {
     hooks.setCode(LIMIT_CODE_1003);
     await hooks.waitRendered(LIMIT_CODE_1003);
     const row = readLimitRow();
@@ -164,7 +164,7 @@ export async function runS20101Diagnostics(hooks: S20101Hooks) {
     return { passed, detail: `${LIMIT_CODE_1003} · ${describeRow(row)}` };
   });
 
-  await attempt("R-03", "AC-02.01-01 补4", "render", async () => {
+  await attempt("R-03", "AC-02.01-01（补4）", "render", async () => {
     hooks.setCode(INDEX_CODE);
     await hooks.waitRendered(INDEX_CODE);
     const row = readLimitRow();
@@ -178,7 +178,7 @@ export async function runS20101Diagnostics(hooks: S20101Hooks) {
     return { passed, detail: `指数 ${INDEX_CODE} · ${describeRow(row)}` };
   });
 
-  await attempt("R-04", "AC-02.01-01 补4", "render", async () => {
+  await attempt("R-04", "AC-02.01-01（补4）", "render", async () => {
     hooks.setCode(SUSPENDED_CODE);
     await hooks.waitRendered(SUSPENDED_CODE);
     const row = readLimitRow();
@@ -199,7 +199,7 @@ export async function runS20101Diagnostics(hooks: S20101Hooks) {
     };
   });
 
-  await attempt("R-05", "AC-02.01-01 补4", "render", async () => {
+  await attempt("R-05", "AC-02.01-01（补4）", "render", async () => {
     hooks.setCode(NEW_LISTING_CODE);
     await hooks.waitRendered(NEW_LISTING_CODE);
     const row = readLimitRow();
