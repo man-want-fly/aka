@@ -17,12 +17,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection, OptionalExtension};
 
-pub const SCHEMA_VERSION: i64 = 4;
+pub const SCHEMA_VERSION: i64 = 5;
 
 const MIGRATION_001: &str = include_str!("../migrations/001_init.sql");
 const MIGRATION_002: &str = include_str!("../migrations/002_watchlist_positions.sql");
 const MIGRATION_003: &str = include_str!("../migrations/003_watchlist_ungrouped.sql");
 const MIGRATION_004: &str = include_str!("../migrations/004_indicator_favorites.sql");
+const MIGRATION_005: &str = include_str!("../migrations/005_recent_views.sql");
 
 /// 首装默认收藏写入标记：用户删光后不得自动补回。
 pub const FAVORITES_INITIALIZED_KEY: &str = "favorites_initialized";
@@ -101,6 +102,13 @@ pub struct IndicatorFavorite {
     pub added_at: i64,
     pub sort_order: i64,
     pub is_default: bool,
+}
+
+/// 最近查看行：同一标的只保留一条，`viewed_at` 为最近一次打开时间（epoch 秒）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecentView {
+    pub code: String,
+    pub viewed_at: i64,
 }
 
 pub struct StateDb {
@@ -247,6 +255,16 @@ impl StateDb {
                     .map_err(|e| DbError::Write(e.to_string()))?;
                     tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
                 }
+                5 => {
+                    let tx = self.conn.transaction().map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.execute_batch(MIGRATION_005).map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.execute(
+                        "INSERT OR REPLACE INTO schema_versions(version, applied_at, note) VALUES (?, ?, ?)",
+                        params![5_i64, now(), "s0501: recent views"],
+                    )
+                    .map_err(|e| DbError::Write(e.to_string()))?;
+                    tx.commit().map_err(|e| DbError::Write(e.to_string()))?;
+                }
                 other => {
                     return Err(DbError::Corrupt(format!("缺失迁移脚本：v{other}")));
                 }
@@ -291,6 +309,9 @@ impl StateDb {
     /// 迁移演练入口（回滚脚本仅本地使用，不自动执行）。
     #[doc(hidden)]
     pub fn apply_rollback_v1_for_tests(&self) -> Result<(), DbError> {
+        self.conn
+            .execute_batch(include_str!("../migrations/005_recent_views_rollback.sql"))
+            .map_err(|e| DbError::Write(e.to_string()))?;
         self.conn
             .execute_batch(include_str!("../migrations/004_indicator_favorites_rollback.sql"))
             .map_err(|e| DbError::Write(e.to_string()))?;
@@ -430,6 +451,58 @@ impl StateDb {
                 "DELETE FROM indicator_favorites WHERE indicator_id = ?",
                 params![indicator_id],
             )
+            .map_err(|err| DbError::Write(err.to_string()))?;
+        Ok(changed > 0)
+    }
+
+    // ---------- recent views ----------
+
+    /// 按最近打开倒序读取，最多 `limit` 条；同一秒内按代码升序保证稳定。
+    pub fn recent_views(&self, limit: usize) -> Result<Vec<RecentView>, DbError> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT code, viewed_at FROM recent_views
+                 ORDER BY viewed_at DESC, code ASC LIMIT ?1",
+            )
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        let rows = stmt
+            .query_map(params![limit as i64], |row| {
+                Ok(RecentView { code: row.get(0)?, viewed_at: row.get(1)? })
+            })
+            .map_err(|err| DbError::Read(err.to_string()))?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(|err| DbError::Read(err.to_string()))
+    }
+
+    /// 打开标的：已存在则只刷新时间，不新增行。
+    pub fn touch_recent_view(&self, code: &str) -> Result<(), DbError> {
+        self.conn
+            .execute(
+                "INSERT INTO recent_views(code, viewed_at) VALUES (?1, ?2)
+                 ON CONFLICT(code) DO UPDATE SET viewed_at = excluded.viewed_at",
+                params![code, now()],
+            )
+            .map_err(|err| DbError::Write(err.to_string()))?;
+        Ok(())
+    }
+
+    /// 只保留最近 `keep` 条；被清理的行由调用方决定时机。
+    pub fn prune_recent_views(&self, keep: usize) -> Result<usize, DbError> {
+        self.conn
+            .execute(
+                "DELETE FROM recent_views WHERE code NOT IN (
+                   SELECT code FROM recent_views ORDER BY viewed_at DESC, code ASC LIMIT ?1
+                 )",
+                params![keep as i64],
+            )
+            .map_err(|err| DbError::Write(err.to_string()))
+    }
+
+    /// 数据集里已不存在的标的：下次读取时清掉，避免浮层显示幽灵记录。
+    pub fn remove_recent_view(&self, code: &str) -> Result<bool, DbError> {
+        let changed = self
+            .conn
+            .execute("DELETE FROM recent_views WHERE code = ?", params![code])
             .map_err(|err| DbError::Write(err.to_string()))?;
         Ok(changed > 0)
     }
@@ -774,6 +847,7 @@ mod tests {
             "view_state",
             "indicator_params",
             "indicator_favorites",
+            "recent_views",
             "dataset_meta",
             "positions",
             "schema_versions",
@@ -785,7 +859,7 @@ mod tests {
             .conn
             .query_row("SELECT COUNT(*) FROM schema_versions", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(logged, 4);
+        assert_eq!(logged, 5);
         // v3 起「全部」为只读派生，不再落库
         assert!(db.watch_groups().unwrap().is_empty());
     }
@@ -885,6 +959,33 @@ mod tests {
         };
         db.upsert_dataset_meta(&meta).unwrap();
         assert_eq!(db.dataset_meta("mock-1d-600519.SH").unwrap(), Some(meta));
+    }
+
+    #[test]
+    fn recent_views_dedupe_prune_and_rollback() {
+        let db = memory();
+        db.touch_recent_view("600519.SH").unwrap();
+        db.touch_recent_view("000001.SZ").unwrap();
+        db.touch_recent_view("600519.SH").unwrap();
+        let rows = db.recent_views(5).unwrap();
+        assert_eq!(rows.len(), 2, "重复打开同一标的不新增行");
+        assert!(rows.iter().any(|row| row.code == "600519.SH"));
+
+        for code in ["300750.SZ", "000858.SZ", "601318.SH", "002594.SZ"] {
+            db.touch_recent_view(code).unwrap();
+        }
+        db.prune_recent_views(5).unwrap();
+        assert_eq!(db.recent_views(10).unwrap().len(), 5, "最多保留 5 条");
+
+        db.remove_recent_view("600519.SH").unwrap();
+        assert!(db
+            .recent_views(10)
+            .unwrap()
+            .iter()
+            .all(|row| row.code != "600519.SH"));
+
+        db.apply_rollback_v1_for_tests().unwrap();
+        assert!(db.table_names().unwrap().is_empty());
     }
 
     #[test]
