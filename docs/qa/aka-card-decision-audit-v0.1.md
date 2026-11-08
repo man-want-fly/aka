@@ -3149,6 +3149,18 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - **预检记录**：写「预检那一刻的 `main` HEAD」+「该 HEAD 的 CI run」，不是 `9de7e0d`。
 - **例外**：仅当证明不触碰两套件源码与取证脚本、且 TL+PM 双批准；逐条记本条。
 
+#### 4.7.89 B1 提前到今晚：判断与硬条件（2026-11-08）
+
+- **排期审计**：11-09 15:30 原为「补字段 + BA 重跑留余量」。现两套基线已全绿（P06 8/8 + `layers` 正确 + `env` 5/5；P07 7/7 + `1/6`；`verify:evidence` 0 失败），`app/` 自 `9de7e0d` 无 diff，**余量已用掉，15:30 已无技术理由**。继续空等会把冻结拖成一天，阻塞 `W-112`/`W-94`/`W-93` 合入。
+- **TL 判断：今晚可签**，但只在下列五条全部满足时签，缺一不签：
+  1. 证据由 `evidence-run.sh` 在干净 `main` 产出（`diag-evidence.sh`/手工快照不算），`meta.dirty=false`、`meta.commit=9de7e0d` 且为签 tip 祖先。
+  2. `/tmp` 快照先归档 `docs/qa/evidence/` 并提交；不得直接拿 `/tmp` 签。
+  3. BA（非作者）完成重跑与复核，给出签 tip SHA 与该 SHA 的 CI run。
+  4. `gate-log` 两行齐、`sign_scope` 恰为 `S-08.02-02`、`S-07.01-02`；`P07-R3 numerator weak (W-103)` 在 note。
+  5. `git diff --stat 9de7e0d -- app/src app/src-tauri app/scripts` 为空；`verify:evidence` exit 0、失败 0。
+- **签完即解冻**（规范 §5.8）：`gate-log` 两行签完、签 tip CI 绿即解除冻结，`dev A` 三张随即可合。
+- **兜底**：BA 今晚不能完成独立复核 → 不签，回到 11-09 15:30，冻结延续。独立复核不因赶时间降级。
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。

@@ -235,6 +235,7 @@
 - **例外**：须同时满足（a）`git diff --stat 9de7e0d -- app/src app/src-tauri app/scripts` 证明不触碰两套件源码与取证脚本、（b）TL 与 PM 双批准；例外逐条记审计。
 - **预检硬门**：预检时 `git diff --stat 9de7e0d -- app/src app/src-tauri app/scripts` **必须为空**；非空 → 窗口取消，重定 tip、重取证。预检记录同时写「那一刻的 `main` HEAD」与「该 HEAD 的 CI run」，不得拿旧 tip 代替。
 - **不合格判定**：冻结期内 `app/` 任何代码合入 → 本轮证据全部作废，窗口重排；已合入的回退到 `9de7e0d` 等价状态。
+- **提前签完即解冻**：若 B1 提前签完，冻结随签字完成即刻解除，不必等 11-09 16:30；解冻以 `gate-log` 两行签完、签 tip CI 绿为准。
 
 ---
 

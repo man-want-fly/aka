@@ -20,7 +20,7 @@
 | W-94 | 失败产物自动落盘 `docs/qa/raw/` | dev A | 待开工 | 自 W-90 拆出 | 2026-11-08 |
 | W-95 | P09 `S-08.02-03` | dev B | 待验收（并入批次 B2，见 W-104） | `dev2`（`61fb175`） | 2026-11-08 |
 | W-96 | P06 `S-08.02-02` + P07 `S-07.01-02`（并入批次 B1） | dev B | 待验收（并入 W-97 批次） | `main`（批次 B1，签 tip 取窗口 HEAD） | 2026-11-08 |
-| W-97 | 批次 B1：P06/P07 一次取证、一次签 | dev B / BA / TL | 待开工（11-09 15:30–16:30；`check.card` 已合 `64e29df`，待 BA 重跑） | `main`（窗口 tip，≥ `64e29df`） | 2026-11-08 |
+| W-97 | 批次 B1：P06/P07 一次取证、一次签 | dev B / BA / TL | 待开工（今晚 BA 确认后开窗；兜底 11-09 15:30–16:30） | `main`（开窗时 HEAD，≥ `4a954c4`） | 2026-11-08 |
 | W-98 | P10 `S-01.03-01` 持仓成本与浮盈 | dev B | 待验收（并入批次 B2，见 W-104） | `dev2`（`61fb175`） | 2026-11-08 |
 | W-99 | 页面 P6 指数与板块页（仅骨架；承载 S-04.01-01/02、S-04.02-01/02） | dev B | 已验收 | `dev2`（`eb1d5b6`，待 B1 后合入） | 2026-11-08 |
 | W-100 | 页面 P7 搜索浮层（承载 S-05.01-01/02） | dev B | 待开工 | — | 2026-11-08 |
@@ -2028,6 +2028,13 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
    - `git diff --stat 9de7e0d -- app/src app/src-tauri app/scripts` **必须为空**；非空即窗口取消、重定 tip、重取证。
    - 预检记录写「那一刻的 `main` HEAD」+「该 HEAD 的 CI run」，**不是 `9de7e0d`**。
    - `W-112`、`W-94`、`W-93` 在分支做，不合 `main`。例外须 TL+PM 双批并证明不触碰两套件源码与取证脚本。
+10. **提前开窗（2026-11-08 晚）**：两套基线已全绿（P06 8/8 + `layers` 正确 + `env` 5/5；P07 7/7 + `1/6`；`verify:evidence` 0 失败），15:30 已无技术理由，**BA 确认可干净归档与复核即可今晚签**。五条硬条件缺一不签：
+    - 证据必须由 `evidence-run.sh` 在干净 `main` 产出，**`diag-evidence.sh`/手工快照不算**；`meta.dirty=false`、`meta.commit=9de7e0d`（为签 tip 祖先）。
+    - `/tmp` 快照先归档进 `docs/qa/evidence/` 并提交，**不得直接拿 `/tmp` 签**。
+    - BA（非作者）确认重跑与复核，并给签 tip SHA + 该 SHA 的 CI run。
+    - `gate-log` 两行齐、`sign_scope` 恰为 `S-08.02-02`、`S-07.01-02`；`P07-R3 numerator weak (W-103)` 在 note。
+    - `git diff --stat 9de7e0d -- app/src app/src-tauri app/scripts` 为空；`verify:evidence` exit 0、失败 0。
+    签完即解冻（规范 §5.8），`dev A` 三张可随即合入；BA 若不能今晚完成独立复核，则不签，兜底 11-09 15:30。
 
 ### W-98（dev B 实现 / 并入 W-97 批次）P10 `S-01.03-01` 持仓成本与浮盈
 
