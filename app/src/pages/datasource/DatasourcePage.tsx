@@ -15,7 +15,7 @@ import { BackfillSection } from "./BackfillSection";
 import { QualitySection } from "./QualitySection";
 
 interface Props {
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
+  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource" | "install") => void;
 }
 
 const STATE_TEXT: Record<DatasourceStatusDto["state"], string> = {
@@ -304,7 +304,7 @@ export function DatasourcePage({ onNavigate }: Props) {
           {!version && state !== "probe_failed" && (
             <div className="ds-missing" data-ds-missing="1">
               <span>未安装样本包</span>
-              <button type="button" onClick={() => onNavigate("settings")}>
+              <button type="button" onClick={() => onNavigate("install")}>
                 去环境页生成
               </button>
             </div>

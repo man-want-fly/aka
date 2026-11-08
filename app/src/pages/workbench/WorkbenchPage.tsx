@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { AppShell } from "../../app/AppShell";
+import { AppShell, type RouteKey } from "../../app/AppShell";
 import { CandleChart, type ChartViewport } from "../../components/CandleChart";
 import { IndicatorReadouts } from "../../components/IndicatorReadouts";
 import { ParamPanel } from "../../components/ParamPanel";
@@ -93,7 +93,7 @@ interface Props {
   onThemeMode: (mode: ThemeMode) => void;
   colorMode: ColorMode;
   onColorMode: (mode: ColorMode) => void;
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource") => void;
+  onNavigate: (key: RouteKey) => void;
 }
 
 /**

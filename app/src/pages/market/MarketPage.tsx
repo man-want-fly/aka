@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { AppShell } from "../../app/AppShell";
+import { AppShell, type RouteKey } from "../../app/AppShell";
 import { SimBadge } from "../../components/SimBadge";
 import { StateCard } from "../../components/StateCard";
 import {
@@ -165,7 +165,7 @@ const SCROLL_KEY = "aka.market.scroll";
 const SELECTED_KEY = "aka.market.selected";
 
 interface Props {
-  onNavigate: (key: "workbench" | "catalog" | "market" | "settings" | "datasource") => void;
+  onNavigate: (key: RouteKey) => void;
   onOpenSecurity: (security: string) => void;
 }
 

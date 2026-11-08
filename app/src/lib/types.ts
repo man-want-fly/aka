@@ -571,3 +571,55 @@ export interface DiagnosticsConfigSnapshot {
   insufficient_hint?: string | null;
   dataset_id?: string | null;
 }
+
+/** S-07.03-01：首装 5 步状态（P10）。 */
+export type SimInstallState = "not_installed" | "installing" | "failed" | "installed";
+
+export type SimStepStatus = "pending" | "running" | "done" | "failed";
+
+export interface SimInstallStepDto {
+  index: number;
+  key: string;
+  name: string;
+  status: SimStepStatus;
+  items: number;
+  total: number;
+  durationMs: number;
+}
+
+export interface SimInstallErrorDto {
+  code: string;
+  message: string;
+}
+
+export interface SimInstallReportDto {
+  seed: number;
+  datasetId: string;
+  datasetDir: string;
+  dataVersion: string;
+  generatedAt: number;
+  rowCount: number;
+  coverageStart: string;
+  coverageEnd: string;
+  sha256: string;
+  shaScope: string;
+  schemaVersion: string;
+  securities: number;
+  stocks: number;
+  indices: number;
+  indexMembers: number;
+  bytes: number;
+  totalMs: number;
+  wallMs: number;
+  slow: boolean;
+  steps: SimInstallStepDto[];
+}
+
+export interface SimInstallStatusDto {
+  state: SimInstallState;
+  resumeFrom: number | null;
+  steps: SimInstallStepDto[];
+  installed: SimInstallReportDto | null;
+  error: SimInstallErrorDto | null;
+  dir: string;
+}

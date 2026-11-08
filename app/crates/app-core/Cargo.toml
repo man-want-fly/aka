@@ -10,6 +10,8 @@ data-provider = { path = "../data-provider" }
 data-store = { path = "../data-store" }
 serde.workspace = true
 serde_json.workspace = true
+libc = "0.2"
+rusqlite = { version = "0.32", features = ["bundled"] }
 
 [dev-dependencies]
 async-trait.workspace = true

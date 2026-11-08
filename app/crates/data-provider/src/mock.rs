@@ -518,7 +518,7 @@ impl DataProvider for MockProvider {
     }
 }
 
-fn build_calendar(start: Date, count: usize) -> Vec<Date> {
+pub(crate) fn build_calendar(start: Date, count: usize) -> Vec<Date> {
     let mut dates = Vec::with_capacity(count);
     let mut cursor = start;
     while dates.len() < count {
@@ -602,7 +602,13 @@ fn build_securities() -> Vec<Security> {
     list
 }
 
-fn make_security(code: &str, name: &str, board: Board, is_index: bool, price: f64) -> Security {
+pub(crate) fn make_security(
+    code: &str,
+    name: &str,
+    board: Board,
+    is_index: bool,
+    price: f64,
+) -> Security {
     let market = if code.ends_with(".SH") {
         Market::Sh
     } else {
@@ -618,7 +624,7 @@ fn make_security(code: &str, name: &str, board: Board, is_index: bool, price: f6
     }
 }
 
-fn generate_bars(security: &Security, calendar: &[Date]) -> Vec<BarRow> {
+pub(crate) fn generate_bars(security: &Security, calendar: &[Date]) -> Vec<BarRow> {
     let seed = fnv1a(&security.code);
     let mut rng = Rng::new(seed);
     // AC-02.02-03 夹具：600519.SH 在 2024-04-29 显式注入一次 2:1 拆分（除权事件）

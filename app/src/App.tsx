@@ -4,6 +4,7 @@ import { CatalogPage } from "./pages/catalog/CatalogPage";
 import { WorkbenchPage } from "./pages/workbench/WorkbenchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { DatasourcePage } from "./pages/datasource/DatasourcePage";
+import { InstallPage } from "./pages/install/InstallPage";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { ipc, isTauriRuntime } from "./lib/ipc";
 import { loadDisplaySettings } from "./lib/settings";
@@ -16,7 +17,7 @@ import {
   type ThemeMode,
 } from "./lib/theme";
 
-type Route = "workbench" | "market" | "catalog" | "settings" | "datasource";
+type Route = "workbench" | "market" | "catalog" | "settings" | "datasource" | "install";
 
 interface Location {
   route: Route;
@@ -30,6 +31,7 @@ const routeFromHash = (): Location => {
   if (hash.startsWith("#/catalog")) return { route: "catalog", code: null };
   if (hash.startsWith("#/settings")) return { route: "settings", code: null };
   if (hash.startsWith("#/datasource")) return { route: "datasource", code: null };
+  if (hash.startsWith("#/install")) return { route: "install", code: null };
   const match = hash.match(/^#\/workbench(?:\/([^/?#]+))?/);
   if (match) {
     return {
@@ -278,6 +280,10 @@ export default function App() {
 
     if (location.route === "datasource") {
       return <DatasourcePage onNavigate={navigate} />;
+    }
+
+    if (location.route === "install") {
+      return <InstallPage onNavigate={navigate} />;
     }
 
     if (location.route === "market") {

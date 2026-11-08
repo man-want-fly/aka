@@ -6,6 +6,7 @@ pub mod core;
 pub mod dto;
 pub mod error;
 pub mod quality;
+pub mod sim_install;
 pub mod telemetry;
 
 pub use core::AppCore;
