@@ -3047,8 +3047,8 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 **一、基线自检：P07 可进窗口，P06 差一个字段**
 - `s070102-corrupt` 7/7 PASS；产品健康汇总 `1/6`（②FAIL、③~⑥SKIP）与判据一致，不是「全绿假象」。
 - 官方产物（`evidence-run.sh`）`meta.dirty=false`、`env` 5/5、`meta.dump`/`meta.reproduce` 齐、`windowFocused`/`appActive` 均真、`activateAttempts=1`；`verify:evidence` **exit 0、失败 0**。
-- `s080202` 6/6 PASS、42 秒、telemetry 4 条 `calc.panic`——W-105 的「每次 `fail()` 前重新注入」已生效。
-- 归档被拦的唯一原因：`diag-evidence.sh` 要求每条 check 带 `card`，`s080202` 6 条缺 `card="S-08.02-02"`（`s070102` 有）。派 dev B 补字段后由 BA 重跑，属**字段缺失**，不属判据或实现问题，不改窗口判定。
+- `s080202` 基线时 6 条 check 全 PASS、42 秒、telemetry 4 条 `calc.panic`——W-105 的「每次 `fail()` 前重新注入」已生效。补 `layer` 后为 **8 条（render 6 + runtime 2）**，旧「6/6」只是基线口径，不得再作为现口径引用。
+- 归档被拦的原因：`diag-evidence.sh` 要求每条 check 带 `card`，基线时 6 条都缺 `card="S-08.02-02"`（`s070102` 有）。派 dev B 补字段后由 BA 重跑，属**字段缺失**，不属判据或实现问题，不改窗口判定。`layer` 同理（缺 `layer` 会让 `meta.result.layers` 落成 `{"?":"6/6"}`，`verify:evidence` exit 1），已由 `9752ae9` 补齐并拆条。
 
 **二、C2 落地：`gate-log` 两行已补**
 - `S-07.01-02`、`S-08.02-02` 已按 C2「签字前必须先有行」补入 `aka-card-gate-log-v0.1.csv`，行数 56→58；`ledger_status=未开始`、`gate_a=N/A`、`gate_c=FAIL`、`sign_commit`/`sign_scope` 留空，note 记基线结果与本条编号。
@@ -3070,7 +3070,7 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - 台账 v0.28 记录本次重算与逐卡变更。
 
 **五、B1 定档：2026-11-09 15:30–16:30**
-- 不再顺延 11-10。前提是 dev B 补 `check.card` 后 BA 重跑 `s080202` 通过、CI 在签 tip 绿、BA 预检通过；任一不满足则当窗口判失败，按 §5.5 另排，不顺延掩盖。
+- 不再顺延 11-10。前提是补 `card`+`layer` 后 BA 重跑 `s080202` 通过（8 条：render 6 + runtime 2）、CI 在签 tip 绿、BA 预检通过；任一不满足则当窗口判失败，按 §5.5 另排，不顺延掩盖。
 - `sign_scope`=`S-07.01-02`+`S-08.02-02`；一窗口、一 tip、一次取证、一次签；签 tip 取窗口启动时干净 `main` HEAD，`evidence-run.sh` 产出。
 - 已写入工单 §0.0 W-97 正文「下一窗口（已定档）」及台账 v0.28。
 
@@ -3121,6 +3121,24 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 - BA 单一写，规范 §5.7；dev B 交的 P10 锚点行**只作锚点提案**，代码合入后由 BA 跑 `verify:docs` 命中再落表。P6 拒改是对的，P10 改动按新规回退，不追责。
 
 **B1 不变**：11-09 15:10 预检、15:30–16:30 正式签，`sign_scope` 只含 `S-08.02-02`、`S-07.01-02`；`62aaa90` 已合为 `64e29df`。
+
+#### 4.7.87 `9752ae9` 合入与 check 数口径变更（2026-11-08）
+
+**一、只合 `s080202` hunk**
+- `9752ae9` 改两文件：`s080202Diag.ts`（`main` 有）、`s080203Diag.ts`（`main` 无，属 B2）。按 `62aaa90` 同一处理：只取 `s080202Diag.ts`，落 `099d021`；`s080203` 的 10 条 layer 随 B2 文件带入。
+- 本地 `verify:dom-contracts`、`verify:ac-token`、`verify:sign-impact --staged` 绿；CI 见本轮 run。
+
+**二、判层与拆条**
+- dev B 按**断言对象**判层，不一刀切：DOM 文本/元素 = render；`calc.panic`/`calc.timeout` 增量与真实墙钟 = runtime。
+- 跨层断言拆成两条：`P06-R3`（render，导出按钮出现）+ `P06-R3-log`（runtime，`calc.panic` 增量=3）；`P06-R5`（render，标题与 elapsed∈7000–9500）+ `P06-R5-run`（runtime，墙钟 7–12s、`calc.timeout` 增量=1）。
+- 结果：**8 条 = render 6 + runtime 2**。
+
+**三、旧「6/6」作废**
+- `s080202` 此前所有「6/6」只代表**基线 6 条**。补 `card`（`64e29df`）不改条数；补 `layer` 并拆条后现口径为 **8 条**。
+- 已同步：`gate-log` `S-08.02-02` 行 note、W-97 正文、本条 §4.7.84 基线段。**不得再引用 6/6 作为现口径**——check 数不是 AC 数，加 check 旧数字即失效。
+
+**四、B2 预告**
+- `s080203Diag` 10 条补 layer（`R1–R4/R6/R7=render`、`R5/R10=runtime`、`R8/R9=data`），随 B2 进入；**B2 开窗时 BA 看到的 check 数会变**（`S-08.02-03`），预检按新数核对。
 
 ## 5. 拍板事项：11 条的最终状态
 
