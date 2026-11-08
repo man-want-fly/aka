@@ -1690,6 +1690,25 @@ npm run verify:constants   # 期望：PASS 20 项 / 告警 0 / 未登记漂移 0
 3. 说明 `count=0` 的判别：`instances=0` 才是零批次；`instances>0` 是热缓存全命中。
 4. `diag.ts` 的 `computeCountSemantics` 已同步为新口径，不再写「批次计数」。
 
+### W-82（dev B）下一批：P9/P8 数据源与设置 4 张（9.0 人日）
+
+| 卡 | 标题 | 人日 | 依赖 |
+|---|---|---|---|
+| `S-07.01-02` | tushare 禁用卡与健康检查 | 2.0 | `S-07.01-01`（已交付） |
+| `S-07.03-02` | manifest 9 字段展示与一致性 | 1.5 | `S-07.03-01` 的 manifest 数据 |
+| `S-07.02-02` | sim/real 隔离与 `dataset_id` 缓存键 | 3.0 | `S-02.06-02` 缓存口径 |
+| `S-06.03-02` | 诊断包导出与隐私排除 | 2.5 | `S-07.05-01` 质量数据 |
+
+约束：① 都在 dev2 已具备的 P9/P8 面，不新增页面依赖；② `S-08.01-02` 整卡 `Blocked` 不占额度；③ P7 相关（搜索浮层）等 `S-05.01`；④ 按第 14 条只在批次边界交货，不逐卡签字。
+
+### W-83（TL）`dev2 → main` 合并与重签协议
+
+- **谁做**：TL；dev 不推 `main`。
+- **何时**：每个批次边界一次，下一批开始前。本边界先合 `dev2` 再开 W-82。
+- **重签**：每次合并一次，不是每提交一次；合并后在新 tip 跑完整 CI，只签该 run 的 `headSha`；dev2 证据仅参考。
+- **清单**：`git merge --no-ff origin/dev2` → 更新页面索引 P9=`exists`（锚点 `app/src/pages/datasource/DatasourcePage.tsx`）→ `verify:docs`/`verify:sign`/`verify:gate-log`/`cargo test --workspace`/`npm test` → push → 在 merge tip 一次性签本批 → 台账登记 `relation=equal`。
+- **预检**：冲突标记 0，可合并。
+
 ### W-73（BA）`W-66` 归属收口：改号条件、补号归卡、丢失基条、冻结件半角
 
 1. **D-AC-01 增补「改号 vs 重编号」判据**：判「该号**作为本卡 AC** 是否已被引用」，不是「该 token 在仓库是否出现过」；允许改号须同时满足：① 本卡无 `check.ac`/`sign_scope`/验收行引用（全仓 + 证据双查）；② 新号在本卡号段空位、不撞别卡；③ 同一提交同步卡面/`ac_ids` 索引/PRD/台账；④ 本卡一经证据或签字即冻结，只能新增补号/基号。`AC-07.05-03 → 04` 按此条放行。

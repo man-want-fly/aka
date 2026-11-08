@@ -2125,6 +2125,25 @@ PRD L1310 有语义（任意空态至少一个可执行下一步动作）；T-08
 
 **落点**：卡面 3C、主流程 1、字段与口径、异常边界、`AC-02.06-01`、埋点均已改写（W-81）；`diag.ts` 的 `computeCountSemantics` 同步改正。
 
+#### 4.7.53 dev B 下一批 + dev2→main 合并协议（2026-11-08）
+
+**一、dev B 下一批（4 张，9.0 人日）。**
+1. `S-07.01-02` tushare 禁用卡与健康检查（2.0）——接 `S-07.01-01`，同一 P9 面。
+2. `S-07.03-02` manifest 9 字段展示与一致性（1.5）——P9，数据已在 dev2。
+3. `S-07.02-02` sim/real 隔离与 `dataset_id` 缓存键（3.0）——数据层，接 `S-02.06-02` 口径。
+4. `S-06.03-02` 诊断包导出与隐私排除（2.5）——复用 P9 质量数据，P8 页面已存在。
+
+选择理由：四张都落在 dev2 已具备的 P9/P8 面，不再引入新页面依赖；总量 9.0 人日与上批 8.0 持平。`S-08.01-02` 整卡 `Blocked`，不占额度；P7 相关卡等 `S-05.01`。
+
+**二、dev A 不加卡**：手上 `S-02.06-01`（方案 2 收口）与 `S-07.05-03`（只落浮层、补1 `Blocked-AC`）够到批次边界。
+
+**三、`dev2 → main` 合并协议。**
+- **谁做**：TL。dev 只推自己的分支，不推 `main`；合并、重跑、重签都由 TL 在批次边界执行。
+- **何时**：每个批次边界一次，在下一批开始前。本边界（dev B 下一批开工前）先合 `dev2`，再开下一批。
+- **冲突预检**：`git merge-tree $(git merge-base main origin/dev2) main origin/dev2` 冲突标记 = 0，可快进式合并（仍需 `--no-ff` 留合并点）。
+- **重签节奏**：**每次合并一次，不是每个提交一次**。合并后在新 tip 跑完整 CI，以该 run 的 `headSha` 作为唯一签字对象；dev2 上的证据只作参考，不单独签。
+- **合并清单**：① `git merge --no-ff origin/dev2`；② 把 `aka-page-registry-v0.1.csv` 的 P9 改为 `exists` + `app/src/pages/datasource/DatasourcePage.tsx` 锚点（合并后 P9 才真实存在）；③ 跑 `verify:docs`、`verify:sign`、`verify:gate-log`、`cargo test --workspace`、`npm test`；④ 推送后在 merge tip 的 run 上一次性签本批卡；⑤ 台账登记 merge run 的 `head_sha` 与被签 `signed_sha`，`relation=equal`。
+
 ---
 
 ## 5. 拍板事项：11 条的最终状态
