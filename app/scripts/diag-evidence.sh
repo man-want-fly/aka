@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 取证并归档：当次 evidence JSON + meta 一起落到 docs/qa/evidence/（W-41 第 2 项）。
-# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market
+# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market|s2|s070503
 # 前置：app/ 根目录执行 npm run build 与 cargo build -p aka-desktop --features tauri/custom-protocol
 # 取证必须用 debug 构建：QA 注入开关在 release 里已整体编译掉（W-47）。
 set -euo pipefail
@@ -104,6 +104,20 @@ PY
     NAME="e01-market-evidence"
     FIXTURE="默认 state.db；E-01 行情套件（数据层 + 渲染层）直接打真实 DOM 与 state.db；只读，不改库"
     EXTRA_ENV="AKA_DIAG_NO_SAMPLES=1"
+    BAK=""
+    ;;
+  s2)
+    TARGET="s2"
+    JSON="$DIAG_DIR/s2-evidence.json"
+    NAME="s2-evidence"
+    FIXTURE="默认固定批次（instances=50 = 1 主图均线 + 5 叠加 + 5 统计 + 1 M06 + 20 B2 + 13 B3 + 5 B1，skip=6）；冷/热各切 30/90 次标的；连键 1→12→120 与 1→12→60；只读行情，不改库"
+    BAK=""
+    ;;
+  s070503)
+    TARGET="s070503"
+    JSON="$DIAG_DIR/s070503-evidence.json"
+    NAME="s070503-evidence"
+    FIXTURE="默认 state.db；debug 注入 DIAGPROV.SZ（40 根，末根清空 batch_id/ingested_at）与 DIAGSUSP.SZ（120 根，80~99 停牌）；点击 600519.SH/DIAGSUSP.SZ/DIAGPROV.SZ 三根 bar；只读行情，不改库"
     BAK=""
     ;;
   star)
