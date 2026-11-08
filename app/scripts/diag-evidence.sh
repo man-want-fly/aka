@@ -158,6 +158,36 @@ PY
     FIXTURE="默认 state.db；App 清空 aka.last.code 后验证无标的引导，再按「副图满仓 / 留出空位」两阶段验证容量、去重与规划项；只改 localStorage，不改库"
     BAK=""
     ;;
+  s030201)
+    TARGET="s030201"
+    JSON="$DIAG_DIR/s030201-favorites-evidence.json"
+    NAME="s030201-favorites-evidence"
+    FIXTURE="默认 state.db；收藏套件自行增删并验证首装 8 项、顺序、幂等与「清空后不重播」；取证后 sqlite3 .backup 还原"
+    BAK="/tmp/aka-state-s030201-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    ;;
+  s030302-catalog)
+    TARGET="s030302-catalog"
+    JSON="$DIAG_DIR/s030302-catalog-evidence.json"
+    NAME="s030302-catalog-evidence"
+    FIXTURE="默认 state.db；目录行进 P4 后 Esc 返回，验证展开/滚动/筛选还原；只读，不改库"
+    BAK=""
+    ;;
+  s030302)
+    TARGET="s030302"
+    JSON="$DIAG_DIR/s030302-evidence.json"
+    NAME="s030302-evidence"
+    FIXTURE="默认 state.db；工作台图例「?」与抽屉「查看口径」进 P4 后返回，验证副图/视口保持与抽屉恢复；只读，不改库"
+    BAK=""
+    ;;
+  s060301)
+    TARGET="s060301"
+    JSON="$DIAG_DIR/s060301-about-evidence.json"
+    NAME="s060301-about-evidence"
+    FLAGS="--empty-dataset"
+    FIXTURE="默认 state.db；--empty-dataset 让数据源不可用，验证关于页数据目录「目录不存在」+「重建样本包」入口，同时核对版本/计数/通道；只读，不改库"
+    BAK=""
+    ;;
   s0602)
     TARGET="s0602"
     JSON="$DIAG_DIR/s0602-display-evidence.json"

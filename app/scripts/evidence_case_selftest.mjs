@@ -1,16 +1,15 @@
 #!/usr/bin/env node
-// P01 S-03.01-04：取证 case 与产品接线的自测（可重跑，不依赖 GUI）。
+// 取证 case 与产品接线的自测（可重跑，不依赖 GUI）。
 //
-// 真实缺陷（本自测要钉住的那一类）：P01 的产品与 diag 已在 main，但
-// diag-evidence.sh 的 `s030104)` case 被合并吞掉 → evidence-run.sh s030104 直接
-// 「未知套件」，永远出不了 dump，台账只能停在「未开始」。
+// 事故：S-03.01-04 / S-03.02-01 / S-03.03-02 / S-06.03-01 的产品与 diag 早在
+// adef5b7 就在 main，但 diag-evidence.sh 的 case 在合并解冲突时被批量吞掉 →
+// evidence-run.sh 直接「未知套件」，卡在 main、台账「未开始」、gate-log 无行。
 //
-// 反例（每条都必须判红，不是「应该有」）：
-//   R1 缺 case：删掉 `s030104)` 后，`evidence-run.sh s030104 --check` 必须 exit≠0 且报「未知套件」；
-//   R2 case 改名：把 case 改成 `s030104x`，同一入口对 s030104 必须仍判红（证明绑的是精确套件名）；
-//   R3 接线断：case 在，但 App / CatalogPage 没有 s030104 分派，或没清 aka.last.code，
-//      自测必须判红（否则进程起来了也不会跑 batchDiag，dump 永远不落盘）。
-// 正向：真实仓库文件 → --check 绿 + 三处接线齐 + case 的 TARGET/JSON/NAME 与 batchDiag 写盘名一致。
+// 每个套件三条反例，缺一条都不算证明：
+//   R1 缺 case       → evidence-run.sh <suite> --check 必须 exit≠0 +「未知套件」；
+//   R2 case 改名      → 同一入口对原 suite 必须仍判红（绑精确套件名）；
+//   R3 接线断        → 页面不再调用 runner 时自测必须判红（否则进程起来也不跑 diag）。
+// 正向：真实仓库 → --check 绿 + 接线齐 + case 写盘名与 batchDiag 一致。
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -24,34 +23,59 @@ const read = (rel) => fs.readFileSync(path.join(APP, rel), "utf8");
 const diagSrc = read("scripts/diag-evidence.sh");
 const runSrc = read("scripts/evidence-run.sh");
 const layoutSrc = read("scripts/evidence-layout.json");
-const catalogSrc = read("src/pages/catalog/CatalogPage.tsx");
 const appSrc = read("src/App.tsx");
 const batchSrc = read("src/features/qa/batchDiag.ts");
+const pageSrc = {
+  catalog: read("src/pages/catalog/CatalogPage.tsx"),
+  workbench: read("src/pages/workbench/WorkbenchPage.tsx"),
+  settings: read("src/pages/settings/SettingsPage.tsx"),
+};
 
-const SUITE = "s030104";
-const CASE_BLOCK = /^  s030104\)\n(?:    [^\n]*\n)*?    ;;\n/m;
-const BUMP_NAME = /^  s030104\)/m;
+const SUITES = [
+  { suite: "s030104", runner: "runS030104Diagnostics", file: "s030104-evidence.json", page: "catalog" },
+  { suite: "s030201", runner: "runS030201Diagnostics", file: "s030201-favorites-evidence.json", page: "catalog" },
+  { suite: "s030302-catalog", runner: "runS030302CatalogDiagnostics", file: "s030302-catalog-evidence.json", page: "catalog" },
+  { suite: "s030302", runner: "runS030302WorkbenchDiagnostics", file: "s030302-evidence.json", page: "workbench" },
+  { suite: "s060301", runner: "runS060301Diagnostics", file: "s060301-about-evidence.json", page: "settings" },
+];
 
-if (!CASE_BLOCK.test(diagSrc)) {
-  console.error("基线红：diag-evidence.sh 里没有 s030104) case，无法做反例");
-  process.exit(1);
+/** 逐行扫到 `    ;;`（case 块里可能嵌 python heredoc，不能按「每行 4 空格」匹配）。 */
+function caseBlock(text, suite) {
+  const lines = text.split("\n");
+  const head = `  ${suite})`;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i] !== head) continue;
+    let j = i + 1;
+    while (j < lines.length && lines[j] !== "    ;;") j += 1;
+    const block = lines.slice(i, j + 1).join("\n");
+    return { block, json: block.match(/JSON="\$DIAG_DIR\/([^"]*)"/)?.[1] ?? null };
+  }
+  return null;
+}
+
+function withoutCase(text, suite) {
+  const hit = caseBlock(text, suite);
+  return hit ? text.replace(`${hit.block}\n`, "") : text;
+}
+
+function renameCase(text, suite) {
+  return text.replace(`  ${suite})\n`, `  ${suite}x)\n`);
 }
 
 /** 在临时 git 仓库里跑 evidence-run.sh <suite> --check（与真入口同一条代码路径）。 */
 function runCheck(diagText, suite) {
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "aka-p01-case-"));
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "aka-case-"));
   try {
     fs.mkdirSync(path.join(repo, "app/scripts"), { recursive: true });
     fs.writeFileSync(path.join(repo, "app/scripts/diag-evidence.sh"), diagText);
     fs.writeFileSync(path.join(repo, "app/scripts/evidence-run.sh"), runSrc);
     fs.writeFileSync(path.join(repo, "app/scripts/evidence-layout.json"), layoutSrc);
-    const git = (args) =>
-      spawnSync("git", args, {
-        cwd: repo,
-        encoding: "utf8",
-        env: { ...process.env, GIT_AUTHOR_NAME: "selftest", GIT_AUTHOR_EMAIL: "selftest@example.invalid",
-          GIT_COMMITTER_NAME: "selftest", GIT_COMMITTER_EMAIL: "selftest@example.invalid" },
-      });
+    const env = {
+      ...process.env,
+      GIT_AUTHOR_NAME: "selftest", GIT_AUTHOR_EMAIL: "selftest@example.invalid",
+      GIT_COMMITTER_NAME: "selftest", GIT_COMMITTER_EMAIL: "selftest@example.invalid",
+    };
+    const git = (args) => spawnSync("git", args, { cwd: repo, encoding: "utf8", env });
     git(["init", "-q"]);
     git(["symbolic-ref", "HEAD", "refs/heads/main"]);
     git(["add", "-A"]);
@@ -61,97 +85,70 @@ function runCheck(diagText, suite) {
       encoding: "utf8",
       env: { ...process.env, EVIDENCE_NODE: NODE },
     });
-    return {
-      status: result.status,
-      stdout: result.stdout ?? "",
-      stderr: result.stderr ?? "",
-    };
+    return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
   } finally {
     fs.rmSync(repo, { recursive: true, force: true });
   }
 }
 
-/** case 与产品入口的接线：任何一处断掉，进程起来也不会跑 batchDiag。 */
-function wiring(catalog, app, batch) {
+/** case ↔ 产品入口接线：任何一处断掉，进程起来也不会跑 batchDiag。 */
+function wiring(item, override) {
+  const batch = override?.batch ?? batchSrc;
+  const app = override?.app ?? appSrc;
+  const page = override?.page ?? pageSrc[item.page];
   const misses = [];
-  if (!/export async function runS030104Diagnostics/.test(batch)) {
-    misses.push("batchDiag 缺 runS030104Diagnostics");
+  if (!new RegExp(`export async function ${item.runner}`).test(batch)) misses.push(`${item.runner} 缺失`);
+  if (!new RegExp(`writeBatchReport\\("${item.file}",\\s*"${item.suite}"`).test(batch)) {
+    misses.push(`未写 ${item.file}`);
   }
-  if (!/writeBatchReport\("s030104-evidence\.json",\s*"s030104"/.test(batch)) {
-    misses.push("batchDiag 未写 s030104-evidence.json");
-  }
-  if (!/target === "s030104"/.test(catalog)) misses.push("CatalogPage 未分派 s030104");
-  if (!/runS030104Diagnostics\(/.test(catalog)) misses.push("CatalogPage 未调用 runS030104Diagnostics");
-  if (!/target === "s030104"/.test(app)) misses.push("App 未放行 s030104");
-  // 阶段 1「无标的」的前提：App 在 s030104 分支必须清掉 aka.last.code。
-  const block = app.match(/if \(target === "s030104"\) \{[\s\S]*?\n          \}/)?.[0] ?? "";
-  if (!/removeItem\("aka\.last\.code"\)/.test(block)) {
-    misses.push("App 的 s030104 分支未清 aka.last.code（无标的阶段前提不成立）");
-  }
+  if (!new RegExp(`${item.runner}\\(`).test(page)) misses.push(`页面未调用 ${item.runner}`);
+  if (!new RegExp(`target === "${item.suite}"`).test(app)) misses.push(`App 未放行 ${item.suite}`);
   return misses;
 }
 
 const results = [];
 const record = (id, passed, detail) => results.push({ id, passed, detail });
 
-// 正向：真实文件
-const real = runCheck(diagSrc, SUITE);
-record(
-  "P01-CASE-GREEN",
-  real.status === 0 && real.stdout.includes("EVIDENCE_OK"),
-  `exit=${real.status} stdout=${real.stdout.trim().split("\n").pop() || "—"}`,
-);
+for (const item of SUITES) {
+  const real = runCheck(diagSrc, item.suite);
+  record(
+    `${item.suite}:GREEN`,
+    real.status === 0 && real.stdout.includes("EVIDENCE_OK"),
+    `exit=${real.status} ${real.stdout.trim().split("\n").pop() || "—"}`,
+  );
 
-// R1：缺 case
-const missing = runCheck(diagSrc.replace(CASE_BLOCK, ""), SUITE);
-record(
-  "P01-CASE-R1",
-  missing.status !== 0 && missing.stderr.includes(`未知套件 ${SUITE}`) && !missing.stdout.includes("EVIDENCE_OK"),
-  `exit=${missing.status} stderr=${missing.stderr.trim().split("\n").pop() || "—"}`,
-);
+  const missing = runCheck(withoutCase(diagSrc, item.suite), item.suite);
+  record(
+    `${item.suite}:R1-MISSING`,
+    missing.status !== 0 && missing.stderr.includes(`未知套件 ${item.suite}`) && !missing.stdout.includes("EVIDENCE_OK"),
+    `exit=${missing.status} ${missing.stderr.trim().split("\n").pop() || "—"}`,
+  );
 
-// R2：case 改名（证明绑的是精确套件名，不是「随便有个 case 就算」）
-const bumped = runCheck(diagSrc.replace(BUMP_NAME, "  s030104x)"), SUITE);
-record(
-  "P01-CASE-R2",
-  bumped.status !== 0 && bumped.stderr.includes(`未知套件 ${SUITE}`),
-  `exit=${bumped.status} stderr=${bumped.stderr.trim().split("\n").pop() || "—"}`,
-);
+  const bumped = runCheck(renameCase(diagSrc, item.suite), item.suite);
+  record(
+    `${item.suite}:R2-RENAMED`,
+    bumped.status !== 0 && bumped.stderr.includes(`未知套件 ${item.suite}`),
+    `exit=${bumped.status} ${bumped.stderr.trim().split("\n").pop() || "—"}`,
+  );
 
-// 接线：真实文件必须齐
-const realMisses = wiring(catalogSrc, appSrc, batchSrc);
-record("P01-WIRING-GREEN", realMisses.length === 0, realMisses.length ? `缺：${realMisses.join("；")}` : "三处接线齐");
+  const realMisses = wiring(item);
+  record(
+    `${item.suite}:WIRING`,
+    realMisses.length === 0 && caseBlock(diagSrc, item.suite)?.json === item.file,
+    realMisses.length
+      ? `缺：${realMisses.join("；")}`
+      : `接线齐，JSON=${caseBlock(diagSrc, item.suite)?.json}`,
+  );
 
-// R3a：CatalogPage 不再调用 diag
-const catalogMut = catalogSrc.replace(/runS030104Diagnostics\(/g, "runS030104DiagnosticsX(");
-record(
-  "P01-WIRING-R3A",
-  wiring(catalogMut, appSrc, batchSrc).length > 0,
-  `变异后缺项数=${wiring(catalogMut, appSrc, batchSrc).length}`,
-);
-
-// R3b：App 的 s030104 分支不清 last_code（无标的阶段前提被破坏）
-const appMut = appSrc.replace(/if \(target === "s030104"\) \{[\s\S]*?\n          \}/, 'if (target === "s030104") {\n          }');
-record(
-  "P01-WIRING-R3B",
-  wiring(catalogSrc, appMut, batchSrc).length > 0,
-  `变异后缺项数=${wiring(catalogSrc, appMut, batchSrc).length}`,
-);
-
-// case 的写盘名必须与 batchDiag 实际写的文件名一致，否则 meta/dump 对不上
-const blockText = diagSrc.match(CASE_BLOCK)?.[0] ?? "";
-const jsonBase = blockText.match(/JSON="\$DIAG_DIR\/([^"]*)"/)?.[1]?.trim() ?? "";
-const nameValue = blockText.match(/NAME="([^"]*)"/)?.[1] ?? "";
-const targetValue = blockText.match(/TARGET="([^"]*)"/)?.[1] ?? "";
-record(
-  "P01-CASE-META",
-  targetValue === "s030104" && nameValue === "s030104-evidence" && /^s030104-evidence\.json$/.test(jsonBase),
-  `TARGET=${targetValue} NAME=${nameValue} JSON=${jsonBase}`,
-);
+  const brokenPage = pageSrc[item.page].replace(new RegExp(`${item.runner}\\(`, "g"), `${item.runner}X(`);
+  record(
+    `${item.suite}:R3-UNWIRED`,
+    wiring(item, { page: brokenPage }).length > 0,
+    `变异后缺项数=${wiring(item, { page: brokenPage }).length}`,
+  );
+}
 
 const failed = results.filter((item) => !item.passed);
-for (const item of results) {
-  console.log(`${item.passed ? "PASS" : "FAIL"} ${item.id} ${item.detail}`);
-}
-console.log(`case 反例 2/2 判红，接线反例 2/2 判红，正向 ${results.filter((i) => i.id.endsWith("GREEN") && i.passed).length}/2 绿`);
+for (const item of results) console.log(`${item.passed ? "PASS" : "FAIL"} ${item.id} ${item.detail}`);
+console.log(`套件 ${SUITES.length} 个：反例 ${SUITES.length * 3}/${SUITES.length * 3} 判红，正向 ${SUITES.length}/${SUITES.length} 绿`);
 process.exit(failed.length === 0 ? 0 : 1);
