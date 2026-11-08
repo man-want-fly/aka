@@ -12,7 +12,7 @@
  */
 
 import { ipc } from "../../lib/ipc";
-import type { CalcResponse, TelemetrySummary } from "../../lib/types";
+import type { CalcResponse, TelemetryEventDto, TelemetrySummary } from "../../lib/types";
 import type { WorkbenchParams } from "./model";
 
 export type DiagPhase = "off" | "debounce" | "cold" | "warm" | "done";
@@ -1426,6 +1426,48 @@ async function collectCatalogCheck(): Promise<Record<string, unknown>> {
   };
 }
 
+/** `compute.count` 事件原文。S-02.06-01 口径：count=本批新增实算（cache miss、去重后）、
+ * instances=批内实例总数、skip=批内去重跳过；count=0 且 instances>0 表示热缓存全命中，不是零批次。 */
+export interface ComputeCountEvent {
+  tsMs: number;
+  count: number;
+  instances: number;
+  skip: number;
+  cacheHit: boolean;
+  fields: Record<string, unknown>;
+}
+
+function lastComputeCount(events: TelemetryEventDto[] | undefined): ComputeCountEvent | null {
+  const event = [...(events ?? [])].reverse().find((item) => item.name === "compute.count");
+  if (!event) return null;
+  const num = (key: string) => {
+    const value = event.fields[key];
+    return typeof value === "number" ? value : Number.NaN;
+  };
+  return {
+    tsMs: event.tsMs,
+    count: num("count"),
+    instances: num("instances"),
+    skip: num("skip"),
+    cacheHit: event.fields["cacheHit"] === true,
+    fields: event.fields,
+  };
+}
+
+/** 冷/热批次形状判定：instances=50（批内总数）、skip=6（去重）、count 按冷 44 / 热 0。 */
+function batchShapeOk(
+  event: ComputeCountEvent | null,
+  expect: { count: number; cacheHit: boolean },
+): boolean {
+  return (
+    event !== null &&
+    event.instances === 50 &&
+    event.skip === 6 &&
+    event.count === expect.count &&
+    event.cacheHit === expect.cacheHit
+  );
+}
+
 export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string, unknown>> {
   const notes: string[] = [];
 
@@ -1472,6 +1514,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
       requestsIssued: burst.length,
       computeCountEvents: computeDelta,
       computeEvent,
+      computeCountEvent: lastComputeCount(after.recent),
       samples: burst,
       passed: burst.length === 1,
     };
@@ -1518,6 +1561,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     cold.push({ ...sample, phase: "cold" });
   }
   const telAfterCold = await hooks.telemetry();
+  const coldComputeCount = lastComputeCount(telAfterCold.recent);
 
   const coldCalcP95 = nearestRankP95(cold.map((item) => item.calcMs));
   const coldTotalP95 = nearestRankP95(cold.map((item) => item.totalMs));
@@ -1549,6 +1593,7 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     }
   }
   const telAfterWarm = await hooks.telemetry();
+  const warmComputeCount = lastComputeCount(telAfterWarm.recent);
   // 请求形状（R-S0-07-01 留档）：取热切回结束时的 D 周期响应体积。
   const requestShape = hooks.probePayload();
 
@@ -1567,6 +1612,16 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
     notes.push(
       `回切异常：样本 ${warm.length} / cacheHit ${warmAllHit} / 逐点一致 ${warmAllMatch} / max ${round2(warmMaxTotal)}ms`,
     );
+  }
+
+  // ---- 3b. S-02.06-01 批次口径：冷缓存 count=新增实算 44 / 热缓存 0，instances=50、skip=6 ----
+  const coldBatchOk = batchShapeOk(coldComputeCount, { count: 44, cacheHit: false });
+  const warmBatchOk = batchShapeOk(warmComputeCount, { count: 0, cacheHit: true });
+  if (!coldBatchOk) {
+    notes.push(`冷缓存批次口径不符：${JSON.stringify(coldComputeCount)}`);
+  }
+  if (!warmBatchOk) {
+    notes.push(`热缓存批次口径不符：${JSON.stringify(warmComputeCount)}`);
   }
 
   // ---- 4. D/W/M 周期切换 ----
@@ -1670,6 +1725,8 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
       maxTotalMs: round2(cold.reduce((max, item) => Math.max(max, item.totalMs), 0)),
       telemetryColdSamples: telAfterCold.coldSamples,
       telemetryColdP95Ms: telAfterCold.coldP95Ms,
+      /** S-02.06-01：最近一次冷切换的 compute.count 原文（count=新增实算、instances、skip、cacheHit） */
+      computeCount: coldComputeCount,
       samples: cold.map((item) => ({
         security: item.security,
         timeframe: item.timeframe,
@@ -1699,6 +1756,8 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
       maxTotalMs: round2(warmMaxTotal),
       maxCalcMs: round2(warmMaxCalc),
       batchMaxTotalMs: warmBatchMax,
+      /** S-02.06-01：最近一次热切回的 compute.count 原文（count=0、instances=50 → 全命中，不是零批次） */
+      computeCount: warmComputeCount,
       samples: warm.map((item) => ({
         security: item.security,
         batch: item.batch,
@@ -1715,6 +1774,15 @@ export async function runS2Diagnostics(hooks: DiagHooks): Promise<Record<string,
         seriesPoints: item.seriesPoints,
         error: item.error,
       })),
+    },
+    /** S-02.06-01 批次口径判据：一次切换 1 个 compute.count；cold.count=44 / warm.count=0；instances=50 才是非零批次 */
+    batchCompute: {
+      criterion:
+        "count=本批新增实算（cache miss、去重后）；instances=批内实例总数 50；skip=批内去重 6；冷缓存 count=44、热缓存 count=0；count=0 且 instances>0 为全命中，不是零批次",
+      cold: coldComputeCount,
+      warm: warmComputeCount,
+      coldOk: coldBatchOk,
+      warmOk: warmBatchOk,
     },
     timeframes: {
       uiOrder: ["W", "D"],

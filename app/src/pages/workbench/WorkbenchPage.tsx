@@ -791,7 +791,9 @@ export function WorkbenchPage({
             diagPhase.current = phase;
           },
           setCode: setActiveCode,
-          setParams: setAppliedParams,
+          // 走真实用户输入路径：params → 120ms 防抖 → appliedParams（S-02.05-01）。
+          // 直接写 appliedParams 会与 params 防抖互相触发，连键会被测成 2 个批次。
+          setParams,
           setTimeframe,
           nextSample,
           drainSamples,
