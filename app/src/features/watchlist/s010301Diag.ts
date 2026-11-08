@@ -166,7 +166,7 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
     const changed = positionTexts(position(1600, 100), 1682.4);
     push(
       "P10-R3",
-      "AC-01.03-01(补1)",
+      "AC-01.03-01（补1）",
       "data",
       changed.marketValue === "168,240.00" &&
         changed.pnl === "+8,240.00" &&
@@ -227,7 +227,7 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
     // 独立来源：同标的同数量 → 市值不变；浮盈与 R5 的差恰为 (1100−1000)×100=10,000；比例手算。
     push(
       "P10-R6",
-      "AC-01.03-01(补1)",
+      "AC-01.03-01（补1）",
       "render",
       near(mv6, close * 100) &&
         near(mv6, parseNumber(mvBeforeAdjChange) ?? Number.NaN) &&
@@ -260,7 +260,7 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
     const sampleProvesRefetch = Math.abs(noneClose - close) > 0.005 && mv7Text !== mvBeforeAdjChange;
     push(
       "P10-R7",
-      "AC-01.03-01(补4)",
+      "AC-01.03-01（补4）",
       "render",
       notice.textContent?.trim() === "复权口径已变更，盈亏仅供参考" &&
         isMoney(mv7Text) &&
@@ -302,7 +302,7 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
     // 独立来源：手算 停牌前收盘×100、恒等式 pnl=市值−10,000（成本 100×100 股）。
     push(
       "P10-R8",
-      "AC-01.03-01(补2)",
+      "AC-01.03-01（补2）",
       "render",
       suspendedReady &&
         badge !== null &&
@@ -336,7 +336,7 @@ export async function runS010301Diagnostics(): Promise<S010301DiagReport> {
     const afterZero = (await ipc.positions()).find((item) => item.security === "600519.SH");
     push(
       "P10-R9",
-      "AC-01.03-01(补3)",
+      "AC-01.03-01（补3）",
       "render",
       error !== null &&
         costInput.getAttribute("aria-invalid") === "true" &&

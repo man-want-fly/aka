@@ -104,7 +104,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
   );
 
   // ② 不展示堆栈（补3）。
-  push("P09-R2", "AC-08.02-03(补3)", !looksLikeStack(errorText()), "错误卡未出现堆栈字样");
+  push("P09-R2", "AC-08.02-03（补3）", !looksLikeStack(errorText()), "错误卡未出现堆栈字样");
 
   if (codeMatches && expectedCode === "MISSING_DIR") {
     // ③ 不可读数据集不给「只读浏览」。
@@ -127,7 +127,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     );
     push(
       "P09-R4",
-      "AC-08.02-03(补4)",
+      "AC-08.02-03（补4）",
       recovered === true &&
         window.location.hash.startsWith("#/market") &&
         document.querySelector("[data-readonly-banner]") === null &&
@@ -148,7 +148,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     ).catch(() => null);
     push(
       "P09-R6",
-      "AC-08.02-03(补1)",
+      "AC-08.02-03（补1）",
       banner !== null &&
         textOf(banner).includes("仅只读浏览") &&
         banner.querySelector("button") === null &&
@@ -174,7 +174,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     const after = (await ipc.watchlist()).items.length;
     push(
       "P09-R8",
-      "AC-08.02-03(补2)",
+      "AC-08.02-03（补2）",
       row !== null && star !== null && toast !== null && before === after,
       `提示=${textOf(toast)}，自选 ${before} → ${after}`,
     );
@@ -191,7 +191,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     ).catch(() => null);
     push(
       "P09-R7",
-      "AC-08.02-03(补1)",
+      "AC-08.02-03（补1）",
       row !== null &&
         notice !== null &&
         textOf(notice).includes("已禁用计算") &&
@@ -221,7 +221,7 @@ export async function runS080203Diagnostics(integrity: DatasetIntegrityDto): Pro
     const themeAfter = themeSnapshot();
     push(
       "P09-R9",
-      "AC-08.02-03(补2)",
+      "AC-08.02-03（补2）",
       themeButton !== undefined &&
         hint !== null &&
         themeBefore.attr === themeAfter.attr &&

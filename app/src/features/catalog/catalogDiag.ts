@@ -100,7 +100,7 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
   const beta = items.filter((item) => item.completeness === "beta").map((item) => item.id);
   push(
     "D-02",
-    "AC-03.01-01(补1)",
+    "AC-03.01-01（补1）",
     "data",
     completion.length === 6 &&
       beta.length === 8 &&
@@ -324,7 +324,7 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
   const t03 = q<HTMLElement>('[data-catalog-item="T03"]');
   push(
     "R-04",
-    "AC-03.01-01(补1)",
+    "AC-03.01-01（补1）",
     "render",
     t03?.dataset.catalogCompletion === "1" &&
       t03?.dataset.catalogPriority === "P0" &&
@@ -338,7 +338,7 @@ export async function runCatalogDiagnostics(manifest: ManifestResponse) {
   const m13 = q<HTMLElement>('[data-catalog-item="M13"]');
   push(
     "R-05",
-    "AC-03.01-01(补1)",
+    "AC-03.01-01（补1）",
     "render",
     m13?.dataset.catalogCompleteness === "beta" &&
       m13?.dataset.catalogPriority === "P1" &&

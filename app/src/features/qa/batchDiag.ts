@@ -100,7 +100,7 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
   const noSymbolButton = q<HTMLButtonElement>('[data-catalog-add="T03"]');
   push(
     "P01-R1",
-    "AC-03.01-05(补1)",
+    "AC-03.01-05（补1）",
     "render",
     Boolean(banner?.textContent?.includes("请先在行情页选择一只标的")) &&
       q("[data-catalog-go-market]") !== null &&
@@ -118,7 +118,7 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
   const m03Add = q<HTMLButtonElement>('[data-catalog-add="M03"]');
   push(
     "P01-R2",
-    "AC-03.01-05(补2)",
+    "AC-03.01-05（补2）",
     "render",
     countState("M03") === "full" &&
       m03Add?.disabled === true &&
@@ -131,7 +131,7 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
   const m06Count = readSubPlots().filter((id) => id === "M06").length;
   push(
     "P01-R3",
-    "AC-03.01-05(补3)",
+    "AC-03.01-05（补3）",
     "render",
     countState("M06") === "added" && m06Add?.disabled === true && m06Count === 1,
     `M06 状态=${countState("M06")} disabled=${m06Add?.disabled} 副图 M06=${m06Count} 次`,
@@ -144,7 +144,7 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
   const plannedHint = q<HTMLElement>("[data-catalog-detail-hint], [data-fav-hint]")?.textContent?.trim() ?? "";
   push(
     "P01-R4",
-    "AC-03.01-05(补4)",
+    "AC-03.01-05（补4）",
     "render",
     countState("T06") === "planned" &&
       t06Add?.getAttribute("aria-disabled") === "true" &&
@@ -219,7 +219,7 @@ export async function runS030201Diagnostics() {
   );
   push(
     "P02-R3",
-    "AC-03.02-02(补1)",
+    "AC-03.02-02（补1）",
     "render",
     afterAdd[0] === "M03",
     `新收藏排在最前：首项 ${afterAdd[0] ?? "—"}`,
@@ -232,7 +232,7 @@ export async function runS030201Diagnostics() {
   const overflows = list ? list.scrollWidth > list.clientWidth + 1 : true;
   push(
     "P02-R4",
-    "AC-03.02-01(补3)",
+    "AC-03.02-01（补3）",
     "render",
     !overflows && chipIds().length === 8,
     `收藏区 ${chipIds().length} 项 / 横向溢出=${overflows}（scrollWidth ${list?.scrollWidth ?? 0} / clientWidth ${list?.clientWidth ?? 0}）`,
@@ -248,7 +248,7 @@ export async function runS030201Diagnostics() {
   const plannedHint = q<HTMLElement>("[data-fav-hint]")?.textContent?.trim() ?? "";
   push(
     "P02-R5",
-    "AC-03.02-01(补2)",
+    "AC-03.02-01（补2）",
     "render",
     t06Chip?.dataset.favStatus === "planned" &&
       plannedHint.includes("该指标规划中，本期未开放") &&
@@ -274,7 +274,7 @@ export async function runS030201Diagnostics() {
   const m03Rows = afterFive.favorites.filter((item) => item.indicatorId === "M03").length;
   push(
     "P02-D2",
-    "AC-03.02-01(补1)",
+    "AC-03.02-01（补1）",
     "data",
     m03Rows === 1 && afterFive.favorites.length === 9,
     `连续 5 次收藏 M03 → 行数 ${afterFive.favorites.length}，M03 唯一行 ${m03Rows}`,
@@ -287,7 +287,7 @@ export async function runS030201Diagnostics() {
   const again = await ipc.indicatorFavorites();
   push(
     "P02-D3",
-    "AC-03.02-01(补2)",
+    "AC-03.02-01（补2）",
     "data",
     emptied.favorites.length === 0 && again.favorites.length === 0,
     `全部移除后 ${emptied.favorites.length} 项；再次读取 ${again.favorites.length} 项（未重新播种）`,
@@ -354,7 +354,7 @@ export async function runS030302WorkbenchDiagnostics() {
   const help = await waitFor(() => q<SVGGElement>('[data-legend-help="M06"]'));
   push(
     "P03-R3",
-    "AC-03.03-03(补1)",
+    "AC-03.03-03（补1）",
     "render",
     Boolean(help) && q('[data-legend-help="M06"]')?.getAttribute("role") === "button",
     `工作台 MACD 图例「?」存在=${Boolean(help)} role=${help?.getAttribute("role") ?? "—"}`,
@@ -367,7 +367,7 @@ export async function runS030302WorkbenchDiagnostics() {
   const crumb = q<HTMLElement>("[data-catalog-breadcrumb]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
   push(
     "P03-R4",
-    "AC-03.03-03(补1)",
+    "AC-03.03-03（补1）",
     "render",
     crumb.includes("工作台") && crumb.includes("600519.SH") && crumb.includes("MACD"),
     `图例来源面包屑「${crumb}」/ hash ${window.location.hash}`,
@@ -380,7 +380,7 @@ export async function runS030302WorkbenchDiagnostics() {
   const viewportAfter = window.sessionStorage.getItem("aka.chart.viewport");
   push(
     "P03-R5",
-    "AC-03.03-03(补1)",
+    "AC-03.03-03（补1）",
     "render",
     subAfter === subBefore && subAfter.includes("M06") && viewportAfter === viewportBefore,
     `返回后副图 ${subBefore} → ${subAfter} / 视口记忆未变=${viewportAfter === viewportBefore}`,
@@ -395,7 +395,7 @@ export async function runS030302WorkbenchDiagnostics() {
   const drawerCrumb = q<HTMLElement>("[data-catalog-breadcrumb]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
   push(
     "P03-R6",
-    "AC-03.03-03(补2)",
+    "AC-03.03-03（补2）",
     "render",
     drawerCrumb.includes("工作台") && drawerCrumb.includes("600519.SH") && drawerCrumb.includes("MACD"),
     `抽屉来源面包屑「${drawerCrumb}」`,
@@ -406,7 +406,7 @@ export async function runS030302WorkbenchDiagnostics() {
   const drawerRestored = await waitFor(() => q("[data-drawer-body]"), 4_000).catch(() => null);
   push(
     "P03-R7",
-    "AC-03.03-03(补2)",
+    "AC-03.03-03（补2）",
     "render",
     drawerRestored !== null,
     `Esc 返回工作台后抽屉恢复=${drawerRestored !== null}`,
@@ -456,7 +456,7 @@ export async function runS060301Diagnostics() {
   const total = manifest.indicators.length;
   push(
     "P04-R2",
-    "AC-06.03-01(补1)",
+    "AC-06.03-01（补1）",
     "render",
     indicators === `${implemented}/${total}` && total === manifest.catalogTotal,
     `关于页 ${indicators} = manifest ${implemented}/${total}（declared ${manifest.catalogTotal}）`,
@@ -466,7 +466,7 @@ export async function runS060301Diagnostics() {
   const rebuild = q("[data-about-datadir-rebuild]") !== null;
   push(
     "P04-R3",
-    "AC-06.03-01(补3)",
+    "AC-06.03-01（补3）",
     "render",
     datadir.includes("data/sim") && state === "missing" && rebuild,
     `数据目录行「${datadir}」状态=${state} / 重建样本包入口=${rebuild}`,
@@ -478,7 +478,7 @@ export async function runS060301Diagnostics() {
     .filter((name) => /^https?:\/\//.test(name));
   push(
     "P04-R4",
-    "AC-06.03-01(补2)",
+    "AC-06.03-01（补2）",
     "runtime",
     external.length === 0,
     `关于页渲染期外部 http(s) 资源 ${external.length} 个${external.length ? `：${external.join(",")}` : ""}`,
@@ -531,7 +531,7 @@ export async function runS060302Diagnostics() {
   if (error !== "") {
     push(
       "P05-R2",
-      "AC-06.03-02(补2)",
+      "AC-06.03-02（补2）",
       "runtime",
       /磁盘空间不足/.test(error) && /可用/.test(error),
       `导出失败提示「${error}」`,
@@ -547,7 +547,7 @@ export async function runS060302Diagnostics() {
     );
     push(
       "P05-R3",
-      "AC-06.03-02(补3)",
+      "AC-06.03-02（补3）",
       "render",
       state !== "no-log" || pathText.includes("无日志"),
       state === "no-log" ? "路径行已注明「本次无日志」" : "本次有日志，形态见包内 app.log",
@@ -556,7 +556,7 @@ export async function runS060302Diagnostics() {
 
   push(
     "P05-R4",
-    "AC-06.03-02(补4)",
+    "AC-06.03-02（补4）",
     "runtime",
     after - before === 0,
     `导出期间外部 http(s) 资源 ${after - before} 个`,
