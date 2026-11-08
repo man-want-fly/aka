@@ -21,5 +21,6 @@ P19,S-04.02-02,V1,3.0,—,不可排,V1 不排期；恢复须先补 sector_member
 P20,S-09.01-01,P0,5.0,BA,非 dev,架构图集为文档交付物，不进 dev 编码线,card,0ed37d6
 P21,S-07.01-01,P0,2.5,—,已交付待签,代码已在 main（7b4f87e/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
 P22,S-07.04-01,P0,1.0,—,已交付待签,代码已在 main（048f16b/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
+P23,S-02.06-02,P0,2.0,dev B,在制,性能修复（W-114）：回切时延 291ms → ≤120ms；口径 warm.criterion / maxTotalMs，90 次样本，allCacheHit 与 allPointwiseMatch 不得退化；验收 s20602 红转绿且 indicator.compute 无新增；反例=改回旧实现必红,card,6654a51
 PG-P6,PAGE-P6,P0,—,dev B,已交付待签,页面层（W-99）骨架 eb1d5b6：与路由+布局空态+7 条 DOM 契约锚点，不含数据；逐卡验证，验过即合；骨架不得作任何数据 AC 证据,page,eb1d5b6
 PG-P7,PAGE-P7,P0,—,dev B,已交付待签,页面层（W-100）9df6957 后端 + af36f9e 前端：承载 S-05.01-01/02；逐卡验证，验过即合；合入后解阻 P14/P15/P18,page,af36f9e
