@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "aka-evidence-failure",
+  "suite": "s030104",
+  "ok": false,
+  "blocked": true,
+  "error": "步骤 collect 失败（exit 1）",
+  "step": "collect",
+  "stepCommand": "tee \"$DIAG_LOG\"",
+  "command": "app/scripts/evidence-run.sh s030104",
+  "exitCode": 1,
+  "finishedAt": "2026-11-10T02:11:49+08:00",
+  "logTail": "超时：240 秒内未生成新的 /Users/sixmillion/Library/Application Support/aka/diag/s030104-evidence.json\n/Users/sixmillion/Documents/AKA/app/scripts/diag-evidence.sh: line 341: 24416 Terminated: 15          AKA_DIAG=1 AKA_DIAG_TARGET=\"$TARGET\" env $EXTRA_ENV \"$APP_BIN\" $FLAGS\n"
+}
