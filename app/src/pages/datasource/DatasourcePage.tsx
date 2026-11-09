@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppShell } from "../../app/AppShell";
+import { AppShell, type RouteKey } from "../../app/AppShell";
 import { formatRowCount } from "../../features/workbench/datasetOverview";
 import { runS070102Diagnostics } from "../../features/qa/batchDiag";
 import { formatDateTime } from "../../lib/datetime";
@@ -15,7 +15,7 @@ import { BackfillSection } from "./BackfillSection";
 import { QualitySection } from "./QualitySection";
 
 interface Props {
-  onNavigate: (key: "workbench" | "market" | "catalog" | "settings" | "datasource" | "install") => void;
+  onNavigate: (key: RouteKey) => void;
 }
 
 const STATE_TEXT: Record<DatasourceStatusDto["state"], string> = {

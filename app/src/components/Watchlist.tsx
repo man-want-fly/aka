@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { diagExportFileName, readDiagExportMode } from "../lib/diagExport";
 import { describeError, ipc } from "../lib/ipc";
+import {
+  ADJ_CHANGE_EVENT,
+  ADJ_STORAGE_KEY,
+  positionTexts,
+  readAdjMode,
+  type AdjMode,
+} from "../features/watchlist/positions";
+import { maybeRunS010301 } from "../features/watchlist/s010301Diag";
 import { StarButton } from "./StarButton";
-import type { SecurityDto, WatchItemDto, WatchlistDto } from "../lib/types";
+import type { PositionDto, SecurityDto, WatchItemDto, WatchlistDto } from "../lib/types";
 
 interface Props {
   securities: SecurityDto[];
@@ -16,6 +24,13 @@ interface Props {
 }
 
 type WriteAction = () => Promise<unknown>;
+
+/** 当前复权口径下该标的的最新日线：根数用于「数据不足」，收盘价用于持仓派生，量 0 视为停牌。 */
+interface QuoteInfo {
+  count: number | null;
+  close: number | null;
+  suspended: boolean;
+}
 
 const ALL = "全部";
 const UNGROUPED = "未分组";
@@ -49,18 +64,30 @@ export function Watchlist({
   const [newGroup, setNewGroup] = useState("");
   const [renaming, setRenaming] = useState<{ name: string; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [barCounts, setBarCounts] = useState<Record<string, number | null>>({});
+  const [quotes, setQuotes] = useState<Record<string, QuoteInfo>>({});
   const [failedSecurity, setFailedSecurity] = useState<string | null>(null);
+  /** S-01.03-01：持仓记录、行内抽屉与复权口径提示 */
+  const [positions, setPositions] = useState<Record<string, PositionDto>>({});
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ security: string; cost: string; shares: string } | null>(
+    null,
+  );
+  const [fieldErrors, setFieldErrors] = useState<{ cost?: string; shares?: string }>({});
+  const [positionWriteError, setPositionWriteError] = useState<string | null>(null);
+  const [adj, setAdj] = useState<AdjMode>(() => readAdjMode());
+  const [adjChanged, setAdjChanged] = useState(false);
   const lastAction = useRef<WriteAction | null>(null);
   /** 与 lastAction 配对：重试时沿用同一条失败文案 */
   const lastFailureText = useRef<string | null>(null);
   const loadToken = useRef(0);
-  const barCountsRef = useRef<Record<string, number | null>>({});
+  const quoteRef = useRef<Record<string, QuoteInfo>>({});
+  const adjRef = useRef<AdjMode>(adj);
 
   const reload = async () => {
     try {
-      const data = await ipc.watchlist();
+      const [data, positionList] = await Promise.all([ipc.watchlist(), ipc.positions()]);
       setWatchlist(data);
+      setPositions(Object.fromEntries(positionList.map((position) => [position.security, position])));
       setReadError(null);
       setTraceId(null);
       setErrorCode("");
@@ -85,29 +112,67 @@ export function Watchlist({
   const items = watchlist?.items ?? [];
   const groups = watchlist?.groups ?? [];
 
-  // 可见标的的 K 线根数：用于「数据不足（<20）」判定，缺失按 null 处理
+  // S-01.03-01：监听工作台的复权切换（同一窗口用自定义事件，跨窗口用 storage）
+  useEffect(() => {
+    const apply = (next: AdjMode) => {
+      if (next === adjRef.current) return;
+      adjRef.current = next;
+      setAdj(next);
+      setAdjChanged(true);
+    };
+    const onAdjChange = (event: Event) => {
+      const next = (event as CustomEvent<AdjMode>).detail;
+      if (next === "none" || next === "qfq" || next === "hfq") apply(next);
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === ADJ_STORAGE_KEY) apply(readAdjMode());
+    };
+    window.addEventListener(ADJ_CHANGE_EVENT, onAdjChange);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(ADJ_CHANGE_EVENT, onAdjChange);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  // 当前复权口径下的最新日线：根数用于「数据不足（<20）」判定，收盘价用于持仓派生。
+  // 复权口径变化时按新口径重新取数，不复用旧口径的缓存。
   useEffect(() => {
     const codes = (watchlist?.items ?? [])
       .map((item) => item.security)
-      .filter((code) => !(code in barCountsRef.current));
+      .filter((code) => !(`${adj}|${code}` in quoteRef.current));
     if (codes.length === 0) return;
     const token = ++loadToken.current;
     void Promise.all(
       codes.map(async (code) => {
         try {
-          const response = await ipc.getBars({ security: code, timeframe: "D", adj: "qfq" });
-          return [code, response.bars.length] as const;
+          const response = await ipc.getBars({ security: code, timeframe: "D", adj });
+          const last = response.bars.length > 0 ? response.bars[response.bars.length - 1] : null;
+          return [
+            code,
+            {
+              count: response.bars.length,
+              close: last ? last.close : null,
+              suspended: last ? last.volume <= 0 : false,
+            },
+          ] as const;
         } catch {
-          return [code, null] as const;
+          return [code, { count: null, close: null, suspended: false }] as const;
         }
       }),
     ).then((rows) => {
       if (token !== loadToken.current) return;
-      const next = { ...barCountsRef.current };
-      for (const [code, count] of rows) next[code] = count;
-      barCountsRef.current = next;
-      setBarCounts(next);
+      const next = { ...quoteRef.current };
+      for (const [code, info] of rows) next[`${adj}|${code}`] = info;
+      quoteRef.current = next;
+      setQuotes(next);
     });
+  }, [watchlist, adj]);
+
+  // S-01.03-01 取证入口：只在 AKA_DIAG_TARGET=s010301 时触发
+  useEffect(() => {
+    if (!watchlist) return;
+    void maybeRunS010301();
   }, [watchlist]);
 
   const securityByCode = useMemo(
@@ -178,6 +243,71 @@ export function Watchlist({
       setConfirmDelete(null);
       setActiveGroup(ALL);
     });
+  };
+
+  // ---------- S-01.03-01 持仓 ----------
+  const openPositionEditor = (security: string) => {
+    const position = positions[security];
+    setEditing({
+      security,
+      cost: position ? String(position.costPrice) : "",
+      shares: position ? String(position.shares) : "",
+    });
+    setFieldErrors({});
+    setPositionWriteError(null);
+    setMenuFor(null);
+  };
+
+  const clearPosition = async (security: string) => {
+    setPositionWriteError(null);
+    try {
+      await ipc.deletePosition(security);
+      setEditing(null);
+      setMenuFor(null);
+      await reload();
+    } catch (err) {
+      setPositionWriteError(describeError(err).message);
+    }
+  };
+
+  const savePosition = async () => {
+    if (!editing) return;
+    const costText = editing.cost.trim();
+    const sharesText = editing.shares.trim();
+    // 卡面口径：清空两字段即删除该持仓记录
+    if (costText === "" && sharesText === "") {
+      await clearPosition(editing.security);
+      return;
+    }
+    const errors: { cost?: string; shares?: string } = {};
+    const cost = Number(costText);
+    const shares = Number(sharesText);
+    if (costText === "" || !Number.isFinite(cost) || cost <= 0) {
+      errors.cost = "成本价需大于 0";
+    } else if (cost > 10_000) {
+      errors.cost = "成本价需不超过 10000";
+    } else if (!/^\d+(\.\d{1,2})?$/.test(costText)) {
+      errors.cost = "成本价最多 2 位小数";
+    }
+    if (sharesText === "" || !/^\d+$/.test(sharesText) || shares <= 0) {
+      errors.shares = "持仓数量需为大于 0 的整数";
+    } else if (shares > 100_000_000) {
+      errors.shares = "持仓数量不能超过 1 亿股";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors({});
+    setPositionWriteError(null);
+    try {
+      await ipc.savePosition(editing.security, Math.round(cost * 100) / 100, shares);
+      setEditing(null);
+      setMenuFor(null);
+      await reload();
+    } catch (err) {
+      setPositionWriteError(describeError(err).message);
+    }
   };
 
   const visible = useMemo(() => {
@@ -494,69 +624,160 @@ export function Watchlist({
         </form>
       )}
 
+      {adjChanged && Object.keys(positions).length > 0 && (
+        <div className="wl-adj-notice" data-pos-adj-notice>
+          复权口径已变更，盈亏仅供参考
+        </div>
+      )}
+
       <div className="wl-list">
         {visible.map((item) => {
           const security = securityByCode.get(item.security);
-          const bars = barCounts[item.security];
+          const quote = quotes[`${adj}|${item.security}`];
+          const bars = quote === undefined ? undefined : quote.count;
           const missing = !security;
           // 「数据不足」= 在数据集内但拿不到可用行情：K 线 0~19 根，或读取失败（null）。
           // 与「不在数据集」同一数据源（securities 全量代码表 + 同一 provider 的 getBars），只是判据不同。
           const insufficient = !missing && (bars === null || (typeof bars === "number" && bars < 20));
           const unknown = !missing && bars === undefined;
+          const position = positions[item.security];
+          const texts = position
+            ? positionTexts(position, missing ? null : quote?.close ?? null)
+            : null;
+          const suspended = Boolean(position) && !missing && quote?.suspended === true;
           return (
-            <div
-              key={item.security}
-              className={`wl-row ${item.security === activeCode ? "active" : ""} ${
-                missing ? "wl-row--muted" : ""
-              }`}
-              data-wl-item={item.security}
-              data-wl-state={missing ? "missing" : insufficient ? "insufficient" : "normal"}
-            >
-              <button type="button" className="wl-row-main" onClick={() => onSelect(item.security)}>
-                <span className="wl-name">{security?.name ?? item.security}</span>
-                <span className="wl-code">{item.security}</span>
-                <span className="wl-board">{security?.board ?? "—"}</span>
-                {missing && (
-                  <span className="tag tag--warn" data-wl-badge="missing">
-                    不在数据集
-                  </span>
-                )}
-                {insufficient && (
-                  <span
-                    className="tag tag--info"
-                    data-wl-badge="insufficient"
-                    title={bars === null ? "行情读取失败，按数据不足处理" : `可用 K 线 ${bars} 根，不足 20 根`}
-                  >
-                    数据不足
-                  </span>
-                )}
-                {insufficient && <span className="wl-quote">—</span>}
-                {unknown && <span className="wl-quote">—</span>}
-                {failedSecurity === item.security && (
-                  <span className="tag tag--warn" data-wl-badge="unsaved">
-                    未保存
-                  </span>
-                )}
-              </button>
-              {!insufficient &&
-                (missing ? (
+            <div className="wl-entry" key={item.security}>
+              <div
+                className={`wl-row ${item.security === activeCode ? "active" : ""} ${
+                  missing ? "wl-row--muted" : ""
+                }`}
+                data-wl-item={item.security}
+                data-wl-state={missing ? "missing" : insufficient ? "insufficient" : "normal"}
+              >
+                <button
+                  type="button"
+                  className="wl-row-main"
+                  onClick={() => {
+                    setMenuFor(null);
+                    onSelect(item.security);
+                  }}
+                >
+                  <span className="wl-name">{security?.name ?? item.security}</span>
+                  <span className="wl-code">{item.security}</span>
+                  <span className="wl-board">{security?.board ?? "—"}</span>
+                  {missing && (
+                    <span className="tag tag--warn" data-wl-badge="missing">
+                      不在数据集
+                    </span>
+                  )}
+                  {insufficient && (
+                    <span
+                      className="tag tag--info"
+                      data-wl-badge="insufficient"
+                      title={bars === null ? "行情读取失败，按数据不足处理" : `可用 K 线 ${bars} 根，不足 20 根`}
+                    >
+                      数据不足
+                    </span>
+                  )}
+                  {suspended && (
+                    <span className="tag tag--info" data-pos-suspended>
+                      停牌
+                    </span>
+                  )}
+                  {insufficient && <span className="wl-quote">—</span>}
+                  {unknown && <span className="wl-quote">—</span>}
+                  {failedSecurity === item.security && (
+                    <span className="tag tag--warn" data-wl-badge="unsaved">
+                      未保存
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="wl-more"
+                  data-pos-menu={item.security}
+                  aria-label={`持仓操作 ${item.security}`}
+                  title="持仓"
+                  onClick={() =>
+                    setMenuFor((current) => (current === item.security ? null : item.security))
+                  }
+                >
+                  ⋯
+                </button>
+                {!insufficient &&
+                  (missing ? (
+                    <button
+                      type="button"
+                      className="wl-remove"
+                      data-wl-remove={item.security}
+                      title="移出自选"
+                      onClick={() => removeItem(item)}
+                    >
+                      ×
+                    </button>
+                  ) : (
+                    <StarButton
+                      code={item.security}
+                      name={security?.name ?? ""}
+                      watched
+                      onToggle={() => removeItem(item)}
+                    />
+                  ))}
+              </div>
+
+              {menuFor === item.security && (
+                <div className="wl-pos-menu" data-pos-menu-panel={item.security}>
                   <button
                     type="button"
-                    className="wl-remove"
-                    data-wl-remove={item.security}
-                    title="移出自选"
-                    onClick={() => removeItem(item)}
+                    data-pos-edit={item.security}
+                    onClick={() => openPositionEditor(item.security)}
                   >
-                    ×
+                    填写持仓
                   </button>
-                ) : (
-                  <StarButton
-                    code={item.security}
-                    name={security?.name ?? ""}
-                    watched
-                    onToggle={() => removeItem(item)}
-                  />
-                ))}
+                  {position && (
+                    <button
+                      type="button"
+                      data-pos-clear={item.security}
+                      onClick={() => void clearPosition(item.security)}
+                    >
+                      清除持仓
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {texts && (
+                <div className="wl-pos" data-pos={item.security}>
+                  <div className="wl-pos__cell" data-pos-cell="costPrice">
+                    <i>成本价</i>
+                    <b>{texts.costPrice}</b>
+                  </div>
+                  <div className="wl-pos__cell" data-pos-cell="shares">
+                    <i>数量</i>
+                    <b>{texts.shares}</b>
+                  </div>
+                  <div className="wl-pos__cell" data-pos-cell="marketValue">
+                    <i>市值</i>
+                    <b>{texts.marketValue}</b>
+                  </div>
+                  <div
+                    className={`wl-pos__cell ${texts.sign}`}
+                    data-pos-cell="pnl"
+                    data-pos-sign={texts.sign}
+                  >
+                    <i>浮盈亏</i>
+                    <b>{texts.pnl}</b>
+                  </div>
+                  <div
+                    className={`wl-pos__cell ${texts.sign}`}
+                    data-pos-cell="pnlPct"
+                    data-pos-sign={texts.sign}
+                  >
+                    <i>盈亏比例</i>
+                    <b>{texts.pnlPct}</b>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -596,6 +817,69 @@ export function Watchlist({
           </div>
         )}
       </div>
+
+      {editing && (
+        <div className="wl-drawer" data-pos-drawer={editing.security} role="dialog" aria-label="填写持仓">
+          <div className="wl-drawer__head">
+            <b>填写持仓</b>
+            <button
+              type="button"
+              className="wl-drawer__close"
+              data-pos-close
+              aria-label="关闭"
+              onClick={() => setEditing(null)}
+            >
+              ×
+            </button>
+          </div>
+          <span className="wl-code">{editing.security}</span>
+          <label className="wl-drawer__field">
+            <span>成本价（元）</span>
+            <input
+              data-pos-input="cost"
+              inputMode="decimal"
+              autoFocus
+              value={editing.cost}
+              aria-invalid={Boolean(fieldErrors.cost)}
+              onChange={(event) => setEditing({ ...editing, cost: event.target.value })}
+            />
+            {fieldErrors.cost && (
+              <em className="wl-hint wl-hint--error" data-pos-error="cost">
+                {fieldErrors.cost}
+              </em>
+            )}
+          </label>
+          <label className="wl-drawer__field">
+            <span>持仓数量（股）</span>
+            <input
+              data-pos-input="shares"
+              inputMode="numeric"
+              value={editing.shares}
+              aria-invalid={Boolean(fieldErrors.shares)}
+              onChange={(event) => setEditing({ ...editing, shares: event.target.value })}
+            />
+            {fieldErrors.shares && (
+              <em className="wl-hint wl-hint--error" data-pos-error="shares">
+                {fieldErrors.shares}
+              </em>
+            )}
+          </label>
+          <p className="wl-drawer__hint">清空两个字段后保存＝删除该持仓记录</p>
+          {positionWriteError && (
+            <em className="wl-hint wl-hint--error" data-pos-write-error>
+              {positionWriteError}
+            </em>
+          )}
+          <div className="wl-drawer__actions">
+            <button type="button" data-pos-save onClick={() => void savePosition()}>
+              保存
+            </button>
+            <button type="button" data-pos-cancel onClick={() => setEditing(null)}>
+              取消
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

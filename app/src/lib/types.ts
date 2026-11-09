@@ -339,6 +339,30 @@ export interface DataHealthDto {
   datasetId: string | null;
 }
 
+/** S-08.02-03：启动数据集校验失败分类 */
+export type DatasetErrorCode =
+  | "MISSING_DIR"
+  | "MANIFEST_INVALID"
+  | "REQUIRED_TABLE_MISSING"
+  | "SHA256_MISMATCH"
+  | "DB_CORRUPT";
+
+export type DatasetFaultValue = "none" | "missing" | "manifest" | "table" | "sha" | "db";
+
+/** S-08.02-03：启动校验结果；blocked 时只渲染全屏错误卡 */
+export interface DatasetIntegrityDto {
+  state: "ok" | "blocked";
+  errorCode: DatasetErrorCode | null;
+  title: string | null;
+  detail: string | null;
+  traceId: string;
+  datasetPath: string;
+  /** 是否允许「只读浏览」 */
+  readable: boolean;
+  checkedAt: number;
+  datasetId: string | null;
+}
+
 /** S-07.05-01：质量检查报告 */
 export interface QualityExampleDto {
   security: string;
