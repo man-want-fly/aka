@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "aka-evidence-failure",
+  "suite": "s030104",
+  "ok": false,
+  "blocked": true,
+  "error": "步骤 collect 失败（exit 2）",
+  "step": "collect",
+  "stepCommand": "tee \"$DIAG_LOG\"",
+  "command": "app/scripts/evidence-run.sh s030104",
+  "exitCode": 2,
+  "finishedAt": "2026-11-10T02:40:08+08:00",
+  "logTail": "::error::dump 缺 checks[]，无法聚合归属\n/Users/sixmillion/Documents/AKA/app/scripts/diag-evidence.sh: line 608: 44446 Terminated: 15          AKA_DIAG=1 AKA_DIAG_TARGET=\"$TARGET\" env $EXTRA_ENV \"$APP_BIN\" $FLAGS\n"
+}
