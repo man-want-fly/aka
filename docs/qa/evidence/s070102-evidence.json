@@ -1,7 +1,7 @@
 {
   "suite": "s070102",
   "ok": true,
-  "finishedAt": "2026-11-08T14:05:16.808Z",
+  "finishedAt": "2026-11-09T17:45:50.385Z",
   "checks": [
     {
       "id": "P07-R1",
@@ -25,7 +25,7 @@
       "ac": "AC-07.01-02",
       "layer": "render",
       "passed": true,
-      "detail": "汇总「6/6 通过 · 总耗时 292 ms · 2026-11-08 22:05:16」"
+      "detail": "manifestCorrupt=false · 汇总「6/6 通过 · 总耗时 151 ms · 2026-11-10 01:45:50」"
     },
     {
       "id": "P07-R4",
@@ -33,7 +33,7 @@
       "ac": "AC-07.01-02",
       "layer": "runtime",
       "passed": true,
-      "detail": "耗时 463 ms / 错误「」/ health.check 新增 1 条（期望 1）"
+      "detail": "耗时 206 ms / 错误「」/ health.check 新增 1 条（期望 1）"
     },
     {
       "id": "P07-R5",
@@ -62,7 +62,7 @@
   ],
   "card": "S-07.01-02",
   "env": {
-    "commit": "6259b9f881244bf647e76a10fa479e1587a860f0",
+    "commit": "e513370ba9563a8af2ecf6aafc6a22269680035c",
     "dirty": false,
     "runtime": {
       "launchMode": "cargo+custom-protocol",
@@ -74,14 +74,14 @@
     },
     "build": {
       "entry": "dist/index.html",
-      "builtAt": "2026-11-08T14:04:54.646Z",
+      "builtAt": "2026-11-09T17:45:33.054Z",
       "cargoProfile": "dev",
       "features": [
         "tauri/custom-protocol"
       ],
       "binary": {
         "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
-        "sha256": "696ddb1631a9adc3a995f3ba9b7a77da875b23253b017d7a98a2f15f1e7a37c8"
+        "sha256": "7fe1cfd645d8cc681722009cc6eaf54edb2cd70fd0f20e2f844a213564fb5f66"
       }
     },
     "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s070102\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"

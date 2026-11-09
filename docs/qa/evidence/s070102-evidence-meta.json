@@ -1,8 +1,8 @@
 {
   "suite": "s070102",
-  "label": "20261108-220512",
-  "runAt": "2026-11-08T22:05:18+08:00",
-  "commit": "6259b9f881244bf647e76a10fa479e1587a860f0",
+  "label": "20261110-014546",
+  "runAt": "2026-11-10T01:45:52+08:00",
+  "commit": "e513370ba9563a8af2ecf6aafc6a22269680035c",
   "dirty": false,
   "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s070102\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
   "fixture": "默认 state.db；P9 健康检查全 PASS 路径 + tushare 0/4 禁用卡；只读，不改库",
@@ -20,9 +20,9 @@
     "otherCards": []
   },
   "dump": {
-    "archived": "docs/qa/raw/s070102-evidence-6259b9f88124-20261108-220512.json",
-    "sha256": "be56be6bfa0cf99b7f2e83e33ed53670cb1a5faeb21a237274409b7ef491b8ea",
-    "finishedAt": "2026-11-08T14:05:16.808Z"
+    "archived": "docs/qa/raw/s070102-evidence-e513370ba956-20261110-014546.json",
+    "sha256": "8f35618497aef9e92657049cb4e416fc7643f42cfb103e9e5c181428cf3d9b25",
+    "finishedAt": "2026-11-09T17:45:50.385Z"
   },
   "runtime": {
     "launchMode": "cargo+custom-protocol",
@@ -34,14 +34,14 @@
   },
   "build": {
     "entry": "dist/index.html",
-    "builtAt": "2026-11-08T14:04:54.646Z",
+    "builtAt": "2026-11-09T17:45:33.054Z",
     "cargoProfile": "dev",
     "features": [
       "tauri/custom-protocol"
     ],
     "binary": {
       "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
-      "sha256": "696ddb1631a9adc3a995f3ba9b7a77da875b23253b017d7a98a2f15f1e7a37c8"
+      "sha256": "7fe1cfd645d8cc681722009cc6eaf54edb2cd70fd0f20e2f844a213564fb5f66"
     }
   },
   "reproduce": "app/scripts/evidence-run.sh s070102"
