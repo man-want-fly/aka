@@ -1,3 +1,2 @@
 id,gate,scope,detail,opened,owner,expiry,remove_when
-R-001,verify:evidence,s2-evidence.json,b2Render.latency 缺失（W-93 卡面第 4 条；BA 重跑 s2 后应齐备）,2026-11-08,BA,2026-11-22,BA 重跑 s2 且 latency 七字段齐备后删除本行
 R-002,history,983e63d / 97c3b52,合并提交正文缺被合并 SHA（不改写历史，不阻断 tip）,2026-11-08,TL,2099-12-31,永久记录（历史提交信息，不适用删除）
