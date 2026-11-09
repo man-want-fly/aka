@@ -268,6 +268,14 @@ PY
     FIXTURE="默认 state.db；任意页唤起 ⌘K 搜索浮层，输入 300750 / 宁德 / ndsd 三次均命中 300750.SZ（AC-05.01-01），搜索期 0 外部请求（AC-05.01-04）；只读，不改库"
     BAK=""
     ;;
+  s020801)
+    TARGET="s020801"
+    JSON="$DIAG_DIR/s020801-evidence.json"
+    NAME="s020801-evidence"
+    FLAGS="--missing-manifest-sha256"
+    FIXTURE="默认 state.db；--missing-manifest-sha256（trigger=injected）让 dataset_manifest 只清 sha256、其余 8 字段原样，验证工作台页脚「只缺一段、其余 6 段正常」（AC-02.08-01（补2））；只读，不改库"
+    BAK=""
+    ;;
   *)
     echo "未知套件：$SUITE" >&2
     exit 2

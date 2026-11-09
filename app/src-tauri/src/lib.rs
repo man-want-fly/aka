@@ -46,6 +46,7 @@ fn faults_from_args(args: &[String]) -> DiagFaults {
         read_only_db: diag_flag(args, "--readonly-db"),
         manifest_corrupt: diag_flag(args, "--corrupt-manifest"),
         manifest_missing: diag_flag(args, "--missing-dataset-manifest"),
+        manifest_sha256_missing: diag_flag(args, "--missing-manifest-sha256"),
         // S-08.02-02：`--inject=timeout|panic|data`；生效一次后自动回落 none。
         inject: if diag_enabled() {
             args.iter()
