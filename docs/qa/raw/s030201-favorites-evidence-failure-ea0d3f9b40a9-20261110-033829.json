@@ -1,0 +1,19 @@
+{
+  "suite": "s030201",
+  "ok": false,
+  "error": "套件异常中断：等待超时",
+  "commit": "ea0d3f9b40a9e06eda061f69527bfd456afe7029",
+  "finishedAt": "2026-11-09T19:38:24.988Z",
+  "checks": [],
+  "blocked": [
+    {
+      "ac": "suite-runner",
+      "blocker": "run-s030201",
+      "reason": "套件异常中断：等待超时",
+      "skipped": false
+    }
+  ],
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": null
+}
