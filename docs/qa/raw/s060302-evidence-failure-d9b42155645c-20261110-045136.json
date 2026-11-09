@@ -1,0 +1,70 @@
+{
+  "suite": "s060302",
+  "ok": false,
+  "finishedAt": "2026-11-09T20:51:40.690Z",
+  "checks": [
+    {
+      "id": "P05-R1",
+      "card": "S-06.03-02",
+      "ac": "AC-06.03-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "按钮可用=true / 说明「含版本、日志、最近 200 条命令与配置快照；不含自选、搜索历史与行情原始数据，全程不上传。」"
+    },
+    {
+      "id": "P05-R2",
+      "card": "S-06.03-02",
+      "ac": "AC-06.03-02",
+      "layer": "runtime",
+      "passed": false,
+      "detail": "路径=/Users/sixmillion/Downloads/aka-diagnostics-1794257500404.zip / 状态=success"
+    },
+    {
+      "id": "P05-R3",
+      "card": "S-06.03-02",
+      "ac": "AC-06.03-02（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "本次有日志，形态见包内 app.log"
+    },
+    {
+      "id": "P05-R4",
+      "card": "S-06.03-02",
+      "ac": "AC-06.03-02（补4）",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "导出期间外部 http(s) 资源 0 个"
+    }
+  ],
+  "card": "S-06.03-02",
+  "env": {
+    "commit": "d9b42155645c073e2d43e5dba1f76e4f85a9f101",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-09T20:51:23.175Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+        "sha256": "c3d7615491fad5c7a344b2b07a9ae8131d82ae3016f004e24b5620fcbd7e59aa"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s060302\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}

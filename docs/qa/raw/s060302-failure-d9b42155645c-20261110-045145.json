@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "aka-evidence-failure",
+  "suite": "s060302",
+  "ok": false,
+  "blocked": true,
+  "error": "步骤 collect 失败（exit 2）",
+  "step": "collect",
+  "stepCommand": "tee \"$DIAG_LOG\"",
+  "command": "app/scripts/evidence-run.sh s060302",
+  "exitCode": 2,
+  "finishedAt": "2026-11-10T04:51:45+08:00",
+  "logTail": "自选已有 2 条，无需注入\n已归档：/Users/sixmillion/Documents/AKA/app/../docs/qa/evidence/s060302-evidence.json\n已归档：/Users/sixmillion/Documents/AKA/app/../docs/qa/evidence/s060302-evidence-meta.json\nok=False layers=None blocked=0 commit=d9b42155645c073e2d43e5dba1f76e4f85a9f101 dirty=False\nEVIDENCE_META=/Users/sixmillion/Documents/AKA/app/../docs/qa/evidence/s060302-evidence-meta.json\n/Users/sixmillion/Documents/AKA/app/scripts/diag-evidence.sh: line 608: 59304 Terminated: 15          AKA_DIAG=1 AKA_DIAG_TARGET=\"$TARGET\" env $EXTRA_ENV \"$APP_BIN\" $FLAGS\nstate.db 已还原：/tmp/aka-state-s060302-20261110-045136.db\n"
+}
