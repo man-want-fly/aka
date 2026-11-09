@@ -1,0 +1,70 @@
+{
+  "suite": "s060301",
+  "ok": true,
+  "finishedAt": "2026-11-09T20:56:31.982Z",
+  "checks": [
+    {
+      "id": "P04-R1",
+      "card": "S-06.03-01",
+      "ac": "AC-06.03-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "版本 0.0.0 / 构建 dev / 引擎 aka-engine-0.1.0 / 指标 45/105 / 目录 ~/Library/Application Support/AKA/data/sim / 通道 stable（按钮 0）/ 许可 internal-evaluation"
+    },
+    {
+      "id": "P04-R2",
+      "card": "S-06.03-01",
+      "ac": "AC-06.03-01（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "关于页 45/105 = manifest 45/105（declared 105）"
+    },
+    {
+      "id": "P04-R3",
+      "card": "S-06.03-01",
+      "ac": "AC-06.03-01（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "数据目录行「~/Library/Application Support/AKA/data/sim」状态=missing / 重建样本包入口=true"
+    },
+    {
+      "id": "P04-R4",
+      "card": "S-06.03-01",
+      "ac": "AC-06.03-01（补2）",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "关于页渲染期外部 http(s) 资源 0 个"
+    }
+  ],
+  "card": "S-06.03-01",
+  "env": {
+    "commit": "32ac0b66d45e6f6347a12b1ba47ba4cbb37a4cb7",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-09T20:56:18.219Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+        "sha256": "aa312e08d7e1dcb0440b82a2ceffaec89fc1b55b3ca186fe5780090e1f41114b"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s060301\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}
