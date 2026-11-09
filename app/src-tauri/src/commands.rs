@@ -192,6 +192,28 @@ pub async fn data_health_check(
     })
 }
 
+/// S-08.02-03：启动数据集校验；失败时前端只渲染全屏错误卡。
+#[tauri::command]
+pub async fn dataset_integrity(
+    state: State<'_, AppState>,
+) -> Result<app_core::DatasetIntegrityDto, AppError> {
+    tracked!(state, "dataset_integrity", {
+        Ok(state.core.dataset_integrity(state.faults().dataset_fault))
+    })
+}
+
+/// S-08.02-03：进入/退出只读浏览（内存态，不写 state.db）。
+#[tauri::command]
+pub async fn dataset_set_readonly(
+    state: State<'_, AppState>,
+    read_only: bool,
+) -> Result<bool, AppError> {
+    tracked!(state, "dataset_set_readonly", {
+        state.set_read_only(read_only);
+        Ok(read_only)
+    })
+}
+
 /// S-08.02-02：单次指标计算超时阈值（与错误态规范一致）。
 const CALC_TIMEOUT_MS: u64 = 8_000;
 

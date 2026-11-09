@@ -17,8 +17,8 @@ use indicator_core::{
 
 use crate::dto::{
     BarDto, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
-    DatasetVersionDto, DataHealthDto, DataHealthItemDto, DatasourceCapabilityDto, DatasourceOpsDto,
-    DatasourceStatusDto,
+    DatasetFault, DatasetIntegrityDto, DatasetVersionDto, DataHealthDto, DataHealthItemDto,
+    DatasourceCapabilityDto, DatasourceOpsDto, DatasourceStatusDto,
     GetBarsRequest, IndicatorFavoriteDto, IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto,
     ListSecuritiesRequest, MarketRowDto,
     MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto,
@@ -28,7 +28,7 @@ use crate::dto::{
 };
 use serde_json::Value;
 
-use crate::error::{AppError, ErrorCode};
+use crate::error::{trace_id, AppError, ErrorCode};
 use crate::quality::{self, SecurityQualityInput};
 use crate::telemetry::{
     Telemetry, EVENT_CACHE_HIT, EVENT_CACHE_MISS, EVENT_COMPUTE_COUNT, EVENT_COMPUTE_SKIP,
@@ -45,6 +45,11 @@ pub const EVENT_HEALTH_CHECK: &str = "health.check";
 pub const EVENT_CALC_TIMEOUT: &str = "calc.timeout";
 /// S-08.02-02：引擎异常（trace id / 指标）。
 pub const EVENT_CALC_PANIC: &str = "calc.panic";
+/// S-08.02-03：启动校验失败（错误分类 / trace id / 数据集路径）。
+pub const EVENT_DATASET_ERROR: &str = "dataset.error";
+
+/// 数据集目录（页面展示与重建提示共用）。
+pub const DATASET_PATH: &str = "~/Library/Application Support/aka/data/sim";
 
 /// 自选上限（跨分组按标的去重计数）
 pub const WATCHLIST_LIMIT: i64 = 500;
@@ -1362,6 +1367,114 @@ impl AppCore {
             dataset_id: Some(manifest.dataset_id.clone()),
         })
     }
+    /// S-08.02-03：启动校验（只读、0 网络）。
+    ///
+    /// 分类顺序固定：目录 → manifest → 必需表 → sha256 → DB。
+    /// `readable` 为真时前端才给「只读浏览」；`DB_CORRUPT` 允许只读展示可读部分。
+    pub fn dataset_integrity(&self, fault: DatasetFault) -> DatasetIntegrityDto {
+        let checked_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .unwrap_or(0);
+        let manifest = self.dataset_manifest();
+        let mut report = DatasetIntegrityDto {
+            state: "ok",
+            error_code: None,
+            title: None,
+            detail: None,
+            trace_id: trace_id(),
+            dataset_path: DATASET_PATH.to_string(),
+            readable: false,
+            checked_at,
+            dataset_id: manifest.as_ref().map(|m| m.dataset_id.clone()),
+        };
+
+        if fault == DatasetFault::Missing || manifest.is_none() {
+            report.state = "blocked";
+            report.error_code = Some("MISSING_DIR");
+            report.title = Some("数据集未找到");
+            report.detail = Some("数据集目录不存在，或未装配任何数据".to_string());
+            return self.finish_dataset_integrity(report);
+        }
+        let manifest = manifest.expect("missing 分支已返回");
+
+        let manifest_ok = fault != DatasetFault::Manifest
+            && !manifest.dataset_id.trim().is_empty()
+            && manifest.row_count > 0
+            && Date::parse(&manifest.coverage_start).is_some()
+            && Date::parse(&manifest.coverage_end).is_some()
+            && manifest.sha256.len() == 64
+            && manifest.sha256.chars().all(|ch| ch.is_ascii_hexdigit());
+        if !manifest_ok {
+            report.state = "blocked";
+            report.error_code = Some("MANIFEST_INVALID");
+            report.title = Some("数据集描述文件损坏");
+            report.detail = Some("manifest 字段缺失或格式不合法".to_string());
+            return self.finish_dataset_integrity(report);
+        }
+
+        let caps = self.provider.capabilities();
+        let tables_ok =
+            caps.securities && caps.daily_bars && caps.adjust_factors && caps.trading_calendar;
+        if fault == DatasetFault::Table || !tables_ok {
+            report.state = "blocked";
+            report.error_code = Some("REQUIRED_TABLE_MISSING");
+            report.title = Some("必需数据表缺失");
+            report.detail = Some("主数据 / 日线 / 复权 / 日历至少一项不可用".to_string());
+            return self.finish_dataset_integrity(report);
+        }
+
+        let short = |text: &str| text[..12.min(text.len())].to_string();
+        let digest = self.provider.dataset_digest();
+        let matched = digest
+            .as_ref()
+            .map(|(sha, rows)| sha == &manifest.sha256 && *rows == manifest.row_count)
+            .unwrap_or(true);
+        if fault == DatasetFault::Sha || !matched {
+            report.state = "blocked";
+            report.error_code = Some("SHA256_MISMATCH");
+            report.title = Some("数据集校验失败");
+            report.readable = true;
+            report.detail = Some(match &digest {
+                Some((sha, rows)) => format!(
+                    "manifest {}（{} 行），复算 {}（{} 行）",
+                    short(&manifest.sha256),
+                    manifest.row_count,
+                    short(sha),
+                    rows
+                ),
+                None => "manifest 与实际数据摘要不一致".to_string(),
+            });
+            return self.finish_dataset_integrity(report);
+        }
+
+        if fault == DatasetFault::Db {
+            report.state = "blocked";
+            report.error_code = Some("DB_CORRUPT");
+            report.title = Some("数据文件损坏");
+            report.readable = true;
+            report.detail = Some("部分数据不可读，仅展示可读部分".to_string());
+            return self.finish_dataset_integrity(report);
+        }
+
+        self.finish_dataset_integrity(report)
+    }
+
+    /// 校验失败落 `dataset.error`（只记分类 / trace id / 路径，不记用户数据）。
+    fn finish_dataset_integrity(&self, report: DatasetIntegrityDto) -> DatasetIntegrityDto {
+        if let Some(code) = report.error_code {
+            self.telemetry.emit(
+                EVENT_DATASET_ERROR,
+                vec![
+                    ("type", serde_json::json!(code)),
+                    ("traceId", serde_json::json!(report.trace_id)),
+                    ("path", serde_json::json!(report.dataset_path)),
+                ],
+            );
+        }
+        report
+    }
+
     pub fn quality_report(&self) -> Option<QualityReportDto> {
         let current = self.current_dataset_id();
         let mut guard = self.quality_report.lock().ok()?;
@@ -2646,6 +2759,56 @@ mod tests {
         assert_eq!(report.items[1].error_code, Some("E_MANIFEST_CORRUPT"));
         assert!(report.items[2..].iter().all(|item| item.status == "SKIP"));
         assert_eq!(report.passed, 1);
+    }
+
+    /// S-08.02-03：正常数据集 → ok，且不落 dataset.error。
+    #[tokio::test]
+    async fn dataset_integrity_ok_on_mock() {
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core.dataset_integrity(DatasetFault::None);
+
+        assert_eq!(report.state, "ok");
+        assert!(report.error_code.is_none());
+        assert!(!report.readable, "正常数据集不进入只读浏览");
+        assert!(report.trace_id.starts_with("TR-"));
+        assert_eq!(report.dataset_path, DATASET_PATH);
+        assert!(report.dataset_id.is_some());
+        let events = core.telemetry().summary(10);
+        assert!(
+            !events.recent.iter().any(|event| event.name == EVENT_DATASET_ERROR),
+            "正常启动不应落 dataset.error"
+        );
+    }
+
+    /// AC-08.02-03 / 补1：五类错误分类互斥，只有 sha256 与 DB 损坏允许只读浏览。
+    #[tokio::test]
+    async fn dataset_integrity_classifies_faults() {
+        let core = AppCore::new_mock().await.unwrap();
+        for (fault, code, readable) in [
+            (DatasetFault::Missing, "MISSING_DIR", false),
+            (DatasetFault::Manifest, "MANIFEST_INVALID", false),
+            (DatasetFault::Table, "REQUIRED_TABLE_MISSING", false),
+            (DatasetFault::Sha, "SHA256_MISMATCH", true),
+            (DatasetFault::Db, "DB_CORRUPT", true),
+        ] {
+            let report = core.dataset_integrity(fault);
+            assert_eq!(report.state, "blocked", "{code} 必须阻断启动");
+            assert_eq!(report.error_code, Some(code));
+            assert_eq!(report.readable, readable, "{code} 只读可用性不符");
+            assert!(report.title.is_some(), "{code} 缺少错误卡标题");
+            assert!(report.detail.is_some(), "{code} 缺少错误说明");
+        }
+
+        let events = core.telemetry().summary(20);
+        assert_eq!(
+            events
+                .recent
+                .iter()
+                .filter(|event| event.name == EVENT_DATASET_ERROR)
+                .count(),
+            5,
+            "每次校验失败都应落一条 dataset.error"
+        );
     }
 
     #[tokio::test]
