@@ -769,3 +769,208 @@ export async function runS020801Diagnostics() {
   await writeBatchReport("s020801-evidence.json", "s020801", report);
   return report;
 }
+
+/**
+ * P15：S-05.01-02 键盘操作 / 无结果 / 最近查看 取证套件。
+ *
+ * 与 P14 的 runS050101Diagnostics 同构：产品实现（SearchOverlay.tsx 的键盘、
+ * 无结果、最近查看与指数快捷入口）已随 W-100 进入 main，本卡补齐 s050102
+ * 套件入口与卡面 7 条 AC 的断言，为 BA 运行层取证清障（§5.8 L260）。
+ * dev 只写入口与断言，不自出运行层证据。
+ *
+ * 每条判定表达式集中引用 obs（DOM 采集的只读观察量），由 verify_s050102.mjs
+ * 从本函数派生后注入正例/反例/变异验证（制度第 29 条）：断言必须能判红。
+ */
+interface S050102Observed {
+  downSelectedSecond: boolean;
+  enterOpenedSecond: boolean;
+  escClearedInput: boolean;
+  upAtFirstStaysFirst: boolean;
+  escClosedOverlay: boolean;
+  reopenInputEmpty: boolean;
+  reopenShowsRecent: boolean;
+  shortcutCount: number;
+  hasRecentPlaceholder: boolean;
+  queryPreserved: boolean;
+  notFoundShown: boolean;
+  clearActionShown: boolean;
+  marketActionShown: boolean;
+  noSkeleton: boolean;
+  noIrrelevantResults: boolean;
+  emptyEnterOverlayOpen: boolean;
+  emptyEnterInputUnchanged: boolean;
+  emptyEnterNoOpen: boolean;
+  clearInputEmpty: boolean;
+  clearBackToIdleRecent: boolean;
+  clearBackToIdleShortcut: boolean;
+}
+
+const emptyS050102Observed = (): S050102Observed => ({
+  downSelectedSecond: false,
+  enterOpenedSecond: false,
+  escClearedInput: false,
+  upAtFirstStaysFirst: false,
+  escClosedOverlay: false,
+  reopenInputEmpty: false,
+  reopenShowsRecent: false,
+  shortcutCount: 0,
+  hasRecentPlaceholder: true,
+  queryPreserved: false,
+  notFoundShown: false,
+  clearActionShown: false,
+  marketActionShown: false,
+  noSkeleton: false,
+  noIrrelevantResults: false,
+  emptyEnterOverlayOpen: false,
+  emptyEnterInputUnchanged: false,
+  emptyEnterNoOpen: false,
+  clearInputEmpty: false,
+  clearBackToIdleRecent: false,
+  clearBackToIdleShortcut: false,
+});
+
+export async function runS050102Diagnostics() {
+  const report = { ...baseReport("s050102"), card: "S-05.01-02" };
+  const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
+    report.checks.push({ id, card: "S-05.01-02", ac, layer, passed, detail });
+  };
+
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  const inputOf = () => q<HTMLInputElement>("[data-search-input]");
+  const overlayPresent = () => Boolean(q("[data-search-overlay]"));
+  const resultRows = () => qa<HTMLElement>("[data-search-result]");
+  const activeIndex = () => resultRows().findIndex((row) => row.getAttribute("aria-selected") === "true");
+  const inputValue = () => inputOf()?.value ?? "";
+  const typeInto = async (text: string) => {
+    const input = inputOf();
+    if (input && setter) {
+      setter.call(input, text);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    await sleep(160);
+  };
+  const pressKey = async (key: string) => {
+    const input = inputOf();
+    if (input) input.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    await sleep(90);
+  };
+  const reopen = async () => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await sleep(60);
+    window.dispatchEvent(new CustomEvent("aka:search-open"));
+    await waitFor(() => q("[data-search-overlay]"));
+    await sleep(160);
+  };
+
+  const obs = emptyS050102Observed();
+
+  // 场景 A（AC-05.01-02 / 补1 / 补2）：唤起 → 输入出 ≥2 结果 → ↓/↑/Enter → Esc → 再唤起。
+  window.dispatchEvent(new CustomEvent("aka:search-open"));
+  await waitFor(() => q("[data-search-overlay]"));
+  await sleep(220);
+  await typeInto("300");
+  const rows = resultRows();
+  const secondCode = rows[1]?.dataset.searchResult ?? "";
+  await pressKey("ArrowDown");
+  obs.downSelectedSecond = rows.length >= 2 && activeIndex() === 1;
+  await pressKey("ArrowUp");
+  await pressKey("ArrowUp");
+  obs.upAtFirstStaysFirst = activeIndex() === 0;
+  await pressKey("ArrowDown");
+  await pressKey("Enter");
+  await sleep(120);
+  obs.enterOpenedSecond = secondCode !== "" && window.localStorage.getItem("aka.last.code") === secondCode;
+  await pressKey("Escape");
+  await sleep(90);
+  obs.escClosedOverlay = !overlayPresent();
+  await reopen();
+  obs.escClearedInput = inputValue() === "";
+  obs.reopenInputEmpty = inputValue() === "";
+  obs.reopenShowsRecent = Boolean(q("[data-search-recent]"));
+
+  // 场景 B（AC-05.01-02 补3）：新装无最近查看，只显示指数快捷入口（≤4），不出现「暂无记录」。
+  const shortcuts = qa<HTMLElement>("[data-search-shortcut-item]");
+  obs.shortcutCount = shortcuts.length;
+  obs.hasRecentPlaceholder = Boolean(q("[data-search-recent-empty]"));
+
+  // 场景 C（AC-05.01-03 / 补1 / 补2）：无结果态保留查询词、两动作、Enter 无动作、清空回空闲态。
+  await reopen();
+  await typeInto("zzzz");
+  obs.queryPreserved = inputValue() === "zzzz";
+  obs.notFoundShown = (q("[data-search-empty]")?.textContent ?? "").includes("未找到");
+  obs.clearActionShown = Boolean(q("[data-search-empty] .search-link"));
+  obs.marketActionShown = Boolean(q("[data-search-empty-market]"));
+  obs.noSkeleton = !Boolean(q("[data-search-preparing]"));
+  obs.noIrrelevantResults = resultRows().length === 0;
+  const beforeEnter = inputValue();
+  // 场景 A 的 Enter 已把 hash 推进 #/workbench/<code> 且不回退，
+  // 故不能用「hash 不以 workbench 开头」判「未打开标的」（该观察恒假）。
+  // 改用 Enter 前后两个独立运行时快照的差分：路由与最近打开标的均未变化。
+  const hashBeforeEnter = window.location.hash;
+  const lastCodeBeforeEnter = window.localStorage.getItem("aka.last.code");
+  await pressKey("Enter");
+  obs.emptyEnterOverlayOpen = overlayPresent();
+  obs.emptyEnterInputUnchanged = inputValue() === beforeEnter;
+  obs.emptyEnterNoOpen =
+    window.location.hash === hashBeforeEnter &&
+    window.localStorage.getItem("aka.last.code") === lastCodeBeforeEnter;
+  const clearButton = q<HTMLElement>("[data-search-empty] .search-link");
+  clearButton?.click();
+  await sleep(120);
+  obs.clearInputEmpty = inputValue() === "";
+  obs.clearBackToIdleRecent = Boolean(q("[data-search-recent]"));
+  obs.clearBackToIdleShortcut = Boolean(q("[data-search-index-shortcut]"));
+
+  push(
+    "S050102-R1",
+    "AC-05.01-02",
+    "render",
+    obs.downSelectedSecond && obs.enterOpenedSecond && obs.escClearedInput,
+    `↓ 选第二条=${obs.downSelectedSecond} / Enter 打开第二条=${obs.enterOpenedSecond} / Esc 清空=${obs.escClearedInput}`,
+  );
+  push(
+    "S050102-R2",
+    "AC-05.01-02（补1）",
+    "render",
+    obs.upAtFirstStaysFirst,
+    `↑ 在首条不循环：activeIndex 仍为 0 = ${obs.upAtFirstStaysFirst}`,
+  );
+  push(
+    "S050102-R3",
+    "AC-05.01-02（补2）",
+    "render",
+    obs.escClearedInput && obs.escClosedOverlay && obs.reopenInputEmpty && obs.reopenShowsRecent,
+    `Esc 关闭=${obs.escClosedOverlay} / 再唤起输入为空=${obs.reopenInputEmpty} / 显示最近查看=${obs.reopenShowsRecent}`,
+  );
+  push(
+    "S050102-R4",
+    "AC-05.01-02（补3）",
+    "render",
+    obs.shortcutCount > 0 && obs.shortcutCount <= 4 && !obs.hasRecentPlaceholder,
+    `指数快捷入口 ${obs.shortcutCount} 个（≤4）/ 无「暂无记录」占位=${!obs.hasRecentPlaceholder}`,
+  );
+  push(
+    "S050102-R5",
+    "AC-05.01-03",
+    "render",
+    obs.queryPreserved && obs.notFoundShown && obs.clearActionShown && obs.marketActionShown && obs.noSkeleton && obs.noIrrelevantResults,
+    `保留 zzzz=${obs.queryPreserved} / 未找到=${obs.notFoundShown} / 两动作=${obs.clearActionShown && obs.marketActionShown} / 无骨架=${obs.noSkeleton} / 无无关结果=${obs.noIrrelevantResults}`,
+  );
+  push(
+    "S050102-R6",
+    "AC-05.01-03（补1）",
+    "render",
+    obs.emptyEnterOverlayOpen && obs.emptyEnterInputUnchanged && obs.emptyEnterNoOpen,
+    `无结果 Enter：浮层仍开=${obs.emptyEnterOverlayOpen} / 输入不变=${obs.emptyEnterInputUnchanged} / 未开标的=${obs.emptyEnterNoOpen}`,
+  );
+  push(
+    "S050102-R7",
+    "AC-05.01-03（补2）",
+    "render",
+    obs.clearInputEmpty && obs.clearBackToIdleRecent && obs.clearBackToIdleShortcut,
+    `点清空：输入空=${obs.clearInputEmpty} / 回空闲态最近查看=${obs.clearBackToIdleRecent} / 指数入口=${obs.clearBackToIdleShortcut}`,
+  );
+
+  await writeBatchReport("s050102-evidence.json", "s050102", report);
+  return report;
+}

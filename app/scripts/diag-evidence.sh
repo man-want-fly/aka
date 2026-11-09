@@ -268,6 +268,13 @@ PY
     FIXTURE="默认 state.db；任意页唤起 ⌘K 搜索浮层，输入 300750 / 宁德 / ndsd 三次均命中 300750.SZ（AC-05.01-01），搜索期 0 外部请求（AC-05.01-04）；只读，不改库"
     BAK=""
     ;;
+  s050102)
+    TARGET="s050102"
+    JSON="$DIAG_DIR/s050102-evidence.json"
+    NAME="s050102-evidence"
+    FIXTURE="默认 state.db；唤起 ⌘K 搜索浮层，驱动 ↓/↑ 边界、Enter 打开、Esc 清空再唤起、无结果 zzzz、无结果 Enter、点清空回空闲态，逐条断言 S-05.01-02 / AC-05.01-02（补1-补3）/ AC-05.01-03（补1-补2）共 7 条渲染层 AC；只读，不改库"
+    BAK=""
+    ;;
   s020801)
     TARGET="s020801"
     JSON="$DIAG_DIR/s020801-evidence.json"

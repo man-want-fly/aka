@@ -135,6 +135,10 @@ jobs:
       - name: 取证 case 逐套件反例（每卡缺 case / 改名 / 接线断 必须红）
         run: npm run verify:evidence-case:selftest
 
+      # P15：S-05.01-02 套件门禁——7 条 AC 判定正例绿/逐条反例红/变异验证，接线与写盘名闭合。
+      - name: P15 s050102 套件反例（7 条 AC 逐条判红 + 变异验证）
+        run: npm run verify:s050102
+
       - name: P04-R3 数据目录注入反例（W-115，注入未生效必红）
         run: npm run verify:p04r3
 

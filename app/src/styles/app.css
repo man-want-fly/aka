@@ -3018,6 +3018,18 @@ mark {
   text-decoration: underline;
 }
 
+/* 卡面 L3897：无结果两动作主次分明，主 = 去行情浏览，次 = 清空。 */
+.search-empty-primary {
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.search-empty-secondary {
+  color: var(--muted);
+}
+
 .search-idle {
   overflow-y: auto;
   padding: 12px 14px 14px;

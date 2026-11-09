@@ -4,6 +4,7 @@ import type { RouteKey } from "../app/AppShell";
 import { formatPct, formatPrice, signClass } from "../lib/format";
 import { ipc, isTauriRuntime } from "../lib/ipc";
 import type { RecentViewDto } from "../lib/types";
+import { runS050102Diagnostics } from "../features/qa/batchDiag";
 import {
   buildSearchIndex,
   highlightParts,
@@ -110,6 +111,10 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
         setOpen((value) => !value);
       } else if (event.key === "Escape" && openRef.current) {
         setOpen(false);
+        // Esc = 关闭 + 清空：不把上次查询留到下次唤起（卡面 L3870 / L3890）。
+        setQuery("");
+        setDebounced("");
+        setActive(0);
       }
     };
     const onOpen = () => setOpen(true);
@@ -155,6 +160,26 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
     document.getElementById(`search-opt-${active}`)?.scrollIntoView({ block: "nearest" });
   }, [active]);
 
+  // P15 / S-05.01-02 取证接线：仅 AKA_DIAG_TARGET=s050102 时自跑一次取证套件。
+  // 只读 DOM、不改产品交互语义；判定表达式与反例由 scripts/verify_s050102.mjs
+  // 从 batchDiag.ts 派生（制度第 29 条）。
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let alive = true;
+    void ipc
+      .diagTarget()
+      .then((target) => {
+        if (!alive || target !== "s050102") return;
+        if (sessionStorage.getItem("aka.batch.s050102.done")) return;
+        sessionStorage.setItem("aka.batch.s050102.done", "1");
+        void runS050102Diagnostics();
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const { hits, matched } = useMemo(
     () => (index ? matchSecurities(index, debounced) : { hits: [], matched: 0 }),
     [index, debounced],
@@ -175,7 +200,11 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
   const openItem = useCallback(
     (item: SearchItem) => {
       onOpenSecurity(item.code);
+      // 打开标的：浮层关闭并清空输入、焦点回到工作台（卡面 L3868）。
       setOpen(false);
+      setQuery("");
+      setDebounced("");
+      setActive(0);
     },
     [onOpenSecurity],
   );
@@ -213,7 +242,11 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
       }
     } else if (event.key === "Escape") {
       event.preventDefault();
+      // 输入中按 Esc 同样关闭 + 清空，不保留草稿（卡面 L3890）。
       setOpen(false);
+      setQuery("");
+      setDebounced("");
+      setActive(0);
     } else if (event.key === "Tab") {
       trapFocus(event);
     }
@@ -312,32 +345,35 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
               </div>
             </section>
 
-            <section className="search-section" data-search-recent>
-              <h3>最近查看</h3>
-              {recent.length === 0 ? (
-                <p className="search-muted" data-search-recent-empty>
-                  暂无最近查看，打开工作台后自动记录。
-                </p>
-              ) : (
-                <ul className="search-recent-list">
-                  {recent.slice(0, SEARCH_RECENT_LIMIT).map((item) => (
-                    <li key={item.code}>
-                      <button
-                        type="button"
-                        className="search-recent-item"
-                        data-search-recent-item={item.code}
-                        onClick={() => {
-                          onOpenSecurity(item.code);
-                          setOpen(false);
-                        }}
-                      >
-                        <span className="search-recent-name">{item.name}</span>
-                        <span className="search-recent-code">{item.code}</span>
-                        <span className="search-recent-time">{relativeTime(item.viewedAt)}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+            {/* 新装无最近查看：该区块整体不显示、不出现「暂无记录」占位（卡面 L3887 / AC-05.01-02 补3）。
+                data-search-recent 作为 DOM 契约锚点保留，供 R3/R7 观察「回到空闲态」。 */}
+            <section className="search-section" data-search-recent hidden={recent.length === 0}>
+              {recent.length > 0 && (
+                <>
+                  <h3>最近查看</h3>
+                  <ul className="search-recent-list">
+                    {recent.slice(0, SEARCH_RECENT_LIMIT).map((item) => (
+                      <li key={item.code}>
+                        <button
+                          type="button"
+                          className="search-recent-item"
+                          data-search-recent-item={item.code}
+                          onClick={() => {
+                            onOpenSecurity(item.code);
+                            setOpen(false);
+                            setQuery("");
+                            setDebounced("");
+                            setActive(0);
+                          }}
+                        >
+                          <span className="search-recent-name">{item.name}</span>
+                          <span className="search-recent-code">{item.code}</span>
+                          <span className="search-recent-time">{relativeTime(item.viewedAt)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
             </section>
           </div>
@@ -345,14 +381,23 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
 
         {state === "empty" && (
           <div className="search-status" data-search-empty>
-            <p>未找到 “{trimmed.length > 24 ? `${trimmed.slice(0, 24)}…` : trimmed}”</p>
+            <p>未找到 “{trimmed.length > 30 ? `${trimmed.slice(0, 30)}…` : trimmed}”</p>
             <div className="search-empty-actions">
-              <button type="button" className="search-link" onClick={() => setQuery("")}>
-                清空搜索
+              <button
+                type="button"
+                className="search-link search-empty-secondary"
+                onClick={() => {
+                  // 清空 = 回到空闲态（仍显示最近查看 + 指数入口），浮层不关（卡面 L3883 / AC 补2）。
+                  setQuery("");
+                  setDebounced("");
+                  setActive(0);
+                }}
+              >
+                清空
               </button>
               <button
                 type="button"
-                className="search-link"
+                className="search-link search-empty-primary"
                 data-search-empty-market
                 onClick={() => {
                   onNavigate("market");
