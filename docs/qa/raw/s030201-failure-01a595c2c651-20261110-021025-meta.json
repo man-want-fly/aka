@@ -1,0 +1,16 @@
+{
+  "suite": "s030201",
+  "commit": "01a595c2c651a8473a1a5d78bdd5d751abe2f824",
+  "dirty": false,
+  "command": "app/scripts/evidence-run.sh s030201",
+  "step": "collect",
+  "stepCommand": "tee \"$DIAG_LOG\"",
+  "exitCode": 1,
+  "finishedAt": "2026-11-10T02:10:25+08:00",
+  "label": "20261110-021025",
+  "dump": {
+    "archived": "/Users/sixmillion/Documents/AKA/docs/qa/raw/s030201-failure-01a595c2c651-20261110-021025.json",
+    "sha256": "306c06f0773dddcafe2c5237f3f3574d4315dc7d41f5e1b31c36073b88b737c8",
+    "finishedAt": "2026-11-10T02:10:25+08:00"
+  }
+}
