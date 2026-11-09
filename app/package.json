@@ -13,6 +13,7 @@
     "verify:evidence-case:selftest": "node scripts/evidence_case_selftest.mjs",
     "verify:evidence-suites": "node scripts/verify_evidence_suites.mjs",
     "verify:evidence-suites:selftest": "node scripts/evidence_suites_selftest.mjs",
+    "verify:diag-runner-wiring": "node scripts/verify_diag_runner_wiring.mjs",
     "verify:s050102": "node scripts/verify_s050102.mjs",
     "verify:p04r3": "node scripts/verify_p04r3_injection.mjs",
     "verify:w116": "node scripts/verify_w116_injection.mjs",
