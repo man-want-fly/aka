@@ -1,0 +1,16 @@
+{
+  "suite": "s2",
+  "commit": "cf3dc70b854900f11b429a05b90c5a0ef430ca94",
+  "dirty": false,
+  "command": "app/scripts/evidence-run.sh s2",
+  "step": "collect",
+  "stepCommand": "tee \"$DIAG_LOG\"",
+  "exitCode": 2,
+  "finishedAt": "2026-11-09T08:42:39+08:00",
+  "label": "20261109-084239",
+  "dump": {
+    "archived": "/Users/sixmillion/Documents/AKA/docs/qa/raw/s2-failure-cf3dc70b8549-20261109-084239.json",
+    "sha256": "aca4d793afec6a02196b4042a1fc8cec25662ec6347f134047b941f26844def1",
+    "finishedAt": "2026-11-09T08:42:39+08:00"
+  }
+}

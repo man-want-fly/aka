@@ -1,10 +1,10 @@
 {
   "suite": "s2",
-  "label": "20261108-141242",
-  "runAt": "2026-11-08T14:13:47+08:00",
-  "commit": "6eb07e625f7f8d4cb2d69c1ab010c1ae8cedfc29",
+  "label": "20261109-085218",
+  "runAt": "2026-11-09T08:53:19+08:00",
+  "commit": "cf3dc70b854900f11b429a05b90c5a0ef430ca94",
   "dirty": false,
-  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s2\" /Users/sixmillion/Documents/aka/app/target/debug/aka-desktop",
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s2\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
   "fixture": "默认固定批次（instances=50 = 1 主图均线 + 5 叠加 + 5 统计 + 1 M06 + 20 B2 + 13 B3 + 5 B1，skip=6）；冷/热各切 30/90 次标的；连键 1→12→120 与 1→12→60；只读行情，不改库",
   "buildMode": "dev",
   "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
@@ -19,13 +19,13 @@
     "otherCards": []
   },
   "dump": {
-    "archived": "docs/qa/raw/s2-evidence-6eb07e625f7f-20261108-141242.json",
-    "sha256": "b2b296af90fde15b27f4ff726bd391318194d3dfd429c5aea07ac45377407e91",
-    "finishedAt": "2026-11-08T06:13:45.695Z"
+    "archived": "docs/qa/raw/s2-evidence-cf3dc70b8549-20261109-085218.json",
+    "sha256": "088ab951e6ede84abc9588300e649545b83bb0d4e382153965448caa0b2a3b8d",
+    "finishedAt": "2026-11-09T00:53:17.663Z"
   },
   "runtime": {
     "launchMode": "cargo+custom-protocol",
-    "node": "v22.23.4",
+    "node": "v22.21.1",
     "os": "macos",
     "arch": "x86_64",
     "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
@@ -33,14 +33,14 @@
   },
   "build": {
     "entry": "dist/index.html",
-    "builtAt": "2026-11-08T06:12:21.449Z",
+    "builtAt": "2026-11-09T00:51:52.503Z",
     "cargoProfile": "dev",
     "features": [
       "tauri/custom-protocol"
     ],
     "binary": {
-      "path": "/Users/sixmillion/Documents/aka/app/target/debug/aka-desktop",
-      "sha256": "cc82358d224c9940b0eee39f549688b0b2e9f60b1105424aa7def0b48c4f1df2"
+      "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+      "sha256": "d336fdc550c8557233181f11b10c70aa718c23b5a75b974f8f1ae322cf1acac3"
     }
   },
   "reproduce": "app/scripts/evidence-run.sh s2"
