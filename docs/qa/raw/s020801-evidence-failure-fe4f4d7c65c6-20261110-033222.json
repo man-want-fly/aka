@@ -1,0 +1,46 @@
+{
+  "suite": "s020801",
+  "ok": false,
+  "finishedAt": "2026-11-09T19:32:26.148Z",
+  "checks": [
+    {
+      "id": "S0208-P2R",
+      "card": "S-02.08-01",
+      "ac": "AC-02.08-01（补2）",
+      "layer": "render",
+      "passed": false,
+      "detail": "页脚 7 段 / 缺失段「provider,version,range,rows,calc」"
+    }
+  ],
+  "card": "S-02.08-01",
+  "env": {
+    "commit": "fe4f4d7c65c65e5091fa1eb64ff0d1b57867d84d",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-09T19:32:11.996Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+        "sha256": "c936fbcd7303daf5660d09013aba027442274af196e37974c68e42edba543097"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s020801\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}
