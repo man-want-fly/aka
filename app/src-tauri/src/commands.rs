@@ -148,6 +148,14 @@ pub async fn dataset_manifest(
     if state.faults().manifest_missing {
         return Ok(None);
     }
+    // W-116：只把 sha256 置空、其余 8 字段原样保留，造出「只缺一段」的可达路径；
+    // 页脚 version 段由 shortSha(空) 派生为 `—`，其余 6 段照常（AC-02.08-01（补2））。
+    if state.faults().manifest_sha256_missing {
+        return Ok(state.core.dataset_manifest().map(|mut m| {
+            m.sha256.clear();
+            m
+        }));
+    }
     tracked!(state, "dataset_manifest", { Ok(state.core.dataset_manifest()) })
 }
 

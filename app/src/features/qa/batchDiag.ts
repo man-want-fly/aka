@@ -693,3 +693,30 @@ export async function runS070102Diagnostics() {
   await writeBatchReport("s070102-evidence.json", "s070102", report);
   return report;
 }
+
+/**
+ * W-116：S-02.08-01 / AC-02.08-01（补2）「只缺 sha256、其余 6 段正常」页脚取证。
+ * 由 AKA_DIAG_TARGET=s020801 + --missing-manifest-sha256 触发；只读，不改产品语义。
+ * 判定表达式由 verify_w116_injection.mjs 从此处派生，注入未生效时必须判红。
+ */
+export async function runS020801Diagnostics() {
+  const report = { ...baseReport("s020801"), card: "S-02.08-01" };
+  const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
+    report.checks.push({ id, card: "S-02.08-01", ac, layer, passed, detail });
+  };
+  await waitFor(() => q("[data-dataset-overview='1']"));
+  const segments = qa<HTMLElement>("[data-dataset-seg]").map((el) => ({
+    key: el.dataset.datasetSeg ?? "",
+    missing: el.dataset.datasetMissing === "1",
+    text: el.textContent?.trim() ?? "",
+  }));
+  push(
+    "S0208-P2R",
+    "AC-02.08-01（补2）",
+    "render",
+    segments.filter((s) => s.missing).length === 1 && segments.find((s) => s.missing)?.key === "version" && segments.filter((s) => !s.missing).length === 6,
+    `页脚 ${segments.length} 段 / 缺失段「${segments.filter((s) => s.missing).map((s) => s.key).join(",") || "无"}」`,
+  );
+  await writeBatchReport("s020801-evidence.json", "s020801", report);
+  return report;
+}

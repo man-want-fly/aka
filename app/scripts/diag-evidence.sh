@@ -261,6 +261,14 @@ PY
     FIXTURE="默认 state.db；工作台真实计算 + diag_set_inject 注入（panic×3 / data / timeout 8s），关闭注入后恢复；不改库"
     BAK=""
     ;;
+  s020801)
+    TARGET="s020801"
+    JSON="$DIAG_DIR/s020801-evidence.json"
+    NAME="s020801-evidence"
+    FLAGS="--missing-manifest-sha256"
+    FIXTURE="默认 state.db；--missing-manifest-sha256（trigger=injected）让 dataset_manifest 只清 sha256、其余 8 字段原样，验证工作台页脚「只缺一段、其余 6 段正常」（AC-02.08-01（补2））；只读，不改库"
+    BAK=""
+    ;;
   *)
     echo "未知套件：$SUITE" >&2
     exit 2

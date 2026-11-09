@@ -14,6 +14,7 @@
     "verify:evidence-suites": "node scripts/verify_evidence_suites.mjs",
     "verify:evidence-suites:selftest": "node scripts/evidence_suites_selftest.mjs",
     "verify:p04r3": "node scripts/verify_p04r3_injection.mjs",
+    "verify:w116": "node scripts/verify_w116_injection.mjs",
     "verify:dom-contracts": "node scripts/verify_dom_contracts.mjs",
     "verify:dom-contracts:selftest": "node scripts/verify_dom_contracts_selftest.mjs",
     "verify:ac-token": "node scripts/verify_ac_token.mjs",
