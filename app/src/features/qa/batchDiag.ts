@@ -903,10 +903,17 @@ export async function runS050102Diagnostics() {
   obs.noSkeleton = !Boolean(q("[data-search-preparing]"));
   obs.noIrrelevantResults = resultRows().length === 0;
   const beforeEnter = inputValue();
+  // 场景 A 的 Enter 已把 hash 推进 #/workbench/<code> 且不回退，
+  // 故不能用「hash 不以 workbench 开头」判「未打开标的」（该观察恒假）。
+  // 改用 Enter 前后两个独立运行时快照的差分：路由与最近打开标的均未变化。
+  const hashBeforeEnter = window.location.hash;
+  const lastCodeBeforeEnter = window.localStorage.getItem("aka.last.code");
   await pressKey("Enter");
   obs.emptyEnterOverlayOpen = overlayPresent();
   obs.emptyEnterInputUnchanged = inputValue() === beforeEnter;
-  obs.emptyEnterNoOpen = !window.location.hash.startsWith("#/workbench/");
+  obs.emptyEnterNoOpen =
+    window.location.hash === hashBeforeEnter &&
+    window.localStorage.getItem("aka.last.code") === lastCodeBeforeEnter;
   const clearButton = q<HTMLElement>("[data-search-empty] .search-link");
   clearButton?.click();
   await sleep(120);
