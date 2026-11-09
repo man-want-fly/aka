@@ -33,7 +33,8 @@
 | `9d4662a` | 代码合并：merge(app) 合入 P15 S-05.01-02 键盘/无结果/最近查看 | `42626999132` success | 自身 |
 | `5c64f6f` | 证据提交：evidence(qa) 采集 S-05.01-02 运行层 GUI 证据（s050102） | `42629655330` success（tip） | 自身 |
 | `f38fc5c` | 条件签前置：docs(qa) 补齐 S-05.01-02 的 G4 驳回 BA 侧签字前置 | `42634147774` success | 自身 |
-| `2ec7841` | 条件签 P15 S-05.01-02（限定 7 条 AC，不升已交付） | `42638396098` failure（**红**：红因为 P7 注册表滞后导致 verify:card-pages 判红，非代码缺陷；由本次修复提交的绿 run 覆盖，不改写历史） | 由本次修复提交的绿 run 覆盖（见补记行，树包含本提交） |
+| `2ec7841` | 条件签 P15 S-05.01-02（限定 7 条 AC，不升已交付） | `42638396098` failure（**红**：红因为 P7 注册表滞后导致 verify:card-pages 判红，非代码缺陷；由本次修复提交的绿 run 覆盖，不改写历史） | `42651697784`（`172e337`，树包含本提交） |
+| `172e337` | docs(qa) 修正 P7 注册表滞后并收口 P15 条件签台账至 v0.31 | `42651697784` success（attempt2） | 自身 |
 
 说明：
 - 2026-11-09 再补记：QA G4 驳回「覆盖表缺口」——按已复核事实补入 `47d6913`→`42595057577`、`9d4662a`→`42626999132`、`5c64f6f`→`42629655330` 三笔绿 run（conclusion=success），均为对应 commit 自身 run；`5c64f6f` 为当前 tip、其证据 `commit=9d4662a` 为直接父。CI 只在 main push 触发，相邻 commit 常共享 tip run，本表仅登记指得出绿 run 的 commit；完成台账三数口径 17/8/9 本轮不变、无卡升 `已交付`。
@@ -43,3 +44,4 @@
 - `2ec7841` 的红因 P7 注册表滞后导致 `verify:card-pages` 判红（`S-05.01-02` 条件交付引用 `absent` 的 P7），属注册表历史滞后、**非代码缺陷**；P7 三列已按 §5.7 由 BA 落 `exists` 命中锚点，该红由本次修复提交的绿 run 覆盖，**不改写历史**（与 `fbd4a28`/`983e63d` 同构，不进 `aka-main-known-reds.csv`，该清单只登记 `verify:evidence` 裁定）；`f38fc5c` 自身 run `42634147774` 为 success。
 - 本表由 `docs/qa/aka-main-known-reds.csv` 驱动判定，CI 步骤「已知红裁定」只放行清单内的红，清单转绿未删行会直接红。
 - 2026-11-09 补记：`3213ae3`（此前漏记）及本轮 6 个 commit（`9d87f58`/`aec0785`/`3b71a57`/`e9725a5`/`36bba90`/`847fb51`）全部自身 run success，逐行补入上表；当前清单仅剩 R-002（`gate=history`，历史非活动），R-001 已转绿删行，判定仍由该清单驱动，无活动红。
+- 2026-11-09 再补记：`172e337`（P7 注册表修正 + 台账收口）自身 run `42651697784` 的 attempt1 中 `macOS build / test / golden` job 被 runner 侧 cancelled（`steps` 为空、一个 step 未跑，非门禁红、非代码/文档缺陷），另两个 job（含 `verify:delivery`/`verify:gate-log`/`verify:sign`/`verify:sign-impact`）均 success；`gh run rerun --failed` 后 attempt2 三个 job 全 success、`conclusion=success`、`headSha=172e337d2bc7a8f9934dc2b428ea22daab3494cc` 精确匹配。该绿 run 覆盖 `2ec7841` 的红，不改写历史；`2ec7841` 仍不进 `aka-main-known-reds.csv`（该清单只管 `verify:evidence` 裁定）。
