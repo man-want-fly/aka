@@ -261,6 +261,13 @@ PY
     FIXTURE="默认 state.db；工作台真实计算 + diag_set_inject 注入（panic×3 / data / timeout 8s），关闭注入后恢复；不改库"
     BAK=""
     ;;
+  s050101)
+    TARGET="s050101"
+    JSON="$DIAG_DIR/s050101-evidence.json"
+    NAME="s050101-evidence"
+    FIXTURE="默认 state.db；任意页唤起 ⌘K 搜索浮层，输入 300750 / 宁德 / ndsd 三次均命中 300750.SZ（AC-05.01-01），搜索期 0 外部请求（AC-05.01-04）；只读，不改库"
+    BAK=""
+    ;;
   *)
     echo "未知套件：$SUITE" >&2
     exit 2
