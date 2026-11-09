@@ -33,7 +33,7 @@
 | W-107 | 全仓 `*Diag.ts` AC token 全角化 + `verify:ac-token` 静态检查（含反例） | dev B | 待验收 | `main`（`27fa6fa`+`dfdbec0`，CI 独立 job） | 2026-11-08 |
 | W-108 | 补签批次 B0-S（11-10 `S-01.01-01`）；B0-R 三张已定案不抢救、降 `Blocked` | BA / TL | 待开工（逐卡，无窗口） | `main`（合并时 HEAD） | 2026-11-08 |
 | W-109 | `S-02.06-01` Gate C 降「不可签」、AC 覆盖与 `compute.discard` 实现 | dev B / BA / TL | 阻塞（`Blocked-AC`，W-110 落地后重签） | `main`（`11e62cb` 签字作废） | 2026-11-08 |
-| W-110 | Gate C 通用检查：AC 覆盖闭合 + 证据 `card` 匹配（各配反例） | dev A | 待开工 | `main` | 2026-11-08 |
+| W-110 | Gate C 通用检查：AC 覆盖闭合 + 证据 `card` 匹配（各配反例） | dev A | 进行中（按 `c8bfec3` 重核：W-116 已合 main、接工单 L2251 排期；补两条检查器 + 反例 + selftest 进 CI，解阻 W-109 `Blocked-AC`；在制数固定 1） | `w110/gate-c-checks`（worktree `AKA-w110`） | 2026-11-09 |
 | W-111 | `S-02.06-02` 立独立 `s20602`：291ms 无判红出口，断言 `maxTotalMs<=120` | dev B | 待验收（已合入 main `9a6a0bf`；`s20602` 负例已进 CI） | `main`（`9a6a0bf`） | 2026-11-08 |
 | W-114 | `S-02.06-02` 回切时延 291ms → ≤120ms（判据先行，`s20602` 由红转绿） | dev B | 待验收（已合入 main `fbd4a28`；**CI 红**：提交 type `perf` 不在枚举，属提交信息缺陷，代码已绿） | `main`（`23ed11d` → `fbd4a28`） | 2026-11-08 |
 | W-112 | `evidence-run.sh` 非 main 分支报 `unbound variable`，改为 `EVIDENCE_FAIL` + 测试 | dev A | 待验收（已合入 main `97c3b52`） | `main`（`97c3b52`） | 2026-11-08 |
@@ -44,6 +44,7 @@
 | P02 | `S-03.02-01` 收藏与 8 项默认收藏 | dev B | 未开始（实现已在 `adef5b7`；`s030201` 入口已补 `c76540d`；**P01 曾重复派单，已切开**） | `main`（`adef5b7`） | 2026-11-08 |
 | P05 | `S-06.03-02` 关于页指标说明核对 | — | 待开工（按 `aec0785` 重核：诊断包实现、`s060302` 套件入口与 6 条 AC 断言均已在 main，属待 BA 取证、非 dev 编码；本轮不认领，排队列） | `main`（`aec0785`） | 2026-11-09 |
 | P14 | `S-05.01-01` ⌘K 唤起 / 拼音匹配 / 排序（W-100 解阻后补 `s050101` 取证入口） | dev B | 待验收（代码已随 `e9725a5` 合入 main；`s050101` 取证入口已进 main；未取证未签） | `main`（`e9725a5`） | 2026-11-09 |
+| P15 | `S-05.01-02` 键盘操作 / 无结果 / 最近查看（按 `c8bfec3` 重核解阻，补 `s050102` 取证套件入口 + 7 条 AC 断言 + 反例） | dev B | 进行中（在制数固定 1；与 P14 同构补套件入口与断言，不自出运行层证据、不改台账） | `p15/s050102-evidence`（worktree `AKA-p15`） | 2026-11-09 |
 
 ## 0.1 双线开发复核口径（2026-11-07 起）
 
@@ -77,6 +78,18 @@
 > 本节只作正文留痕，**不在 §0.0 状态表新增 W 编号行**（避免 `verify:delivery` L302「表内编号无对应工单标题」判红）。W-117 对应 `w117/dev2-integration` 的 `20ada2f`，随合并提交 `847fb51` 把 dev2 遗留的 P6/W-99 指数页骨架、`S-01.03-01` 持仓、`S-08.02-03` 数据集校验产品实现接线到 `main`。本轮 6 个 commit（`9d87f58`/`aec0785`/`3b71a57`/`e9725a5`/`36bba90`/`847fb51`）各自 CI 绿，另 `3213ae3` 之前漏记已补入 CI 覆盖表。
 >
 > **口径（交付规范 `aka-delivery-standard-v0.2.md` §1 四件齐 L14-21、§1.2 L36）**：以上各卡均为「代码已合 main、CI 绿」，但运行层 GUI 取证未做、`gate-log` 无签字，四件齐缺「证据」与「签字」，一律不得升 `已交付`，维持或记为 `待签`。`S-08.02-03` 的 readOnly 全链路 UI 未挂载，属部分实现；P6/W-99 仅骨架，不得作数据 AC 证据。相关卡的 `§0.0` 行（W-95/W-98/W-99/W-115/W-116/P01/P14）已在表内就地更新，签字与状态仍以 `gate-log` 与完成台账为唯一权威，本轮不改 `gate-log`、不改 `sign_commit`（制度第 17 条）。
+
+## 0.5 本轮取卡重核与认领留痕（2026-11-09，按 `c8bfec3`）
+
+> 上一轮 dev 双线交付的 W-116 / P14 代码已合 `main`（`36bba90` / `e9725a5`），§0.0 均为「待验收（代码已合 main、未取证未签、待签）」。依规范 §5.8 L252/L255「交付一张后立即取下一张、在制数固定 1、派单前先读 §0.0」取新卡。派单池 `last_check` 全部过期（多为 `0ed37d6` / `aec0785` / `847fb51`），不以 CSV 历史 note 派单，一律按 `git show origin/main` 与 `c8bfec3` 实际代码重核。
+
+> **重核证据（文件 + 行号）**：P6 骨架 / `#/indices` 路由 = `app/src/App.tsx:39,299-300` + `app/src/pages/indices/IndexPage.tsx:58,87`（`data-indices-root="p6"`）；P7 浮层 = `app/src/components/SearchOverlay.tsx` + `app/src/features/search/searchIndex.ts` + `App.tsx:9,324`；`index_members 256` = `app/crates/app-core/src/sim_install.rs:423,738` + `app/crates/data-provider/src/sim_seed.rs:195,214`；`s050101` 入口 = `app/scripts/diag-evidence.sh:264` + `app/src/features/qa/batchDiag.ts:703`；`recent_views` migration 005 = `app/crates/data-store/src/state_db.rs:26,260`。以上均在 `main`，池里「P6 骨架 eb1d5b6 未入 main」「上游 P14 未就绪、dev B 在制 P14」等旧 note 均已失真。
+
+> **认领**：dev A → `W-110`（Gate C 通用检查，§0.0 已标 dev A「待开工」、工单 L2251「W-116 之后接 W-110」，是解阻 W-109 `Blocked-AC` 的工具/门禁卡，补两条检查器 + 反例 + selftest）；dev B → `P15 S-05.01-02`（P0 产品卡，P7 / P14 / `s050101` / `recent_views` 全在 `main`，补 `s050102` 取证套件入口与 7 条 AC 断言）。按 L260「产品卡可开工时优先产品卡，不两人同时陷门禁」：一条 P0 产品卡 + 一条解阻工具卡，未两人同时做工具卡。
+
+> **取舍**：`P11/P12/P13` 骨架前置已解阻，但指数快照 / 成分计数 / 六桶 / 涨跌停推导的数据源在 `main` 无实现、`IndexPage.tsx` 仍为占位态，属 4.0 人日产品实现缺口，本轮只排队列、不开工（`eligibility` 待解阻 → 待开工、`last_check` 刷 `c8bfec3`）。`P01/P02/P03/P04/P05/P08/P21/P22` 待 BA 运行层取证、非 dev 编码；`P17` dev A 已占用、`P18` 整卡 Blocked、`P19` V1 不排、`P20` 非 dev 线——均不重复认领。
+
+> **边界**：本轮只改 `§0.0` 状态表与派单池，不动台账 / 签字 / `gate-log` / 卡面 / 页面注册表 / CI 覆盖表 / known-reds；不标「已交付 / 已签字」、不自出运行层 GUI 证据。W-110 正文锚点在 L2154 `### W-110`；P15 沿用派单池编号 `| P15 |`，与 P01/P02/P05/P14 同为 P 行、不在 `verify:delivery` 的 `| W-` 状态表校验范围内，故不触发「表内编号无对应工单标题」判红；提交前 `verify:delivery` / `verify:gate-log` 预检均绿。
 
 ## 0. 总览
 

@@ -9,11 +9,11 @@ P07,S-07.01-02,P0,2.0,dev B,在制,证据已采（7 条：render 5 + runtime 2�
 P08,S-07.05-01,P0,3.5,—,已交付待签,代码已在 main（689528a/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
 P09,S-08.02-03,P0,3.0,dev B,已交付待签,产品实现已随 847fb51 合入 main（W-117 dev2 接线）；但 S-08.02-03 readOnly 全链路 UI 未挂载、属部分实现；逐卡（W-104）；W-102 已复核符合第 38 条；主 AC 仍 Blocked-AC；【2026-11-09 按 847fb51 重核】代码已合 main 且 CI 绿、待 BA 运行层取证、不得标已交付,card,847fb51
 P10,S-01.03-01,P1,2.5,dev B,已交付待签,S-01.03-01 持仓产品实现已随 847fb51 合入 main（W-117 dev2 接线）；逐卡（W-104）；W-102 已复核；P1 条件交付；【2026-11-09 按 847fb51 重核】代码已合 main 且 CI 绿、待 BA 运行层取证、不得标已交付,card,847fb51
-P11,S-04.01-01,P0,4.0,dev B,待解阻,P6 骨架 eb1d5b6 未入 main；另等 W-101 步骤② index_members 256；不得用 fixture 取证；数据 AC 须本卡自验,card,0ed37d6
-P12,S-04.01-02,P0,2.0,dev B,待解阻,P6 骨架 eb1d5b6 未入 main；数据 AC 须本卡自验，骨架不作证据,card,0ed37d6
-P13,S-04.02-01,P0,4.0,dev B,待解阻,P6 骨架 eb1d5b6 未入 main；数据 AC 须本卡自验，骨架不作证据,card,0ed37d6
+P11,S-04.01-01,P0,4.0,dev B,待开工,【2026-11-09 按 c8bfec3 重核】P6 骨架已随 847fb51 合入 main（App.tsx:39/299-300、IndexPage.tsx:87）；index_members 256 已在 main（sim_install.rs:423/738、sim_seed.rs:195/214）；旧「骨架 eb1d5b6 未入 main」记载失真、前置阻塞已解。但指数快照/成分计数数据源（index_snapshot / listIndices）在 main 无实现、IndexPage 仍为占位态，数据+渲染 4.0 人日实现缺口仍在，不得用 fixture、数据 AC 须本卡自验；本轮按 L260 让位 W-110/P15、排队列不认领,card,c8bfec3
+P12,S-04.01-02,P0,2.0,dev B,待开工,【2026-11-09 按 c8bfec3 重核】P6 骨架与 index_members 256 已在 main（同 P11）；旧「骨架未入 main」记载失真、前置阻塞已解。区间切换控件在骨架里（IndexPage.tsx:10-14、67-83）但区间累计重算依赖指数日线序列数据源（main 无实现），数据 AC 须本卡自验、骨架不作证据；排队列不认领,card,c8bfec3
+P13,S-04.02-01,P0,4.0,dev B,待开工,【2026-11-09 按 c8bfec3 重核】P6 骨架与 index_members 256 已在 main（同 P11）；旧「骨架未入 main」记载失真、前置阻塞已解。BREADTH_BUCKETS / LIMIT_CARDS 仅常量（IndexPage.tsx:36-49）、六桶判定与涨跌停推导及分母 112 的数据层实现在 main 无独立模块，数据 AC 须本卡自验、骨架不作证据；排队列不认领,card,c8bfec3
 P14,S-05.01-01,P0,3.5,dev B,在制,s050101 取证入口已随 e9725a5 合入 main；W-100（PAGE-P7）已合入 main、页面 absent 阻塞解除；【2026-11-09 按 847fb51 重核】代码已合 main 且 CI 绿、待 BA 运行层取证、不得标已交付；dev B 解阻（补套件入口与断言）完成，不自出运行层证据、不改台账,card,847fb51
-P15,S-05.01-02,P0,1.5,—,待解阻,【2026-11-09 按 aec0785 重核】W-100 已合入、页面 absent 阻塞解除；上游 S-05.01-01（P14）索引与取证入口未就绪，且 dev B 在制 P14（在制数固定 1）；释放占用、排队列不认领,card,aec0785
+P15,S-05.01-02,P0,1.5,dev B,在制,【2026-11-09 按 c8bfec3 重核】P7 浮层（SearchOverlay.tsx / searchIndex.ts）、P14 代码与 s050101 入口（diag-evidence.sh:264、batchDiag.ts:703）、recent_views 005（state_db.rs:26/260）均已在 main；旧「上游 P14 未就绪、dev B 在制 P14」记载失真（P14 已随 e9725a5 合入、占用释放），前置阻塞已解。产品实现已在 main，缺 s050102 取证套件入口与 7 条 AC 断言，dev B 认领补入口+断言+反例，不自出运行层证据、不改台账,card,c8bfec3
 P16,S-07.03-01,P0,8.0,dev B,已交付待签,页面层+生成器（W-101，02f18c9）：页面 P10、5 步生成器、步骤② index_members 256；逐卡验证，验过即合；解阻 P11,page,02f18c9
 P17,S-07.05-03,P0,1.0,dev A,已占用,dev A 手上；只落浮层、补1 Blocked-AC,card,0ed37d6
 P18,S-08.01-02,P0,1.0,—,不可排,【2026-11-09 按 aec0785 重核】W-100 虽已合入 main，但 gate-log / 台账裁定整卡续 Blocked、不拆卡（指标侧并入他卡、标的侧依赖 S-05.01-02）；仍不可排、不认领,card,aec0785
