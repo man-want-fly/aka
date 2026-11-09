@@ -693,3 +693,52 @@ export async function runS070102Diagnostics() {
   await writeBatchReport("s070102-evidence.json", "s070102", report);
   return report;
 }
+
+/**
+ * P14 解阻：S-05.01-01 ⌘K 唤起 / 代码名称拼音匹配取证入口。
+ * W-100（PAGE-P7）已把浮层实现带进 main，本卡补齐套件 case 与断言，
+ * 为 BA 运行层取证清障（§5.8 L260）；dev 只写入口，不自出运行层证据。
+ * 反例：三次输入法任一未命中 300750.SZ 时 S050101-R1 必须判红。
+ */
+export async function runS050101Diagnostics() {
+  const report = { ...baseReport("s050101"), card: "S-05.01-01" };
+  const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
+    report.checks.push({ id, card: "S-05.01-01", ac, layer, passed, detail });
+  };
+  // 唤起浮层：SearchOverlay 监听 aka:search-open（与 ⌘K 等价的窗口级入口）。
+  window.dispatchEvent(new CustomEvent("aka:search-open"));
+  const overlay = await waitFor(() => q("[data-search-overlay]"));
+  await sleep(200); // 等待索引构建（≤300ms 契约）
+  const input = q<HTMLInputElement>("[data-search-input]");
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  const query = async (text: string): Promise<string[]> => {
+    if (!input || !setter) return [];
+    setter.call(input, text);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await sleep(160); // 60ms 防抖 + 渲染余量
+    return qa<HTMLElement>("[data-search-result]").map((el) => el.dataset.searchResult ?? "");
+  };
+  const byCode = await query("300750");
+  const byName = await query("宁德");
+  const byPinyin = await query("ndsd");
+  push(
+    "S050101-R1",
+    "AC-05.01-01",
+    "render",
+    Boolean(overlay) && byCode.includes("300750.SZ") && byName.includes("300750.SZ") && byPinyin.includes("300750.SZ"),
+    `代码/名称/拼音三次命中：${[byCode, byName, byPinyin].map((r) => r[0] ?? "无").join(" / ")}`,
+  );
+  const external = performance
+    .getEntriesByType("resource")
+    .map((entry) => entry.name)
+    .filter((name) => /^https?:\/\//.test(name));
+  push(
+    "S050101-R2",
+    "AC-05.01-04",
+    "runtime",
+    external.length === 0,
+    `搜索期间外部 http(s) 资源 ${external.length} 个`,
+  );
+  await writeBatchReport("s050101-evidence.json", "s050101", report);
+  return report;
+}
