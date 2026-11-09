@@ -35,6 +35,13 @@ jobs:
         run: node app/scripts/verify_sign_coverage.mjs --check
       - name: verify:gate-log（结构 / 枚举 / 40 位 SHA / 与 verify:sign 对齐）
         run: node app/scripts/verify_gate_log.mjs
+      # W-110：Gate C 通用检查两条（AC 覆盖闭合 + 证据 card 匹配），各配反例自证，进 CI。
+      - name: verify:gate-c:ac（AC 覆盖闭合反例：5 条 AC 覆盖 1 条必红）
+        run: node app/scripts/verify_gate_c.mjs --suite=ac
+      - name: verify:gate-c:source（Gate C 来源本卡反例：引用邻卡证据必红）
+        run: node app/scripts/verify_gate_c.mjs --suite=source
+      - name: verify:gate-c:selftest（第 29 条：失败信息指向具体 AC / 文件 + 变异验证）
+        run: node app/scripts/verify_gate_c_selftest.mjs
       - name: verify:delivery:selftest（交付规范反例 + 变异验证，第 29 条）
         run: node app/scripts/verify_delivery_selftest.mjs
       - name: verify:delivery（规范结构 / 状态表 / 已交付签字 / 提交信息）
