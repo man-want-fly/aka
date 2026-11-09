@@ -1,0 +1,54 @@
+{
+  "suite": "s050101",
+  "ok": true,
+  "finishedAt": "2026-11-09T19:28:29.152Z",
+  "checks": [
+    {
+      "id": "S050101-R1",
+      "card": "S-05.01-01",
+      "ac": "AC-05.01-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "代码/名称/拼音三次命中：300750.SZ / 300750.SZ / 300750.SZ"
+    },
+    {
+      "id": "S050101-R2",
+      "card": "S-05.01-01",
+      "ac": "AC-05.01-04",
+      "layer": "runtime",
+      "passed": true,
+      "detail": "搜索期间外部 http(s) 资源 0 个"
+    }
+  ],
+  "card": "S-05.01-01",
+  "env": {
+    "commit": "ebb296d40982f142a8032820dbc1cbf07e513ad4",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-09T19:28:09.940Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+        "sha256": "640e9489d946acfbaf88172c01dc59204af0ae5df09fa9e1dff29e8c3c642eaa"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s050101\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}
