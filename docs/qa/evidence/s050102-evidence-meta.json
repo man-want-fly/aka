@@ -1,0 +1,47 @@
+{
+  "suite": "s050102",
+  "label": "20261109-215036",
+  "runAt": "2026-11-09T21:50:45+08:00",
+  "commit": "9d4662aa1b108e01bf911ff1e8b252e9756ab9dd",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s050102\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+  "fixture": "默认 state.db；唤起 ⌘K 搜索浮层，驱动 ↓/↑ 边界、Enter 打开、Esc 清空再唤起、无结果 zzzz、无结果 Enter、点清空回空闲态，逐条断言 S-05.01-02 / AC-05.01-02（补1-补3）/ AC-05.01-03（补1-补2）共 7 条渲染层 AC；只读，不改库",
+  "buildMode": "dev",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "blocked": [],
+    "card": "S-05.01-02",
+    "layers": {
+      "render": "7/7"
+    },
+    "otherCards": []
+  },
+  "dump": {
+    "archived": "docs/qa/raw/s050102-evidence-9d4662aa1b10-20261109-215036.json",
+    "sha256": "652286e5012e40e6cbfdf74408d93f3447e0c5aa26c0a5f1f62ef7b7ec6074b6",
+    "finishedAt": "2026-11-09T13:50:43.390Z"
+  },
+  "runtime": {
+    "launchMode": "cargo+custom-protocol",
+    "node": "v22.21.1",
+    "os": "macos",
+    "arch": "x86_64",
+    "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+    "electron": "none"
+  },
+  "build": {
+    "entry": "dist/index.html",
+    "builtAt": "2026-11-09T13:50:21.770Z",
+    "cargoProfile": "dev",
+    "features": [
+      "tauri/custom-protocol"
+    ],
+    "binary": {
+      "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+      "sha256": "935429ef93136fec657ab80b1846cf2e1fe038888af99885c8938ffe8176891b"
+    }
+  },
+  "reproduce": "app/scripts/evidence-run.sh s050102"
+}
