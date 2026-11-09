@@ -1,11 +1,11 @@
 {
   "target": "s080202",
   "card": "S-08.02-02",
-  "startedAt": "2026-11-08T11:30:08.670Z",
-  "finishedAt": "2026-11-08T11:30:18.162Z",
+  "startedAt": "2026-11-09T17:41:38.591Z",
+  "finishedAt": "2026-11-09T17:41:48.050Z",
   "ok": true,
   "env": {
-    "commit": "9de7e0d5f5d9fb41f89e95a31af7fdd2372c8da6",
+    "commit": "3454613bc12dc9fcfa55512ba79100bc950f79aa",
     "dirty": false,
     "runtime": {
       "launchMode": "cargo+custom-protocol",
@@ -17,14 +17,14 @@
     },
     "build": {
       "entry": "dist/index.html",
-      "builtAt": "2026-11-08T11:29:51.866Z",
+      "builtAt": "2026-11-09T17:41:20.657Z",
       "cargoProfile": "dev",
       "features": [
         "tauri/custom-protocol"
       ],
       "binary": {
         "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
-        "sha256": "ca0dff1d9ad59331d4acb446db8d760c1b7e0565960a74ee84f43479a6aae4f9"
+        "sha256": "51a5cc492c855f255cb946d0423ed8af2b07d8c65523554b70e3d0b0b14571ea"
       }
     },
     "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s080202\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
@@ -38,7 +38,7 @@
       "ac": "AC-08.02-02",
       "layer": "render",
       "passed": true,
-      "detail": "标题/码/trace=trace TR-20261108-193008-0001，动作=重试/降低参数"
+      "detail": "标题/码/trace=trace TR-20261110-014138-0001，动作=重试/降低参数"
     },
     {
       "id": "P06-R2",
@@ -78,7 +78,7 @@
       "ac": "AC-08.02-02",
       "layer": "render",
       "passed": true,
-      "detail": "标题=计算超时，elapsed=8010ms"
+      "detail": "标题=计算超时，elapsed=8008ms"
     },
     {
       "id": "P06-R5-run",
@@ -86,7 +86,7 @@
       "ac": "AC-08.02-02",
       "layer": "runtime",
       "passed": true,
-      "detail": "wall=8171ms，calc.timeout 新增 1 条（应为 1）"
+      "detail": "wall=8169ms，calc.timeout 新增 1 条（应为 1）"
     },
     {
       "id": "P06-R6",
