@@ -135,6 +135,9 @@ jobs:
       - name: 取证 case 逐套件反例（每卡缺 case / 改名 / 接线断 必须红）
         run: npm run verify:evidence-case:selftest
 
+      - name: P04-R3 数据目录注入反例（W-115，注入未生效必红）
+        run: npm run verify:p04r3
+
       - name: DOM 契约门禁（第 32 条，取证选择器未登记即红）
         run: npm run verify:dom-contracts
 

@@ -144,6 +144,10 @@ pub async fn bar_provenance(
 pub async fn dataset_manifest(
     state: State<'_, AppState>,
 ) -> Result<Option<DatasetManifest>, AppError> {
+    // W-115：debug 注入「manifest 整体缺失」，与 list_securities 的 --empty-dataset 同构。
+    if state.faults().manifest_missing {
+        return Ok(None);
+    }
     tracked!(state, "dataset_manifest", { Ok(state.core.dataset_manifest()) })
 }
 
@@ -152,6 +156,16 @@ pub async fn dataset_manifest(
 pub async fn datasource_status(
     state: State<'_, AppState>,
 ) -> Result<DatasourceStatusDto, AppError> {
+    // W-115：注入只改命令层呈现，不动 core 探测逻辑；正常启动 faults 恒 false。
+    // 数据目录「目录不存在」由此可达（SettingsPage 判 datasource.version === null）。
+    if state.faults().manifest_missing {
+        let mut status = state.core.datasource_status().await;
+        status.state = "missing";
+        status.version = None;
+        status.error_code = Some("E_DATASET_MISSING");
+        status.ops.data_dir_readable = false;
+        return Ok(status);
+    }
     tracked!(state, "datasource_status", {
         Ok(state.core.datasource_status().await)
     })

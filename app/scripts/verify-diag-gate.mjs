@@ -36,7 +36,7 @@ const splitLines = (text) => text.split("\n");
 
 /** 诊断标记串：从源码字符串字面量里抽出的标记片段（允许是更长路径/文件名的一部分）。
  *  `AKA_BUILD_*` 是发布构建元数据（W-28），不是调试开关，必须允许出现在 release。 */
-const MARKER = /AKA[_-](?!BUILD_)[A-Z0-9_-]*|--(?:corrupt-db|readonly-db|empty-dataset)|s2-evidence|aka\/diag/g;
+const MARKER = /AKA[_-](?!BUILD_)[A-Z0-9_-]*|--(?:corrupt-db|readonly-db|empty-dataset|missing-dataset-manifest)|s2-evidence|aka\/diag/g;
 const STRING_LITERAL = /"((?:[^"\\]|\\.)*)"/g;
 
 const markerNames = new Set();

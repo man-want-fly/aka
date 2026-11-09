@@ -191,8 +191,8 @@ PY
     TARGET="s060301"
     JSON="$DIAG_DIR/s060301-about-evidence.json"
     NAME="s060301-about-evidence"
-    FLAGS="--empty-dataset"
-    FIXTURE="默认 state.db；--empty-dataset 让数据源不可用，验证关于页数据目录「目录不存在」+「重建样本包」入口，同时核对版本/计数/通道；只读，不改库"
+    FLAGS="--missing-dataset-manifest"
+    FIXTURE="默认 state.db；--missing-dataset-manifest（trigger=injected）让 dataset_manifest/datasource_status 返回缺失，验证关于页数据目录「目录不存在」+「重建样本包」入口；只读，不改库"
     BAK=""
     ;;
   s0602)
