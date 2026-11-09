@@ -1,9 +1,9 @@
 pool_seq,card_id,priority,estimate_pd,take_by,eligibility,note,layer,last_check
-P01,S-03.01-04,P0,1.5,dev A,未开始,实现已在 main（adef5b7）；s030104 入口已补（c76540d），待取证后转待验收,card,c76540d
-P02,S-03.02-01,P0,2.0,—,未开始,实现已在 main（adef5b7）；s030201 入口已补（c76540d），待取证,card,c76540d
-P03,S-03.03-02,P0,2.0,—,未开始,实现已在 main（adef5b7）；s030302 / s030302-catalog 入口已补（c76540d），待取证,card,c76540d
-P04,S-06.03-01,P0,1.5,dev A,未开始,实现已在 main（adef5b7）；s060301 入口已补（c76540d）；P04-R3 死 AC，W-115（--missing-dataset-manifest）前不得签字,card,c76540d
-P05,S-06.03-02,P0,2.5,dev B,待开工,last_check 过期；先重核 main 实际代码；【2026-11-08 最新指派 dev B】先前 dev A 承接作废，防重复派单,card,
+P01,S-03.01-04,P0,1.5,dev A,未开始,实现已在 main（adef5b7）；s030104 入口已补（c76540d）；【2026-11-09 按 aec0785 重核】实现与取证入口均在 main，待 BA 取证、非 dev 编码，本轮不认领,card,aec0785
+P02,S-03.02-01,P0,2.0,—,未开始,实现已在 main（adef5b7）；s030201 入口已补（c76540d）；【2026-11-09 按 aec0785 重核】待 BA 取证、非 dev 编码，本轮不认领,card,aec0785
+P03,S-03.03-02,P0,2.0,—,未开始,实现已在 main（adef5b7）；s030302 / s030302-catalog 入口已补（c76540d）；【2026-11-09 按 aec0785 重核】待 BA 取证、非 dev 编码，本轮不认领,card,aec0785
+P04,S-06.03-01,P0,1.5,dev A,未开始,实现已在 main（adef5b7）；s060301 入口已补（c76540d）；【2026-11-09 按 aec0785 重核】W-115 的 --missing-dataset-manifest 注入与 verify:p04r3 反例已合入 aec0785，P04-R3 死 AC 已解，待 BA 按 tip 复核，本轮不认领,card,aec0785
+P05,S-06.03-02,P0,2.5,—,待开工,【2026-11-09 按 aec0785 重核】诊断包实现（SettingsPage / diagnostics.rs）、s060302 套件入口与 6 条 AC 断言均已在 main，属待 BA 取证、非 dev 编码；释放 dev B 占用（改派 P14），本轮不认领、排队列,card,aec0785
 P06,S-08.02-02,P0,3.0,dev B,在制,证据已采（8 条：render 6 + runtime 2，dirty=false）；BA 逐卡验证中，验过即合；不并批、不排窗口,card,0ed37d6
 P07,S-07.01-02,P0,2.0,dev B,在制,证据已采（7 条：render 5 + runtime 2，dirty=false）；BA 逐卡验证中，验过即合；不并批、不排窗口,card,0ed37d6
 P08,S-07.05-01,P0,3.5,—,已交付待签,代码已在 main（689528a/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
@@ -12,16 +12,16 @@ P10,S-01.03-01,P1,2.5,dev B,已交付待签,逐卡（W-104）；W-102 已复核�
 P11,S-04.01-01,P0,4.0,dev B,待解阻,P6 骨架 eb1d5b6 未入 main；另等 W-101 步骤② index_members 256；不得用 fixture 取证；数据 AC 须本卡自验,card,0ed37d6
 P12,S-04.01-02,P0,2.0,dev B,待解阻,P6 骨架 eb1d5b6 未入 main；数据 AC 须本卡自验，骨架不作证据,card,0ed37d6
 P13,S-04.02-01,P0,4.0,dev B,待解阻,P6 骨架 eb1d5b6 未入 main；数据 AC 须本卡自验，骨架不作证据,card,0ed37d6
-P14,S-05.01-01,P0,3.5,dev A,待解阻,P7 浮层已交付（W-100：9df6957+af36f9e）但未入 main；合入即解阻；合入后 dev A 接,card,0ed37d6
-P15,S-05.01-02,P0,1.5,dev B,待解阻,P7 浮层已交付（W-100）但未入 main；合入即解阻；dev B 队列,card,0ed37d6
+P14,S-05.01-01,P0,3.5,dev B,在制,【2026-11-09 按 aec0785 重核】W-100（PAGE-P7）已合入 main，页面 absent 阻塞解除；SearchOverlay.tsx / searchIndex.ts 实现已在 main 但缺 s050101 取证入口；dev B 认领做解阻（补套件入口与断言），分支 w11/s050101-evidence，worktree AKA-w11；不自出运行层证据、不改台账,card,aec0785
+P15,S-05.01-02,P0,1.5,—,待解阻,【2026-11-09 按 aec0785 重核】W-100 已合入、页面 absent 阻塞解除；上游 S-05.01-01（P14）索引与取证入口未就绪，且 dev B 在制 P14（在制数固定 1）；释放占用、排队列不认领,card,aec0785
 P16,S-07.03-01,P0,8.0,dev B,已交付待签,页面层+生成器（W-101，02f18c9）：页面 P10、5 步生成器、步骤② index_members 256；逐卡验证，验过即合；解阻 P11,page,02f18c9
 P17,S-07.05-03,P0,1.0,dev A,已占用,dev A 手上；只落浮层、补1 Blocked-AC,card,0ed37d6
-P18,S-08.01-02,P0,1.0,—,不可排,整卡续 Blocked、不拆卡；标的侧 AC-08.01-02 及补1/补2 依赖 P7 浮层 → 等 PAGE-P7 合入,card,0ed37d6
+P18,S-08.01-02,P0,1.0,—,不可排,【2026-11-09 按 aec0785 重核】W-100 虽已合入 main，但 gate-log / 台账裁定整卡续 Blocked、不拆卡（指标侧并入他卡、标的侧依赖 S-05.01-02）；仍不可排、不认领,card,aec0785
 P19,S-04.02-02,V1,3.0,—,不可排,V1 不排期；恢复须先补 sector_members,card,0ed37d6
 P20,S-09.01-01,P0,5.0,BA,非 dev,架构图集为文档交付物，不进 dev 编码线,card,0ed37d6
 P21,S-07.01-01,P0,2.5,—,已交付待签,代码已在 main（7b4f87e/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
 P22,S-07.04-01,P0,1.0,—,已交付待签,代码已在 main（048f16b/d996c6f）；证据需按 tip 重跑后签,card,d996c6f
 P23,S-02.06-02,P0,2.0,dev B,在制,性能修复（W-114）：回切时延 291ms → ≤120ms；口径 warm.criterion / maxTotalMs，90 次样本，allCacheHit 与 allPointwiseMatch 不得退化；验收 s20602 红转绿且 indicator.compute 无新增；反例=改回旧实现必红,card,6654a51
 PG-P6,PAGE-P6,P0,—,dev B,已交付待签,页面层（W-99）骨架 eb1d5b6：与路由+布局空态+7 条 DOM 契约锚点，不含数据；逐卡验证，验过即合；骨架不得作任何数据 AC 证据,page,eb1d5b6
-PG-P7,PAGE-P7,P0,—,dev B,已交付待签,页面层（W-100）9df6957 后端 + af36f9e 前端：承载 S-05.01-01/02；逐卡验证，验过即合；合入后解阻 P14/P15/P18,page,af36f9e
-P24,S-02.08-01,P0,1.5,dev A,待开工,新死 AC（补2）「只缺 sha256、其余 6 段正常」无入口可达：W-116 补 debug-only 注入；W-115 完成后开工；不得顺手改产品语义,card,a53371c
+PG-P7,PAGE-P7,P0,—,dev B,已交付待签,【2026-11-09 按 aec0785 重核】W-100 搜索浮层（SearchOverlay.tsx / searchIndex.ts）已在 main，页面 absent 阻塞解除，P14 / P15 由此解阻、P18 整卡 Blocked 不变；承载 S-05.01-01/02，逐卡验证验过即签,page,aec0785
+P24,S-02.08-01,P0,1.5,dev A,在制,【2026-11-09 按 aec0785 重核】W-115 已合入 aec0785，「W-115 完成后开工」前置解除；新死 AC（补2）「只缺 sha256、其余 6 段正常」仍无入口；dev A 认领 W-116 做 debug-only --missing-manifest-sha256 注入 + 门禁反例（与 W-115 同构），分支 w116/missing-manifest-sha256，worktree AKA-w116；不得顺手改产品语义,card,aec0785
