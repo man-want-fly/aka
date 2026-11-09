@@ -4,6 +4,7 @@ import type { RouteKey } from "../app/AppShell";
 import { formatPct, formatPrice, signClass } from "../lib/format";
 import { ipc, isTauriRuntime } from "../lib/ipc";
 import type { RecentViewDto } from "../lib/types";
+import { runS050102Diagnostics } from "../features/qa/batchDiag";
 import {
   buildSearchIndex,
   highlightParts,
@@ -154,6 +155,26 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
   useEffect(() => {
     document.getElementById(`search-opt-${active}`)?.scrollIntoView({ block: "nearest" });
   }, [active]);
+
+  // P15 / S-05.01-02 取证接线：仅 AKA_DIAG_TARGET=s050102 时自跑一次取证套件。
+  // 只读 DOM、不改产品交互语义；判定表达式与反例由 scripts/verify_s050102.mjs
+  // 从 batchDiag.ts 派生（制度第 29 条）。
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let alive = true;
+    void ipc
+      .diagTarget()
+      .then((target) => {
+        if (!alive || target !== "s050102") return;
+        if (sessionStorage.getItem("aka.batch.s050102.done")) return;
+        sessionStorage.setItem("aka.batch.s050102.done", "1");
+        void runS050102Diagnostics();
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const { hits, matched } = useMemo(
     () => (index ? matchSecurities(index, debounced) : { hits: [], matched: 0 }),
