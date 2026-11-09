@@ -54,7 +54,7 @@ const LEGACY_NO_SIGN = new Set([
   "S-03.04-01",
   "S-06.01-02",
 ]);
-const TYPE = new Set(["feat", "fix", "docs", "sign", "evidence", "merge", "refactor", "test", "chore"]);
+const TYPE = new Set(["feat", "fix", "docs", "sign", "evidence", "merge", "refactor", "test", "perf", "chore"]);
 const DISPOSAL = ["补签", "降级为文档卡", "降级为不可放行", "逐张裁定"];
 
 const failures = [];

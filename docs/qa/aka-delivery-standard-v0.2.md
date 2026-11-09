@@ -75,7 +75,7 @@
 - Sign-Invalidates: none | <卡号/行>
 ```
 
-- `type` ∈ `feat|fix|docs|sign|evidence|merge|refactor|test|chore|chore`；`scope` 小写中划线。
+- `type` ∈ `feat|fix|docs|sign|evidence|merge|refactor|test|perf|chore`；`scope` 小写中划线。`perf` 用于性能口径/判据类提交（2026-11-08 修订：`fbd4a28` 因枚举缺 `perf` 被误判红，属枚举缺口而非笔误）。
 - **`Sign-Invalidates:` 必填**：只要本次 diff 触碰 `docs/qa/aka-card-gate-log-v0.1.csv`、`docs/qa/evidence/` 或已签卡的卡面，必须写明失效范围；无失效写 `none`。
 - **「连带修正：文件 L行 原值→新值」必填**：改常量、改派生口径、改卡面数字时，逐条列出旧值和新值；只写「已修正」视为未交付。
 - **不合格判定**：`verify:delivery` 校验 HEAD 提交信息（subject 格式 + 触碰签字产物时的 trailer）；CI 红。合并提交跳过 trailer 检查，但合并提交正文必须列出被合并的 commit。
