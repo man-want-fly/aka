@@ -176,6 +176,18 @@ export default function App() {
           setLocation({ route: "datasource", code: null });
           return;
         }
+        // W-118：s050101（搜索浮层）/ s020801（工作台页脚）此前无落地页分支，
+        // 命中末尾 return 停在默认页，s020801 宿主 WorkbenchPage 不挂载 → 零 dump、240s 超时。
+        if (target === "s050101" || target === "s020801") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.setItem("aka.catalog.diag.done", "1");
+          sessionStorage.setItem("aka.s0602.diag.done", "1");
+          if (window.location.hash.startsWith("#/workbench")) return;
+          window.location.hash = "#/workbench";
+          setLocation({ route: "workbench", code: null });
+          return;
+        }
         // S-03.01-01 指标目录取证：直接进目录页，并占住 S2/抽屉的 once 位。
         if (target === "catalog") {
           sessionStorage.setItem("aka.s2.diag.once", "1");

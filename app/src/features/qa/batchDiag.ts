@@ -109,6 +109,33 @@ const writeBatchReport = async (
   );
 };
 
+/**
+ * W-118：取证套件异常中断时落一份可诊断的失败 dump，避免「零产物 + 240s 空等」。
+ * 文件名与成功证据一致：diag-evidence.sh 的等待循环见到新文件即结束；
+ * ok:false / error / blocked[] 由 verify:evidence 第 31 条判为失败记录（不计份数、不可签）。
+ * 只在 runner 抛错的 catch 路径调用，正常证据仍由各 runner 自己 writeBatchReport 落盘。
+ */
+export async function writeDiagnosticFailure(
+  name: string,
+  suite: string,
+  err: unknown,
+): Promise<void> {
+  const message = err instanceof Error ? err.message : String(err);
+  const reason = `套件异常中断：${message}`;
+  // 构建期 define（vite-env.d.ts 全局声明）；拿不到时留空，不因诊断路径再抛错。
+  const commit = typeof __AKA_BUILD_COMMIT__ === "string" ? __AKA_BUILD_COMMIT__ : "";
+  const dump = {
+    suite,
+    ok: false,
+    error: reason,
+    commit,
+    finishedAt: new Date().toISOString(),
+    checks: [] as Check[],
+    blocked: [{ ac: "suite-runner", blocker: `run-${suite}`, reason, skipped: false }],
+  };
+  await ipc.diagWriteNamed(name, JSON.stringify(dump, null, 2));
+}
+
 /** P01：目录行「加入图表」容量、去重、规划项与无标的引导。 */
 export async function runS030104Diagnostics(manifest: ManifestResponse) {
   const report = { ...baseReport("s030104"), card: "S-03.01-04" };

@@ -8,6 +8,7 @@ import {
   runS030104Diagnostics,
   runS030201Diagnostics,
   runS030302CatalogDiagnostics,
+  writeDiagnosticFailure,
 } from "../../features/qa/batchDiag";
 import { Highlight, PANEL_LABEL, searchIndicators } from "../../features/indicators/search";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
@@ -217,7 +218,21 @@ export function CatalogPage({ onNavigate, onOpenWorkbench }: Props) {
           await runS030302CatalogDiagnostics();
         }
       } catch (err) {
-        console.error("[catalog.diag]", describeError(err).message);
+        const message = describeError(err).message;
+        console.error("[catalog.diag]", message);
+        // W-118：套件异常中断也必须落 dump，否则 240s 只能看到「一个文件都没有」，
+        // 无法区分「没跑完」和「等待路径错」。文件名与成功证据一致，等待循环见到
+        // 新文件即结束；ok:false / error / blocked[] 由第 31 条判失败记录，不计份数、不可签。
+        const failureFileByTarget: Record<string, string> = {
+          catalog: "s03010-evidence.json",
+          s030104: "s030104-evidence.json",
+          s030201: "s030201-favorites-evidence.json",
+          "s030302-catalog": "s030302-catalog-evidence.json",
+        };
+        const failureFile = failureFileByTarget[target];
+        if (failureFile) {
+          await writeDiagnosticFailure(failureFile, target, err).catch(() => undefined);
+        }
       }
     })();
     return () => {

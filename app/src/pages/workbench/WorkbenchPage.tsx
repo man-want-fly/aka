@@ -66,7 +66,11 @@ import { runRestartDiagnostics, restartDiagStage } from "../../features/workbenc
 import { runWatchlistDiagnostics, watchlistDiagStage } from "../../features/watchlist/watchlistDiag";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
-import { runS030302WorkbenchDiagnostics } from "../../features/qa/batchDiag";
+import {
+  runS020801Diagnostics,
+  runS030302WorkbenchDiagnostics,
+  writeDiagnosticFailure,
+} from "../../features/qa/batchDiag";
 import type {
   AppError,
   BarProvenanceDto,
@@ -1273,6 +1277,28 @@ export function WorkbenchPage({
       alive = false;
     };
   }, [manifest, datasetManifest]);
+
+  // W-118：S-02.08-01（补2）页脚取证接线。runner 只读 [data-dataset-overview]/
+  // [data-dataset-seg]，宿主是本页；此前无任何组件调用（死代码）→ 零 dump、240s 超时。
+  // 异常也落失败 dump，避免零产物空等（对齐 s070503 的 blockedDump 口径）。
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let alive = true;
+    void ipc
+      .diagTarget()
+      .then((target) => {
+        if (!alive || target !== "s020801") return;
+        if (window.sessionStorage.getItem("aka.batch.s020801.done") === "1") return;
+        window.sessionStorage.setItem("aka.batch.s020801.done", "1");
+        void runS020801Diagnostics().catch((err: unknown) => {
+          void writeDiagnosticFailure("s020801-evidence.json", "s020801", err);
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // S-07.05-03 溯源浮层取证：AKA_DIAG_TARGET=s070503 时自跑一次
   useEffect(() => {
