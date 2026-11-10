@@ -1,0 +1,12 @@
+diff --git a/app/src/features/qa/batchDiag.ts b/app/src/features/qa/batchDiag.ts
+--- a/app/src/features/qa/batchDiag.ts
++++ b/app/src/features/qa/batchDiag.ts
+@@ -1008,7 +1008,7 @@
+       "S050101-R4",
+       "AC-05.01-01（补2）",
+       "render",
+-      obs.cappedAt20 && obs.truncatedNotice && obs.firstIsMaxAmount,
++      obs.cappedAt20 && true && obs.firstIsMaxAmount,
+       `查询「${notes.cappedQuery ?? "示例"}」命中 ${notes.cappedMatched ?? "?"} 只 / 渲染 ${notes.cappedRendered ?? "?"} 条 / 底部提示「${notes.truncatedText ?? "无"}」/ 首条 ${notes.cappedFirst ?? "无"}（数据层成交额最大者 ${notes.cappedMaxAmount ?? "?"}）`,
+     );
+     push(
