@@ -1,0 +1,86 @@
+{
+  "suite": "s030104",
+  "ok": true,
+  "finishedAt": "2026-11-10T08:40:56.292Z",
+  "checks": [
+    {
+      "id": "P01-R1",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "无标的横幅「请先在行情页选择一只标的 · 去行情页」/ 去行情页=true / 按钮 disabled=true title=「请先在行情页选择一只标的」"
+    },
+    {
+      "id": "P01-R2",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "M02 状态=full disabled=true title=「副图已满（3/3），请先移除一个」/ 提示「副图已满（3/3），请先移除一个」/ 副图 VOL,M06,M01"
+    },
+    {
+      "id": "P01-R3",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "M06 状态=added disabled=true 副图 M06=1 次"
+    },
+    {
+      "id": "P01-R4",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补4）",
+      "layer": "render",
+      "passed": true,
+      "detail": "T06 状态=planned aria-disabled=true 提示「该指标规划中，本期未开放」/ 副图未变=true"
+    },
+    {
+      "id": "P01-R5",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05",
+      "layer": "render",
+      "passed": true,
+      "detail": "加入前副图 VOL,M06 / 加入后副图 VOL,M06,D01 / OBV=1 次 / 按钮「已加入」/ 在工作台查看=true / manifest 105 条"
+    },
+    {
+      "id": "P01-R6",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补4）",
+      "layer": "render",
+      "passed": true,
+      "detail": "M03 状态=planned aria-disabled=true 提示「该指标规划中，本期未开放」/ 副图未变=true"
+    }
+  ],
+  "card": "S-03.01-04",
+  "env": {
+    "commit": "f10e077a68413de8f20abb9463c6a5a8d268c1f9",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-10T08:40:39.331Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+        "sha256": "f8145b7b22d99d943eebd23fb2b14e688b80534f48812e9e6489e68e8d1bbbfc"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s030104\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}

@@ -1,0 +1,47 @@
+{
+  "suite": "s030104",
+  "label": "20261110-164050",
+  "runAt": "2026-11-10T16:40:57+08:00",
+  "commit": "f10e077a68413de8f20abb9463c6a5a8d268c1f9",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s030104\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+  "fixture": "默认 state.db；App 清空 aka.last.code 后验证无标的引导，再按「副图满仓 / 留出空位」两阶段验证容量、去重与规划项；只改 localStorage，不改库",
+  "buildMode": "dev",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "blocked": [],
+    "card": "S-03.01-04",
+    "layers": {
+      "render": "6/6"
+    },
+    "otherCards": []
+  },
+  "dump": {
+    "archived": "docs/qa/raw/s030104-evidence-f10e077a6841-20261110-164050.json",
+    "sha256": "210829a9008e8bfc359a16da7675824ab0f4de7bc84cd8fd8c6605cf9b904245",
+    "finishedAt": "2026-11-10T08:40:56.292Z"
+  },
+  "runtime": {
+    "launchMode": "cargo+custom-protocol",
+    "node": "v22.21.1",
+    "os": "macos",
+    "arch": "x86_64",
+    "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+    "electron": "none"
+  },
+  "build": {
+    "entry": "dist/index.html",
+    "builtAt": "2026-11-10T08:40:39.331Z",
+    "cargoProfile": "dev",
+    "features": [
+      "tauri/custom-protocol"
+    ],
+    "binary": {
+      "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+      "sha256": "f8145b7b22d99d943eebd23fb2b14e688b80534f48812e9e6489e68e8d1bbbfc"
+    }
+  },
+  "reproduce": "app/scripts/evidence-run.sh s030104"
+}
