@@ -162,6 +162,19 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
     };
   }, [open]);
 
+  /**
+   * 卡面「⌘K 唤起 → 浮层出现，输入框自动聚焦」。
+   * 索引未就绪时输入框是 disabled 的，disabled 元素上 focus() 无效 —— 只在打开瞬间
+   * 聚焦一次，「唤起早于索引就绪」这条路径就永远拿不到焦点（实测 ⌘K 唤起=true 但
+   * 输入框聚焦=false）。这里在输入框变为可用（索引就绪）时补一次聚焦。
+   */
+  useEffect(() => {
+    if (!open || loadState !== "ready") return;
+    const element = inputRef.current;
+    if (!element || element.disabled) return;
+    element.focus();
+  }, [open, loadState]);
+
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(query), 60);
     return () => window.clearTimeout(timer);
