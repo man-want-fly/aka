@@ -78,6 +78,7 @@
 - `type` ∈ `feat|fix|docs|sign|evidence|merge|refactor|test|perf|chore`；`scope` 小写中划线。`perf` 用于性能口径/判据类提交（2026-11-08 修订：`fbd4a28` 因枚举缺 `perf` 被误判红，属枚举缺口而非笔误）。
 - **`Sign-Invalidates:` 必填**：只要本次 diff 触碰 `docs/qa/aka-card-gate-log-v0.1.csv`、`docs/qa/evidence/` 或已签卡的卡面，必须写明失效范围；无失效写 `none`。
 - **「连带修正：文件 L行 原值→新值」必填**：改常量、改派生口径、改卡面数字时，逐条列出旧值和新值；只写「已修正」视为未交付。
+- **归档提交只写事实**（2026-11-10 新增，`fe3bd30` 事故）：`evidence` 类提交只写「归档了什么」——套件、文件、次数、时间；**不得在提交信息里下结论**（如「环境抖动」「预期红」「不可判」）。结论只能进卡面或审计，且必须有人裁。归档记录不因结论有误而删除：**纠结论，不删档案**；以 `Sign-Invalidates:` 撤掉不利记录一律视为擦证据。
 - **不合格判定**：`verify:delivery` 校验 HEAD 提交信息（subject 格式 + 触碰签字产物时的 trailer）；CI 红。合并提交跳过 trailer 检查，但合并提交正文必须列出被合并的 commit。
 
 ### 2.3 索引归属（`4f44b08` 事故）

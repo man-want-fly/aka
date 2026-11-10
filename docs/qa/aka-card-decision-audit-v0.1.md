@@ -3467,6 +3467,28 @@ B 那次：`engineMs` 全 0（引擎缓存命中）；bars/calc 的 p50 几乎�
 - 「after」= 合并后 tip 上一次干净采集的新 `s2` 证据；「before」= 仓库已有三份 dump（A `55` / C `66` / B `291`），**不新采、不切主树**。
 - 同一签字对象只允许**一份**证据；不得为凑对照在 main 上切来切去。
 
+#### 4.7.101 归档提交越界下结论：`fe3bd30` 的「环境抖动」（2026-11-10）
+
+**现场**：`s060302` 第一次取证（`2026-11-10 14:01`）失败，四项原文——`step=collect`、`exitCode=2`、日志尾「置前失败：前台进程=Electron（activateAttempts=1），中止取证」、发生时间 `2026-11-10 14:01`。失败记录随后被 `fe3bd30`（14:07:03）收入 main，提交信息写「归档 s060302 取证第 1 次置前失败记录（环境抖动，留痕）」。
+
+**问题**：**归档提交在提交信息里下结论**。`activateAttempts=1` 到底是产品「置前」缺陷还是环境噪声，尚未排查；写成「环境抖动」等于用 commit message 结案，而该结论会随 main 长期存在。
+
+**裁定 A（保留归档，不撤）**：
+- 归档保留。档案删了现场就没了；要纠的是那句结论，不是那两个文件。
+- 用 `Sign-Invalidates:` 去撤一份对自己不利的记录，等于拿制度工具擦证据——**此先例的危害大于那次误判**，不采用。
+- `fe3bd30` 的提交信息按历史缺陷登记，**不改写历史**。
+- 卡面 `P05` 行（工单 L45）记：`fe3bd30` 提交信息的「环境抖动」是**未经验证的结论，不采信**；`activateAttempts=1` 待查，不得以「重跑过了」结案；四项事实原文保留，不改一字。
+
+**新规（入交付规范 §2.2）**：证据归档提交只写「归档了什么」——套件、文件、次数、时间；**不写「为什么」**。结论只能进卡面或审计，且必须有人裁。归档记录不因结论有误而删除：**纠结论，不删档案**。
+
+**附：14:07:47 重采 `s060302` 的字段值（只报事实，不下可签结论）**
+- 文件：`docs/qa/evidence/s060302-evidence.json` + `s060302-evidence-meta.json`；两份已随 `7a624a6`（2026-11-10 14:11:28）入库。
+- `checks` 4 条（`P05-R1`~`R4`）全 `passed:true`；`ok=true`；`suite=s060302`；`card=S-06.03-02`；`finishedAt=2026-11-10T06:07:52.854Z`（本地 14:07:52）。
+- `env` 五项齐：`commit=fe3bd30af250…`、`dirty=false`、`runtime`（`cargo+custom-protocol` / node `v22.21.1` / `macos` / `x86_64` / `tauri-webkit(x86_64-apple-darwin)`）、`build`（`dist/index.html`、`builtAt 14:07:28`、`dev`、`tauri/custom-protocol`、binary `sha256=aee1a298…`）、`command=AKA_DIAG=1 AKA_DIAG_TARGET="s060302" …`。
+- 聚焦：`windowFocused=true`、`appActive=true`、`activateAttempts=1`、`focusedAtLaunch=true`、`focusedAtAssert=true`。
+- meta：`runAt=2026-11-10T14:07:55+08:00`、`commit=fe3bd30…`、`dirty=false`、`reproduce=app/scripts/evidence-run.sh s060302`；`dump.sha256=188bb22bb74c…`，与 raw 实算一致。
+- 对应提交：归档提交 `7a624a6`；证据文件内的 `env.commit` / `meta.commit` 为 `fe3bd30`（采集时 HEAD），两者不是同一件事。
+
 ## 5. 拍板事项：11 条的最终状态
 
 **已拍 5 条（产品）**：B-09 分母 112；beta 徽标只看 status；T03/T21 转正、T19 保持 beta；ST 不进 MVP；12 行业降级 V1（**2026-11-07 已确认**，见 4.7.8）。
