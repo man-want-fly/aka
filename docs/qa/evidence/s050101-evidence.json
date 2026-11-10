@@ -1,7 +1,7 @@
 {
   "suite": "s050101",
   "ok": true,
-  "finishedAt": "2026-11-09T19:28:29.152Z",
+  "finishedAt": "2026-11-10T08:33:54.943Z",
   "checks": [
     {
       "id": "S050101-R1",
@@ -9,7 +9,7 @@
       "ac": "AC-05.01-01",
       "layer": "render",
       "passed": true,
-      "detail": "代码/名称/拼音三次命中：300750.SZ / 300750.SZ / 300750.SZ"
+      "detail": "⌘K 唤起=true / 输入框聚焦=true / 代码·名称·拼音命中=true·true·true / 行含代码·名称·板块·模拟=true·true·true·true / 查询 P95=0.000ms（V-07 口径：本地索引查询，预热 5 次后取 30 次 P95，dev 构建（Release 复测待 BA 补））"
     },
     {
       "id": "S050101-R2",
@@ -17,12 +17,45 @@
       "ac": "AC-05.01-04",
       "layer": "runtime",
       "passed": true,
-      "detail": "搜索期间外部 http(s) 资源 0 个"
+      "detail": "搜索期间外部 http(s) 资源：增量 0 个 / 累计 0 个"
+    },
+    {
+      "id": "S050101-R3",
+      "card": "S-05.01-01",
+      "ac": "AC-05.01-01（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "300750.SZ → 300750.SZ / 300750.sz → 300750.SZ"
+    },
+    {
+      "id": "S050101-R4",
+      "card": "S-05.01-01",
+      "ac": "AC-05.01-01（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "查询「示例」命中 103 只 / 渲染 20 条 / 底部提示「仅显示前 20 条」/ 首条 601029.SH（数据层成交额最大者 10371482219.04（601029.SH））"
+    },
+    {
+      "id": "S050101-R5",
+      "card": "S-05.01-01",
+      "ac": "AC-05.01-01（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "停牌标的 DIAGQSUP.SZ：命中=true / 「停牌」标签=true / 涨跌幅=「—」"
+    },
+    {
+      "id": "S050101-R6",
+      "card": "S-05.01-01",
+      "ac": "AC-05.01-01（补4）",
+      "layer": "render",
+      "passed": true,
+      "detail": "「/」结果 0 条 / 输入保留「/」/ 三空格结果 0 条 / 输入保留「   」/ toast=无 / 运行期异常 0 条"
     }
   ],
   "card": "S-05.01-01",
+  "blocked": [],
   "env": {
-    "commit": "ebb296d40982f142a8032820dbc1cbf07e513ad4",
+    "commit": "532c88ee742b1f7ed562f1350f39cb976963e10b",
     "dirty": false,
     "runtime": {
       "launchMode": "cargo+custom-protocol",
@@ -34,14 +67,14 @@
     },
     "build": {
       "entry": "dist/index.html",
-      "builtAt": "2026-11-09T19:28:09.940Z",
+      "builtAt": "2026-11-10T08:32:57.683Z",
       "cargoProfile": "dev",
       "features": [
         "tauri/custom-protocol"
       ],
       "binary": {
         "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
-        "sha256": "640e9489d946acfbaf88172c01dc59204af0ae5df09fa9e1dff29e8c3c642eaa"
+        "sha256": "7b4fe4e4b757a802fa8cae8691a7f230aacb5b9fd8b43f7a5348e8e3d7952ba5"
       }
     },
     "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s050101\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
