@@ -1,0 +1,47 @@
+{
+  "suite": "s020801",
+  "label": "20261110-135816",
+  "runAt": "2026-11-10T13:58:29+08:00",
+  "commit": "ccfe54496817077256ed5b3841d816bd7d4a2d20",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s020801\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+  "fixture": "默认 state.db；--missing-manifest-sha256（trigger=injected）让 dataset_manifest 只清 sha256、其余 8 字段原样，验证工作台页脚「只缺一段、其余 6 段正常」（AC-02.08-01（补2））；只读，不改库",
+  "buildMode": "dev",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "blocked": [],
+    "card": "S-02.08-01",
+    "layers": {
+      "render": "1/1"
+    },
+    "otherCards": []
+  },
+  "dump": {
+    "archived": "docs/qa/raw/s020801-evidence-ccfe54496817-20261110-135816.json",
+    "sha256": "9027162cd18e960fc16acabe1fbad550e77c28abb2e82fac80982c39cad2216a",
+    "finishedAt": "2026-11-10T05:58:26.678Z"
+  },
+  "runtime": {
+    "launchMode": "cargo+custom-protocol",
+    "node": "v22.21.1",
+    "os": "macos",
+    "arch": "x86_64",
+    "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+    "electron": "none"
+  },
+  "build": {
+    "entry": "dist/index.html",
+    "builtAt": "2026-11-10T05:57:45.949Z",
+    "cargoProfile": "dev",
+    "features": [
+      "tauri/custom-protocol"
+    ],
+    "binary": {
+      "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+      "sha256": "acca73019e3bccc038527b0966ddf93dd05d44272f359b1125d7a07f3062530f"
+    }
+  },
+  "reproduce": "app/scripts/evidence-run.sh s020801"
+}
