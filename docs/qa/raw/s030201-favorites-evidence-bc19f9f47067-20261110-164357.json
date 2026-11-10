@@ -1,0 +1,102 @@
+{
+  "suite": "s030201",
+  "ok": true,
+  "finishedAt": "2026-11-10T08:44:03.298Z",
+  "checks": [
+    {
+      "id": "P02-R1",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "收藏 chips T01,T02,T09,M06,M01,M02,V01,D01 / 状态 normal,normal,normal,normal,normal,normal,normal,normal / 计数「8」"
+    },
+    {
+      "id": "P02-R2",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-02",
+      "layer": "render",
+      "passed": true,
+      "detail": "M03 星标前 aria-pressed=false / 添加后序列 M03,T01,T02,T09,M06,M01,M02,V01,D01 / M03 首项且唯一=true / 星标后 aria-pressed=true"
+    },
+    {
+      "id": "P02-R3",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-02（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "新收藏排在最前：首项 M03"
+    },
+    {
+      "id": "P02-R4",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-01（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "收藏区 8 项 / 横向溢出=false（scrollWidth 417 / clientWidth 417）"
+    },
+    {
+      "id": "P02-R5",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-01（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "T06 chip 状态=planned 提示「该指标规划中，本期未开放」/ chip 保留=true"
+    },
+    {
+      "id": "P02-D1",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-01",
+      "layer": "data",
+      "passed": true,
+      "detail": "IPC 默认收藏 T01,T02,T09,M06,M01,M02,V01,D01 / 全部 normal+default=true"
+    },
+    {
+      "id": "P02-D2",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-01（补1）",
+      "layer": "data",
+      "passed": true,
+      "detail": "连续 5 次收藏 M03 → 行数 9，M03 唯一行 1"
+    },
+    {
+      "id": "P02-D3",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-01（补2）",
+      "layer": "data",
+      "passed": true,
+      "detail": "全部移除后 0 项；再次读取 0 项（未重新播种）"
+    }
+  ],
+  "card": "S-03.02-01",
+  "env": {
+    "commit": "bc19f9f470676742fd3cb62beed8f54cb8558283",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-10T08:43:42.728Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
+        "sha256": "7b4f48c0a62ee8f8d4a0b5ce9521da0bc3cb72e46a8a9868cb7be8df60bd34fd"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s030201\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}
