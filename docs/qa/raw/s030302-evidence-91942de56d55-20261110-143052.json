@@ -1,0 +1,78 @@
+{
+  "suite": "s030302",
+  "ok": true,
+  "finishedAt": "2026-11-10T06:30:58.380Z",
+  "checks": [
+    {
+      "id": "P03-R3",
+      "card": "S-03.03-02",
+      "ac": "AC-03.03-03（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "工作台 MACD 图例「?」存在=true role=button"
+    },
+    {
+      "id": "P03-R4",
+      "card": "S-03.03-02",
+      "ac": "AC-03.03-03（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "图例来源面包屑「工作台 / 600519.SH / MACDM06」/ hash #/catalog/M06?from=chart&code=600519.SH"
+    },
+    {
+      "id": "P03-R5",
+      "card": "S-03.03-02",
+      "ac": "AC-03.03-03（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "返回后副图 VOL,M06,M01 → VOL,M06,M01 / 视口记忆未变=true"
+    },
+    {
+      "id": "P03-R6",
+      "card": "S-03.03-02",
+      "ac": "AC-03.03-03（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "抽屉来源面包屑「工作台 / 600519.SH / MACDM06」"
+    },
+    {
+      "id": "P03-R7",
+      "card": "S-03.03-02",
+      "ac": "AC-03.03-03（补2）",
+      "layer": "render",
+      "passed": true,
+      "detail": "Esc 返回工作台后抽屉恢复=true"
+    }
+  ],
+  "card": "S-03.03-02",
+  "env": {
+    "commit": "91942de56d5547075712bf85a7eb3f341caec9b1",
+    "dirty": false,
+    "runtime": {
+      "launchMode": "cargo+custom-protocol",
+      "node": "v22.21.1",
+      "os": "macos",
+      "arch": "x86_64",
+      "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+      "electron": "none"
+    },
+    "build": {
+      "entry": "dist/index.html",
+      "builtAt": "2026-11-10T06:30:36.406Z",
+      "cargoProfile": "dev",
+      "features": [
+        "tauri/custom-protocol"
+      ],
+      "binary": {
+        "path": "/tmp/aka-ev/app/target/debug/aka-desktop",
+        "sha256": "e890a449b63ecdb160d49623ac69f0e5e37fc359363ecd2397d11a4242576ba1"
+      }
+    },
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s030302\" /tmp/aka-ev/app/target/debug/aka-desktop"
+  },
+  "windowFocused": true,
+  "appActive": true,
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": true
+}

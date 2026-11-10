@@ -1,0 +1,47 @@
+{
+  "suite": "s030302",
+  "label": "20261110-143052",
+  "runAt": "2026-11-10T14:30:59+08:00",
+  "commit": "91942de56d5547075712bf85a7eb3f341caec9b1",
+  "dirty": false,
+  "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s030302\" /tmp/aka-ev/app/target/debug/aka-desktop",
+  "fixture": "默认 state.db；工作台图例「?」与抽屉「查看口径」进 P4 后返回，验证副图/视口保持与抽屉恢复；只读，不改库",
+  "buildMode": "dev",
+  "environment": "macOS 本机；NODE_ENV=development vite build（mode=dev，含 dev-only 导出注入）+ cargo build（debug，含 QA 注入）--features tauri/custom-protocol。静态零命中检查跑 release dist，与四支运行时证据不是同一产物。",
+  "formatScan": null,
+  "result": {
+    "ok": true,
+    "blocked": [],
+    "card": "S-03.03-02",
+    "layers": {
+      "render": "5/5"
+    },
+    "otherCards": []
+  },
+  "dump": {
+    "archived": "docs/qa/raw/s030302-evidence-91942de56d55-20261110-143052.json",
+    "sha256": "ebd039a4a33be0ca4216f99c3437d4b50f30919ba559817c0970897158d3b224",
+    "finishedAt": "2026-11-10T06:30:58.380Z"
+  },
+  "runtime": {
+    "launchMode": "cargo+custom-protocol",
+    "node": "v22.21.1",
+    "os": "macos",
+    "arch": "x86_64",
+    "hostTarget": "tauri-webkit(x86_64-apple-darwin)",
+    "electron": "none"
+  },
+  "build": {
+    "entry": "dist/index.html",
+    "builtAt": "2026-11-10T06:30:36.406Z",
+    "cargoProfile": "dev",
+    "features": [
+      "tauri/custom-protocol"
+    ],
+    "binary": {
+      "path": "/tmp/aka-ev/app/target/debug/aka-desktop",
+      "sha256": "e890a449b63ecdb160d49623ac69f0e5e37fc359363ecd2397d11a4242576ba1"
+    }
+  },
+  "reproduce": "app/scripts/evidence-run.sh s030302"
+}
