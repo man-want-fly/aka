@@ -1,0 +1,12 @@
+diff --git a/app/src/features/qa/batchDiag.ts b/app/src/features/qa/batchDiag.ts
+--- a/app/src/features/qa/batchDiag.ts
++++ b/app/src/features/qa/batchDiag.ts
+@@ -1387,7 +1387,7 @@
+     "S050102-R1",
+     "AC-05.01-02",
+     "render",
+-    obs.downSelectedSecond && obs.enterOpenedSecond && obs.escClearedInput,
++    obs.downSelectedSecond || obs.enterOpenedSecond || obs.escClearedInput,
+     `↓ 选第二条=${obs.downSelectedSecond} / Enter 打开第二条=${obs.enterOpenedSecond} / Esc 清空=${obs.escClearedInput}`,
+   );
+   push(

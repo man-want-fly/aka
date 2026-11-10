@@ -1,5 +1,6 @@
 import { ipc } from "../../lib/ipc";
 import type { ManifestResponse } from "../../lib/types";
+import { buildSearchIndex, matchSecurities } from "../search/searchIndex";
 import { collectEvidenceEnv, collectFocus } from "../workbench/diag";
 import { healthSummaryMismatch } from "./healthSummary";
 
@@ -21,13 +22,40 @@ interface Check {
 
 const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
-const waitFor = async <T,>(probe: () => T | null, timeoutMs = 8_000, stepMs = 50): Promise<T> => {
+/** 取证环境是 debug 构建 + 冷启动，DOM 就绪普遍慢于 8s；统一放宽到 20s。 */
+const DOM_WAIT_MS = 20_000;
+/** 工作台要等 bars+calc 首次算完，单独放宽。 */
+const CHART_WAIT_MS = 45_000;
+
+/**
+ * 等待 DOM/状态就绪。超时错误必须带步骤名：
+ * 失败 dump 里只有「等待超时」四个字时，无法区分卡在哪一步（W-119 的教训）。
+ */
+const waitFor = async <T,>(
+  probe: () => T | null,
+  timeoutMs = DOM_WAIT_MS,
+  stepMs = 50,
+  label = "未命名步骤",
+): Promise<T> => {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     const value = probe();
     if (value) return value;
-    if (Date.now() > deadline) throw new Error("等待超时");
+    if (Date.now() > deadline) throw new Error(`等待超时（${timeoutMs}ms）：${label}`);
     await sleep(stepMs);
+  }
+};
+
+/** 可选等待：超时返回 null（用于「拿不到就判红」的观察量，不让整条套件崩掉）。 */
+const tryWait = async <T,>(
+  probe: () => T | null,
+  timeoutMs = DOM_WAIT_MS,
+  stepMs = 50,
+): Promise<T | null> => {
+  try {
+    return await waitFor(probe, timeoutMs, stepMs);
+  } catch {
+    return null;
   }
 };
 
@@ -36,29 +64,58 @@ const qa = <T extends Element>(selector: string) => Array.from(document.querySel
 
 const CATEGORY_KEYS = ["trend", "momentum", "volatility", "volume", "stat", "breadth"] as const;
 
+/**
+ * 分类懒挂载：目录重挂载后 manifest 要重新拉，分类开关在 manifest 到位前不存在。
+ * 旧实现直接点开关 → manifest 未到时点空 → 后续等 T06 行超时（W-119：套件跑不完）。
+ * 现在先等 manifest 就绪（分类开关出现）再逐类展开。
+ */
 const expandAllCategories = async () => {
+  await waitFor(
+    () => q('[data-catalog-cat-toggle="trend"]'),
+    DOM_WAIT_MS,
+    50,
+    "目录 manifest 就绪（分类开关出现）",
+  );
   for (const key of CATEGORY_KEYS) {
     const toggle = q<HTMLElement>(`[data-catalog-cat-toggle="${key}"]`);
-    if (toggle && toggle.getAttribute("aria-expanded") !== "true") {
+    if (!toggle) continue;
+    if (toggle.getAttribute("aria-expanded") !== "true") {
       toggle.click();
-      await sleep(60);
+      await sleep(80);
     }
   }
-  await waitFor(() => q('[data-catalog-item="T06"]'));
+  await waitFor(() => q('[data-catalog-item="T06"]'), DOM_WAIT_MS, 50, "分类展开后 T06 行出现");
 };
 
-const gotoHash = async (hash: string, selector: string) => {
+const gotoHash = async (hash: string, selector: string, label: string) => {
   window.location.hash = hash;
-  await waitFor(() => q(selector));
+  await waitFor(() => q(selector), DOM_WAIT_MS, 50, label);
   await sleep(120);
 };
 
-/** 目录页状态（last_code/收藏）来自挂载时读取，须先离开再回来才会重挂载。 */
+/**
+ * 目录页状态（last_code/收藏）来自挂载时读取，须先离开再回来才会重挂载。
+ * 旧实现只等 `main`（行情页与目录页都有）→ React 把两次 hash 变更合批后
+ * 目录页其实没卸载/重挂载，last_code 仍是旧值 → 后续点击 disabled → 等状态超时。
+ * 现在等「目录根真的消失」再回来，等价于确认卸载 → 再等 manifest 就绪。
+ */
 const remountCatalog = async () => {
   window.location.hash = "#/market";
-  await waitFor(() => q("[data-market-root], main"));
-  await sleep(150);
-  await gotoHash("#/catalog", "[data-catalog-root='p3']");
+  await waitFor(
+    () => (q("[data-catalog-root='p3']") === null ? "unmounted" : null),
+    DOM_WAIT_MS,
+    50,
+    "目录页卸载（离开 #/catalog）",
+  );
+  await sleep(120);
+  await gotoHash("#/catalog", "[data-catalog-root='p3']", "目录页重挂载");
+  await waitFor(
+    () => q('[data-catalog-cat-toggle="trend"]'),
+    DOM_WAIT_MS,
+    50,
+    "目录 manifest 就绪（重挂载后）",
+  );
+  await sleep(120);
 };
 
 const readSubPlots = (): string[] => {
@@ -114,11 +171,15 @@ const writeBatchReport = async (
  * 文件名与成功证据一致：diag-evidence.sh 的等待循环见到新文件即结束；
  * ok:false / error / blocked[] 由 verify:evidence 第 31 条判为失败记录（不计份数、不可签）。
  * 只在 runner 抛错的 catch 路径调用，正常证据仍由各 runner 自己 writeBatchReport 落盘。
+ *
+ * W-119：partialChecks 让失败 dump 保留「已跑完那几条 check」，否则失败记录里
+ * checks[] 恒为空，无法判断套件是「一开始就卡住」还是「跑到一半卡住」。
  */
 export async function writeDiagnosticFailure(
   name: string,
   suite: string,
   err: unknown,
+  partialChecks: Check[] = [],
 ): Promise<void> {
   const message = err instanceof Error ? err.message : String(err);
   const reason = `套件异常中断：${message}`;
@@ -130,11 +191,41 @@ export async function writeDiagnosticFailure(
     error: reason,
     commit,
     finishedAt: new Date().toISOString(),
-    checks: [] as Check[],
+    checks: partialChecks,
     blocked: [{ ac: "suite-runner", blocker: `run-${suite}`, reason, skipped: false }],
   };
   await ipc.diagWriteNamed(name, JSON.stringify(dump, null, 2));
 }
+
+/**
+ * W-119：套件兜底包装。
+ * runner 中途抛错时由 runner 自己落失败 dump（带已完成的 checks），并**不再向上抛**：
+ * 宿主层（CatalogPage / WorkbenchPage）的 catch 会再写一份同名空 dump 覆盖掉这份，
+ * 造成「checks[] 为空、看不出卡点」。返回 false 表示套件未跑完，调用方不要再写成功证据。
+ */
+const runSuite = async (
+  name: string,
+  suite: string,
+  report: { checks: Check[] },
+  body: () => Promise<void>,
+  onFailure?: (report: { checks: Check[] }) => void,
+): Promise<boolean> => {
+  try {
+    await body();
+    return true;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[${suite}.diag] 套件异常中断：${message}`);
+    // 失败前先把「已观测到的结论」写进 checks，失败 dump 才看得出跑到哪一步。
+    try {
+      onFailure?.(report);
+    } catch {
+      // 观测回调自身出错不掩盖原始异常
+    }
+    await writeDiagnosticFailure(name, suite, err, report.checks).catch(() => undefined);
+    return false;
+  }
+};
 
 /** P01：目录行「加入图表」容量、去重、规划项与无标的引导。 */
 export async function runS030104Diagnostics(manifest: ManifestResponse) {
@@ -146,83 +237,93 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
     q<HTMLElement>(`[data-catalog-add="${id}"]`)?.dataset.catalogAddState ?? "";
   const rowHint = (id: string) => q<HTMLElement>(`[data-catalog-add-hint="${id}"]`)?.textContent?.trim() ?? "";
 
-  // 阶段 1：无标的（App 已清 aka.last.code）
-  await waitFor(() => q("[data-catalog-root='p3']"));
-  const banner = q<HTMLElement>("[data-catalog-no-target]");
-  const noSymbolButton = q<HTMLButtonElement>('[data-catalog-add="T03"]');
-  push(
-    "P01-R1",
-    "AC-03.01-05（补1）",
-    "render",
-    Boolean(banner?.textContent?.includes("请先在行情页选择一只标的")) &&
-      q("[data-catalog-go-market]") !== null &&
-      noSymbolButton?.disabled === true &&
-      noSymbolButton?.title === "请先在行情页选择一只标的",
-    `无标的横幅「${banner?.textContent?.trim() ?? "—"}」/ 去行情页=${q("[data-catalog-go-market]") !== null} / 按钮 disabled=${noSymbolButton?.disabled} title=「${noSymbolButton?.title ?? ""}」`,
-  );
+  // W-119：runner 自己兜底落失败 dump（带已完成 checks），不再向上抛 ——
+  // 宿主层 catch 会写同名空 dump 覆盖它，反而丢掉卡点线索。
+  const completed = await runSuite("s030104-evidence.json", "s030104", report, async () => {
+    // 阶段 1：无标的（App 已清 aka.last.code）
+    await waitFor(() => q("[data-catalog-root='p3']"), DOM_WAIT_MS, 50, "目录页根出现（阶段 1）");
+    const banner = q<HTMLElement>("[data-catalog-no-target]");
+    const noSymbolButton = q<HTMLButtonElement>('[data-catalog-add="T03"]');
+    push(
+      "P01-R1",
+      "AC-03.01-05（补1）",
+      "render",
+      Boolean(banner?.textContent?.includes("请先在行情页选择一只标的")) &&
+        q("[data-catalog-go-market]") !== null &&
+        noSymbolButton?.disabled === true &&
+        noSymbolButton?.title === "请先在行情页选择一只标的",
+      `无标的横幅「${banner?.textContent?.trim() ?? "—"}」/ 去行情页=${q("[data-catalog-go-market]") !== null} / 按钮 disabled=${noSymbolButton?.disabled} title=「${noSymbolButton?.title ?? ""}」`,
+    );
 
-  // 阶段 2：有标的 + 默认副图满仓（VOL/M06/M01）
-  window.localStorage.setItem("aka.last.code", "600519.SH");
-  writeSubPlots(["VOL", "M06", "M01"]);
-  await remountCatalog();
-  await expandAllCategories();
+    // 阶段 2：有标的 + 默认副图满仓（VOL/M06/M01）
+    window.localStorage.setItem("aka.last.code", "600519.SH");
+    writeSubPlots(["VOL", "M06", "M01"]);
+    await remountCatalog();
+    await expandAllCategories();
 
-  const m03Add = q<HTMLButtonElement>('[data-catalog-add="M03"]');
-  push(
-    "P01-R2",
-    "AC-03.01-05（补2）",
-    "render",
-    countState("M03") === "full" &&
-      m03Add?.disabled === true &&
-      m03Add?.title === "副图已满（3/3），请先移除一个" &&
-      rowHint("M03") === "副图已满（3/3），请先移除一个",
-    `M03 状态=${countState("M03")} disabled=${m03Add?.disabled} title=「${m03Add?.title ?? ""}」/ 提示「${rowHint("M03")}」`,
-  );
+    const m03Add = q<HTMLButtonElement>('[data-catalog-add="M03"]');
+    push(
+      "P01-R2",
+      "AC-03.01-05（补2）",
+      "render",
+      countState("M03") === "full" &&
+        m03Add?.disabled === true &&
+        m03Add?.title === "副图已满（3/3），请先移除一个" &&
+        rowHint("M03") === "副图已满（3/3），请先移除一个",
+      `M03 状态=${countState("M03")} disabled=${m03Add?.disabled} title=「${m03Add?.title ?? ""}」/ 提示「${rowHint("M03")}」`,
+    );
 
-  const m06Add = q<HTMLButtonElement>('[data-catalog-add="M06"]');
-  const m06Count = readSubPlots().filter((id) => id === "M06").length;
-  push(
-    "P01-R3",
-    "AC-03.01-05（补3）",
-    "render",
-    countState("M06") === "added" && m06Add?.disabled === true && m06Count === 1,
-    `M06 状态=${countState("M06")} disabled=${m06Add?.disabled} 副图 M06=${m06Count} 次`,
-  );
+    const m06Add = q<HTMLButtonElement>('[data-catalog-add="M06"]');
+    const m06Count = readSubPlots().filter((id) => id === "M06").length;
+    push(
+      "P01-R3",
+      "AC-03.01-05（补3）",
+      "render",
+      countState("M06") === "added" && m06Add?.disabled === true && m06Count === 1,
+      `M06 状态=${countState("M06")} disabled=${m06Add?.disabled} 副图 M06=${m06Count} 次`,
+    );
 
-  const beforePlanned = readSubPlots().join(",");
-  const t06Add = q<HTMLButtonElement>('[data-catalog-add="T06"]');
-  t06Add?.click();
-  await sleep(120);
-  const plannedHint = q<HTMLElement>("[data-catalog-detail-hint], [data-fav-hint]")?.textContent?.trim() ?? "";
-  push(
-    "P01-R4",
-    "AC-03.01-05（补4）",
-    "render",
-    countState("T06") === "planned" &&
-      t06Add?.getAttribute("aria-disabled") === "true" &&
-      plannedHint.includes("该指标规划中，本期未开放") &&
-      readSubPlots().join(",") === beforePlanned,
-    `T06 状态=${countState("T06")} aria-disabled=${t06Add?.getAttribute("aria-disabled")} 提示「${plannedHint}」/ 副图未变=${readSubPlots().join(",") === beforePlanned}`,
-  );
+    const beforePlanned = readSubPlots().join(",");
+    const t06Add = q<HTMLButtonElement>('[data-catalog-add="T06"]');
+    t06Add?.click();
+    await sleep(120);
+    const plannedHint = q<HTMLElement>("[data-catalog-detail-hint], [data-fav-hint]")?.textContent?.trim() ?? "";
+    push(
+      "P01-R4",
+      "AC-03.01-05（补4）",
+      "render",
+      countState("T06") === "planned" &&
+        t06Add?.getAttribute("aria-disabled") === "true" &&
+        plannedHint.includes("该指标规划中，本期未开放") &&
+        readSubPlots().join(",") === beforePlanned,
+      `T06 状态=${countState("T06")} aria-disabled=${t06Add?.getAttribute("aria-disabled")} 提示「${plannedHint}」/ 副图未变=${readSubPlots().join(",") === beforePlanned}`,
+    );
 
-  // 阶段 3：留出副图空位后加入
-  writeSubPlots(["VOL"]);
-  await remountCatalog();
-  await expandAllCategories();
-  const m03Before = readSubPlots().join(",");
-  q<HTMLButtonElement>('[data-catalog-add="M03"]')?.click();
-  await waitFor(() => (countState("M03") === "added" ? "1" : null));
-  const m03After = readSubPlots().filter((id) => id === "M03").length;
-  push(
-    "P01-R5",
-    "AC-03.01-05",
-    "render",
-    m03After === 1 && !m03Before.split(",").includes("M03") && q<HTMLElement>('[data-catalog-add="M03"]')?.textContent?.includes("已加入") === true,
-    `加入前副图 ${m03Before} / 加入后 M03=${m03After} 次 / 按钮「${q<HTMLElement>('[data-catalog-add="M03"]')?.textContent?.trim() ?? ""}」/ manifest ${manifest.indicators.length} 条`,
-  );
+    // 阶段 3：留出副图空位后加入
+    writeSubPlots(["VOL"]);
+    await remountCatalog();
+    await expandAllCategories();
+    const m03Before = readSubPlots().join(",");
+    q<HTMLButtonElement>('[data-catalog-add="M03"]')?.click();
+    await waitFor(
+      () => (countState("M03") === "added" ? "1" : null),
+      DOM_WAIT_MS,
+      50,
+      "加入 M03 后按钮状态转 added",
+    );
+    const m03After = readSubPlots().filter((id) => id === "M03").length;
+    push(
+      "P01-R5",
+      "AC-03.01-05",
+      "render",
+      m03After === 1 && !m03Before.split(",").includes("M03") && q<HTMLElement>('[data-catalog-add="M03"]')?.textContent?.includes("已加入") === true,
+      `加入前副图 ${m03Before} / 加入后 M03=${m03After} 次 / 按钮「${q<HTMLElement>('[data-catalog-add="M03"]')?.textContent?.trim() ?? ""}」/ manifest ${manifest.indicators.length} 条`,
+    );
 
-  // 复原默认副图，避免影响后续套件
-  writeSubPlots(["VOL", "M06", "M01"]);
+    // 复原默认副图，避免影响后续套件
+    writeSubPlots(["VOL", "M06", "M01"]);
+  });
+  if (!completed) return report;
   await writeBatchReport("s030104-evidence.json", "s030104", report);
   return report;
 }
@@ -237,112 +338,132 @@ export async function runS030201Diagnostics() {
   const chipIds = () =>
     qa<HTMLElement>("[data-fav-chip]").map((element) => element.dataset.favChip ?? "").filter(Boolean);
 
-  await waitFor(() => q("[data-catalog-root='p3']"));
-  await waitFor(() => q("[data-fav-strip]"));
-  await waitFor(() => (qa("[data-fav-chip]").length === 8 ? "8" : null));
+  // W-119：runner 自己兜底落失败 dump（带已完成 checks），不再向上抛 ——
+  // 宿主层 catch 会写同名空 dump 覆盖它，反而丢掉卡点线索。
+  const completed = await runSuite("s030201-favorites-evidence.json", "s030201", report, async () => {
+    await waitFor(() => q("[data-catalog-root='p3']"), DOM_WAIT_MS, 50, "目录页根出现（收藏区）");
+    await waitFor(() => q("[data-fav-strip]"), DOM_WAIT_MS, 50, "收藏条出现");
+    await waitFor(
+      () => (qa("[data-fav-chip]").length === 8 ? "8" : null),
+      DOM_WAIT_MS,
+      50,
+      "默认 8 项收藏 chip 就位",
+    );
 
-  const chips = chipIds();
-  const statuses = qa<HTMLElement>("[data-fav-chip]").map((element) => element.dataset.favStatus ?? "");
-  const countText = q<HTMLElement>("[data-fav-count-text]")?.textContent?.trim() ?? "";
-  push(
-    "P02-R1",
-    "AC-03.02-01",
-    "render",
-    chips.join(",") === expected.join(",") &&
-      statuses.every((status) => status === "normal") &&
-      countText === "8",
-    `收藏 chips ${chips.join(",")} / 状态 ${statuses.join(",")} / 计数「${countText}」`,
-  );
+    const chips = chipIds();
+    const statuses = qa<HTMLElement>("[data-fav-chip]").map((element) => element.dataset.favStatus ?? "");
+    const countText = q<HTMLElement>("[data-fav-count-text]")?.textContent?.trim() ?? "";
+    push(
+      "P02-R1",
+      "AC-03.02-01",
+      "render",
+      chips.join(",") === expected.join(",") &&
+        statuses.every((status) => status === "normal") &&
+        countText === "8",
+      `收藏 chips ${chips.join(",")} / 状态 ${statuses.join(",")} / 计数「${countText}」`,
+    );
 
-  // 星标添加：M03 不在默认集；添加后应排在最前，再取消恢复
-  const m03StarBefore = q<HTMLElement>('[data-fav-star="M03"]')?.getAttribute("aria-pressed");
-  q<HTMLElement>('[data-fav-star="M03"]')?.click();
-  await waitFor(() => (chipIds()[0] === "M03" ? "1" : null));
-  const afterAdd = chipIds();
-  const m03First = afterAdd[0] === "M03" && afterAdd.filter((id) => id === "M03").length === 1;
-  push(
-    "P02-R2",
-    "AC-03.02-02",
-    "render",
-    m03StarBefore === "false" && m03First && afterAdd.length === 9,
-    `M03 星标前 aria-pressed=${m03StarBefore} / 添加后序列 ${afterAdd.join(",")} / M03 首项且唯一=${m03First}`,
-  );
-  push(
-    "P02-R3",
-    "AC-03.02-02（补1）",
-    "render",
-    afterAdd[0] === "M03",
-    `新收藏排在最前：首项 ${afterAdd[0] ?? "—"}`,
-  );
-  q<HTMLElement>('[data-fav-star="M03"]')?.click();
-  await waitFor(() => (chipIds().length === 8 ? "8" : null));
+    // 星标添加：M03 不在默认集；添加后应排在最前，再取消恢复
+    const m03StarBefore = q<HTMLElement>('[data-fav-star="M03"]')?.getAttribute("aria-pressed");
+    q<HTMLElement>('[data-fav-star="M03"]')?.click();
+    await waitFor(
+      () => (chipIds()[0] === "M03" ? "1" : null),
+      DOM_WAIT_MS,
+      50,
+      "星标 M03 后收藏 chip 重排（首位）",
+    );
+    const afterAdd = chipIds();
+    const m03First = afterAdd[0] === "M03" && afterAdd.filter((id) => id === "M03").length === 1;
+    push(
+      "P02-R2",
+      "AC-03.02-02",
+      "render",
+      m03StarBefore === "false" && m03First && afterAdd.length === 9,
+      `M03 星标前 aria-pressed=${m03StarBefore} / 添加后序列 ${afterAdd.join(",")} / M03 首项且唯一=${m03First}`,
+    );
+    push(
+      "P02-R3",
+      "AC-03.02-02（补1）",
+      "render",
+      afterAdd[0] === "M03",
+      `新收藏排在最前：首项 ${afterAdd[0] ?? "—"}`,
+    );
+    q<HTMLElement>('[data-fav-star="M03"]')?.click();
+    await waitFor(
+      () => (chipIds().length === 8 ? "8" : null),
+      DOM_WAIT_MS,
+      50,
+      "取消 M03 后收藏回到 8 项",
+    );
 
-  // 8 项在一屏内可见（不横向溢出）
-  const list = q<HTMLElement>(".fav-chips");
-  const overflows = list ? list.scrollWidth > list.clientWidth + 1 : true;
-  push(
-    "P02-R4",
-    "AC-03.02-01（补3）",
-    "render",
-    !overflows && chipIds().length === 8,
-    `收藏区 ${chipIds().length} 项 / 横向溢出=${overflows}（scrollWidth ${list?.scrollWidth ?? 0} / clientWidth ${list?.clientWidth ?? 0}）`,
-  );
+    // 8 项在一屏内可见（不横向溢出）
+    const list = q<HTMLElement>(".fav-chips");
+    const overflows = list ? list.scrollWidth > list.clientWidth + 1 : true;
+    push(
+      "P02-R4",
+      "AC-03.02-01（补3）",
+      "render",
+      !overflows && chipIds().length === 8,
+      `收藏区 ${chipIds().length} 项 / 横向溢出=${overflows}（scrollWidth ${list?.scrollWidth ?? 0} / clientWidth ${list?.clientWidth ?? 0}）`,
+    );
 
-  // 规划项 chip：点击「加入图表」应被拒并保留 chip
-  await ipc.setIndicatorFavorite("T06", true);
-  await remountCatalog();
-  await waitFor(() => q('[data-fav-chip="T06"]'));
-  const t06Chip = q<HTMLElement>('[data-fav-chip="T06"]');
-  q<HTMLElement>('[data-fav-chip-add="T06"]')?.click();
-  await sleep(150);
-  const plannedHint = q<HTMLElement>("[data-fav-hint]")?.textContent?.trim() ?? "";
-  push(
-    "P02-R5",
-    "AC-03.02-01（补2）",
-    "render",
-    t06Chip?.dataset.favStatus === "planned" &&
-      plannedHint.includes("该指标规划中，本期未开放") &&
-      chipIds().includes("T06"),
-    `T06 chip 状态=${t06Chip?.dataset.favStatus ?? "—"} 提示「${plannedHint}」/ chip 保留=${chipIds().includes("T06")}`,
-  );
-  await ipc.setIndicatorFavorite("T06", false);
+    // 规划项 chip：点击「加入图表」应被拒并保留 chip
+    await ipc.setIndicatorFavorite("T06", true);
+    await remountCatalog();
+    await waitFor(() => q('[data-fav-chip="T06"]'), DOM_WAIT_MS, 50, "规划项 T06 收藏 chip 出现");
+    const t06Chip = q<HTMLElement>('[data-fav-chip="T06"]');
+    q<HTMLElement>('[data-fav-chip-add="T06"]')?.click();
+    await sleep(150);
+    const plannedHint = q<HTMLElement>("[data-fav-hint]")?.textContent?.trim() ?? "";
+    push(
+      "P02-R5",
+      "AC-03.02-01（补2）",
+      "render",
+      t06Chip?.dataset.favStatus === "planned" &&
+        plannedHint.includes("该指标规划中，本期未开放") &&
+        chipIds().includes("T06"),
+      `T06 chip 状态=${t06Chip?.dataset.favStatus ?? "—"} 提示「${plannedHint}」/ chip 保留=${chipIds().includes("T06")}`,
+    );
+    await ipc.setIndicatorFavorite("T06", false);
 
-  // ---- 数据层：与目录/抽屉同源的 IPC 真值 ----
-  const seeded = await ipc.indicatorFavorites();
-  const seededIds = seeded.favorites.map((item) => item.indicatorId);
-  push(
-    "P02-D1",
-    "AC-03.02-01",
-    "data",
-    seededIds.join(",") === expected.join(",") &&
-      seeded.favorites.every((item) => item.isDefault && item.status === "normal"),
-    `IPC 默认收藏 ${seededIds.join(",")} / 全部 normal+default=${seeded.favorites.every((item) => item.isDefault && item.status === "normal")}`,
-  );
+    // ---- 数据层：与目录/抽屉同源的 IPC 真值 ----
+    const seeded = await ipc.indicatorFavorites();
+    const seededIds = seeded.favorites.map((item) => item.indicatorId);
+    push(
+      "P02-D1",
+      "AC-03.02-01",
+      "data",
+      seededIds.join(",") === expected.join(",") &&
+        seeded.favorites.every((item) => item.isDefault && item.status === "normal"),
+      `IPC 默认收藏 ${seededIds.join(",")} / 全部 normal+default=${seeded.favorites.every((item) => item.isDefault && item.status === "normal")}`,
+    );
 
-  for (let i = 0; i < 5; i += 1) await ipc.setIndicatorFavorite("M03", true);
-  const afterFive = await ipc.indicatorFavorites();
-  const m03Rows = afterFive.favorites.filter((item) => item.indicatorId === "M03").length;
-  push(
-    "P02-D2",
-    "AC-03.02-01（补1）",
-    "data",
-    m03Rows === 1 && afterFive.favorites.length === 9,
-    `连续 5 次收藏 M03 → 行数 ${afterFive.favorites.length}，M03 唯一行 ${m03Rows}`,
-  );
-  await ipc.setIndicatorFavorite("M03", false);
+    for (let i = 0; i < 5; i += 1) await ipc.setIndicatorFavorite("M03", true);
+    const afterFive = await ipc.indicatorFavorites();
+    const m03Rows = afterFive.favorites.filter((item) => item.indicatorId === "M03").length;
+    push(
+      "P02-D2",
+      "AC-03.02-01（补1）",
+      "data",
+      m03Rows === 1 && afterFive.favorites.length === 9,
+      `连续 5 次收藏 M03 → 行数 ${afterFive.favorites.length}，M03 唯一行 ${m03Rows}`,
+    );
+    await ipc.setIndicatorFavorite("M03", false);
 
-  const all = (await ipc.indicatorFavorites()).favorites;
-  for (const item of all) await ipc.setIndicatorFavorite(item.indicatorId, false);
-  const emptied = await ipc.indicatorFavorites();
-  const again = await ipc.indicatorFavorites();
-  push(
-    "P02-D3",
-    "AC-03.02-01（补2）",
-    "data",
-    emptied.favorites.length === 0 && again.favorites.length === 0,
-    `全部移除后 ${emptied.favorites.length} 项；再次读取 ${again.favorites.length} 项（未重新播种）`,
-  );
+    const all = (await ipc.indicatorFavorites()).favorites;
+    for (const item of all) await ipc.setIndicatorFavorite(item.indicatorId, false);
+    const emptied = await ipc.indicatorFavorites();
+    const again = await ipc.indicatorFavorites();
+    push(
+      "P02-D3",
+      "AC-03.02-01（补2）",
+      "data",
+      emptied.favorites.length === 0 && again.favorites.length === 0,
+      `全部移除后 ${emptied.favorites.length} 项；再次读取 ${again.favorites.length} 项（未重新播种）`,
+    );
 
+  });
+  if (!completed) return report;
   await writeBatchReport("s030201-favorites-evidence.json", "s030201", report);
   return report;
 }
@@ -353,39 +474,49 @@ export async function runS030302CatalogDiagnostics() {
   const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
     report.checks.push({ id, card: "S-03.03-02", ac, layer, passed, detail });
   };
-  await waitFor(() => q("[data-catalog-root='p3']"));
-  await expandAllCategories();
+  // W-119：runner 自己兜底落失败 dump（带已完成 checks），不再向上抛 ——
+  // 宿主层 catch 会写同名空 dump 覆盖它，反而丢掉卡点线索。
+  const completed = await runSuite("s030302-catalog-evidence.json", "s030302-catalog", report, async () => {
+    await waitFor(() => q("[data-catalog-root='p3']"), DOM_WAIT_MS, 50, "目录页根出现（深链来源）");
+    await expandAllCategories();
 
-  const firstToggle = q<HTMLElement>('[data-catalog-cat-toggle="trend"]');
-  if (firstToggle?.getAttribute("aria-expanded") === "true") {
-    firstToggle.click();
-    await sleep(80);
-  }
-  q<HTMLElement>('[data-catalog-open-detail="M06"]')?.click();
-  await waitFor(() => q("[data-catalog-breadcrumb-current='M06']"));
-  const crumb = q<HTMLElement>("[data-catalog-breadcrumb]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
-  push(
-    "P03-R1",
-    "AC-03.03-03",
-    "render",
-    crumb.includes("指标目录") && crumb.includes("MACD") && window.location.hash.includes("#/catalog/M06"),
-    `目录来源面包屑「${crumb}」/ hash ${window.location.hash}`,
-  );
+    const firstToggle = q<HTMLElement>('[data-catalog-cat-toggle="trend"]');
+    if (firstToggle?.getAttribute("aria-expanded") === "true") {
+      firstToggle.click();
+      await sleep(80);
+    }
+    q<HTMLElement>('[data-catalog-open-detail="M06"]')?.click();
+    await waitFor(
+      () => q("[data-catalog-breadcrumb-current='M06']"),
+      DOM_WAIT_MS,
+      50,
+      "目录深链面包屑当前项 M06",
+    );
+    const crumb = q<HTMLElement>("[data-catalog-breadcrumb]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+    push(
+      "P03-R1",
+      "AC-03.03-03",
+      "render",
+      crumb.includes("指标目录") && crumb.includes("MACD") && window.location.hash.includes("#/catalog/M06"),
+      `目录来源面包屑「${crumb}」/ hash ${window.location.hash}`,
+    );
 
-  window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  await waitFor(() => q("[data-catalog-root='p3']"));
-  const trendToggle = q<HTMLElement>('[data-catalog-cat-toggle="trend"]');
-  const rows = qa<HTMLElement>("[data-catalog-item]").length;
-  push(
-    "P03-R2",
-    "AC-03.03-03",
-    "render",
-    !window.location.hash.startsWith("#/catalog/") &&
-      trendToggle?.getAttribute("aria-expanded") === "true" &&
-      rows >= 24,
-    `Esc 返回后 hash ${window.location.hash || "(空)"} / trend 展开=${trendToggle?.getAttribute("aria-expanded")} / DOM ${rows} 行`,
-  );
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await waitFor(() => q("[data-catalog-root='p3']"), DOM_WAIT_MS, 50, "Esc 返回目录列表");
+    const trendToggle = q<HTMLElement>('[data-catalog-cat-toggle="trend"]');
+    const rows = qa<HTMLElement>("[data-catalog-item]").length;
+    push(
+      "P03-R2",
+      "AC-03.03-03",
+      "render",
+      !window.location.hash.startsWith("#/catalog/") &&
+        trendToggle?.getAttribute("aria-expanded") === "true" &&
+        rows >= 24,
+      `Esc 返回后 hash ${window.location.hash || "(空)"} / trend 展开=${trendToggle?.getAttribute("aria-expanded")} / DOM ${rows} 行`,
+    );
 
+  });
+  if (!completed) return report;
   await writeBatchReport("s030302-catalog-evidence.json", "s030302-catalog", report);
   return report;
 }
@@ -397,68 +528,109 @@ export async function runS030302WorkbenchDiagnostics() {
     report.checks.push({ id, card: "S-03.03-02", ac, layer, passed, detail });
   };
 
-  const help = await waitFor(() => q<SVGGElement>('[data-legend-help="M06"]'));
-  push(
-    "P03-R3",
-    "AC-03.03-03（补1）",
-    "render",
-    Boolean(help) && q('[data-legend-help="M06"]')?.getAttribute("role") === "button",
-    `工作台 MACD 图例「?」存在=${Boolean(help)} role=${help?.getAttribute("role") ?? "—"}`,
-  );
+  // W-119：runner 自己兜底落失败 dump（带已完成 checks），不再向上抛 ——
+  // 宿主层 catch 会写同名空 dump 覆盖它，反而丢掉卡点线索。
+  const completed = await runSuite("s030302-evidence.json", "s030302", report, async () => {
+    // W-119：取证前置准备（幂等 UI 动作，runner 内做，不改产品语义）：
+    //  1) 副图组合写回本地设置 + 重挂载工作台 —— 图例「?」依赖 M06 在上图；
+    //  2) 切标的到 600519.SH —— 卡面要求面包屑带 600519.SH，工作台默认标的是 300750.SZ。
+    // 旧实现既没切标的、也没等图表就绪，8s 超时 → runner 抛错 → 宿主只 console.error
+    // → 240 秒零 dump（不可判）。现在先把状态备齐，再等图例 DOM。
+    writeSubPlots(["VOL", "M06", "M01"]);
+    window.localStorage.setItem("aka.last.code", "600519.SH");
+    window.location.hash = "#/market";
+    await waitFor(
+      () => (q("[data-workbench-root]") === null ? "unmounted" : null),
+      DOM_WAIT_MS,
+      50,
+      "工作台卸载（离开 #/workbench）",
+    );
+    window.location.hash = "#/workbench/600519.SH";
+    await waitFor(
+      () => q<HTMLElement>('[data-quote-head="1"][data-quote-code="600519.SH"]'),
+      CHART_WAIT_MS,
+      50,
+      "工作台报价头切到 600519.SH",
+    );
+    const help = await waitFor(
+      () => q<SVGGElement>('[data-legend-help="M06"]'),
+      CHART_WAIT_MS,
+      50,
+      "工作台 M06 图例「?」出现（副图已上图、图表已绘制）",
+    );
+    push(
+      "P03-R3",
+      "AC-03.03-03（补1）",
+      "render",
+      Boolean(help) && q('[data-legend-help="M06"]')?.getAttribute("role") === "button",
+      `工作台 MACD 图例「?」存在=${Boolean(help)} role=${help?.getAttribute("role") ?? "—"}`,
+    );
 
-  const subBefore = readSubPlots().join(",");
-  const viewportBefore = window.sessionStorage.getItem("aka.chart.viewport");
-  help.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  await waitFor(() => q("[data-catalog-breadcrumb-from='chart']"));
-  const crumb = q<HTMLElement>("[data-catalog-breadcrumb]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
-  push(
-    "P03-R4",
-    "AC-03.03-03（补1）",
-    "render",
-    crumb.includes("工作台") && crumb.includes("600519.SH") && crumb.includes("MACD"),
-    `图例来源面包屑「${crumb}」/ hash ${window.location.hash}`,
-  );
+    const subBefore = readSubPlots().join(",");
+    const viewportBefore = window.sessionStorage.getItem("aka.chart.viewport");
+    help.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await waitFor(
+      () => q("[data-catalog-breadcrumb-from='chart']"),
+      DOM_WAIT_MS,
+      50,
+      "图例来源目录深链打开",
+    );
+    const crumb = q<HTMLElement>("[data-catalog-breadcrumb]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+    push(
+      "P03-R4",
+      "AC-03.03-03（补1）",
+      "render",
+      crumb.includes("工作台") && crumb.includes("600519.SH") && crumb.includes("MACD"),
+      `图例来源面包屑「${crumb}」/ hash ${window.location.hash}`,
+    );
 
-  window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  await waitFor(() => q("[data-workbench-root]"));
-  await sleep(300);
-  const subAfter = readSubPlots().join(",");
-  const viewportAfter = window.sessionStorage.getItem("aka.chart.viewport");
-  push(
-    "P03-R5",
-    "AC-03.03-03（补1）",
-    "render",
-    subAfter === subBefore && subAfter.includes("M06") && viewportAfter === viewportBefore,
-    `返回后副图 ${subBefore} → ${subAfter} / 视口记忆未变=${viewportAfter === viewportBefore}`,
-  );
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await waitFor(() => q("[data-workbench-root]"), DOM_WAIT_MS, 50, "Esc 返回工作台");
+    await sleep(300);
+    const subAfter = readSubPlots().join(",");
+    const viewportAfter = window.sessionStorage.getItem("aka.chart.viewport");
+    push(
+      "P03-R5",
+      "AC-03.03-03（补1）",
+      "render",
+      subAfter === subBefore && subAfter.includes("M06") && viewportAfter === viewportBefore,
+      `返回后副图 ${subBefore} → ${subAfter} / 视口记忆未变=${viewportAfter === viewportBefore}`,
+    );
 
-  // 抽屉来源：打开抽屉 → 收藏区「查看口径」→ 面包屑 → Esc 回来抽屉仍开
-  const drawerTrigger = q<HTMLButtonElement>("[data-drawer-trigger]");
-  drawerTrigger?.click();
-  await waitFor(() => q("[data-drawer-body]"));
-  q<HTMLElement>('[data-fav-chip-detail="M06"]')?.click();
-  await waitFor(() => q("[data-catalog-breadcrumb-from='drawer']"));
-  const drawerCrumb = q<HTMLElement>("[data-catalog-breadcrumb]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
-  push(
-    "P03-R6",
-    "AC-03.03-03（补2）",
-    "render",
-    drawerCrumb.includes("工作台") && drawerCrumb.includes("600519.SH") && drawerCrumb.includes("MACD"),
-    `抽屉来源面包屑「${drawerCrumb}」`,
-  );
+    // 抽屉来源：打开抽屉 → 收藏区「查看口径」→ 面包屑 → Esc 回来抽屉仍开
+    const drawerTrigger = q<HTMLButtonElement>("[data-drawer-trigger]");
+    drawerTrigger?.click();
+    await waitFor(() => q("[data-drawer-body]"), DOM_WAIT_MS, 50, "指标抽屉打开");
+    q<HTMLElement>('[data-fav-chip-detail="M06"]')?.click();
+    await waitFor(
+      () => q("[data-catalog-breadcrumb-from='drawer']"),
+      DOM_WAIT_MS,
+      50,
+      "抽屉来源目录深链打开",
+    );
+    const drawerCrumb = q<HTMLElement>("[data-catalog-breadcrumb]")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+    push(
+      "P03-R6",
+      "AC-03.03-03（补2）",
+      "render",
+      drawerCrumb.includes("工作台") && drawerCrumb.includes("600519.SH") && drawerCrumb.includes("MACD"),
+      `抽屉来源面包屑「${drawerCrumb}」`,
+    );
 
-  window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  await waitFor(() => q("[data-workbench-root]"));
-  const drawerRestored = await waitFor(() => q("[data-drawer-body]"), 4_000).catch(() => null);
-  push(
-    "P03-R7",
-    "AC-03.03-03（补2）",
-    "render",
-    drawerRestored !== null,
-    `Esc 返回工作台后抽屉恢复=${drawerRestored !== null}`,
-  );
-  q<HTMLElement>("[data-drawer-close]")?.click();
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await waitFor(() => q("[data-workbench-root]"), DOM_WAIT_MS, 50, "Esc 返回工作台（抽屉来源）");
+    const drawerRestored = await waitFor(() => q("[data-drawer-body]"), 8_000).catch(() => null);
+    push(
+      "P03-R7",
+      "AC-03.03-03（补2）",
+      "render",
+      drawerRestored !== null,
+      `Esc 返回工作台后抽屉恢复=${drawerRestored !== null}`,
+    );
+    q<HTMLElement>("[data-drawer-close]")?.click();
 
+  });
+  if (!completed) return report;
   await writeBatchReport("s030302-evidence.json", "s030302", report);
   return report;
 }
@@ -722,50 +894,313 @@ export async function runS070102Diagnostics() {
 }
 
 /**
- * P14 解阻：S-05.01-01 ⌘K 唤起 / 代码名称拼音匹配取证入口。
- * W-100（PAGE-P7）已把浮层实现带进 main，本卡补齐套件 case 与断言，
- * 为 BA 运行层取证清障（§5.8 L260）；dev 只写入口，不自出运行层证据。
- * 反例：三次输入法任一未命中 300750.SZ 时 S050101-R1 必须判红。
+ * W-119：S-05.01-01 ⌘K 唤起 / 代码名称拼音匹配 / 排序 —— 卡面 6 条 AC 各挂一条可判 check。
+ *
+ * 卡面 6 条 AC：AC-05.01-01、AC-05.01-01（补1）/（补2）/（补3）/（补4）、AC-05.01-04。
+ * 上轮只产出 2 条 check（基条 + AC-05.01-04），其余 4 条零覆盖 → QA G4 判「缺证不足签」。
+ *
+ * 判定口径（每条都能因产品回退而红，不做恒真/宽松匹配）：
+ *  - 基条：真实 ⌘K keydown 唤起（不用内部事件，否则快捷键接线断了也判绿）+ 输入框自动聚焦
+ *    + 三种输入（300750 / 宁德 / ndsd）都命中 300750.SZ 且为首位 + 结果行含代码/名称/板块/模拟标签
+ *    （与数据层 securities 逐字段比对，不做「非空即通过」）+ 本地索引查询 P95 ≤100ms（V-07 口径）。
+ *  - 补1：`300750.SZ` 与 `300750.sz` 结果集完全相同（大小写不敏感）。
+ *  - 补2：命中 >20 的查询只渲染 20 条 + 列表底部显示「仅显示前 20 条」+ 首条 = 数据层成交额最大者。
+ *  - 补3：停牌标的行可见 + 标「停牌」+ 涨跌幅「—」。
+ *  - 补4：`/` 与三个空格 → 无运行期异常、无结果、无 toast、输入框保留内容。
+ *  - AC-05.01-04：搜索期间 0 外部 http(s) 请求（增量与累计都为 0）。
  */
+interface S050101Observed {
+  overlayOpened: boolean;
+  inputFocused: boolean;
+  codeHit: boolean;
+  nameHit: boolean;
+  pinyinHit: boolean;
+  rowHasCode: boolean;
+  rowHasName: boolean;
+  rowHasBoard: boolean;
+  rowHasSimTag: boolean;
+  queryP95Ok: boolean;
+  externalZero: boolean;
+  suffixSameResult: boolean;
+  cappedAt20: boolean;
+  truncatedNotice: boolean;
+  firstIsMaxAmount: boolean;
+  suspendedRowVisible: boolean;
+  suspendedTagShown: boolean;
+  suspendedChangeDash: boolean;
+  slashNoResult: boolean;
+  slashKeepsInput: boolean;
+  blankNoResult: boolean;
+  blankKeepsInput: boolean;
+  noToast: boolean;
+  noRuntimeError: boolean;
+}
+
+const emptyS050101Observed = (): S050101Observed => ({
+  overlayOpened: false,
+  inputFocused: false,
+  codeHit: false,
+  nameHit: false,
+  pinyinHit: false,
+  rowHasCode: false,
+  rowHasName: false,
+  rowHasBoard: false,
+  rowHasSimTag: false,
+  queryP95Ok: false,
+  externalZero: false,
+  suffixSameResult: false,
+  cappedAt20: false,
+  truncatedNotice: false,
+  firstIsMaxAmount: false,
+  suspendedRowVisible: false,
+  suspendedTagShown: false,
+  suspendedChangeDash: false,
+  slashNoResult: false,
+  slashKeepsInput: false,
+  blankNoResult: false,
+  blankKeepsInput: false,
+  noToast: false,
+  noRuntimeError: false,
+});
+
 export async function runS050101Diagnostics() {
-  const report = { ...baseReport("s050101"), card: "S-05.01-01" };
+  const report = { ...baseReport("s050101"), card: "S-05.01-01", blocked: [] as Array<{ ac: string; blocker: string; reason: string; skipped: boolean }> };
   const push = (id: string, ac: string, layer: Check["layer"], passed: boolean, detail: string) => {
     report.checks.push({ id, card: "S-05.01-01", ac, layer, passed, detail });
   };
-  // 唤起浮层：SearchOverlay 监听 aka:search-open（与 ⌘K 等价的窗口级入口）。
-  window.dispatchEvent(new CustomEvent("aka:search-open"));
-  const overlay = await waitFor(() => q("[data-search-overlay]"));
-  await sleep(200); // 等待索引构建（≤300ms 契约）
-  const input = q<HTMLInputElement>("[data-search-input]");
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-  const query = async (text: string): Promise<string[]> => {
-    if (!input || !setter) return [];
-    setter.call(input, text);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    await sleep(160); // 60ms 防抖 + 渲染余量
-    return qa<HTMLElement>("[data-search-result]").map((el) => el.dataset.searchResult ?? "");
+  const obs = emptyS050101Observed();
+  const notes: Record<string, string> = {};
+
+  /** 6 条 check 只在观测完成后落一次；失败路径由 runSuite 的 onFailure 复用同一函数。 */
+  const pushChecks = () => {
+    if (report.checks.length > 0) return;
+    push(
+      "S050101-R1",
+      "AC-05.01-01",
+      "render",
+      obs.overlayOpened &&
+        obs.inputFocused &&
+        obs.codeHit &&
+        obs.nameHit &&
+        obs.pinyinHit &&
+        obs.rowHasCode &&
+        obs.rowHasName &&
+        obs.rowHasBoard &&
+        obs.rowHasSimTag &&
+        obs.queryP95Ok,
+      `⌘K 唤起=${obs.overlayOpened} / 输入框聚焦=${obs.inputFocused} / 代码·名称·拼音命中=${obs.codeHit}·${obs.nameHit}·${obs.pinyinHit} / 行含代码·名称·板块·模拟=${obs.rowHasCode}·${obs.rowHasName}·${obs.rowHasBoard}·${obs.rowHasSimTag} / 查询 P95=${notes.p95 ?? "未测"}ms（V-07 口径：本地索引查询，预热 5 次后取 30 次 P95，${notes.buildKind ?? "取证构建"}）`,
+    );
+    push(
+      "S050101-R2",
+      "AC-05.01-04",
+      "runtime",
+      obs.externalZero,
+      `搜索期间外部 http(s) 资源：增量 ${notes.externalDelta ?? "?"} 个 / 累计 ${notes.externalTotal ?? "?"} 个`,
+    );
+    push(
+      "S050101-R3",
+      "AC-05.01-01（补1）",
+      "render",
+      obs.suffixSameResult,
+      `300750.SZ → ${notes.suffixUpper ?? "未观测"} / 300750.sz → ${notes.suffixLower ?? "未观测"}`,
+    );
+    push(
+      "S050101-R4",
+      "AC-05.01-01（补2）",
+      "render",
+      obs.cappedAt20 && obs.truncatedNotice && obs.firstIsMaxAmount,
+      `查询「${notes.cappedQuery ?? "示例"}」命中 ${notes.cappedMatched ?? "?"} 只 / 渲染 ${notes.cappedRendered ?? "?"} 条 / 底部提示「${notes.truncatedText ?? "无"}」/ 首条 ${notes.cappedFirst ?? "无"}（数据层成交额最大者 ${notes.cappedMaxAmount ?? "?"}）`,
+    );
+    push(
+      "S050101-R5",
+      "AC-05.01-01（补3）",
+      "render",
+      obs.suspendedRowVisible && obs.suspendedTagShown && obs.suspendedChangeDash,
+      notes.suspendedDetail ?? "未观测到停牌标的",
+    );
+    push(
+      "S050101-R6",
+      "AC-05.01-01（补4）",
+      "render",
+      obs.slashNoResult &&
+        obs.slashKeepsInput &&
+        obs.blankNoResult &&
+        obs.blankKeepsInput &&
+        obs.noToast &&
+        obs.noRuntimeError,
+      `「/」结果 ${notes.slashHits ?? "?"} 条 / 输入保留「${notes.slashInput ?? "?"}」/ 三空格结果 ${notes.blankHits ?? "?"} 条 / 输入保留「${notes.blankInput ?? "?"}」/ toast=${obs.noToast ? "无" : "有"} / 运行期异常 ${notes.runtimeErrors ?? "0"} 条`,
+    );
   };
-  const byCode = await query("300750");
-  const byName = await query("宁德");
-  const byPinyin = await query("ndsd");
-  push(
-    "S050101-R1",
-    "AC-05.01-01",
-    "render",
-    Boolean(overlay) && byCode.includes("300750.SZ") && byName.includes("300750.SZ") && byPinyin.includes("300750.SZ"),
-    `代码/名称/拼音三次命中：${[byCode, byName, byPinyin].map((r) => r[0] ?? "无").join(" / ")}`,
+
+  const completed = await runSuite(
+    "s050101-evidence.json",
+    "s050101",
+    report,
+    async () => {
+      // 补4 要求「无异常」：先挂运行期异常监听。
+      const runtimeErrors: string[] = [];
+      const onError = (event: ErrorEvent) => runtimeErrors.push(event.message || "error");
+      const onReject = (event: PromiseRejectionEvent) => runtimeErrors.push(String(event.reason));
+      window.addEventListener("error", onError);
+      window.addEventListener("unhandledrejection", onReject);
+      try {
+        // 1) 真实 ⌘K 唤起（卡面「任意页面按 ⌘K」）：用内部事件唤起会让快捷键接线断了也判绿。
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }));
+        const overlay = await waitFor(
+          () => q("[data-search-overlay]"),
+          DOM_WAIT_MS,
+          50,
+          "⌘K 唤起搜索浮层",
+        );
+        obs.overlayOpened = Boolean(overlay);
+        // 索引构建 ≤300ms 契约：输入框可用即索引就绪。
+        const input = await waitFor(
+          () => {
+            const el = q<HTMLInputElement>("[data-search-input]");
+            return el && !el.disabled ? el : null;
+          },
+          DOM_WAIT_MS,
+          50,
+          "搜索索引就绪（输入框可用）",
+        );
+        obs.inputFocused =
+          (await tryWait(() => (document.activeElement === input ? "focused" : null), 5_000, 50)) !== null;
+
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+        const inputOf = () => q<HTMLInputElement>("[data-search-input]");
+        const query = async (text: string): Promise<string[]> => {
+          const el = inputOf();
+          if (!el || !setter) return [];
+          setter.call(el, text);
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          await sleep(160); // 60ms 防抖 + 渲染余量
+          return qa<HTMLElement>("[data-search-result]").map((row) => row.dataset.searchResult ?? "");
+        };
+        const rowText = (code: string) =>
+          q<HTMLElement>(`[data-search-result="${code}"]`)?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+
+        const externalBefore = performance
+          .getEntriesByType("resource")
+          .map((entry) => entry.name)
+          .filter((name) => /^https?:\/\//.test(name)).length;
+
+        // 2) 基条：三种输入都命中同一标的，且为首位。
+        const byCode = await query("300750");
+        const byName = await query("宁德");
+        const byPinyin = await query("ndsd");
+        obs.codeHit = byCode[0] === "300750.SZ";
+        obs.nameHit = byName[0] === "300750.SZ";
+        obs.pinyinHit = byPinyin[0] === "300750.SZ";
+
+        // 3) 结果行字段：与数据层 securities 逐字段比对（非空即通过 = 宽松断言）。
+        const securities = await ipc.listSecurities();
+        const snapshot = await ipc.marketSnapshot();
+        const target = securities.find((item) => item.code === "300750.SZ");
+        const targetRow = rowText("300750.SZ");
+        obs.rowHasCode = targetRow.includes("300750.SZ");
+        obs.rowHasName = target !== undefined && targetRow.includes(target.name);
+        obs.rowHasBoard = target !== undefined && target.board !== "" && targetRow.includes(target.board);
+        obs.rowHasSimTag = targetRow.includes("模拟");
+
+        // 4) V-07 性能口径：预热后 30 次取 P95 ≤100ms（本套件测「本地索引查询」这一段，
+        //    不含 60ms 输入防抖；Release 复测由 BA 在 release 产物上补，口径写进 detail）。
+        const index = buildSearchIndex(securities, snapshot.rows);
+        const runQuery = () => matchSecurities(index, "300750");
+        for (let i = 0; i < 5; i += 1) runQuery();
+        const samples: number[] = [];
+        for (let i = 0; i < 30; i += 1) {
+          const started = performance.now();
+          runQuery();
+          samples.push(performance.now() - started);
+        }
+        samples.sort((a, b) => a - b);
+        const p95 = samples[Math.min(samples.length - 1, Math.ceil(samples.length * 0.95) - 1)];
+        notes.p95 = p95.toFixed(3);
+        notes.buildKind = import.meta.env.DEV ? "dev 构建（Release 复测待 BA 补）" : "release 构建";
+        obs.queryP95Ok = p95 <= 100;
+
+        // 5) AC-05.01-04：0 外部请求（增量 + 累计）。
+        const externalAfter = performance
+          .getEntriesByType("resource")
+          .map((entry) => entry.name)
+          .filter((name) => /^https?:\/\//.test(name));
+        notes.externalDelta = String(externalAfter.length - externalBefore);
+        notes.externalTotal = String(externalAfter.length);
+        obs.externalZero = externalAfter.length - externalBefore === 0 && externalAfter.length === 0;
+
+        // 6) 补1：带后缀与全小写后缀结果集完全相同。
+        const bySuffixUpper = await query("300750.SZ");
+        const bySuffixLower = await query("300750.sz");
+        notes.suffixUpper = bySuffixUpper.join(",") || "无结果";
+        notes.suffixLower = bySuffixLower.join(",") || "无结果";
+        obs.suffixSameResult =
+          bySuffixUpper.join(",") === bySuffixLower.join(",") && bySuffixUpper.includes("300750.SZ");
+
+        // 7) 补2：命中 >20 的查询只渲染 20 条 + 底部「仅显示前 20 条」+ 首条成交额最大。
+        //    卡面举例「a（命中 25 只）」在当前样本不可复现（拼音首字母只预置 14 只已知标的，
+        //    生成标的名为「示例标的 NNN」→ 「a」命中 0 只），改用同口径可复现查询「示例」。
+        const cappedQuery = "示例";
+        const cappedCodes = await query(cappedQuery);
+        const matchedRows = snapshot.rows.filter((row) => row.name.startsWith(cappedQuery));
+        notes.cappedQuery = cappedQuery;
+        notes.cappedMatched = String(matchedRows.length);
+        notes.cappedRendered = String(cappedCodes.length);
+        notes.truncatedText = (q("[data-search-truncated]")?.textContent ?? "").trim() || "无";
+        const maxAmount = matchedRows.reduce((max, row) => Math.max(max, row.amount ?? -1), -1);
+        const maxAmountCodes = matchedRows
+          .filter((row) => (row.amount ?? -1) === maxAmount)
+          .map((row) => row.security);
+        notes.cappedMaxAmount = `${maxAmount}（${maxAmountCodes.join("/")}）`;
+        notes.cappedFirst = cappedCodes[0] ?? "无";
+        obs.cappedAt20 = cappedCodes.length === 20 && matchedRows.length > 20;
+        obs.truncatedNotice = notes.truncatedText === "仅显示前 20 条";
+        obs.firstIsMaxAmount = maxAmountCodes.includes(cappedCodes[0] ?? "");
+
+        // 8) 补3：停牌标的行可见 + 「停牌」+ 涨跌幅「—」（停牌样本由取证注入提供）。
+        const suspendedRows = snapshot.rows.filter((row) => row.suspended);
+        if (suspendedRows.length > 0) {
+          const suspendedCode = suspendedRows[0].security;
+          const suspendedHits = await query(suspendedCode);
+          const suspendedRow = q<HTMLElement>(`[data-search-result="${suspendedCode}"]`);
+          const suspendedPct = (suspendedRow?.querySelector(".search-row-pct")?.textContent ?? "").trim();
+          obs.suspendedRowVisible = suspendedHits.includes(suspendedCode) && suspendedRow !== null;
+          obs.suspendedTagShown = (suspendedRow?.textContent ?? "").includes("停牌");
+          obs.suspendedChangeDash = suspendedPct === "—";
+          notes.suspendedDetail = `停牌标的 ${suspendedCode}：命中=${obs.suspendedRowVisible} / 「停牌」标签=${obs.suspendedTagShown} / 涨跌幅=「${suspendedPct}」`;
+        } else {
+          notes.suspendedDetail = "样本内无停牌标的（取证注入未生效）";
+          report.blocked.push({
+            ac: "AC-05.01-01（补3）",
+            blocker: "sample-no-suspended",
+            reason: "当前样本 120 只无停牌标的，该 AC 需在注入停牌样本的取证环境下重判",
+            skipped: true,
+          });
+        }
+
+        // 9) 补4：`/` 与三个空格 → 无异常、无结果、无 toast、输入保留。
+        const slashHits = await query("/");
+        obs.slashNoResult = slashHits.length === 0;
+        obs.slashKeepsInput = (inputOf()?.value ?? "") === "/";
+        notes.slashHits = String(slashHits.length);
+        notes.slashInput = inputOf()?.value ?? "";
+        const blankHits = await query("   ");
+        obs.blankNoResult = blankHits.length === 0;
+        obs.blankKeepsInput = (inputOf()?.value ?? "") === "   ";
+        notes.blankHits = String(blankHits.length);
+        notes.blankInput = inputOf()?.value ?? "";
+        obs.noToast = q(".market-toast, .toast") === null;
+        obs.noRuntimeError = runtimeErrors.length === 0;
+        notes.runtimeErrors = String(runtimeErrors.length);
+      } finally {
+        window.removeEventListener("error", onError);
+        window.removeEventListener("unhandledrejection", onReject);
+      }
+    },
+    pushChecks,
   );
-  const external = performance
-    .getEntriesByType("resource")
-    .map((entry) => entry.name)
-    .filter((name) => /^https?:\/\//.test(name));
-  push(
-    "S050101-R2",
-    "AC-05.01-04",
-    "runtime",
-    external.length === 0,
-    `搜索期间外部 http(s) 资源 ${external.length} 个`,
-  );
+
+  pushChecks();
+  if (!completed) return report;
   await writeBatchReport("s050101-evidence.json", "s050101", report);
   return report;
 }

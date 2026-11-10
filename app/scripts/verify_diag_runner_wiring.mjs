@@ -157,6 +157,124 @@ console.log(
     `J1 闭环 ${real.j1}/${real.runners.length} / J2 case 锚点 ${real.j2}/${real.cases.size}`,
 );
 
+// —— J4：s050101 六条 AC 的判定表达式逐条可判红（制度第 29 条）——
+// 卡面 S-05.01-01 有 6 条 AC（基条 + 补1~补4 + AC-05.01-04），上轮只挂 2 条 check
+// → QA G4 判「缺证不足签」。J4 把「每条 AC 各挂一条 check + 每条 check 都有专属反例」
+// 变成可判红检查；判据抽成纯函数，原样判绿、变异判红（不用恒真锚点自证）。
+const S050101_ACS = [
+  "AC-05.01-01",
+  "AC-05.01-01（补1）",
+  "AC-05.01-01（补2）",
+  "AC-05.01-01（补3）",
+  "AC-05.01-01（补4）",
+  "AC-05.01-04",
+];
+const S050101_CHECKS = [
+  { id: "S050101-R1", ac: "AC-05.01-01", flip: "pinyinHit" },
+  { id: "S050101-R2", ac: "AC-05.01-04", flip: "externalZero" },
+  { id: "S050101-R3", ac: "AC-05.01-01（补1）", flip: "suffixSameResult" },
+  { id: "S050101-R4", ac: "AC-05.01-01（补2）", flip: "truncatedNotice" },
+  { id: "S050101-R5", ac: "AC-05.01-01（补3）", flip: "suspendedTagShown" },
+  { id: "S050101-R6", ac: "AC-05.01-01（补4）", flip: "blankKeepsInput" },
+];
+const S050101_GOOD = {
+  overlayOpened: true,
+  inputFocused: true,
+  codeHit: true,
+  nameHit: true,
+  pinyinHit: true,
+  rowHasCode: true,
+  rowHasName: true,
+  rowHasBoard: true,
+  rowHasSimTag: true,
+  queryP95Ok: true,
+  externalZero: true,
+  suffixSameResult: true,
+  cappedAt20: true,
+  truncatedNotice: true,
+  firstIsMaxAmount: true,
+  suspendedRowVisible: true,
+  suspendedTagShown: true,
+  suspendedChangeDash: true,
+  slashNoResult: true,
+  slashKeepsInput: true,
+  blankNoResult: true,
+  blankKeepsInput: true,
+  noToast: true,
+  noRuntimeError: true,
+};
+
+/** 从 push("<id>", "<ac>", "<layer>", <expr>, <detail>) 里按括号配平取参数。 */
+function pushArgs(text, id) {
+  const marker = text.indexOf(`"${id}"`);
+  if (marker < 0) return null;
+  const open = text.lastIndexOf("push(", marker);
+  if (open < 0) return null;
+  const args = [];
+  let depth = 0;
+  let current = "";
+  for (let i = open + "push".length; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "(") {
+      depth += 1;
+      if (depth === 1) continue;
+    } else if (ch === ")") {
+      depth -= 1;
+      if (depth === 0) {
+        args.push(current.trim());
+        break;
+      }
+    }
+    if (depth === 1 && ch === ",") {
+      args.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  return args.length >= 4 ? args : null;
+}
+
+/** J4 判据（纯函数）：对给定的 batchDiag.ts 源码返回失败项。 */
+function judgeS050101(source) {
+  const failures = [];
+  for (const ac of S050101_ACS) {
+    if (!source.includes(`"${ac}"`)) failures.push(`s050101 未挂 AC token ${ac}`);
+  }
+  for (const check of S050101_CHECKS) {
+    const args = pushArgs(source, check.id);
+    if (!args) {
+      failures.push(`s050101 取不到 ${check.id} 的 push 参数`);
+      continue;
+    }
+    if (args[1] !== `"${check.ac}"`) {
+      failures.push(`${check.id} 的 ac=${args[1]} 与期望 ${check.ac} 不一致`);
+    }
+    if (args[2] !== '"render"' && args[2] !== '"runtime"') {
+      failures.push(`${check.id} 的 layer=${args[2]} 不在 render|runtime`);
+    }
+    let judge;
+    try {
+      judge = new Function("obs", `return (${args[3]});`);
+    } catch (error) {
+      failures.push(`${check.id} 判定表达式不可求值：${error.message}`);
+      continue;
+    }
+    if (judge(S050101_GOOD) !== true) failures.push(`${check.id} 正例 obs 未判绿`);
+    const bad = { ...S050101_GOOD, [check.flip]: false };
+    if (judge(bad) !== false) {
+      failures.push(`${check.id} 反例 obs 未判红（翻转 ${check.flip} 后仍判绿 = 恒真断言）`);
+    }
+  }
+  return failures;
+}
+
+const j4Real = judgeS050101(batch);
+for (const message of j4Real) console.error(`FAIL J4 ${message}`);
+console.log(
+  `J4 s050101 判定可判红：AC token ${S050101_ACS.length} 条 / check ${S050101_CHECKS.length} 条 / 失败 ${j4Real.length} 项`,
+);
+
 // —— J3 反例自证：每条判定都要能被变异打红（制度第 29 条）——
 const mutations = [];
 // (a) 逐一移除每个 runner 的宿主调用点 → J1 必须判「死 runner」
@@ -195,19 +313,31 @@ for (const r of real.runners) {
   });
 }
 
+// (d) s050101 的 R4 判定被弱化（truncatedNotice → true）→ J4 必须判红
+{
+  const needle = "obs.cappedAt20 && obs.truncatedNotice && obs.firstIsMaxAmount";
+  const mutated = batch.replace(needle, "obs.cappedAt20 && true && obs.firstIsMaxAmount");
+  const failures = mutated === batch ? ["变异未落到源码上"] : judgeS050101(mutated);
+  mutations.push({
+    id: "判定弱化:s050101/S050101-R4",
+    red: failures.some((f) => f.includes("S050101-R4 反例 obs 未判红")),
+  });
+}
+
 for (const m of mutations) {
   if (!m.red) console.error(`FAIL 反例未判红：${m.id}`);
 }
 const red = mutations.filter((m) => m.red).length;
 console.log(
-  `反例 ${red}/${mutations.length} 判红（死 runner ${real.runners.length} + 删 case 1 + 无接线 case 1）`,
+  `反例 ${red}/${mutations.length} 判红（死 runner ${real.runners.length} + 删 case 1 + 无接线 case 1 + 判定弱化 1）`,
 );
 
 if (
   real.failures.length > 0 ||
   real.j1 !== real.runners.length ||
   real.j2 !== real.cases.size ||
-  red !== mutations.length
+  red !== mutations.length ||
+  j4Real.length > 0
 ) {
   process.exit(2);
 }

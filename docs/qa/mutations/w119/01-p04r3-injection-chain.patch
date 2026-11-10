@@ -1,0 +1,12 @@
+diff --git a/app/src-tauri/src/commands.rs b/app/src-tauri/src/commands.rs
+--- a/app/src-tauri/src/commands.rs
++++ b/app/src-tauri/src/commands.rs
+@@ -146,7 +146,7 @@
+ ) -> Result<Option<DatasetManifest>, AppError> {
+     // W-115：debug 注入「manifest 整体缺失」，与 list_securities 的 --empty-dataset 同构。
+     if state.faults().manifest_missing {
+-        return Ok(None);
++        return Ok(Some(state.core.dataset_manifest()?));
+     }
+     // W-116：只把 sha256 置空、其余 8 字段原样保留，造出「只缺一段」的可达路径；
+     // 页脚 version 段由 shortSha(空) 派生为 `—`，其余 6 段照常（AC-02.08-01（补2））。

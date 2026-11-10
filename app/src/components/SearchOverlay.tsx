@@ -53,6 +53,18 @@ function Marked({ text, query }: { text: string; query: string }) {
   );
 }
 
+/**
+ * 卡面「代码匹配：`300750` 与 `300750.SZ`、`300750.sz` 均命中」+ AC-05.01-01（补1）
+ * 「结果集完全相同（大小写不敏感）」：把带交易所后缀的代码查询改写成裸代码，
+ * 三种写法才落到同一匹配档位（结果集与排序完全一致）。
+ * 只改写「6 位数字 + .SH/.SZ/.BJ」的代码形态；其它输入（名称/拼音）原样透传。
+ */
+export function normalizeSearchQuery(query: string): string {
+  const trimmed = query.trim();
+  const code = /^(\d{6})\.(SH|SZ|BJ)$/i.exec(trimmed);
+  return code ? code[1] : trimmed;
+}
+
 export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState<SearchIndex | null>(null);
@@ -197,7 +209,7 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
   }, []);
 
   const { hits, matched } = useMemo(
-    () => (index ? matchSecurities(index, debounced) : { hits: [], matched: 0 }),
+    () => (index ? matchSecurities(index, normalizeSearchQuery(debounced)) : { hits: [], matched: 0 }),
     [index, debounced],
   );
   const shortcuts = useMemo(() => (index ? indexShortcuts(index) : []), [index]);
@@ -473,6 +485,12 @@ export function SearchOverlay({ onOpenSecurity, onNavigate }: Props) {
                 </li>
               ))}
             </ul>
+            {/* 卡面「超出 20 条时列表底部显示「仅显示前 20 条」」：放在列表底部（不是顶部计数行）。 */}
+            {matched > SEARCH_RESULT_LIMIT && (
+              <p className="search-truncated caption" data-search-truncated="1">
+                仅显示前 {SEARCH_RESULT_LIMIT} 条
+              </p>
+            )}
           </div>
         )}
 
