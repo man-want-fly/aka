@@ -146,6 +146,16 @@ jobs:
       - name: P15 s050102 套件反例（7 条 AC 逐条判红 + 变异验证）
         run: npm run verify:s050102
 
+      # W-119c：S-05.01-01 搜索卡产品侧门禁——索引取数链路 + 同分组首条=成交额最大者
+      # + 浮层聚焦契约；反例①（索引键改回裸代码）反例②（聚焦不跟 loadState）必须红。
+      - name: W-119c 搜索卡门禁（索引 join / 排序口径 / 聚焦契约 + 变异验证）
+        run: npm run verify:search
+
+      # W-119c：S-03.01-04 / S-03.02-01 取证 runner 口径门禁——planned 指标不得用于
+      # full/added 断言、星标前必须展开全部分类；三处变异必须红。
+      - name: W-119c 目录 runner 口径门禁（规划项/可操作指标 + 懒挂载行前置 + 变异验证）
+        run: npm run verify:catalog-runner
+
       - name: P04-R3 数据目录注入反例（W-115，注入未生效必红）
         run: npm run verify:p04r3
 

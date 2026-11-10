@@ -52,13 +52,20 @@ export interface SearchHit {
   score: number;
 }
 
-/** 行情按代码索引；缺行情的标的仍可搜索，只是价格/涨跌幅为空。 */
+/**
+ * 行情按代码索引；缺行情的标的仍可搜索，只是价格/涨跌幅为空。
+ *
+ * 索引键必须是 `MarketRowDto.security`（带交易所后缀的唯一键，如 `601029.SH`），
+ * 不能用 `MarketRowDto.code`（裸代码，如 `601029`）：证券表用的是带后缀的 code，
+ * 按裸代码建表会让每一条行情都查不到 → 成交额/最新价/涨跌幅/停牌全落 null，
+ * 同分排序退化成代码升序（卡面 AC-05.01-01 补2「首条为成交额最大者」不成立）。
+ */
 export function buildSearchIndex(
   securities: SecurityDto[],
   rows: MarketRowDto[],
 ): SearchIndex {
   const quotes = new Map<string, MarketRowDto>();
-  for (const row of rows) quotes.set(row.code, row);
+  for (const row of rows) quotes.set(row.security, row);
 
   let missingPinyin = 0;
   const items = securities.map((security) => {
