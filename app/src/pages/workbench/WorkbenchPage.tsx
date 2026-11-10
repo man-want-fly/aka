@@ -144,6 +144,9 @@ const RANGES = [
 /** 输入静默 120ms 后才发请求：连续输入（典型间隔 40ms）只保留最后一次，避免抖动请求 */
 const REQUEST_DEBOUNCE_MS = 120;
 
+/** W-119：页脚取证前等待「页脚已就绪」的上限；超时也照常跑一次 runner，产出可判红的 dump */
+const FOOTER_READY_TIMEOUT_MS = 20_000;
+
 /** S-08.02-02：错误标题只认三类，其余归「计算失败」。 */
 const CALC_ERROR_TITLES: Record<string, string> = {
   E_TIMEOUT: "计算超时",
@@ -227,6 +230,8 @@ export function WorkbenchPage({
   const [manifest, setManifest] = useState<ManifestResponse | null>(null);
   // S-02.08-01：页脚 7 段唯一来源；不提供 manifest 时整段显示 —
   const [datasetManifest, setDatasetManifest] = useState<DatasetManifestDto | null>(null);
+  // W-119：manifest 读取是否仍在途中。途中不是「manifest 字段缺失」，页脚各段显示「加载中」。
+  const [datasetManifestPending, setDatasetManifestPending] = useState(true);
   const [shaCopied, setShaCopied] = useState(false);
   const units = useMemo(
     () =>
@@ -441,6 +446,8 @@ export function WorkbenchPage({
   }, []);
   const [bars, setBars] = useState<BarsResponse | null>(null);
   const [calc, setCalc] = useState<CalcResponse | null>(null);
+  // W-119：本次计算是否已出结果（成功或失败）。未出结果时页脚计算段显示「计算中」（卡面口径）。
+  const [calcSettled, setCalcSettled] = useState(false);
   // S-07.05-03：主图 K 线点击 → 六字段溯源浮层（复用 S-07.05-02 的 bar_provenance，不新增 IPC）
   const [provSel, setProvSel] = useState<{ index: number; date: string } | null>(null);
   const [provData, setProvData] = useState<BarProvenanceDto | null>(null);
@@ -565,7 +572,12 @@ export function WorkbenchPage({
     computedMs: calc?.computedMs ?? null,
     cacheHit: calc?.cacheHit ?? null,
     loading,
+    manifestPending: datasetManifestPending,
+    calcPending: !calcSettled,
   });
+  // W-119：页脚 7 段的读点。manifest 派生的 4 段要等 dataset_manifest 回来，
+  // 计算段要等首次计算出结果；否则读到的只是「未就绪」的半成品。
+  const footerReady = !datasetManifestPending && calcSettled;
   const restartStarted = useRef(false);
   const watchlistStarted = useRef(false);
   const generation = useRef(0);
@@ -674,7 +686,11 @@ export function WorkbenchPage({
 
   // S-02.08-01：页脚只消费 manifest 下发的字段；取不到就整段显示 —，不在前端补默认数字
   useEffect(() => {
-    if (!isTauriRuntime()) return;
+    if (!isTauriRuntime()) {
+      // 非 Tauri 运行没有 manifest 来源，直接落到「未就绪结束」态，不让页脚一直显示「加载中」
+      setDatasetManifestPending(false);
+      return;
+    }
     let alive = true;
     ipc
       .datasetManifest()
@@ -683,6 +699,9 @@ export function WorkbenchPage({
       })
       .catch(() => {
         /* manifest 取不到不阻塞行情主流程，页脚降级为 — */
+      })
+      .finally(() => {
+        if (alive) setDatasetManifestPending(false);
       });
     return () => {
       alive = false;
@@ -802,6 +821,8 @@ export function WorkbenchPage({
       inFlightRef.current = true;
       setLoading(true);
       setError(null);
+      // W-119：本轮计算重新开始，计算段回到「计算中」，页脚未就绪
+      setCalcSettled(false);
 
       const requestParams = appliedParams;
       const request = {
@@ -844,6 +865,8 @@ export function WorkbenchPage({
           setBars(nextBars);
           barsRef.current = nextBars;
           setLoading(false);
+          // W-119：本轮计算已出结果（成功或失败），页脚计算段不再是「计算中」
+          setCalcSettled(true);
 
           if (calcResult.ok) {
             // AC-02.05-01 补4：服务端耗时 >300ms 提示超时并回退上一组有效参数
@@ -1281,24 +1304,39 @@ export function WorkbenchPage({
   // W-118：S-02.08-01（补2）页脚取证接线。runner 只读 [data-dataset-overview]/
   // [data-dataset-seg]，宿主是本页；此前无任何组件调用（死代码）→ 零 dump、240s 超时。
   // 异常也落失败 dump，避免零产物空等（对齐 s070503 的 blockedDump 口径）。
+  // W-119：读点必须是「页脚已就绪」。runner 的 waitFor 只等 [data-dataset-overview] 出现，
+  // 而该节点从首帧就在，manifest 派生段要等 dataset_manifest 回来、计算段要等首次计算出结果；
+  // 过早读会拿到「未就绪」半成品（实测缺 provider/version/range/rows/calc 共 5 段）。
   useEffect(() => {
     if (!isTauriRuntime()) return;
     let alive = true;
+    let timer = 0;
+    const start = () => {
+      if (!alive) return;
+      if (window.sessionStorage.getItem("aka.batch.s020801.done") === "1") return;
+      window.sessionStorage.setItem("aka.batch.s020801.done", "1");
+      void runS020801Diagnostics().catch((err: unknown) => {
+        void writeDiagnosticFailure("s020801-evidence.json", "s020801", err);
+      });
+    };
     void ipc
       .diagTarget()
       .then((target) => {
         if (!alive || target !== "s020801") return;
-        if (window.sessionStorage.getItem("aka.batch.s020801.done") === "1") return;
-        window.sessionStorage.setItem("aka.batch.s020801.done", "1");
-        void runS020801Diagnostics().catch((err: unknown) => {
-          void writeDiagnosticFailure("s020801-evidence.json", "s020801", err);
-        });
+        if (footerReady) {
+          start();
+          return;
+        }
+        // 页脚始终未就绪：最多再等 FOOTER_READY_TIMEOUT_MS，仍未就绪也跑一次 runner，
+        // 产出可判红、可定位的 dump，而不是零产物空等。
+        timer = window.setTimeout(start, FOOTER_READY_TIMEOUT_MS);
       })
       .catch(() => undefined);
     return () => {
       alive = false;
+      window.clearTimeout(timer);
     };
-  }, []);
+  }, [footerReady]);
 
   // S-07.05-03 溯源浮层取证：AKA_DIAG_TARGET=s070503 时自跑一次
   useEffect(() => {
@@ -2517,9 +2555,11 @@ export function WorkbenchPage({
                 title={
                   segment.missing
                     ? "manifest 字段缺失"
-                    : `数据集 ${datasetManifest?.datasetId ?? ""} · 点击复制完整 sha256`
+                    : segment.pending
+                      ? "正在读取数据集清单"
+                      : `数据集 ${datasetManifest?.datasetId ?? ""} · 点击复制完整 sha256`
                 }
-                disabled={segment.missing}
+                disabled={segment.missing || segment.pending}
                 onClick={copyDatasetSha}
               >
                 {segment.text}
@@ -2530,7 +2570,15 @@ export function WorkbenchPage({
                 className={segment.key === "calc" ? "dataset-seg mono" : "dataset-seg"}
                 data-dataset-seg={segment.key}
                 data-dataset-missing={segment.missing ? "1" : "0"}
-                title={segment.missing ? "manifest 字段缺失" : segment.label}
+                title={
+                  segment.missing
+                    ? segment.key === "calc"
+                      ? "计算未产出结果"
+                      : "manifest 字段缺失"
+                    : segment.pending
+                      ? "正在读取数据集清单"
+                      : segment.label
+                }
               >
                 {segment.text}
               </span>
