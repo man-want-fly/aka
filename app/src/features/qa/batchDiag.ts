@@ -428,7 +428,7 @@ export async function runS030201Diagnostics() {
     );
     push(
       "P02-R3",
-      "AC-03.02-02（补1）",
+      "AC-03.02-02",
       "render",
       afterAdd[0] === "M03",
       `新收藏排在最前：首项 ${afterAdd[0] ?? "—"}`,
@@ -446,7 +446,7 @@ export async function runS030201Diagnostics() {
     const overflows = list ? list.scrollWidth > list.clientWidth + 1 : true;
     push(
       "P02-R4",
-      "AC-03.02-01（补3）",
+      "AC-03.02-01",
       "render",
       !overflows && chipIds().length === 8,
       `收藏区 ${chipIds().length} 项 / 横向溢出=${overflows}（scrollWidth ${list?.scrollWidth ?? 0} / clientWidth ${list?.clientWidth ?? 0}）`,
@@ -462,7 +462,7 @@ export async function runS030201Diagnostics() {
     const plannedHint = q<HTMLElement>("[data-fav-hint]")?.textContent?.trim() ?? "";
     push(
       "P02-R5",
-      "AC-03.02-01（补2）",
+      "AC-03.02-03（补2）",
       "render",
       t06Chip?.dataset.favStatus === "planned" &&
         plannedHint.includes("该指标规划中，本期未开放") &&
@@ -488,7 +488,7 @@ export async function runS030201Diagnostics() {
     const m03Rows = afterFive.favorites.filter((item) => item.indicatorId === "M03").length;
     push(
       "P02-D2",
-      "AC-03.02-01（补1）",
+      "AC-03.02-03（补3）",
       "data",
       m03Rows === 1 && afterFive.favorites.length === 9,
       `连续 5 次收藏 M03 → 行数 ${afterFive.favorites.length}，M03 唯一行 ${m03Rows}`,
@@ -501,7 +501,7 @@ export async function runS030201Diagnostics() {
     const again = await ipc.indicatorFavorites();
     push(
       "P02-D3",
-      "AC-03.02-01（补2）",
+      "AC-03.02-03（补1）",
       "data",
       emptied.favorites.length === 0 && again.favorites.length === 0,
       `全部移除后 ${emptied.favorites.length} 项；再次读取 ${again.favorites.length} 项（未重新播种）`,
