@@ -2306,9 +2306,8 @@ fn telemetry_context(
     ]
 }
 
-/// 缓存键 = 6 个原有维度（数据集版本、标的、周期、复权、指标 id、参数）+ DateRange，
-/// 共 7 维；DateRange 用规范化后的实际起止日参与哈希（未指定时记 `*`）。
-/// 不再保留旧六元组键：日期区间变化必须视为新的计算结果。
+/// 缓存键 = 7 个维度（数据集版本、标的、周期、复权、指标 id、参数、日期区间），
+/// 逐段拼成 `v2|...`；日期区间取吸附后的实际起止日，未指定时记 `*`。
 fn calc_key(
     series: &CandleSeries,
     meta: &'static indicator_core::Meta,
@@ -3159,6 +3158,77 @@ mod tests {
         assert_ne!(kd, kw, "D→W 必须产生不同缓存键");
         assert_ne!(kw, km, "W→M 必须产生不同缓存键");
         assert!(kd.contains("|1d|") && kw.contains("|1w|") && km.contains("|1m|"));
+    }
+
+    /// S-EP05-04：只改复权口径必须换缓存键。
+    #[test]
+    fn cache_key_includes_adj() {
+        let qfq = series(Date::new(2024, 12, 20), 10);
+        let mut hfq = series(Date::new(2024, 12, 20), 10);
+        hfq.adj = "hfq".into();
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let window = resolve_window(&qfq, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        let kq = calc_key(&qfq, meta, &params, &window.range);
+        let kh = calc_key(&hfq, meta, &params, &window.range);
+        assert_ne!(kq, kh, "qfq→hfq 必须产生不同缓存键");
+        assert!(kq.contains("|qfq|") && kh.contains("|hfq|"));
+    }
+
+    /// S-EP05-04：数据集重建（dataset_id 变化）必须换缓存键。
+    #[test]
+    fn cache_key_includes_dataset_id() {
+        let a = series(Date::new(2024, 12, 20), 10);
+        let mut b = series(Date::new(2024, 12, 20), 10);
+        b.dataset_id = "ds-rebuilt".into();
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let window = resolve_window(&a, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        let ka = calc_key(&a, meta, &params, &window.range);
+        let kb = calc_key(&b, meta, &params, &window.range);
+        assert_ne!(ka, kb, "dataset_id 变化必须产生不同缓存键");
+        assert!(kb.contains("|ds-rebuilt|"));
+    }
+
+    /// S-EP05-04：参数内容相同、插入顺序不同，键必须相同（`Params` 为 `BTreeMap`）。
+    #[test]
+    fn cache_key_stable_for_equal_params() {
+        let s = series(Date::new(2024, 12, 20), 10);
+        let meta = lookup("ma").unwrap().meta();
+        let forward = Params::from([
+            ("fast".to_string(), indicator_core::ParamValue::Int(12)),
+            ("slow".to_string(), indicator_core::ParamValue::Int(26)),
+        ]);
+        let backward = Params::from([
+            ("slow".to_string(), indicator_core::ParamValue::Int(26)),
+            ("fast".to_string(), indicator_core::ParamValue::Int(12)),
+        ]);
+        let window = resolve_window(&s, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        assert_eq!(
+            calc_key(&s, meta, &forward, &window.range),
+            calc_key(&s, meta, &backward, &window.range),
+            "参数插入顺序不得影响缓存键"
+        );
+    }
+
+    /// S-EP05-04：`params_hash` 固定 16 位小写十六进制，仅用于埋点。
+    #[test]
+    fn params_hash_is_16_lower_hex() {
+        let s = series(Date::new(2024, 12, 20), 10);
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let hash = params_hash(&params);
+        assert_eq!(hash.len(), 16, "params_hash 必须固定 16 位：{hash}");
+        assert!(
+            hash.chars()
+                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)),
+            "params_hash 必须是小写十六进制：{hash}"
+        );
+        let window = resolve_window(&s, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        assert!(
+            !calc_key(&s, meta, &params, &window.range).contains(&hash),
+            "params_hash 只进埋点，不参与缓存键"
+        );
     }
 
     /// S-EP05-05 AC1/AC2/AC5：513 个互异键后只保留 512，最早插入的键被淘汰。
