@@ -226,7 +226,7 @@ export function CatalogPage({ onNavigate, onOpenWorkbench }: Props) {
         const failureFileByTarget: Record<string, string> = {
           catalog: "s03010-evidence.json",
           s030104: "s030104-evidence.json",
-          s030201: "s030201-favorites-evidence.json",
+          s030201: "s030201-favorites-v2-evidence.json",
           "s030302-catalog": "s030302-catalog-evidence.json",
         };
         const failureFile = failureFileByTarget[target];
