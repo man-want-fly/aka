@@ -33,7 +33,7 @@ const pageSrc = {
 
 const SUITES = [
   { suite: "s030104", runner: "runS030104Diagnostics", file: "s030104-evidence.json", page: "catalog" },
-  { suite: "s030201", runner: "runS030201Diagnostics", file: "s030201-favorites-evidence.json", page: "catalog" },
+  { suite: "s030201", runner: "runS030201Diagnostics", file: "s030201-favorites-v2-evidence.json", page: "catalog" },
   { suite: "s030302-catalog", runner: "runS030302CatalogDiagnostics", file: "s030302-catalog-evidence.json", page: "catalog" },
   { suite: "s030302", runner: "runS030302WorkbenchDiagnostics", file: "s030302-evidence.json", page: "workbench" },
   { suite: "s060301", runner: "runS060301Diagnostics", file: "s060301-about-evidence.json", page: "settings" },

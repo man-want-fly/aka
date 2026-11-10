@@ -167,8 +167,8 @@ PY
     ;;
   s030201)
     TARGET="s030201"
-    JSON="$DIAG_DIR/s030201-favorites-evidence.json"
-    NAME="s030201-favorites-evidence"
+    JSON="$DIAG_DIR/s030201-favorites-v2-evidence.json"
+    NAME="s030201-favorites-v2-evidence"
     FIXTURE="默认 state.db；收藏套件自行增删并验证首装 8 项、顺序、幂等与「清空后不重播」；取证后 sqlite3 .backup 还原"
     BAK="/tmp/aka-state-s030201-$LABEL.db"
     sqlite3 "$DB" ".backup '$BAK'"

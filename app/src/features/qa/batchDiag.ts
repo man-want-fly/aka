@@ -374,7 +374,7 @@ export async function runS030201Diagnostics() {
 
   // W-119：runner 自己兜底落失败 dump（带已完成 checks），不再向上抛 ——
   // 宿主层 catch 会写同名空 dump 覆盖它，反而丢掉卡点线索。
-  const completed = await runSuite("s030201-favorites-evidence.json", "s030201", report, async () => {
+  const completed = await runSuite("s030201-favorites-v2-evidence.json", "s030201", report, async () => {
     await waitFor(() => q("[data-catalog-root='p3']"), DOM_WAIT_MS, 50, "目录页根出现（收藏区）");
     await waitFor(() => q("[data-fav-strip]"), DOM_WAIT_MS, 50, "收藏条出现");
     await waitFor(
@@ -509,7 +509,7 @@ export async function runS030201Diagnostics() {
 
   });
   if (!completed) return report;
-  await writeBatchReport("s030201-favorites-evidence.json", "s030201", report);
+  await writeBatchReport("s030201-favorites-v2-evidence.json", "s030201", report);
   return report;
 }
 
