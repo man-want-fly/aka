@@ -15,6 +15,8 @@ use indicator_core::{
     ManifestParam, OhlcvView, ParamError, Params, ENGINE_VERSION, PLANNED_INDICATOR_COUNT,
 };
 
+use crate::cache::{CalcCache, Lookup};
+
 use crate::dto::{
     BarDto, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
     DatasetFault, DatasetIntegrityDto, DatasetVersionDto, DataHealthDto, DataHealthItemDto,
@@ -31,8 +33,9 @@ use serde_json::Value;
 use crate::error::{trace_id, AppError, ErrorCode};
 use crate::quality::{self, SecurityQualityInput};
 use crate::telemetry::{
-    Telemetry, EVENT_CACHE_HIT, EVENT_CACHE_MISS, EVENT_COMPUTE_COUNT, EVENT_COMPUTE_SKIP,
-    EVENT_INDEFINITE, EVENT_INDICATOR_COMPUTE,
+    Telemetry, EVENT_CACHE_EVICT, EVENT_CACHE_HIT, EVENT_CACHE_MISS, EVENT_CACHE_SKIP_OOM,
+    EVENT_CACHE_STALE_SUSPECT, EVENT_COMPUTE_COUNT, EVENT_COMPUTE_SKIP, EVENT_INDEFINITE,
+    EVENT_INDICATOR_COMPUTE,
 };
 
 /// 质量扫描完成事件（JSONL 与内存环形队列同源）。
@@ -314,7 +317,7 @@ pub struct AppCore {
     daily_batches: Mutex<HashMap<String, Arc<BarBatch>>>,
     /// 数据集 manifest 覆盖区间（provider 自报，独立于行内最新交易日）
     dataset_coverage: Option<(String, String)>,
-    calc_cache: Mutex<HashMap<String, Arc<Vec<Vec<f64>>>>>,
+    calc_cache: Mutex<CalcCache>,
     calc_stats: Mutex<CacheStats>,
     /// S-07.05-01：按 dataset_id 缓存的最近一次质量报告（跨命令复用）。
     quality_report: Mutex<Option<QualityReportDto>>,
@@ -388,7 +391,7 @@ impl AppCore {
             store: Mutex::new(CandleStore::new()),
             daily_batches: Mutex::new(HashMap::new()),
             dataset_coverage,
-            calc_cache: Mutex::new(HashMap::new()),
+            calc_cache: Mutex::new(CalcCache::new()),
             calc_stats: Mutex::new(CacheStats::default()),
             telemetry: Telemetry::in_memory(),
             quality_report: Mutex::new(None),
@@ -1706,6 +1709,12 @@ impl AppCore {
         let mut cache_hit = true;
         let mut computed = 0u64;
         let mut skipped = 0u64;
+        // S-02.06-02 双保险：缓存条目记录写入时的数据集末端日期，读取时与当前值比对。
+        let coverage_end = self
+            .dataset_coverage
+            .as_ref()
+            .map(|(_, end)| end.clone())
+            .unwrap_or_default();
         // 同请求内同键去重：5 个实例引用同一指标参数时只算一次，其余实例复用结果。
         let mut request_cache: HashMap<String, Arc<Vec<Vec<f64>>>> = HashMap::new();
         let mut output = Vec::with_capacity(req.instances.len());
@@ -1745,12 +1754,21 @@ impl AppCore {
                 );
                 values.clone()
             } else {
-                let cached = self
+                let cached = match self
                     .calc_cache
                     .lock()
                     .map_err(|_| AppError::internal("计算缓存锁中毒"))?
-                    .get(&key)
-                    .cloned();
+                    .lookup(&key, &coverage_end)
+                {
+                    Lookup::Hit(values) => Some(values),
+                    Lookup::Stale => {
+                        // 世代未变但数据集末端日期已变：不支持场景，记录后按 miss 重算。
+                        self.telemetry
+                            .emit(EVENT_CACHE_STALE_SUSPECT, context.clone());
+                        None
+                    }
+                    Lookup::Miss => None,
+                };
 
                 match cached {
                     Some(values) => {
@@ -1785,10 +1803,29 @@ impl AppCore {
                         );
 
                         let values = Arc::new(values);
-                        self.calc_cache
+                        let inserted = self
+                            .calc_cache
                             .lock()
                             .map_err(|_| AppError::internal("计算缓存锁中毒"))?
-                            .insert(key.clone(), values.clone());
+                            .insert(key.clone(), values.clone(), coverage_end.clone());
+                        for evicted in inserted.evicted {
+                            self.telemetry.emit(
+                                EVENT_CACHE_EVICT,
+                                vec![("cacheKey", serde_json::json!(evicted))],
+                            );
+                        }
+                        if inserted.skipped_oom {
+                            self.telemetry.emit(
+                                EVENT_CACHE_SKIP_OOM,
+                                vec![
+                                    ("cacheKey", serde_json::json!(key.clone())),
+                                    (
+                                        "bytes",
+                                        serde_json::json!(values.iter().map(|c| c.len() * 8).sum::<usize>()),
+                                    ),
+                                ],
+                            );
+                        }
                         values
                     }
                 }
@@ -3631,7 +3668,7 @@ mod tests {
                     let meta = indicator.meta();
                     let params = merge_defaults(meta.params, &instance.params);
                     let key = calc_key(&series, meta, &params, &window.range);
-                    let hit = core.calc_cache.lock().unwrap().get(&key).cloned();
+                    let hit = core.calc_cache.lock().unwrap().peek(&key);
                     std::hint::black_box(hit);
                 }
             });
@@ -3644,7 +3681,7 @@ mod tests {
                     let meta = indicator.meta();
                     let params = merge_defaults(meta.params, &instance.params);
                     let key = calc_key(&series, meta, &params, &window.range);
-                    match core.calc_cache.lock().unwrap().get(&key).cloned() {
+                    match core.calc_cache.lock().unwrap().peek(&key) {
                         Some(values) => Some((meta.id, values)),
                         None => {
                             missing.push(meta.id);
@@ -3654,7 +3691,14 @@ mod tests {
                 })
                 .collect();
             if !missing.is_empty() {
-                let stored: Vec<String> = core.calc_cache.lock().unwrap().keys().cloned().take(3).collect();
+                let stored: Vec<String> = core
+                    .calc_cache
+                    .lock()
+                    .unwrap()
+                    .keys()
+                    .take(3)
+                    .cloned()
+                    .collect();
                 let probe = {
                     let instance = instances
                         .iter()

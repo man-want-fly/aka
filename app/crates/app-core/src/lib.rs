@@ -2,6 +2,7 @@
 //!
 //! 依赖边界：app-core 可以依赖三个底层 crate；底层禁止反向依赖它。
 
+pub mod cache;
 pub mod core;
 pub mod dto;
 pub mod error;
