@@ -19,11 +19,17 @@ export interface DatasetSegment {
   /** 字段中文名，用于 title/ARIA（视觉上不重复出现） */
   label: string;
   text: string;
-  /** 缺失字段统一为 `—`，tooltip 说明原因 */
+  /** manifest 字段确实缺失（卡面：`—` + tooltip「manifest 字段缺失」） */
   missing?: boolean;
+  /** 尚未就绪（manifest 未到 / 计算未完成）：不是字段缺失，不能冒充「manifest 字段缺失」 */
+  pending?: boolean;
 }
 
 const MISSING = "—";
+/** 未就绪占位：与「字段缺失」区分，字段还没拿到 ≠ manifest 里没有该字段 */
+const PENDING = "加载中";
+/** 卡面「计算未完成：计算段显示 `计算中`」 */
+const CALC_PENDING = "计算中";
 
 const ADJ_TEXT = { none: "不复权", qfq: "前复权", hfq: "后复权" } as const;
 const TF_TEXT = { D: "日线", W: "周线", M: "月线" } as const;
@@ -46,15 +52,21 @@ export function datasetSegments(input: {
   computedMs: number | null;
   cacheHit: boolean | null;
   loading: boolean;
+  /** manifest 读取是否仍在途中：途中不算「manifest 字段缺失」 */
+  manifestPending?: boolean;
+  /** 首次计算是否仍未出结果：未出结果显示「计算中」 */
+  calcPending?: boolean;
 }): DatasetSegment[] {
   const m = input.manifest;
+  const manifestPending = input.manifestPending ?? false;
+  const calcPending = input.calcPending ?? input.loading;
   const calc =
     input.computedMs === null
-      ? input.loading
-        ? "计算中"
+      ? calcPending
+        ? CALC_PENDING
         : undefined
       : `${formatComputedMs(input.computedMs)}ms · ${input.cacheHit ? "缓存命中" : "冷算"}`;
-  return [
+  const segments: DatasetSegment[] = [
     { key: "provider", label: "数据来源", text: m?.provider || MISSING, missing: !m?.provider },
     {
       key: "version",
@@ -78,4 +90,12 @@ export function datasetSegments(input: {
     },
     { key: "calc", label: "计算耗时", text: calc ?? MISSING, missing: !calc },
   ];
+  if (!manifestPending) return segments;
+  // manifest 还在途中：字段只是「还没拿到」，不能报「manifest 字段缺失」；
+  // 口径/周期不依赖 manifest，保持正常（卡面：页脚不消失、其余段不被阻塞）。
+  return segments.map((segment) =>
+    segment.key === "adj" || segment.key === "timeframe" || segment.key === "calc"
+      ? segment
+      : { ...segment, text: PENDING, missing: false, pending: true },
+  );
 }
