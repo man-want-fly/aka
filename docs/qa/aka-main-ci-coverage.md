@@ -35,6 +35,17 @@
 | `f38fc5c` | 条件签前置：docs(qa) 补齐 S-05.01-02 的 G4 驳回 BA 侧签字前置 | `42634147774` success | 自身 |
 | `2ec7841` | 条件签 P15 S-05.01-02（限定 7 条 AC，不升已交付） | `42638396098` failure（**红**：红因为 P7 注册表滞后导致 verify:card-pages 判红，非代码缺陷；由本次修复提交的绿 run 覆盖，不改写历史） | `42651697784`（`172e337`，树包含本提交） |
 | `172e337` | docs(qa) 修正 P7 注册表滞后并收口 P15 条件签台账至 v0.31 | `42651697784` success（attempt2） | 自身 |
+| `d377348` | merge(app) 合入 W-118 取证 runner 接线修复（死 runner / 失败落盘 / 落地页跳转） | `42675179408` success | 自身 |
+| `e513370` | evidence(qa) 采集 S-08.02-02 运行层 GUI 证据（s080202） | `42667417213` success | 自身 |
+| `d2994d2` | evidence(qa) 采集 S-07.01-02 运行层 GUI 证据（s070102） | `42667879167` success | 自身 |
+| `fe4f4d7` | evidence(qa) 采集 S-05.01-01 运行层 GUI 证据（s050101，证据不足签） | `42683790967` success | 自身 |
+| `89a00a2` | evidence(qa) 采集 S-06.03-01 运行层 GUI 证据（s060301） | `42697829390` success | 自身 |
+| `ebb296d` | evidence(qa) 归档 s030104 取证失败记录（不可判 / BLOCKED） | `42683045739` success | 自身 |
+| `ea0d3f9` | evidence(qa) 归档 s020801 取证失败记录（不可判 / BLOCKED） | `42684715606` success | 自身 |
+| `240eda2` | evidence(qa) 归档 s030201 取证失败记录（不可判 / BLOCKED） | `42695148678` success | 自身 |
+| `d9b4215` | evidence(qa) 归档 s030302 取证超时失败记录（不可判 / BLOCKED） | `42696381176` success | 自身 |
+| `32ac0b6` | evidence(qa) 归档 s060302 取证失败记录（不可判 / BLOCKED） | `42697144996` success | 自身 |
+| `2594e97` | sign(qa) 逐卡签 P04/P06/P07（1 整卡 + 2 条件签，P14 驳回） | `42727743201` failure（**红**：红因为完成台账 `S-06.03-01` 状态词用了词表外的「待验收（…）」，`verify:gate-log` 规则 5 判「有签字行但台账无此卡」——**属台账状态词缺陷、非代码缺陷**；由本次台账修复提交的绿 run 覆盖，不改写历史） | 自身 |
 
 说明：
 - 2026-11-09 再补记：QA G4 驳回「覆盖表缺口」——按已复核事实补入 `47d6913`→`42595057577`、`9d4662a`→`42626999132`、`5c64f6f`→`42629655330` 三笔绿 run（conclusion=success），均为对应 commit 自身 run；`5c64f6f` 为当前 tip、其证据 `commit=9d4662a` 为直接父。CI 只在 main push 触发，相邻 commit 常共享 tip run，本表仅登记指得出绿 run 的 commit；完成台账三数口径 17/8/9 本轮不变、无卡升 `已交付`。
@@ -45,3 +56,4 @@
 - 本表由 `docs/qa/aka-main-known-reds.csv` 驱动判定，CI 步骤「已知红裁定」只放行清单内的红，清单转绿未删行会直接红。
 - 2026-11-09 补记：`3213ae3`（此前漏记）及本轮 6 个 commit（`9d87f58`/`aec0785`/`3b71a57`/`e9725a5`/`36bba90`/`847fb51`）全部自身 run success，逐行补入上表；当前清单仅剩 R-002（`gate=history`，历史非活动），R-001 已转绿删行，判定仍由该清单驱动，无活动红。
 - 2026-11-09 再补记：`172e337`（P7 注册表修正 + 台账收口）自身 run `42651697784` 的 attempt1 中 `macOS build / test / golden` job 被 runner 侧 cancelled（`steps` 为空、一个 step 未跑，非门禁红、非代码/文档缺陷），另两个 job（含 `verify:delivery`/`verify:gate-log`/`verify:sign`/`verify:sign-impact`）均 success；`gh run rerun --failed` 后 attempt2 三个 job 全 success、`conclusion=success`、`headSha=172e337d2bc7a8f9934dc2b428ea22daab3494cc` 精确匹配。该绿 run 覆盖 `2ec7841` 的红，不改写历史；`2ec7841` 仍不进 `aka-main-known-reds.csv`（该清单只管 `verify:evidence` 裁定）。
+- 2026-11-10 补记：本轮连续逐卡取证 7 张（成功 4 张 `s080202`/`s070102`/`s050101`/`s060301`，不可判 5 张 `s030104`/`s030201`/`s030302`/`s020801`/`s060302` 失败记录按第 27/31 条留痕 `docs/qa/raw/`），TL `2594e97` 逐卡签 3 张（1 整卡 + 2 条件签）、QA 驳回 `S-05.01-01`；`2594e97` 的 run `42727743201` 为 failure，红因为台账状态词词表外写法、由本轮台账修复提交的绿 run 覆盖，不改写历史、不进 `aka-main-known-reds.csv`（该清单只管 `verify:evidence` 裁定）。
