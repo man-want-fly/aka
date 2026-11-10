@@ -1,7 +1,7 @@
 {
   "suite": "s060301",
   "ok": true,
-  "finishedAt": "2026-11-09T20:56:31.982Z",
+  "finishedAt": "2026-11-10T06:34:33.074Z",
   "checks": [
     {
       "id": "P04-R1",
@@ -38,7 +38,7 @@
   ],
   "card": "S-06.03-01",
   "env": {
-    "commit": "32ac0b66d45e6f6347a12b1ba47ba4cbb37a4cb7",
+    "commit": "a5ec7f580765a0653a7d11ec8863c5c974c2286b",
     "dirty": false,
     "runtime": {
       "launchMode": "cargo+custom-protocol",
@@ -50,17 +50,17 @@
     },
     "build": {
       "entry": "dist/index.html",
-      "builtAt": "2026-11-09T20:56:18.219Z",
+      "builtAt": "2026-11-10T06:34:13.577Z",
       "cargoProfile": "dev",
       "features": [
         "tauri/custom-protocol"
       ],
       "binary": {
-        "path": "/Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop",
-        "sha256": "aa312e08d7e1dcb0440b82a2ceffaec89fc1b55b3ca186fe5780090e1f41114b"
+        "path": "/tmp/aka-ev/app/target/debug/aka-desktop",
+        "sha256": "5fed37b65dcee8f16b3ecb1c20905d3631ce660b474000ca1544419afe49a656"
       }
     },
-    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s060301\" /Users/sixmillion/Documents/AKA/app/target/debug/aka-desktop"
+    "command": "AKA_DIAG=1 AKA_DIAG_TARGET=\"s060301\" /tmp/aka-ev/app/target/debug/aka-desktop"
   },
   "windowFocused": true,
   "appActive": true,
