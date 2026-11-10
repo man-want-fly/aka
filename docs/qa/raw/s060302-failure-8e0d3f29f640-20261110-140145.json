@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "aka-evidence-failure",
+  "suite": "s060302",
+  "ok": false,
+  "blocked": true,
+  "error": "步骤 collect 失败（exit 2）",
+  "step": "collect",
+  "stepCommand": "tee \"$DIAG_LOG\"",
+  "command": "app/scripts/evidence-run.sh s060302",
+  "exitCode": 2,
+  "finishedAt": "2026-11-10T14:01:45+08:00",
+  "logTail": "自选已有 2 条，无需注入\n置前失败：前台进程=Electron（activateAttempts=1），中止取证\n/Users/sixmillion/Documents/AKA/app/scripts/diag-evidence.sh: line 324: 30330 Terminated: 15          AKA_DIAG=1 AKA_DIAG_TARGET=\"$TARGET\" env $EXTRA_ENV \"$APP_BIN\" $FLAGS\nstate.db 已还原：/tmp/aka-state-s060302-20261110-140133.db\n"
+}
