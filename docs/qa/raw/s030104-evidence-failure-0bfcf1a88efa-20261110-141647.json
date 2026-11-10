@@ -1,0 +1,52 @@
+{
+  "suite": "s030104",
+  "ok": false,
+  "error": "套件异常中断：等待超时（20000ms）：加入 M03 后按钮状态转 added",
+  "commit": "0bfcf1a88efad3097f5e5e5aa654b2fbec260ff0",
+  "finishedAt": "2026-11-10T06:17:13.959Z",
+  "checks": [
+    {
+      "id": "P01-R1",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补1）",
+      "layer": "render",
+      "passed": true,
+      "detail": "无标的横幅「请先在行情页选择一只标的 · 去行情页」/ 去行情页=true / 按钮 disabled=true title=「请先在行情页选择一只标的」"
+    },
+    {
+      "id": "P01-R2",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补2）",
+      "layer": "render",
+      "passed": false,
+      "detail": "M03 状态=planned disabled=false title=「该指标规划中，本期未开放」/ 提示「」"
+    },
+    {
+      "id": "P01-R3",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补3）",
+      "layer": "render",
+      "passed": true,
+      "detail": "M06 状态=added disabled=true 副图 M06=1 次"
+    },
+    {
+      "id": "P01-R4",
+      "card": "S-03.01-04",
+      "ac": "AC-03.01-05（补4）",
+      "layer": "render",
+      "passed": true,
+      "detail": "T06 状态=planned aria-disabled=true 提示「该指标规划中，本期未开放」/ 副图未变=true"
+    }
+  ],
+  "blocked": [
+    {
+      "ac": "suite-runner",
+      "blocker": "run-s030104",
+      "reason": "套件异常中断：等待超时（20000ms）：加入 M03 后按钮状态转 added",
+      "skipped": false
+    }
+  ],
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": null
+}

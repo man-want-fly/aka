@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "aka-evidence-failure",
+  "suite": "s030104",
+  "ok": false,
+  "blocked": true,
+  "error": "步骤 collect 失败（exit 2）",
+  "step": "collect",
+  "stepCommand": "tee \"$DIAG_LOG\"",
+  "command": "app/scripts/evidence-run.sh s030104",
+  "exitCode": 2,
+  "finishedAt": "2026-11-10T14:17:17+08:00",
+  "logTail": "已归档：/tmp/aka-ev/app/../docs/qa/evidence/s030104-evidence.json\n已归档：/tmp/aka-ev/app/../docs/qa/evidence/s030104-evidence-meta.json\nok=False layers=None blocked=1 commit=0bfcf1a88efad3097f5e5e5aa654b2fbec260ff0 dirty=False\nEVIDENCE_META=/tmp/aka-ev/app/../docs/qa/evidence/s030104-evidence-meta.json\n/tmp/aka-ev/app/scripts/diag-evidence.sh: line 608: 44122 Terminated: 15          AKA_DIAG=1 AKA_DIAG_TARGET=\"$TARGET\" env $EXTRA_ENV \"$APP_BIN\" $FLAGS\n"
+}
