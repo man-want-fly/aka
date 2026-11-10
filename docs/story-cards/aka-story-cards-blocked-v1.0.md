@@ -27,8 +27,8 @@
 
 ### B-05-03 · 仓库无 `npm test` / ESLint / `check:dto` / `audit:ipc`
 - 类型：门禁缺失 ｜ 影响范围：EP-05/06/07 全部卡 ｜ 判定：**不阻塞**（DoD 取证方式改口径）
-- 事实：`app/package.json` 无 `test`、无 `check:dto`、无 `audit:ipc`；`app/` 下无 ESLint 配置；前端 34 个 `app/scripts/*.mjs` 由 `.github/workflows/ci.yml` 逐个调起，不是 npm script。
-- 临时口径（已写进卡）：Rust 侧 DoD 以 `cargo test -p app-core` 取证；前端侧以 `node app/scripts/<具体脚本>.mjs` 取证；**不得**在卡里写 `npm test`、`npm run check:dto`、`npm run audit:ipc`、`eslint`。
+- 事实：`app/package.json` 无 `test`、无 `check:dto`、无 `audit:ipc`；`app/` 下无 ESLint 配置。但**已有 40 个 `verify:*` npm script**（`package.json:6-47`），`ci.yml` 以 `npm run verify:*` 调起其中 16 个，另有 2 处直接 `node app/scripts/...`（`ci.yml:35-53`）。**反例：`verify:format`（`node scripts/verify-number-format.mjs`）已定义却未接入 CI**，即门禁存在但从不运行。
+- 临时口径（已写进卡）：Rust 侧 DoD 以 `cargo test -p app-core` 取证；前端侧以 `node app/scripts/<具体脚本>.mjs` 取证；新增门禁**沿用 `verify:*` 命名并登记进 `ci.yml`**；**不得**在卡里写 `npm test`、`npm run check:dto`、`npm run audit:ipc`、`eslint`（这三条命令不存在）。
 - 需谁定：TL（是否新增统一入口）。属于工程化改造，不在本三 Epic 的交付范围。
 
 ---
@@ -60,4 +60,16 @@
 
 ## EP-07 前端基座（壳 / 主题 / 格式 / SIM）
 
-（待 EP-07 写卡时登记）
+### B-07-01 · 首屏内联脚本与将来的 CSP `script-src` 收紧是否冲突
+- 类型：口径缺失 ｜ 影响卡：`S-EP07-01` ｜ 判定：**不阻塞**（已按临时口径写死）
+- 缺什么：要消除浅色用户首帧闪黑，必须在 `<head>` 里放一段**同步内联**脚本，先于 CSS/React 写 `data-theme`。仓库当前没有任何 CSP 配置（无 `Content-Security-Policy` meta、无 Tauri `csp` 声明），所以现在能跑；但一旦引入 `script-src 'self'`（或 Tauri 默认 CSP 收紧），内联脚本会被拦，首帧预置**静默失效**——而且失效方式是「看起来正常、只是闪一下」，很难被发现。
+- 临时口径（已写进卡）：用内联同步脚本，**不加 `nonce`、不引外部主题库、不把主题逻辑挪到外部 `.js`**（外部文件在 Vite dev 下是 module，仍晚于首帧）；门禁 `verify_boot_theme.mjs` 同时断言脚本存在于 `index.html` 且先于 `#root`，将来 CSP 若收紧，这条断言会先红。
+- 需谁定：安全 owner + TL。要回答：①是否计划引入 CSP（Tauri 2 的 `app.security.csp`）；②若引入，内联段走 `nonce`/`sha256` 白名单，还是改为「外部同步脚本 + 构建期内联」。
+- 裁定后要改的卡：`S-EP07-01` 技术决定的脚本形态与门禁断言；若改 `nonce`，需在 `tauri.conf.json` 落点补一条（当前卡面明确不碰构建配置）。
+
+### B-07-02 · 字节/时长的格式化口径无产品签字
+- 类型：口径缺失 ｜ 影响卡：`S-EP07-05` ｜ 判定：**不阻塞**（已按临时口径写死）
+- 缺什么：`InstallPage.tsx:29,34,35` 与 `SettingsPage.tsx:25-32` 各自内联了字节与时长格式化，两处进制、小数位、单位大小写都不一致，且仓库没有任何文档规定该用 1000 还是 1024 进制、时长到「分秒」还是「秒」。同卡的 `formatPct(0.0123) → +0.01%` 也说明既有口径是**入参为百分数而非比率**，但这条只写在代码里，没有文字依据。
+- 临时口径（已写进卡）：字节按 **1024 进制、1 位小数**（`1536 → 1.5 KB`、`1023 → 1023 B`）；时长 `<1000ms` 用 `N ms`、`<60s` 用 `x.x s`、否则 `m分s秒`（秒取整）；`formatPct` 维持「入参是百分数」不变，只放宽形参到 `number | null | undefined`。
+- 需谁定：产品 + TL。要回答：①字节用 1024（KiB 语义但标 KB）还是 1000；②安装耗时是否需要「分秒」粒度，还是统一秒；③`formatPct` 的百分数入参是否借本次一并改名为 `formatPctValue`（改名会牵动 EP-08 三态卡的 `expectedChangePctText`）。
+- 裁定后要改的卡：`S-EP07-05` AC5 的具体样例值、反例 4 的构造；若改名 `formatPct`，需同步 EP-08 三态卡与 `verify-r03-three-state.mjs` 的引用。
