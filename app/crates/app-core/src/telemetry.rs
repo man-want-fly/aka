@@ -26,12 +26,6 @@ pub const EVENT_COMPUTE_COUNT: &str = "compute.count";
 pub const EVENT_COMPUTE_SKIP: &str = "compute.skip";
 pub const EVENT_CACHE_HIT: &str = "cache.hit";
 pub const EVENT_CACHE_MISS: &str = "cache.miss";
-/// LRU 达到条目或内存上限，最久未用条目被淘汰（S-02.06-02 AC-02.06-04 补1）。
-pub const EVENT_CACHE_EVICT: &str = "cache.evict";
-/// 单条目超出内存预算，跳过缓存只渲染（S-02.06-02 异常边界）。
-pub const EVENT_CACHE_SKIP_OOM: &str = "cache.skip_oom";
-/// 世代未变但数据集末端日期变化，旧条目按 miss 处理（S-02.06-02 双保险）。
-pub const EVENT_CACHE_STALE_SUSPECT: &str = "cache.stale_suspect";
 pub const EVENT_COLD_MS: &str = "indicator.cold_ms";
 pub const EVENT_PARAM_DEBOUNCE: &str = "param.debounce";
 /// 指标输出出现 ±Infinity（无法定义）时记一次；值在返回前统一转 `None`，不落盘、不画线。
