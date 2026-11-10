@@ -33,7 +33,7 @@
 | 错误码 D | `diag_write` / `diag_write_named` 返回 `Result<String, String>`，**裸字符串错误**，不满足 `AppError` 形状 | `commands.rs:569-574`、`593-606` |
 | `tracked!` 约束 | 宏内部写死 `Result<_, AppError>`，因此 D 类两条无法接入遥测 | `commands.rs:23-27` |
 | 规划命令残留 | 架构文档 §4 仍写「只注册了 4 条」，并列 6 条「规划（未注册）」命令：`app_info` / `provider_status` / `indicator_spec` / `load_state` / `save_state` / `rebuild_dataset` —— 代码里**一条都不存在** | `docs/architecture/aka-module-architecture.md:115-133` |
-| 工程门禁缺失 | 无 `check:dto`、无 `audit:ipc`、无 `npm test`、无 ESLint；34 个 `app/scripts/*.mjs` 由 `ci.yml` 逐个调起 | `app/package.json:6-47`、`.github/workflows/ci.yml:127-185` |
+| 工程门禁现状 | 无 `check:dto`、无 `audit:ipc`、无 `npm test`、无 ESLint；但已有 **40 个 `verify:*` npm script**，`ci.yml` 调起其中 **16 个**（另 2 处直接 `node app/scripts/…`）；`verify:format` 已定义却**未接入 CI** | `app/package.json:6-47`、`.github/workflows/ci.yml:126-180` |
 
 > 读卡顺序：`01 → 02 → 04 → 06` 是契约主线；`03 → 05 → 07` 可并行。
 
@@ -68,7 +68,7 @@
   5. 读 `app/src/**/*.{ts,tsx}`，断言 `@tauri-apps/api` 只出现在 `lib/ipc.ts`
   6. 扫 `ipc.(diagWrite|diagWriteNamed|diagFaults|diagSetInject|diagEnv)` 的调用文件，断言文件名含 `Diag` 或等于 `App.tsx`
   7. 退出码：全部通过 0；任一失败 1，并打印 `期望 / 实际` 两列，禁止只打印一句「不一致」
-- 登记方式：在 `.github/workflows/ci.yml` 的 node 脚本段（`ci.yml:127-185` 同列）追加 `run: node scripts/verify_ipc_surface.mjs`，**不新增 npm script**（见 `B-05-03`）
+- 登记方式：`app/package.json` 新增 `"verify:ipc": "node scripts/verify_ipc_surface.mjs"`（与既有 40 个 `verify:*` 同构），并在 `.github/workflows/ci.yml` 的 node 段（`ci.yml:126-180`）追加 `run: npm run verify:ipc`；**不新增 `npm test` / `check:dto` / `audit:ipc`**（这三条命令不存在，见 `B-05-03`）
 - 不做：不把 5 条 debug 命令并入 release；不改任何命令名；不引入 `plugin-*` 命令命名空间
 
 **可致红反例（QA）**
@@ -80,7 +80,7 @@
 
 **Task 拆解（Dev）**
 1. 新建 `app/scripts/verify_ipc_surface.mjs`，按上述 7 条实现，先跑出当前基线 `46/41/5/46` 并写入脚本头注释
-2. `ci.yml` 追加一行调用；本地以 `node app/scripts/verify_ipc_surface.mjs` 取证
+2. `package.json` 加 `"verify:ipc"`，`ci.yml` 加 `run: npm run verify:ipc`；本地以 `node app/scripts/verify_ipc_surface.mjs` 取证
 3. `commands.rs:1-19` 头部补 6 行注释：46/41/5、39 tracked / 7 untracked，注明差集 5 条命令名
 4. 不写 Rust 单测（本卡是文件级契约，Rust 侧无运行期行为可断言）
 
@@ -129,7 +129,7 @@
 
 **Task 拆解（Dev）**
 1. 新建 `app/scripts/verify_dto_ts.mjs`，先跑基线 `39 matched / 0 drifted`
-2. `ci.yml` node 段追加调用
+2. `package.json` 加 `"verify:dto"`，`ci.yml` node 段加 `run: npm run verify:dto`
 3. `dto.rs:1-7` 头注释补一行「39 个 DTO，字段名改动必须同步 `app/src/lib/types.ts`，门禁 `verify_dto_ts.mjs`」
 4. Rust 侧补 2 个序列化单测（放 `dto.rs` 底部 `#[cfg(test)]`）：`option_fields_serialize_as_null`、`output_kind_is_camel_case`
 
@@ -175,7 +175,7 @@
 1. 重写 `aka-module-architecture.md` §4 为两张表，命令名逐条从 `lib.rs` 复制
 2. 删除 `:133` 引注，修正 `:120` / `:125`
 3. `verify_ipc_surface.mjs` 增 `--docs` 分支
-4. `ci.yml` 该步改为 `node scripts/verify_ipc_surface.mjs --docs`
+4. `package.json` 加 `"verify:ipc:docs": "node scripts/verify_ipc_surface.mjs --docs"`，`ci.yml` 加对应 `npm run`
 
 **完成定义 DoD**
 单测通过（脚本 `--docs` 退出 0）· 联调通过 · 产品验收 · 文档更新
@@ -227,7 +227,7 @@
 2. 新增 `docs/reference/error-codes.md`：A/B/C/D 四段各一张表，注明「A 是唯一 `AppError` 出口」
 3. `error.rs:1-8` 头注释补「13 值冻结，新增错误码需同步 `verify_error_codes.mjs` 与 `docs/reference/error-codes.md`」
 4. Rust 单测 2 个：`error_codes_are_prefixed_and_unique`、`timeout_details_carry_trace_id`
-5. `ci.yml` node 段追加调用
+5. `package.json` 加 `"verify:errors"`，`ci.yml` node 段加 `run: npm run verify:errors`
 
 **完成定义 DoD**
 单测通过（2 个 Rust 单测 + 脚本退出 0）· 联调通过 · 产品验收 · 文档更新（`docs/reference/error-codes.md`）
@@ -273,7 +273,7 @@
 2. 新增 `bars_payload_under_budget`（520 根，断言 ≤ 256 KiB）
 3. `commands.rs` `calc_indicators` 内加超阈值埋点（`ipc.payload.large`），只在超阈值时发
 4. 新建 `app/scripts/verify_payload_budget.mjs`（依赖清单 + `tauri::ipc::Response` 扫描）
-5. `ci.yml` node 段追加调用
+5. `package.json` 加 `"verify:payload"`，`ci.yml` node 段加 `run: npm run verify:payload`
 
 **完成定义 DoD**
 单测通过（2 个预算测试 + 脚本退出 0）· 联调通过 · 产品验收 · 文档更新（预算与拒绝方案写入 `docs/reference/error-codes.md` 同目录的 `ipc-contract.md`）
