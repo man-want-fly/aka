@@ -1,0 +1,28 @@
+{
+  "suite": "s030201",
+  "ok": false,
+  "error": "套件异常中断：等待超时（20000ms）：星标 M03 后收藏 chip 重排（首位）",
+  "commit": "61b812abe71115e3d1d6aa5a43a53f4e445377df",
+  "finishedAt": "2026-11-10T06:20:07.781Z",
+  "checks": [
+    {
+      "id": "P02-R1",
+      "card": "S-03.02-01",
+      "ac": "AC-03.02-01",
+      "layer": "render",
+      "passed": true,
+      "detail": "收藏 chips T01,T02,T09,M06,M01,M02,V01,D01 / 状态 normal,normal,normal,normal,normal,normal,normal,normal / 计数「8」"
+    }
+  ],
+  "blocked": [
+    {
+      "ac": "suite-runner",
+      "blocker": "run-s030201",
+      "reason": "套件异常中断：等待超时（20000ms）：星标 M03 后收藏 chip 重排（首位）",
+      "skipped": false
+    }
+  ],
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": null
+}

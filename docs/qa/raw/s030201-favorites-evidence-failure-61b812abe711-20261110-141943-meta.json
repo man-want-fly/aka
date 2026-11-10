@@ -1,0 +1,16 @@
+{
+  "suite": "s030201",
+  "commit": "61b812abe71115e3d1d6aa5a43a53f4e445377df",
+  "dirty": false,
+  "command": "app/scripts/evidence-run.sh s030201",
+  "step": "collect",
+  "stepCommand": "tee \"$DIAG_LOG\"",
+  "exitCode": 2,
+  "finishedAt": "2026-11-10T14:20:08+08:00",
+  "label": "20261110-141943",
+  "dump": {
+    "archived": "docs/qa/raw/s030201-favorites-evidence-failure-61b812abe711-20261110-141943.json",
+    "sha256": "7f2eb1f3088f068e5857a760ec101f8eae40ab82906a97ae8099c60618a38f4c",
+    "finishedAt": "2026-11-10T06:20:07.781Z"
+  }
+}
