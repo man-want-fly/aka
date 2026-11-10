@@ -261,16 +261,23 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
     await remountCatalog();
     await expandAllCategories();
 
-    const m03Add = q<HTMLButtonElement>('[data-catalog-add="M03"]');
+    // 补2 卡面口径是「点任意 sub 指标」→ 用 status=normal 的副图指标 M02（KDJ）。
+    // 不能用 M03：M03 是 planned 指标，卡面「异常与边界」与补4 要求规划项一律给
+    // 「该指标规划中，本期未开放」，规划项优先于容量提示（产品既有语义，不改产品）。
+    // 上轮 runner 用 M03 判「副图已满」→ 断言口径与卡面/产品都不一致，判红属 runner 缺陷。
+    const m02Add = q<HTMLButtonElement>('[data-catalog-add="M02"]');
+    const subBeforeFull = readSubPlots().join(",");
     push(
       "P01-R2",
       "AC-03.01-05（补2）",
       "render",
-      countState("M03") === "full" &&
-        m03Add?.disabled === true &&
-        m03Add?.title === "副图已满（3/3），请先移除一个" &&
-        rowHint("M03") === "副图已满（3/3），请先移除一个",
-      `M03 状态=${countState("M03")} disabled=${m03Add?.disabled} title=「${m03Add?.title ?? ""}」/ 提示「${rowHint("M03")}」`,
+      countState("M02") === "full" &&
+        m02Add?.disabled === true &&
+        m02Add?.title === "副图已满（3/3），请先移除一个" &&
+        rowHint("M02") === "副图已满（3/3），请先移除一个" &&
+        readSubPlots().length === 3 &&
+        readSubPlots().join(",") === subBeforeFull,
+      `M02 状态=${countState("M02")} disabled=${m02Add?.disabled} title=「${m02Add?.title ?? ""}」/ 提示「${rowHint("M02")}」/ 副图 ${readSubPlots().join(",")}`,
     );
 
     const m06Add = q<HTMLButtonElement>('[data-catalog-add="M06"]');
@@ -299,25 +306,52 @@ export async function runS030104Diagnostics(manifest: ManifestResponse) {
       `T06 状态=${countState("T06")} aria-disabled=${t06Add?.getAttribute("aria-disabled")} 提示「${plannedHint}」/ 副图未变=${readSubPlots().join(",") === beforePlanned}`,
     );
 
-    // 阶段 3：留出副图空位后加入
-    writeSubPlots(["VOL"]);
+    // 阶段 3：留出副图空位后加入。
+    // 卡面 AC-03.01-05 原文：last_code=600519.SH、副图已有 2 个、当前为 OBV（panel=sub）
+    // → 点「加入图表」→ OBV 出现在工作台副图第 3 格、目录按钮变「已加入」。
+    // 上轮用 M03（planned）做这一步 → 规划项本就不可加入，等「按钮转 added」必然超时。
+    writeSubPlots(["VOL", "M06"]);
     await remountCatalog();
     await expandAllCategories();
-    const m03Before = readSubPlots().join(",");
-    q<HTMLButtonElement>('[data-catalog-add="M03"]')?.click();
+    const obvBefore = readSubPlots().join(",");
+    q<HTMLButtonElement>('[data-catalog-add="D01"]')?.click();
     await waitFor(
-      () => (countState("M03") === "added" ? "1" : null),
+      () => (countState("D01") === "added" ? "1" : null),
       DOM_WAIT_MS,
       50,
-      "加入 M03 后按钮状态转 added",
+      "加入 OBV（D01）后按钮状态转 added",
     );
-    const m03After = readSubPlots().filter((id) => id === "M03").length;
+    const obvAfter = readSubPlots().filter((id) => id === "D01").length;
+    const obvButton = q<HTMLElement>('[data-catalog-add="D01"]');
     push(
       "P01-R5",
       "AC-03.01-05",
       "render",
-      m03After === 1 && !m03Before.split(",").includes("M03") && q<HTMLElement>('[data-catalog-add="M03"]')?.textContent?.includes("已加入") === true,
-      `加入前副图 ${m03Before} / 加入后 M03=${m03After} 次 / 按钮「${q<HTMLElement>('[data-catalog-add="M03"]')?.textContent?.trim() ?? ""}」/ manifest ${manifest.indicators.length} 条`,
+      obvAfter === 1 &&
+        !obvBefore.split(",").includes("D01") &&
+        readSubPlots().length === 3 &&
+        readSubPlots()[2] === "D01" &&
+        obvButton?.textContent?.includes("已加入") === true &&
+        q('[data-catalog-view-workbench="D01"]') !== null,
+      `加入前副图 ${obvBefore} / 加入后副图 ${readSubPlots().join(",")} / OBV=${obvAfter} 次 / 按钮「${obvButton?.textContent?.trim() ?? ""}」/ 在工作台查看=${q('[data-catalog-view-workbench="D01"]') !== null} / manifest ${manifest.indicators.length} 条`,
+    );
+
+    // 补4 的副图侧：planned 指标（M03，panel=副）在副图满时仍只给规划中提示、无添加动作。
+    // 与 T06（panel=主）一起把「规划项优先于容量提示」这条卡面规则钉住。
+    const subBeforePlanned = readSubPlots().join(",");
+    const m03Add = q<HTMLButtonElement>('[data-catalog-add="M03"]');
+    m03Add?.click();
+    await sleep(120);
+    const m03Hint = q<HTMLElement>("[data-catalog-detail-hint], [data-fav-hint]")?.textContent?.trim() ?? "";
+    push(
+      "P01-R6",
+      "AC-03.01-05（补4）",
+      "render",
+      countState("M03") === "planned" &&
+        m03Add?.getAttribute("aria-disabled") === "true" &&
+        m03Hint.includes("该指标规划中，本期未开放") &&
+        readSubPlots().join(",") === subBeforePlanned,
+      `M03 状态=${countState("M03")} aria-disabled=${m03Add?.getAttribute("aria-disabled")} 提示「${m03Hint}」/ 副图未变=${readSubPlots().join(",") === subBeforePlanned}`,
     );
 
     // 复原默认副图，避免影响后续套件
@@ -363,7 +397,17 @@ export async function runS030201Diagnostics() {
       `收藏 chips ${chips.join(",")} / 状态 ${statuses.join(",")} / 计数「${countText}」`,
     );
 
-    // 星标添加：M03 不在默认集；添加后应排在最前，再取消恢复
+    // 星标添加：M03 不在默认集；添加后应排在最前，再取消恢复。
+    // 前置补齐（根因）：目录按分类懒挂载行，默认只展开「趋势」，M03 属「动量」→
+    // 未展开时 [data-fav-star="M03"] 根本不在 DOM 里，点了个空元素 → 收藏没写入 →
+    // 等「chip 重排（首位）」必然 20s 超时，套件异常中断。
+    await expandAllCategories();
+    await waitFor(
+      () => (q('[data-fav-star="M03"]') ? "star" : null),
+      DOM_WAIT_MS,
+      50,
+      "M03 星标按钮就位（动量分类已展开）",
+    );
     const m03StarBefore = q<HTMLElement>('[data-fav-star="M03"]')?.getAttribute("aria-pressed");
     q<HTMLElement>('[data-fav-star="M03"]')?.click();
     await waitFor(
@@ -374,12 +418,13 @@ export async function runS030201Diagnostics() {
     );
     const afterAdd = chipIds();
     const m03First = afterAdd[0] === "M03" && afterAdd.filter((id) => id === "M03").length === 1;
+    const m03StarAfter = q<HTMLElement>('[data-fav-star="M03"]')?.getAttribute("aria-pressed");
     push(
       "P02-R2",
       "AC-03.02-02",
       "render",
-      m03StarBefore === "false" && m03First && afterAdd.length === 9,
-      `M03 星标前 aria-pressed=${m03StarBefore} / 添加后序列 ${afterAdd.join(",")} / M03 首项且唯一=${m03First}`,
+      m03StarBefore === "false" && m03First && afterAdd.length === 9 && m03StarAfter === "true",
+      `M03 星标前 aria-pressed=${m03StarBefore} / 添加后序列 ${afterAdd.join(",")} / M03 首项且唯一=${m03First} / 星标后 aria-pressed=${m03StarAfter}`,
     );
     push(
       "P02-R3",
