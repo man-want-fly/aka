@@ -116,7 +116,16 @@
 
 ## 建议
 
-1. **单独开卡**：`AC-02.08-01（补2）`（真死 AC）。修法与 W-115 同构：新增 debug-only「单字段缺失」注入，或让页脚 missing 判定可由诊断夹具直接驱动；反例必须是「注入未生效时该段不得为 `—`」。
+1. **单独开卡**：`AC-02.08-01（补2）`（真死 AC）。修法与 W-115 同构：新增 debug-only「单字段缺失」注入，或让页脚 missing 判定可由诊断夹具直接驱动；反例必须是「注入未生效时该段不得为 `—`」。**（已由 `W-116` 承接，见「后续记录」第 1 条，不再重复开卡。）**
 2. **不按死 AC 开卡**：未实现 17 条属于未开工清单；仅 dev2 的 12 条属于合并计划，应并入 P9/P10 合并核对，不重复开卡。
 3. **对规则的补充**：卡面 AC 出现状态值时，除「有可达路径」外，还应区分「已实现但无路」与「未实现」——后者是排期问题，前者才是判据自欺。建议 ledger 增一列 `state_reachability`，交付前必须填。
-4. **前提更正**：`--dataset-fault=` 在 main 不存在（只在 dev2），W-115 之后 main 的注入开关是 `--empty-dataset` / `--corrupt-db` / `--readonly-db` / `--corrupt-manifest` / `--inject=` / `--missing-dataset-manifest`。
+4. **前提更正**：`--dataset-fault=` 在 main 不存在（只在 dev2），W-115 之后 main 的注入开关是 `--empty-dataset` / `--corrupt-db` / `--readonly-db` / `--corrupt-manifest` / `--inject=` / `--missing-dataset-manifest`（W-116 合入后另有 `--missing-manifest-sha256`）。
+
+## 后续记录（TL 裁定 2026-11-10）
+
+本节的四笔是对上面清单的处置结论，只记录事实与归属，不改产品、不改台账、不改卡面。
+
+1. **#15 真死 AC 已开卡，不再重复开**：`AC-02.08-01（补2）` 对应 `W-116`（`w116/missing-manifest-sha256`，`dd907e2` 已在 main）。实现为 debug-only `--missing-manifest-sha256`：只清 `sha256`、其余 8 字段原样、仍返回 `Some`，页脚 version 段派生 `—`（`app/src-tauri/src/commands.rs` 的 `dataset_manifest`）。清单里摸清的三件前提作为该卡背景保留：**manifest 来源恒完整**、`--corrupt-manifest` 只让健康检查②失败、`--missing-dataset-manifest` 让整份为空（7 段全 `—`）——三者都造不出「只缺一段」，这是该卡存在的理由。
+2. **仅 dev2 的 12 条（另 2 条部分）并入 P9/P10 核对**，不重复开卡；它们是未合代码，不是设计死路。
+3. **卡面前提写错一笔（单独记录，不是实现缺陷）**：派单时的前提「项目已有 `--empty-dataset`、`--corrupt-manifest`、`--dataset-fault=` 三个注入开关」在 main 上只成立两个——`--dataset-fault=` 只存在于 dev2。凡以「已有三个开关」为前提推导出的方案可行性，都需要按 main 重核；本清单的判定均按 main 实际开关给出。
+4. **台账 `S-06.03-01` 应重新进候选**：现状仍为「未开始 / 无关于页」（`docs/qa/aka-story-completion-ledger-v0.1.md`），但关于页与 `P04-R3` 代码都在 main，`W-115`（`aec0785` 合入）之后该状态可经 `--missing-dataset-manifest` 进入。这不是改一个状态词：卡应回到候选，按实际实现重核交付口径。台账由 BA/TL 维护，dev 不代改。
