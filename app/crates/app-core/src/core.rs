@@ -3571,6 +3571,13 @@ mod tests {
             .expect("必须有 compute.count");
         assert_eq!(count_event.fields["count"], 2);
         assert_eq!(count_event.fields["skip"], 1);
+        assert_eq!(count_event.fields["instances"], 3);
+        let skip_event = events
+            .iter()
+            .find(|event| name(event) == crate::telemetry::EVENT_COMPUTE_SKIP)
+            .expect("必须有 compute.skip");
+        assert_eq!(skip_event.fields["reason"], "duplicateKey");
+        assert_eq!(skip_event.fields["instanceId"], "b");
         assert!(core.telemetry().cold_p95_ms().is_some());
 
         // 同请求再算一次：全部命中缓存，不再执行计算。
@@ -3579,6 +3586,36 @@ mod tests {
         let counts = core.telemetry().summary(0).counts;
         assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_HIT), Some(&2));
         assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&2));
+    }
+
+    /// S-EP05-02 AC3：多输出指标（MACD）命中同键去重时，全部输出列一起复用。
+    #[tokio::test]
+    async fn dedup_reuses_all_outputs_for_multi_output_indicator() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+            from: None,
+            to: None,
+            generation: 1,
+            instances: vec![
+                calc_instance("a", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+                calc_instance("b", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+            ],
+        };
+        let response = core.calc_indicators(&request).await.unwrap();
+        assert_eq!(response.series.len(), 2);
+        let first = &response.series[0];
+        let second = &response.series[1];
+        assert_eq!(first.outputs.len(), 3, "MACD 必须保留三条输出");
+        assert_eq!(second.outputs.len(), 3);
+        for (left, right) in first.outputs.iter().zip(&second.outputs) {
+            assert_eq!(left.values, right.values, "去重实例必须逐点复用输出");
+        }
+        let counts = core.telemetry().summary(0).counts;
+        assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&1));
+        assert_eq!(counts.get(crate::telemetry::EVENT_COMPUTE_SKIP), Some(&1));
     }
 
     /// S-EP05-05 AC4：同一请求内 3 个实例同键，只新增 1 个缓存键（去重不额外占容量）。
@@ -4022,4 +4059,93 @@ mod tests {
         assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_HIT), Some(&1));
         assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&1));
     }
+
+    fn calc_instance(id: &str, indicator: &str, params: &[(&str, i64)]) -> crate::dto::InstanceRequest {
+        crate::dto::InstanceRequest {
+            instance_id: id.into(),
+            indicator_id: indicator.into(),
+            params: params
+                .iter()
+                .map(|(k, v)| ((*k).to_string(), indicator_core::ParamValue::Int(*v)))
+                .collect(),
+        }
+    }
+
+    fn calc_request(timeframe: &str, instances: Vec<crate::dto::InstanceRequest>) -> CalcRequest {
+        CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: timeframe.into(),
+            adj: "qfq".into(),
+            from: None,
+            to: None,
+            generation: 1,
+            instances,
+        }
+    }
+
+    /// S-EP05-01 AC1：响应顺序与请求 instances 顺序一致，不按 id 排序。
+    #[tokio::test]
+    async fn calc_response_keeps_request_instance_order() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request(
+            "D",
+            vec![
+                calc_instance("c", "T01", &[("period", 30)]),
+                calc_instance("a", "T01", &[("period", 10)]),
+                calc_instance("b", "T01", &[("period", 20)]),
+            ],
+        );
+        let response = core.calc_indicators(&request).await.unwrap();
+        let ids: Vec<&str> = response
+            .series
+            .iter()
+            .map(|series| series.instance_id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["c", "a", "b"]);
+    }
+
+    /// S-EP05-01 AC2：每个输出列长度都等于 barCount。
+    #[tokio::test]
+    async fn calc_values_length_equals_bar_count() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request(
+            "D",
+            vec![
+                calc_instance("a", "T01", &[("period", 20)]),
+                calc_instance("b", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+            ],
+        );
+        let response = core.calc_indicators(&request).await.unwrap();
+        assert!(response.bar_count > 0);
+        for series in &response.series {
+            for output in &series.outputs {
+                assert_eq!(
+                    output.values.len(),
+                    response.bar_count,
+                    "{} 输出长度必须等于 barCount",
+                    series.instance_id
+                );
+            }
+        }
+    }
+
+    /// S-EP05-01 AC3：未知指标号整单失败，不回半份结果。
+    #[tokio::test]
+    async fn calc_unknown_indicator_fails_whole_request() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request(
+            "D",
+            vec![
+                calc_instance("ok", "T01", &[("period", 20)]),
+                calc_instance("bad", "NOPE", &[]),
+            ],
+        );
+        let err = core.calc_indicators(&request).await.unwrap_err();
+        assert_eq!(err.code, crate::error::ErrorCode::UnknownIndicator);
+        assert_eq!(
+            err.details.as_ref().and_then(|d| d.get("indicatorId")),
+            Some(&serde_json::json!("NOPE"))
+        );
+    }
+
 }
