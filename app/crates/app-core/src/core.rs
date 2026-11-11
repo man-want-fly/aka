@@ -1991,7 +1991,10 @@ impl AppCore {
         Ok(series)
     }
 
-    /// 日线原始批次缓存：同一标的/复权只取一次，换算周/月时不重复打 provider。
+    /// 取数唯一入口：日/周/月与质量扫描都从这里拿原始日线批次。
+    ///
+    /// 同一标的/复权只取一次；周/月聚合在 `series_for` 内本地完成，不再打 provider。
+    /// 缓存缺口（S-08.02-01）未实现前不存在第二个拉数入口。
     async fn daily_batch(&self, code: &str, adj: Adjust) -> Result<Arc<BarBatch>, AppError> {
         let key = format!("{}|{}", code, adj.as_str());
         if let Some(cached) = self
@@ -3280,6 +3283,46 @@ mod tests {
         let second = core.calc_indicators(&request).await.unwrap();
         assert!(second.cache_hit);
         assert_eq!(second.computed_ms, 0.0, "全命中不应再耗时计算");
+    }
+
+    /// S-EP05-06 AC1/AC2：日线只取一次；周/月从同一日线批次聚合，不重复取数。
+    #[tokio::test]
+    async fn series_reuses_daily_batch_and_store() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("a", "T01", &[("period", 20)])]);
+        core.calc_indicators(&request).await.unwrap();
+        assert_eq!(core.store.lock().unwrap().loaded_series(), 1);
+        assert_eq!(core.daily_batches.lock().unwrap().len(), 1);
+
+        core.calc_indicators(&request).await.unwrap();
+        assert_eq!(core.store.lock().unwrap().loaded_series(), 1, "第二次应命中 store");
+        assert_eq!(core.daily_batches.lock().unwrap().len(), 1);
+
+        for timeframe in ["W", "M"] {
+            let mut aggregated = request.clone();
+            aggregated.timeframe = timeframe.into();
+            core.calc_indicators(&aggregated).await.unwrap();
+        }
+        assert_eq!(
+            core.daily_batches.lock().unwrap().len(),
+            1,
+            "周/月聚合不得新增日线取数批次"
+        );
+    }
+
+    /// S-EP05-06 AC3：未知标的口径为 `E_UNKNOWN_SECURITY`，details 带 code。
+    #[tokio::test]
+    async fn unknown_security_maps_to_e_unknown_security() {
+        let core = AppCore::new_mock().await.unwrap();
+        let err = core
+            .series_for("NOPE.SH", Timeframe::Day, Adjust::Qfq)
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, crate::error::ErrorCode::UnknownSecurity);
+        assert_eq!(
+            err.details.as_ref().and_then(|d| d.get("security")),
+            Some(&serde_json::json!("NOPE.SH"))
+        );
     }
 
     /// S-EP05-05 AC1/AC2/AC5：513 个互异键后只保留 512，最早插入的键被淘汰。
