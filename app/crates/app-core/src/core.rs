@@ -3231,6 +3231,57 @@ mod tests {
         );
     }
 
+    /// S-EP05-03 AC2/AC3：命中不是「全有或全无」——只有部分键命中时 cacheHit=false。
+    #[tokio::test]
+    async fn cache_hit_is_all_or_nothing() {
+        let core = AppCore::new_mock().await.unwrap();
+        let call = |second: bool| {
+            let mut instances = vec![calc_instance("a", "T01", &[("period", 20)])];
+            instances.push(if second {
+                calc_instance("c", "T01", &[("period", 40)])
+            } else {
+                calc_instance("b", "T01", &[("period", 30)])
+            });
+            calc_request("D", instances)
+        };
+
+        let first = core.calc_indicators(&call(false)).await.unwrap();
+        assert!(!first.cache_hit);
+
+        let before = core.telemetry().summary(0).counts;
+        let second = core.calc_indicators(&call(true)).await.unwrap();
+        let after = core.telemetry().summary(0).counts;
+        assert!(!second.cache_hit, "部分命中必须报 cacheHit=false");
+        assert_eq!(
+            after.get(crate::telemetry::EVENT_CACHE_HIT).copied().unwrap_or(0)
+                - before.get(crate::telemetry::EVENT_CACHE_HIT).copied().unwrap_or(0),
+            1
+        );
+        assert_eq!(
+            after.get(crate::telemetry::EVENT_CACHE_MISS).copied().unwrap_or(0)
+                - before.get(crate::telemetry::EVENT_CACHE_MISS).copied().unwrap_or(0),
+            1
+        );
+    }
+
+    /// S-EP05-03 AC3：全部命中时 computedMs 必须收敛为 0.0。
+    #[tokio::test]
+    async fn fully_cached_request_reports_zero_computed_ms() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request(
+            "D",
+            vec![
+                calc_instance("a", "T01", &[("period", 20)]),
+                calc_instance("b", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+            ],
+        );
+        let first = core.calc_indicators(&request).await.unwrap();
+        assert!(first.computed_ms >= 0.0);
+        let second = core.calc_indicators(&request).await.unwrap();
+        assert!(second.cache_hit);
+        assert_eq!(second.computed_ms, 0.0, "全命中不应再耗时计算");
+    }
+
     /// S-EP05-05 AC1/AC2/AC5：513 个互异键后只保留 512，最早插入的键被淘汰。
     #[test]
     fn calc_cache_evicts_oldest_beyond_limit() {
