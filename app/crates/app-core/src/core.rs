@@ -3285,6 +3285,37 @@ mod tests {
         assert_eq!(second.computed_ms, 0.0, "全命中不应再耗时计算");
     }
 
+    /// S-EP05-07 AC2：`QualityFlag` 的 8 个 wire 串冻结（大小写混排，按原样输出）。
+    #[test]
+    fn quality_flag_wire_strings_are_exactly_eight() {
+        use data_provider::QualityFlag::*;
+        let flags = [
+            Simulated,
+            LimitUp,
+            LimitDown,
+            SplitDay,
+            Suspended,
+            ExRights,
+            ZeroVolume,
+            PriceAnomaly,
+        ];
+        let wires: Vec<&str> = flags.iter().map(|flag| flag.as_str()).collect();
+        assert_eq!(
+            wires,
+            vec![
+                "simulated",
+                "limitUp",
+                "limitDown",
+                "splitDay",
+                "SUSPENDED",
+                "EX_RIGHTS",
+                "ZERO_VOLUME",
+                "PRICE_ANOMALY",
+            ],
+            "wire 串冻结，不得改名或统一大小写"
+        );
+    }
+
     /// S-EP05-06 AC1/AC2：日线只取一次；周/月从同一日线批次聚合，不重复取数。
     #[tokio::test]
     async fn series_reuses_daily_batch_and_store() {
