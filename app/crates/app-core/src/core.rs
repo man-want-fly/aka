@@ -4286,4 +4286,131 @@ mod tests {
         );
     }
 
+    /// S-EP05-09 AC1：线格式顶层键正好 9 个且全为 camelCase，无 snake_case 漏网。
+    #[tokio::test]
+    async fn calc_response_wire_shape_is_exactly_camel_case() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("a", "T01", &[("period", 20)])]);
+        let response = core.calc_indicators(&request).await.unwrap();
+        let value = serde_json::to_value(&response).unwrap();
+
+        let mut keys: Vec<&str> = value
+            .as_object()
+            .expect("CalcResponse 必须是 JSON 对象")
+            .keys()
+            .map(|key| key.as_str())
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            vec![
+                "barCount",
+                "cacheHit",
+                "computedMs",
+                "datasetGeneration",
+                "datasetId",
+                "engineVersion",
+                "generation",
+                "range",
+                "series",
+            ]
+        );
+
+        let mut range_keys: Vec<&str> = value["range"]
+            .as_object()
+            .expect("range 必须是 JSON 对象")
+            .keys()
+            .map(|key| key.as_str())
+            .collect();
+        range_keys.sort_unstable();
+        assert_eq!(
+            range_keys,
+            vec![
+                "barCount",
+                "clamped",
+                "requestedFrom",
+                "requestedTo",
+                "returnedFrom",
+                "returnedTo",
+            ]
+        );
+
+        let mut series_keys: Vec<&str> = value["series"][0]
+            .as_object()
+            .expect("series 元素必须是 JSON 对象")
+            .keys()
+            .map(|key| key.as_str())
+            .collect();
+        series_keys.sort_unstable();
+        assert_eq!(
+            series_keys,
+            vec!["engineVersion", "indicatorId", "instanceId", "outputs", "warmup"]
+        );
+    }
+
+    /// S-EP05-09 AC2：预热段 NaN 一律出 null，不得出 NaN 或 0。
+    #[tokio::test]
+    async fn nan_values_serialize_as_null() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("ma", "T01", &[("period", 20)])]);
+        let response = core.calc_indicators(&request).await.unwrap();
+        let value = serde_json::to_value(&response).unwrap();
+        let values = value["series"][0]["outputs"][0]["values"]
+            .as_array()
+            .expect("values 必须是 JSON 数组");
+        let warmup = value["series"][0]["warmup"].as_u64().unwrap() as usize;
+
+        assert!(warmup > 0, "T01(period=20) 必有预热段");
+        assert!(
+            values[..warmup].iter().all(serde_json::Value::is_null),
+            "预热段必须逐点 null"
+        );
+        assert!(
+            values[warmup].is_number(),
+            "预热后首个点必须是数值（NaN 不得漏成 null 以外的形态）"
+        );
+        assert_eq!(
+            values.iter().filter(|v| v.is_number()).count(),
+            values.len() - warmup,
+            "预热段之外不应再出现 null"
+        );
+    }
+
+    /// S-EP05-09 AC3：全命中时 computedMs 为 0.0；未指定日期的键仍在且为 null。
+    #[tokio::test]
+    async fn zero_computed_ms_keeps_null_keys() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("a", "T01", &[("period", 20)])]);
+        core.calc_indicators(&request).await.unwrap();
+        let second = core.calc_indicators(&request).await.unwrap();
+        assert!(second.cache_hit);
+        assert_eq!(second.computed_ms, 0.0);
+
+        let value = serde_json::to_value(&second).unwrap();
+        assert_eq!(value["computedMs"].as_f64(), Some(0.0));
+        let range = value["range"].as_object().unwrap();
+        assert!(range.contains_key("requestedFrom"), "requestedFrom 键不得被省略");
+        assert!(range.contains_key("requestedTo"), "requestedTo 键不得被省略");
+        assert!(range["requestedFrom"].is_null());
+        assert!(range["requestedTo"].is_null());
+    }
+
+    /// S-EP05-09 AC4：外层 engineVersion 为字符串，SeriesDto.engineVersion 为数字。
+    #[tokio::test]
+    async fn engine_version_types_differ_by_layer() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("a", "T01", &[("period", 20)])]);
+        let response = core.calc_indicators(&request).await.unwrap();
+        let value = serde_json::to_value(&response).unwrap();
+
+        assert_eq!(value["engineVersion"].as_str(), Some(ENGINE_VERSION));
+        assert!(
+            value["series"][0]["engineVersion"].as_u64().is_some(),
+            "SeriesDto.engineVersion 必须是数字"
+        );
+        assert_eq!(
+            value["series"][0]["engineVersion"], serde_json::json!(response.series[0].engine_version)
+        );
+    }
+
 }
