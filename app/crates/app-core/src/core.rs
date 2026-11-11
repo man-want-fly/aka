@@ -3098,6 +3098,19 @@ mod tests {
     }
 
     #[test]
+    fn max_bars_detail_fields() {
+        // 2501 个交易日约 9.6 年，日历跨度未超 10 年，但返回根数超上限。
+        let s = series(Date::new(2020, 1, 2), MAX_RANGE_BARS + 1);
+        let first = s.candles.first().unwrap().date.clone();
+        let last = s.candles.last().unwrap().date.clone();
+        let err = resolve_window(&s, Some(&first), Some(&last)).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InvalidArgument);
+        let details = err.details.as_ref().expect("超根数必须带 details");
+        assert_eq!(details["maxBars"], MAX_RANGE_BARS);
+        assert_eq!(details["requestedBars"], MAX_RANGE_BARS + 1);
+    }
+
+    #[test]
     fn bad_date_format_is_invalid() {
         let s = series(Date::new(2024, 12, 20), 5);
         let err = resolve_window(&s, Some("2024-02-30"), None).unwrap_err();
