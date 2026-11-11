@@ -1,8 +1,8 @@
-# EP-05（编排、缓存与 DTO）阻塞清单 v0.2
+# EP-05（编排、缓存与 DTO）阻塞清单 v0.3
 
 - 记录角色：dev B（数据层/指标内核）
 - 工作区：`/Users/sixmillion/Documents/AKA-dev2`，分支 `dev2`
-- 记录基线：`a21b009`（2026-11-10）
+- 记录基线：`fea248e`（2026-11-11）
 - 说明：本清单只登记阻塞、待拍板项与卡面比对差异，不替代 Story 卡的 AC 判据。
 
 ## 1. 范围口径
@@ -56,6 +56,10 @@ EP-05 的权威卡面为 `AKA-ep0507` 工作区 `docs/story-cards/aka-story-card
 | B-06 | blocked（引用 TL 清单） | S-EP05-05 / S-EP05-06 | 数据集重建后 `calc_cache` 不清空、`CandleStore` 的 `SeriesKey` 也不含 `dataset_id`，理论上会命中陈旧序列；新卡面明确本轮不做，对应 TL 清单 B-05-01 | TL 给出失效策略后新开卡 |
 | B-07 | blocked（引用 TL 清单） | S-EP05-07 | `QualityFlag` 8 个 wire 串大小写混排已冻结，但前端/契约侧缺统一映射说明，对应 TL 清单 B-05-02 | 契约文档冻结映射 |
 | B-08 | blocked（引用 TL 清单） | S-EP05-04 ~ 09 | 前端无 `npm test` / ESLint 基线，对应 TL 清单 B-05-03；不影响 EP-05 数据层判据 | 前端测试基线建立 |
+| B-09 | blocked | S-EP05-01 补测「月线预热」 | 卡面 AC 要求「月线返回 4 根时 `warmup == 26` 且全 null」；实测 T02(EMA, N=20) 的 meta `warmup = 3N-1 = 59`，且实现按全历史预热后再截窗，12 根窗口内出现 5 个非 null。属卡面判据与实现口径冲突，本轮**不改实现、不加红测试** | TL 确认月线预热口径（按 meta warmup 还是按窗口内首个有效点） |
+| B-10 | blocked | S-EP05-03 补测「stats 按请求清零」 | `calc_stats` 只有写入路径、无读取出口，无法在不改生产代码的前提下验证「按请求清零」。已改用 telemetry 增量断言 `cache.hit=1` / `cache.miss=1` 替代，清零语义仍无取证通道 | 卡面明确 stats 的对外读出口（或允许加测试专用 getter） |
+| B-11 | blocked | S-EP05-06 补测「空序列 → `E_DATASET_MISSING`」 | mock 无「已上市但零行」样本，`with_diag_short_series(0)` 为空操作，无法构造空序列夹具；现有 `E_DATASET_MISSING` 仅能由「数据集缺失」路径触发 | 提供零行长序列夹具通道，或确认该判据由 dataset 层用例覆盖 |
+| B-12 | blocked | S-EP05-07 补测「首根 close ≤ 0 判异常」 | `series_for` 仅在 `index > 0` 时判价格异常，卡面要求首根也判，属实现与卡面不一致；本轮**不加红测试、不改实现** | TL 裁定首根是否纳入异常判定 |
 
 ## 4. 本轮落地
 
@@ -63,17 +67,29 @@ EP-05 的权威卡面为 `AKA-ep0507` 工作区 `docs/story-cards/aka-story-card
 | --- | --- | --- | --- |
 | S-EP05-05 | `CalcCache` 512 条 FIFO；字段/初始化/读写/微基准 3 处调用点同步；移除旧 LRU/字节预算/日期校验与三类埋点 | 数据层：4 个新单测 + 既有缓存用例全绿 | `4ae09cf` |
 | S-EP05-04 | 补 `cache_key_includes_adj`、`cache_key_includes_dataset_id`、`cache_key_stable_for_equal_params`、`params_hash_is_16_lower_hex`；注释统一为「7 维 + 区间」 | 数据层：4 个单测 | `a21b009` |
+| S-EP05-01/02 | 补 `calc_response_keeps_request_instance_order`、`calc_values_length_equals_bar_count`、`calc_unknown_indicator_fails_whole_request`、`dedup_reuses_all_outputs_for_multi_output_indicator`；去重用例补 `instances` / `duplicateKey` / 被去重实例断言 | 数据层：4 个单测 + 1 组断言 | `b45a7aa` |
+| S-EP05-03 | 补 `cache_hit_is_all_or_nothing`、`fully_cached_request_reports_zero_computed_ms`；stats 清零改用 telemetry 增量取证（见 B-10） | 数据层：2 个单测 | `c8c6239` |
+| S-EP05-06 | 补 `series_reuses_daily_batch_and_store`、`unknown_security_maps_to_e_unknown_security`；`daily_batch` 注释收敛为单入口说明。空序列判据见 B-11 | 数据层：2 个单测 | `ba9bbe1` |
+| S-EP05-07 | 补 `quality_flag_wire_strings_are_exactly_eight`，按序冻结 8 个 wire 串。首根 close≤0 见 B-12 | 数据层：1 个单测 | `8d2ef1c` |
+| S-EP05-08 | 补 `max_bars_detail_fields`（`MAX_RANGE_BARS+1` → `E_INVALID_ARGUMENT` 且 details 含 `maxBars` / `requestedBars`） | 数据层：1 个单测 | `cd98a61` |
+| S-EP05-09 | 补顶层/`range`/`series` 键集合冻结、预热段 NaN→null、全命中 `computedMs=0.0` 且 null 键保留、`engineVersion` 内外层类型区分 | 数据层：4 个单测 | `fea248e` |
 
 ## 5. 9 张卡当前状态
 
 | 卡 | 实现 | 本轮核对结论 |
 | --- | --- | --- |
-| S-EP05-01 | 已在 | 无代码变更 |
-| S-EP05-02 | 已在 | 无代码变更 |
-| S-EP05-03 | 已在 | 无代码变更 |
+| S-EP05-01 | 已在 | 补 3 条单测（`b45a7aa`）；月线预热判据见 B-09 |
+| S-EP05-02 | 已在 | 去重断言补齐 + MACD 多输出用例（`b45a7aa`） |
+| S-EP05-03 | 已在 | 补 2 条单测（`c8c6239`）；stats 清零读取见 B-10 |
 | S-EP05-04 | 已在 | 补 4 条单测（`a21b009`） |
 | S-EP05-05 | **本轮补齐** | `4ae09cf` |
-| S-EP05-06 | 已在 | 无代码变更 |
-| S-EP05-07 | 已在 | wire 串映射见 B-07 |
-| S-EP05-08 | 已在 | 无代码变更 |
-| S-EP05-09 | 已在 | 渲染项见 B-02 |
+| S-EP05-06 | 已在 | 补 2 条单测（`ba9bbe1`）；空序列判据见 B-11 |
+| S-EP05-07 | 已在 | 补 wire 串冻结（`8d2ef1c`）；首根异常判据见 B-12、映射见 B-07 |
+| S-EP05-08 | 已在 | 补超根数 details（`cd98a61`） |
+| S-EP05-09 | 已在 | 补 4 条序列化单测（`fea248e`）；渲染项见 B-02 |
+
+## 6. 汇总口径
+
+- EP-05 9 张卡实现全部在库，卡面 Task 列出的补测已逐条落地；无法取证或口径冲突的 4 项（B-09…B-12）按硬规则登记 blocked 并跳过。
+- 全量回归：`cargo test -p app-core --lib` = 75 passed / 0 failed / 1 ignored；`cargo build --workspace` 通过。
+- 未进入 EP-06（`commands.rs` / `ipc.ts`），等待指令。
