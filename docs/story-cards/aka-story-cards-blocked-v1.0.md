@@ -27,7 +27,7 @@
 
 ### B-05-03 · 仓库无 `npm test` / ESLint / `check:dto` / `audit:ipc`
 - 类型：门禁缺失 ｜ 影响范围：EP-05/06/07 全部卡 ｜ 判定：**不阻塞**（DoD 取证方式改口径）
-- 事实：`app/package.json` 无 `test`、无 `check:dto`、无 `audit:ipc`；`app/` 下无 ESLint 配置。但**已有 40 个 `verify:*` npm script**（`package.json:6-47`），`ci.yml` 以 `npm run verify:*` 调起其中 16 个，另有 2 处直接 `node app/scripts/...`（`ci.yml:35-53`）。**反例：`verify:format`（`node scripts/verify-number-format.mjs`）已定义却未接入 CI**，即门禁存在但从不运行。
+- 事实：`app/package.json` 无 `test`、无 `check:dto`、无 `audit:ipc`；`app/` 下无 ESLint 配置。但**已有 34 个 `verify:*` npm script**（`package.json:6-47`），`ci.yml` 以 `npm run verify:*` 调起其中 16 个，另有 10 处直接 `node app/scripts/...`（`ci.yml:35-69`）。**反例：`verify:format`（`node scripts/verify-number-format.mjs`）已定义却未接入 CI**，即门禁存在但从不运行。
 - 临时口径（已写进卡）：Rust 侧 DoD 以 `cargo test -p app-core` 取证；前端侧以 `node app/scripts/<具体脚本>.mjs` 取证；新增门禁**沿用 `verify:*` 命名并登记进 `ci.yml`**；**不得**在卡里写 `npm test`、`npm run check:dto`、`npm run audit:ipc`、`eslint`（这三条命令不存在）。
 - 需谁定：TL（是否新增统一入口）。属于工程化改造，不在本三 Epic 的交付范围。
 

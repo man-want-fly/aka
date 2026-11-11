@@ -33,7 +33,7 @@
 | 错误码 D | `diag_write` / `diag_write_named` 返回 `Result<String, String>`，**裸字符串错误**，不满足 `AppError` 形状 | `commands.rs:569-574`、`593-606` |
 | `tracked!` 约束 | 宏内部写死 `Result<_, AppError>`，因此 D 类两条无法接入遥测 | `commands.rs:23-27` |
 | 规划命令残留 | 架构文档 §4 仍写「只注册了 4 条」，并列 6 条「规划（未注册）」命令：`app_info` / `provider_status` / `indicator_spec` / `load_state` / `save_state` / `rebuild_dataset` —— 代码里**一条都不存在** | `docs/architecture/aka-module-architecture.md:115-133` |
-| 工程门禁现状 | 无 `check:dto`、无 `audit:ipc`、无 `npm test`、无 ESLint；但已有 **40 个 `verify:*` npm script**，`ci.yml` 调起其中 **16 个**（另 2 处直接 `node app/scripts/…`）；`verify:format` 已定义却**未接入 CI** | `app/package.json:6-47`、`.github/workflows/ci.yml:126-180` |
+| 工程门禁现状 | 无 `check:dto`、无 `audit:ipc`、无 `npm test`、无 ESLint；但已有 **34 个 `verify:*` npm script**，`ci.yml` 调起其中 **16 个**（另 10 处直接 `node app/scripts/…`）；`verify:format` 已定义却**未接入 CI** | `app/package.json:6-47`、`.github/workflows/ci.yml:126-180` |
 
 > 读卡顺序：`01 → 02 → 04 → 06` 是契约主线；`03 → 05 → 07` 可并行。
 
@@ -68,7 +68,7 @@
   5. 读 `app/src/**/*.{ts,tsx}`，断言 `@tauri-apps/api` 只出现在 `lib/ipc.ts`
   6. 扫 `ipc.(diagWrite|diagWriteNamed|diagFaults|diagSetInject|diagEnv)` 的调用文件，断言文件名含 `Diag` 或等于 `App.tsx`
   7. 退出码：全部通过 0；任一失败 1，并打印 `期望 / 实际` 两列，禁止只打印一句「不一致」
-- 登记方式：`app/package.json` 新增 `"verify:ipc": "node scripts/verify_ipc_surface.mjs"`（与既有 40 个 `verify:*` 同构），并在 `.github/workflows/ci.yml` 的 node 段（`ci.yml:126-180`）追加 `run: npm run verify:ipc`；**不新增 `npm test` / `check:dto` / `audit:ipc`**（这三条命令不存在，见 `B-05-03`）
+- 登记方式：`app/package.json` 新增 `"verify:ipc": "node scripts/verify_ipc_surface.mjs"`（与既有 34 个 `verify:*` 同构），并在 `.github/workflows/ci.yml` 的 node 段（`ci.yml:126-180`）追加 `run: npm run verify:ipc`；**不新增 `npm test` / `check:dto` / `audit:ipc`**（这三条命令不存在，见 `B-05-03`）
 - 不做：不把 5 条 debug 命令并入 release；不改任何命令名；不引入 `plugin-*` 命令命名空间
 
 **可致红反例（QA）**
