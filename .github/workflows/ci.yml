@@ -100,6 +100,11 @@ jobs:
       - name: npm ci
         run: npm ci
 
+      # 发卡前门禁：卡面引用的路径 / 符号 / npm 脚本必须能在仓库内解析。
+      # 判据全部从仓库实际状态派生，不维护名字白名单；无 v1.0 卡面时跳过。
+      - name: 卡面引用门禁（路径 / 符号 / npm 脚本）
+        run: npm run verify:card-refs
+
       - name: 常量单一源门禁（G1，不一致即红）
         run: npm run verify:constants
 
