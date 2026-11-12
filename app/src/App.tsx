@@ -6,8 +6,10 @@ import { WorkbenchPage } from "./pages/workbench/WorkbenchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { DatasourcePage } from "./pages/datasource/DatasourcePage";
 import { InstallPage } from "./pages/install/InstallPage";
+import { DatasetErrorPage } from "./pages/dataset/DatasetErrorPage";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { ipc, isTauriRuntime } from "./lib/ipc";
+import type { DatasetIntegrityDto } from "./lib/types";
 import {
   MENU_ACTION_EVENT,
   setPendingMenuAction,
@@ -61,6 +63,70 @@ export default function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(loadThemeMode);
   const [colorMode, setColorMode] = useState<ColorMode>(loadColorMode);
   const [location, setLocation] = useState<Location>(routeFromHash);
+
+  // S-08.02-03：启动校验 → 失败即全屏错误卡；「只读浏览」为进程内状态，不跨启动记忆。
+  const [integrity, setIntegrity] = useState<DatasetIntegrityDto | null>(null);
+  const [integrityReady, setIntegrityReady] = useState(!isTauriRuntime());
+  const [readOnly, setReadOnly] = useState(false);
+  const [readOnlyHint, setReadOnlyHint] = useState<string | null>(null);
+
+  /** 重跑校验；恢复 ok 时退出只读并落到行情页（AC-08.02-03（补4））。 */
+  const recheckIntegrity = async (): Promise<DatasetIntegrityDto> => {
+    const next = await ipc.datasetIntegrity();
+    setIntegrity(next);
+    if (next.state === "ok") {
+      setReadOnly(false);
+      void ipc.datasetSetReadonly(false).catch(() => undefined);
+      window.location.hash = "#/market";
+      setLocation({ route: "market", code: null });
+    }
+    return next;
+  };
+
+  const enterReadOnly = async () => {
+    await ipc.datasetSetReadonly(true);
+    setReadOnly(true);
+  };
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const dto = await ipc.datasetIntegrity();
+        if (alive) setIntegrity(dto);
+      } catch {
+        // 校验命令不可用时不阻塞主界面（浏览器预览 / 旧构建）。
+      } finally {
+        if (alive) setIntegrityReady(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 只读红条占位：页面主体整体下移 30px，避免遮挡页头。
+  useEffect(() => {
+    if (readOnly) document.documentElement.dataset.readonly = "1";
+    else delete document.documentElement.dataset.readonly;
+    return () => {
+      delete document.documentElement.dataset.readonly;
+    };
+  }, [readOnly]);
+
+  const readonlyHintTimer = useRef<number | null>(null);
+  const refuseWrite = () => {
+    setReadOnlyHint("数据集不可写：本次修改未生效");
+    if (readonlyHintTimer.current !== null) window.clearTimeout(readonlyHintTimer.current);
+    readonlyHintTimer.current = window.setTimeout(() => setReadOnlyHint(null), 4000);
+  };
+  useEffect(
+    () => () => {
+      if (readonlyHintTimer.current !== null) window.clearTimeout(readonlyHintTimer.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     applyTheme(themeMode, colorMode);
@@ -241,6 +307,7 @@ export default function App() {
           target === "s203" ||
           target === "s20202" ||
           target === "s20101" ||
+          target === "s010301" ||
           target.startsWith("watchlist")
         ) {
           sessionStorage.setItem("aka.s2.diag.once", "1");
@@ -328,6 +395,25 @@ export default function App() {
     }, 50);
   };
 
+  // 首屏校验完成前不渲染主界面，避免错误卡闪一下再出现。
+  if (isTauriRuntime() && !integrityReady) {
+    return (
+      <div className="dataset-boot" data-dataset-boot>
+        正在校验数据集…
+      </div>
+    );
+  }
+
+  if (!readOnly && integrity?.state === "blocked") {
+    return (
+      <DatasetErrorPage
+        integrity={integrity}
+        onRecheck={recheckIntegrity}
+        onEnterReadonly={enterReadOnly}
+      />
+    );
+  }
+
   const renderPage = () => {
     if (location.route === "catalog") {
       return <CatalogPage onNavigate={navigate} onOpenWorkbench={openSecurity} />;
@@ -351,7 +437,7 @@ export default function App() {
 
     if (location.route === "market") {
       return (
-        <MarketPage onNavigate={navigate} onOpenSecurity={openSecurity} />
+        <MarketPage onNavigate={navigate} onOpenSecurity={openSecurity} readOnly={readOnly} />
       );
     }
 
@@ -360,16 +446,23 @@ export default function App() {
         initialCode={location.code}
         backRoute={workbenchFrom}
         themeMode={themeMode}
-        onThemeMode={setThemeMode}
+        onThemeMode={(mode) => (readOnly ? refuseWrite() : setThemeMode(mode))}
         colorMode={colorMode}
-        onColorMode={setColorMode}
+        onColorMode={(mode) => (readOnly ? refuseWrite() : setColorMode(mode))}
         onNavigate={navigate}
+        readOnly={readOnly}
       />
     );
   };
 
   return (
     <>
+      {readOnly && (
+        <div className="readonly-banner" data-readonly-banner role="status">
+          <span>仅只读浏览 · 数据集不可写</span>
+          {readOnlyHint && <span data-readonly-hint>{readOnlyHint}</span>}
+        </div>
+      )}
       {renderPage()}
       <SearchOverlay onOpenSecurity={openSecurity} onNavigate={navigate} />
     </>

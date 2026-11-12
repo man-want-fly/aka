@@ -393,6 +393,7 @@ pub struct AppCore {
     daily_batches: Mutex<HashMap<String, Arc<BarBatch>>>,
     /// 数据集 manifest 覆盖区间（provider 自报，独立于行内最新交易日）
     dataset_coverage: Option<(String, String)>,
+    /// S-EP05-05：指标计算结果缓存，容量上限 512，按首次插入顺序 FIFO 淘汰。
     calc_cache: Mutex<CalcCache>,
     calc_stats: Mutex<CacheStats>,
     /// S-07.05-01：按 dataset_id 缓存的最近一次质量报告（跨命令复用）。
@@ -5706,6 +5707,20 @@ mod tests {
     }
 
     #[test]
+    fn max_bars_detail_fields() {
+        // 2501 个交易日约 9.6 年，日历跨度未超 10 年，但返回根数超上限。
+        let s = series(Date::new(2020, 1, 2), MAX_RANGE_BARS + 1);
+        let first = s.candles.first().unwrap().date.clone();
+        let last = s.candles.last().unwrap().date.clone();
+        let err = resolve_window(&s, Some(&first), Some(&last)).unwrap_err();
+        // ST-DF-04-01：超根数改用独立错误码，便于前端区分「缩小日期范围」的重试提示。
+        assert_eq!(err.code, ErrorCode::RangeTooLarge);
+        let details = err.details.as_ref().expect("超根数必须带 details");
+        assert_eq!(details["maxBars"], MAX_RANGE_BARS);
+        assert_eq!(details["requestedBars"], MAX_RANGE_BARS + 1);
+    }
+
+    #[test]
     fn bad_date_format_is_invalid() {
         let s = series(Date::new(2024, 12, 20), 5);
         let err = resolve_window(&s, Some("2024-02-30"), None).unwrap_err();
@@ -5787,6 +5802,247 @@ mod tests {
         assert_ne!(kd, kw, "D→W 必须产生不同缓存键");
         assert_ne!(kw, km, "W→M 必须产生不同缓存键");
         assert!(kd.contains("|1d|") && kw.contains("|1w|") && km.contains("|1m|"));
+    }
+
+    /// S-EP05-04：只改复权口径必须换缓存键。
+    #[test]
+    fn cache_key_includes_adj() {
+        let qfq = series(Date::new(2024, 12, 20), 10);
+        let mut hfq = series(Date::new(2024, 12, 20), 10);
+        hfq.adj = "hfq".into();
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let window = resolve_window(&qfq, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        let kq = calc_key(&qfq, meta, &params, &window.range);
+        let kh = calc_key(&hfq, meta, &params, &window.range);
+        assert_ne!(kq, kh, "qfq→hfq 必须产生不同缓存键");
+        assert!(kq.contains("|qfq|") && kh.contains("|hfq|"));
+    }
+
+    /// S-EP05-04：数据集重建（dataset_id 变化）必须换缓存键。
+    #[test]
+    fn cache_key_includes_dataset_id() {
+        let a = series(Date::new(2024, 12, 20), 10);
+        let mut b = series(Date::new(2024, 12, 20), 10);
+        b.dataset_id = "ds-rebuilt".into();
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let window = resolve_window(&a, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        let ka = calc_key(&a, meta, &params, &window.range);
+        let kb = calc_key(&b, meta, &params, &window.range);
+        assert_ne!(ka, kb, "dataset_id 变化必须产生不同缓存键");
+        assert!(kb.contains("|ds-rebuilt|"));
+    }
+
+    /// S-EP05-04：参数内容相同、插入顺序不同，键必须相同（`Params` 为 `BTreeMap`）。
+    #[test]
+    fn cache_key_stable_for_equal_params() {
+        let s = series(Date::new(2024, 12, 20), 10);
+        let meta = lookup("ma").unwrap().meta();
+        let forward = Params::from([
+            ("fast".to_string(), indicator_core::ParamValue::Int(12)),
+            ("slow".to_string(), indicator_core::ParamValue::Int(26)),
+        ]);
+        let backward = Params::from([
+            ("slow".to_string(), indicator_core::ParamValue::Int(26)),
+            ("fast".to_string(), indicator_core::ParamValue::Int(12)),
+        ]);
+        let window = resolve_window(&s, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        assert_eq!(
+            calc_key(&s, meta, &forward, &window.range),
+            calc_key(&s, meta, &backward, &window.range),
+            "参数插入顺序不得影响缓存键"
+        );
+    }
+
+    /// S-EP05-04：`params_hash` 固定 16 位小写十六进制，仅用于埋点。
+    #[test]
+    fn params_hash_is_16_lower_hex() {
+        let s = series(Date::new(2024, 12, 20), 10);
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let hash = params_hash(meta, &params);
+        assert_eq!(hash.len(), 16, "params_hash 必须固定 16 位：{hash}");
+        assert!(
+            hash.chars()
+                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c)),
+            "params_hash 必须是小写十六进制：{hash}"
+        );
+        let window = resolve_window(&s, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+        assert!(
+            !calc_key(&s, meta, &params, &window.range).contains(&hash),
+            "params_hash 只进埋点，不参与缓存键"
+        );
+    }
+
+    /// S-EP05-03 AC2/AC3：命中不是「全有或全无」——只有部分键命中时 cacheHit=false。
+    #[tokio::test]
+    async fn cache_hit_is_all_or_nothing() {
+        let core = AppCore::new_mock().await.unwrap();
+        let call = |second: bool| {
+            let mut instances = vec![calc_instance("a", "T01", &[("period", 20)])];
+            instances.push(if second {
+                calc_instance("c", "T01", &[("period", 40)])
+            } else {
+                calc_instance("b", "T01", &[("period", 30)])
+            });
+            calc_request("D", instances)
+        };
+
+        let first = core.calc_indicators(&call(false)).await.unwrap();
+        assert!(!first.cache_hit);
+
+        let before = core.telemetry().summary(0).counts;
+        let second = core.calc_indicators(&call(true)).await.unwrap();
+        let after = core.telemetry().summary(0).counts;
+        assert!(!second.cache_hit, "部分命中必须报 cacheHit=false");
+        assert_eq!(
+            after.get(crate::telemetry::EVENT_CACHE_HIT).copied().unwrap_or(0)
+                - before.get(crate::telemetry::EVENT_CACHE_HIT).copied().unwrap_or(0),
+            1
+        );
+        assert_eq!(
+            after.get(crate::telemetry::EVENT_CACHE_MISS).copied().unwrap_or(0)
+                - before.get(crate::telemetry::EVENT_CACHE_MISS).copied().unwrap_or(0),
+            1
+        );
+    }
+
+    /// S-EP05-03 AC3：全部命中时 computedMs 必须收敛为 0.0。
+    #[tokio::test]
+    async fn fully_cached_request_reports_zero_computed_ms() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request(
+            "D",
+            vec![
+                calc_instance("a", "T01", &[("period", 20)]),
+                calc_instance("b", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+            ],
+        );
+        let first = core.calc_indicators(&request).await.unwrap();
+        assert!(first.computed_ms >= 0.0);
+        let second = core.calc_indicators(&request).await.unwrap();
+        assert!(second.cache_hit);
+        assert_eq!(second.computed_ms, 0.0, "全命中不应再耗时计算");
+    }
+
+    /// S-EP05-07 AC2：`QualityFlag` 的 8 个 wire 串冻结（大小写混排，按原样输出）。
+    #[test]
+    fn quality_flag_wire_strings_are_exactly_eight() {
+        use data_provider::QualityFlag::*;
+        let flags = [
+            Simulated,
+            LimitUp,
+            LimitDown,
+            SplitDay,
+            Suspended,
+            ExRights,
+            ZeroVolume,
+            PriceAnomaly,
+        ];
+        let wires: Vec<&str> = flags.iter().map(|flag| flag.as_str()).collect();
+        assert_eq!(
+            wires,
+            vec![
+                "simulated",
+                "limitUp",
+                "limitDown",
+                "splitDay",
+                "SUSPENDED",
+                "EX_RIGHTS",
+                "ZERO_VOLUME",
+                "PRICE_ANOMALY",
+            ],
+            "wire 串冻结，不得改名或统一大小写"
+        );
+    }
+
+    /// S-EP05-06 AC1/AC2：日线只取一次；周/月从同一日线批次聚合，不重复取数。
+    #[tokio::test]
+    async fn series_reuses_daily_batch_and_store() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("a", "T01", &[("period", 20)])]);
+        core.calc_indicators(&request).await.unwrap();
+        assert_eq!(core.store.lock().unwrap().loaded_series(), 1);
+        assert_eq!(core.daily_batches.lock().unwrap().len(), 1);
+
+        core.calc_indicators(&request).await.unwrap();
+        assert_eq!(core.store.lock().unwrap().loaded_series(), 1, "第二次应命中 store");
+        assert_eq!(core.daily_batches.lock().unwrap().len(), 1);
+
+        for timeframe in ["W", "M"] {
+            let mut aggregated = request.clone();
+            aggregated.timeframe = timeframe.into();
+            core.calc_indicators(&aggregated).await.unwrap();
+        }
+        assert_eq!(
+            core.daily_batches.lock().unwrap().len(),
+            1,
+            "周/月聚合不得新增日线取数批次"
+        );
+    }
+
+    /// S-EP05-06 AC3：未知标的口径为 `E_UNKNOWN_SECURITY`，details 带 code。
+    #[tokio::test]
+    async fn unknown_security_maps_to_e_unknown_security() {
+        let core = AppCore::new_mock().await.unwrap();
+        let err = core
+            .series_for("NOPE.SH", Timeframe::Day, Adjust::Qfq)
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, crate::error::ErrorCode::UnknownSecurity);
+        assert_eq!(
+            err.details.as_ref().and_then(|d| d.get("security")),
+            Some(&serde_json::json!("NOPE.SH"))
+        );
+    }
+
+    /// S-EP05-05 AC1/AC2/AC5：513 个互异键后只保留 512，最早插入的键被淘汰。
+    #[test]
+    fn calc_cache_evicts_oldest_beyond_limit() {
+        let mut cache = CalcCache::default();
+        for i in 0..=CALC_CACHE_MAX {
+            cache.insert(format!("k{i}"), Arc::new(CachedCalc { start: 0, values: vec![vec![i as f64]] }));
+        }
+        assert_eq!(cache.len(), CALC_CACHE_MAX);
+        assert!(cache.get("k0").is_none(), "最早插入的键必须被淘汰");
+        assert!(cache.get("k1").is_some(), "只淘汰最早一个键");
+        assert!(
+            cache.get(&format!("k{CALC_CACHE_MAX}")).is_some(),
+            "最后插入的键必须在"
+        );
+    }
+
+    /// S-EP05-05 AC3：恰好 512 个互异键时一个都不能被误淘汰。
+    #[test]
+    fn calc_cache_keeps_exactly_512_hits() {
+        let mut cache = CalcCache::default();
+        for i in 0..CALC_CACHE_MAX {
+            cache.insert(format!("k{i}"), Arc::new(CachedCalc { start: 0, values: vec![vec![i as f64]] }));
+        }
+        assert_eq!(cache.len(), CALC_CACHE_MAX);
+        for i in 0..CALC_CACHE_MAX {
+            assert!(
+                cache.get(&format!("k{i}")).is_some(),
+                "第 {i} 个键被误淘汰"
+            );
+        }
+    }
+
+    /// S-EP05-05：重复插入同键不改变首次插入顺序，不额外占容量。
+    #[test]
+    fn calc_cache_reinsert_same_key_keeps_first_order() {
+        let mut cache = CalcCache::default();
+        for i in 0..CALC_CACHE_MAX {
+            cache.insert(format!("k{i}"), Arc::new(CachedCalc { start: 0, values: vec![vec![0.0]] }));
+        }
+        // 重写 k0：仍是首次插入位置，插入 k512 时应淘汰 k0 而不是别人。
+        cache.insert("k0".into(), Arc::new(CachedCalc { start: 0, values: vec![vec![1.0]] }));
+        cache.insert("k512".into(), Arc::new(CachedCalc { start: 0, values: vec![vec![2.0]] }));
+        assert_eq!(cache.len(), CALC_CACHE_MAX);
+        assert!(cache.get("k0").is_none(), "k0 仍是 FIFO 最早键");
+        assert!(cache.get("k1").is_some());
+        assert!(cache.get("k512").is_some());
     }
 
     fn bars_req(timeframe: &str, from: Option<&str>, to: Option<&str>) -> GetBarsRequest {
@@ -6080,6 +6336,13 @@ mod tests {
             .expect("必须有 compute.count");
         assert_eq!(count_event.fields["count"], 2);
         assert_eq!(count_event.fields["skip"], 1);
+        assert_eq!(count_event.fields["instances"], 3);
+        let skip_event = events
+            .iter()
+            .find(|event| name(event) == crate::telemetry::EVENT_COMPUTE_SKIP)
+            .expect("必须有 compute.skip");
+        assert_eq!(skip_event.fields["reason"], "duplicateKey");
+        assert_eq!(skip_event.fields["instanceId"], "b");
         assert!(core.telemetry().cold_p95_ms().is_some());
 
         // 同请求再算一次：全部命中缓存，不再执行计算。
@@ -6088,6 +6351,71 @@ mod tests {
         let counts = core.telemetry().summary(0).counts;
         assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_HIT), Some(&2));
         assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&2));
+    }
+
+    /// S-EP05-02 AC3：多输出指标（MACD）命中同键去重时，全部输出列一起复用。
+    #[tokio::test]
+    async fn dedup_reuses_all_outputs_for_multi_output_indicator() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+            from: None,
+            to: None,
+            generation: 1,
+            instances: vec![
+                calc_instance("a", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+                calc_instance("b", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+            ],
+        };
+        let response = core.calc_indicators(&request).await.unwrap();
+        assert_eq!(response.series.len(), 2);
+        let first = &response.series[0];
+        let second = &response.series[1];
+        assert_eq!(first.outputs.len(), 3, "MACD 必须保留三条输出");
+        assert_eq!(second.outputs.len(), 3);
+        for (left, right) in first.outputs.iter().zip(&second.outputs) {
+            assert_eq!(left.values, right.values, "去重实例必须逐点复用输出");
+        }
+        let counts = core.telemetry().summary(0).counts;
+        assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&1));
+        assert_eq!(counts.get(crate::telemetry::EVENT_COMPUTE_SKIP), Some(&1));
+    }
+
+    /// S-EP05-05 AC4：同一请求内 3 个实例同键，只新增 1 个缓存键（去重不额外占容量）。
+    #[tokio::test]
+    async fn calc_cache_same_key_dedup_adds_one_entry() {
+        let core = AppCore::new_mock().await.unwrap();
+        let instance = |id: &str| crate::dto::InstanceRequest {
+            instance_id: id.into(),
+            indicator_id: "T01".into(),
+            params: std::collections::BTreeMap::from([(
+                "period".to_string(),
+                indicator_core::ParamValue::Int(20),
+            )]),
+        };
+        let request = |generation: u64| CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+            from: None,
+            to: None,
+            generation,
+            instances: vec![instance("a"), instance("b"), instance("c")],
+        };
+
+        let first = core.calc_indicators(&request(1)).await.unwrap();
+        assert!(!first.cache_hit);
+        assert_eq!(
+            core.calc_cache.lock().unwrap().len(),
+            1,
+            "3 个同键实例只应占 1 个缓存条目"
+        );
+
+        let second = core.calc_indicators(&request(2)).await.unwrap();
+        assert!(second.cache_hit, "同键再请求必须命中缓存");
+        assert_eq!(core.calc_cache.lock().unwrap().len(), 1);
     }
 
     /// QA-S0-028：主图 2 叠加 + 副图 3（M06 三次不同参数，含重复 id），5 个实例键全不重复
@@ -6719,6 +7047,220 @@ mod tests {
             suspended.close,
             round2(raw_pre.close * 0.5),
             "停牌行价格字段仍按前复权口径处理"
+        );
+    }
+    fn calc_instance(id: &str, indicator: &str, params: &[(&str, i64)]) -> crate::dto::InstanceRequest {
+        crate::dto::InstanceRequest {
+            instance_id: id.into(),
+            indicator_id: indicator.into(),
+            params: params
+                .iter()
+                .map(|(k, v)| ((*k).to_string(), indicator_core::ParamValue::Int(*v)))
+                .collect(),
+        }
+    }
+
+    fn calc_request(timeframe: &str, instances: Vec<crate::dto::InstanceRequest>) -> CalcRequest {
+        CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: timeframe.into(),
+            adj: "qfq".into(),
+            from: None,
+            to: None,
+            generation: 1,
+            instances,
+        }
+    }
+
+    /// S-EP05-01 AC1：响应顺序与请求 instances 顺序一致，不按 id 排序。
+    #[tokio::test]
+    async fn calc_response_keeps_request_instance_order() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request(
+            "D",
+            vec![
+                calc_instance("c", "T01", &[("period", 30)]),
+                calc_instance("a", "T01", &[("period", 10)]),
+                calc_instance("b", "T01", &[("period", 20)]),
+            ],
+        );
+        let response = core.calc_indicators(&request).await.unwrap();
+        let ids: Vec<&str> = response
+            .series
+            .iter()
+            .map(|series| series.instance_id.as_str())
+            .collect();
+        assert_eq!(ids, vec!["c", "a", "b"]);
+    }
+
+    /// S-EP05-01 AC2：每个输出列长度都等于 barCount。
+    #[tokio::test]
+    async fn calc_values_length_equals_bar_count() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request(
+            "D",
+            vec![
+                calc_instance("a", "T01", &[("period", 20)]),
+                calc_instance("b", "M06", &[("fast", 12), ("slow", 26), ("signal", 9)]),
+            ],
+        );
+        let response = core.calc_indicators(&request).await.unwrap();
+        assert!(response.bar_count > 0);
+        for series in &response.series {
+            for output in &series.outputs {
+                assert_eq!(
+                    output.values.len(),
+                    response.bar_count,
+                    "{} 输出长度必须等于 barCount",
+                    series.instance_id
+                );
+            }
+        }
+    }
+
+    /// S-EP05-01 AC3：未知指标号整单失败，不回半份结果。
+    #[tokio::test]
+    async fn calc_unknown_indicator_fails_whole_request() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request(
+            "D",
+            vec![
+                calc_instance("ok", "T01", &[("period", 20)]),
+                calc_instance("bad", "NOPE", &[]),
+            ],
+        );
+        let err = core.calc_indicators(&request).await.unwrap_err();
+        assert_eq!(err.code, crate::error::ErrorCode::UnknownIndicator);
+        assert_eq!(
+            err.details.as_ref().and_then(|d| d.get("indicatorId")),
+            Some(&serde_json::json!("NOPE"))
+        );
+    }
+
+    /// S-EP05-09 AC1：线格式顶层键正好 9 个且全为 camelCase，无 snake_case 漏网。
+    #[tokio::test]
+    async fn calc_response_wire_shape_is_exactly_camel_case() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("a", "T01", &[("period", 20)])]);
+        let response = core.calc_indicators(&request).await.unwrap();
+        let value = serde_json::to_value(&response).unwrap();
+
+        let mut keys: Vec<&str> = value
+            .as_object()
+            .expect("CalcResponse 必须是 JSON 对象")
+            .keys()
+            .map(|key| key.as_str())
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            vec![
+                "barCount",
+                "cacheHit",
+                "computedMs",
+                "datasetGeneration",
+                "datasetId",
+                "engineVersion",
+                "generation",
+                "range",
+                "series",
+            ]
+        );
+
+        let mut range_keys: Vec<&str> = value["range"]
+            .as_object()
+            .expect("range 必须是 JSON 对象")
+            .keys()
+            .map(|key| key.as_str())
+            .collect();
+        range_keys.sort_unstable();
+        assert_eq!(
+            range_keys,
+            vec![
+                "barCount",
+                "clamped",
+                "requestedFrom",
+                "requestedTo",
+                "returnedFrom",
+                "returnedTo",
+            ]
+        );
+
+        let mut series_keys: Vec<&str> = value["series"][0]
+            .as_object()
+            .expect("series 元素必须是 JSON 对象")
+            .keys()
+            .map(|key| key.as_str())
+            .collect();
+        series_keys.sort_unstable();
+        assert_eq!(
+            series_keys,
+            vec!["engineVersion", "indicatorId", "instanceId", "outputs", "warmup"]
+        );
+    }
+
+    /// S-EP05-09 AC2：预热段 NaN 一律出 null，不得出 NaN 或 0。
+    #[tokio::test]
+    async fn nan_values_serialize_as_null() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("ma", "T01", &[("period", 20)])]);
+        let response = core.calc_indicators(&request).await.unwrap();
+        let value = serde_json::to_value(&response).unwrap();
+        let values = value["series"][0]["outputs"][0]["values"]
+            .as_array()
+            .expect("values 必须是 JSON 数组");
+        let warmup = value["series"][0]["warmup"].as_u64().unwrap() as usize;
+
+        assert!(warmup > 0, "T01(period=20) 必有预热段");
+        assert!(
+            values[..warmup].iter().all(serde_json::Value::is_null),
+            "预热段必须逐点 null"
+        );
+        assert!(
+            values[warmup].is_number(),
+            "预热后首个点必须是数值（NaN 不得漏成 null 以外的形态）"
+        );
+        assert_eq!(
+            values.iter().filter(|v| v.is_number()).count(),
+            values.len() - warmup,
+            "预热段之外不应再出现 null"
+        );
+    }
+
+    /// S-EP05-09 AC3：全命中时 computedMs 为 0.0；未指定日期的键仍在且为 null。
+    #[tokio::test]
+    async fn zero_computed_ms_keeps_null_keys() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("a", "T01", &[("period", 20)])]);
+        core.calc_indicators(&request).await.unwrap();
+        let second = core.calc_indicators(&request).await.unwrap();
+        assert!(second.cache_hit);
+        assert_eq!(second.computed_ms, 0.0);
+
+        let value = serde_json::to_value(&second).unwrap();
+        assert_eq!(value["computedMs"].as_f64(), Some(0.0));
+        let range = value["range"].as_object().unwrap();
+        assert!(range.contains_key("requestedFrom"), "requestedFrom 键不得被省略");
+        assert!(range.contains_key("requestedTo"), "requestedTo 键不得被省略");
+        assert!(range["requestedFrom"].is_null());
+        assert!(range["requestedTo"].is_null());
+    }
+
+    /// S-EP05-09 AC4：外层 engineVersion 为字符串，SeriesDto.engineVersion 为数字。
+    #[tokio::test]
+    async fn engine_version_types_differ_by_layer() {
+        let core = AppCore::new_mock().await.unwrap();
+        let request = calc_request("D", vec![calc_instance("a", "T01", &[("period", 20)])]);
+        let response = core.calc_indicators(&request).await.unwrap();
+        let value = serde_json::to_value(&response).unwrap();
+
+        assert_eq!(value["engineVersion"].as_str(), Some(ENGINE_VERSION));
+        assert!(
+            value["series"][0]["engineVersion"].as_u64().is_some(),
+            "SeriesDto.engineVersion 必须是数字"
+        );
+        assert_eq!(
+            value["series"][0]["engineVersion"], serde_json::json!(response.series[0].engine_version)
         );
     }
 }

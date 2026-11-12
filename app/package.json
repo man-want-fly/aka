@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --port 1420",
     "build": "tsc --noEmit && vite build",
+    "verify:card-refs": "node scripts/verify_card_refs.mjs",
     "verify:constants": "node scripts/verify_constants.mjs --docs",
     "verify:evidence": "node scripts/verify_evidence.mjs",
     "verify:evidence:selftest": "node scripts/verify_evidence_selftest.mjs",

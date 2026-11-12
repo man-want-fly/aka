@@ -111,21 +111,6 @@ impl AppState {
             .clone()
     }
 
-    pub fn set_dataset_empty(&self, empty: bool) {
-        self.faults
-            .lock()
-            .unwrap_or_else(|err| err.into_inner())
-            .dataset_empty = empty;
-    }
-
-    /// 重建样本包后清除 manifest 损坏注入，否则健康检查无法恢复。
-    pub fn set_manifest_corrupt(&self, corrupt: bool) {
-        self.faults
-            .lock()
-            .unwrap_or_else(|err| err.into_inner())
-            .manifest_corrupt = corrupt;
-    }
-
     /// S-08.02-02：设置注入类型，返回旧值。
     pub fn set_inject(&self, kind: InjectKind) -> InjectKind {
         let mut faults = self.faults.lock().unwrap_or_else(|err| err.into_inner());

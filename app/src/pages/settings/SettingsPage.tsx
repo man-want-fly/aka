@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { AppShell, type RouteKey } from "../../app/AppShell";
+import { useEffect, useRef, useState } from "react";import { AppShell, type RouteKey } from "../../app/AppShell";
 import { formatAmount, formatPct, formatPrice, formatVolume } from "../../lib/format";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import {
@@ -23,8 +22,7 @@ import { loadColorMode, loadThemeMode } from "../../lib/theme";
 
 const DATA_DIR = "~/Library/Application Support/AKA/data/sim";
 interface Props {
-  onNavigate: (key: RouteKey) => void;
-}
+  onNavigate: (key: RouteKey) => void;}
 
 const DENSITY_OPTIONS: Array<{ key: Density; label: string }> = [
   { key: "compact", label: "紧凑" },
@@ -212,8 +210,13 @@ export function SettingsPage({ onNavigate }: Props) {
       .then((value) => {
         const next = sanitizeDisplay(value);
         setSettings(next);
-        void saveDisplaySettings(next);
-        setStatus("已保存");
+        void saveDisplaySettings(next)
+          .then(() => setStatus("已保存"))
+          .catch((err) => {
+            // S-08.02-03：只读浏览下写操作被门禁拒绝，给出原因而不是静默失败。
+            setStatus("idle");
+            setError(`设置未保存：${describeError(err).message}`);
+          });
       })
       .catch((err) => setError(`设置未保存：${describeError(err).message}`));
   };

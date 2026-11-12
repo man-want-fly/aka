@@ -152,8 +152,7 @@ PY
     FLAGS="--readonly-db"
     FIXTURE="默认 state.db；启动带 --readonly-db（PRAGMA query_only=ON），观察窗 1.2s 内统计写入类命令（应为 0），并核对元信息与页脚 7 段就绪（AC-06.04-05）"
     BAK=""
-    ;;
-  s20602)
+    ;;  s20602)
     TARGET="s20602"
     JSON="$DIAG_DIR/s20602-evidence.json"
     NAME="s20602-evidence"
@@ -319,6 +318,29 @@ PY
     FLAGS="--missing-manifest-sha256"
     FIXTURE="默认 state.db；--missing-manifest-sha256（trigger=injected）让 dataset_manifest 只清 sha256、其余 8 字段原样，验证工作台页脚「只缺一段、其余 6 段正常」（AC-02.08-01（补2））；只读，不改库"
     BAK=""
+    ;;
+  s080203)
+    TARGET="s080203"
+    JSON="$DIAG_DIR/s080203-evidence.json"
+    NAME="s080203-evidence"
+    FLAGS="--dataset-fault=missing --expect-code=MISSING_DIR"
+    FIXTURE="默认 state.db；--dataset-fault=missing 让启动校验返回 MISSING_DIR（期望码由 --expect-code 独立给出，和 DTO 比对不一致即红），验证全屏错误卡（码/trace/路径/无堆栈）与「重建样本包」恢复后进入行情页；不改库"
+    BAK=""
+    ;;
+  s080203-readonly)
+    TARGET="s080203"
+    JSON="$DIAG_DIR/s080203-evidence.json"
+    NAME="s080203-readonly-evidence"
+    FLAGS="--dataset-fault=sha --expect-code=SHA256_MISMATCH"
+    FIXTURE="默认 state.db；--dataset-fault=sha 让启动校验返回 SHA256_MISMATCH（期望码由 --expect-code 独立给出，和 DTO 比对不一致即红），验证只读浏览红条、K 线可看/计算禁用、自选与主题写入被拒（自选数不变、主题三路不变）；不改库"
+    BAK=""
+    ;;
+  s010301)
+    TARGET="s010301"
+    JSON="$DIAG_DIR/s010301-positions-evidence.json"
+    NAME="s010301-positions-evidence"
+    FIXTURE="默认 state.db 备份后由套件自建 5 只自选与持仓（600519.SH 等），并追加 AKA_DIAG=1 的停牌样本 DIAGQSUP.SZ；取证结束还原 state.db"
+    BAK="/tmp/aka-state-s010301-$LABEL.db"
     ;;
   *)
     echo "未知套件：$SUITE" >&2

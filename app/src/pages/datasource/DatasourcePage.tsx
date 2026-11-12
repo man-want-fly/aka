@@ -15,8 +15,7 @@ import { BackfillSection } from "./BackfillSection";
 import { QualitySection } from "./QualitySection";
 
 interface Props {
-  onNavigate: (key: RouteKey) => void;
-}
+  onNavigate: (key: RouteKey) => void;}
 
 const STATE_TEXT: Record<DatasourceStatusDto["state"], string> = {
   ready: "可用",
@@ -335,8 +334,7 @@ export function DatasourcePage({ onNavigate }: Props) {
               <button type="button" onClick={() => onNavigate("install")}>
                 {status?.errorCode === "E_DATASET_VERSION_MISMATCH"
                   ? "去重建数据集"
-                  : "去环境页生成"}
-              </button>
+                  : "去环境页生成"}              </button>
             </div>
           )}
 

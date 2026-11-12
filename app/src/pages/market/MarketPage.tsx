@@ -182,11 +182,12 @@ const SCROLL_KEY = "aka.market.scroll";
 const SELECTED_KEY = "aka.market.selected";
 
 interface Props {
-  onNavigate: (key: RouteKey) => void;
-  onOpenSecurity: (security: string) => void;
+  onNavigate: (key: RouteKey) => void;  onOpenSecurity: (security: string) => void;
+  /** S-08.02-03：只读浏览下不落盘视图状态，避免无谓的“设置未保存”提示 */
+  readOnly?: boolean;
 }
 
-export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
+export function MarketPage({ onNavigate, onOpenSecurity, readOnly = false }: Props) {
   const [snapshot, setSnapshot] = useState<MarketSnapshotDto | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistDto | null>(null);
   const [view, setView] = useState<MarketViewState>(DEFAULT_VIEW);
@@ -245,14 +246,14 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
   viewRef.current = view;
 
   useEffect(() => {
-    if (!viewLoaded) return;
+    if (!viewLoaded || readOnly) return;
     const timer = window.setTimeout(() => {
       void ipc.viewStateSet(VIEW_SCOPE, viewRef.current).catch((err) => {
         setToast(`设置未保存：${describeError(err).message}`);
       });
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [view, viewLoaded]);
+  }, [view, viewLoaded, readOnly]);
 
   // 离开页面时补一次写入，避免未到期的变更被防抖计时器丢弃。
   useEffect(() => {

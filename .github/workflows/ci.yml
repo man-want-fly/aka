@@ -130,6 +130,11 @@ jobs:
       - name: npm ci
         run: npm ci
 
+      # 发卡前门禁：卡面引用的路径 / 符号 / npm 脚本必须能在仓库内解析。
+      # 判据全部从仓库实际状态派生，不维护名字白名单；无 v1.0 卡面时跳过。
+      - name: 卡面引用门禁（路径 / 符号 / npm 脚本）
+        run: npm run verify:card-refs
+
       - name: 常量单一源门禁（G1，不一致即红）
         run: npm run verify:constants
 
@@ -181,6 +186,7 @@ jobs:
 
       - name: S-02.06-02 缓存回切判据负例（W-111，maxMs=121 必红）
         run: npm run verify:s20602
+
       # W-59：内容库已交付，本步骤转 required——内容缺失（exit 2）或不合格（exit 1）一律阻断。
       - name: 指标口径页门禁（W-03 / W-59，required）
         run: npm run verify:docs

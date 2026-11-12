@@ -384,9 +384,10 @@ pub async fn dataset_regenerate(
     tracked!(state, "dataset_regenerate", {
         // ST-DF-03-05：「重新生成」属于写操作，只读下不得清故障位或重发数据。
         state.ensure_writable()?;
-        state.set_dataset_empty(false);
-        // 重建后 manifest 恢复可读（清掉 S-07.01-02 的损坏注入）。
-        state.set_manifest_corrupt(false);
+        // 重建后三个故障位一起清掉（S-07.01-02 损坏注入 + S-08.02-03 数据集注入）。
+        state.clear_dataset_faults();
+        // S-08.02-03：重建成功即退出只读浏览（补4）。
+        state.set_read_only(false);
         Ok(state.core.list_securities(&req))
     })
 }
@@ -674,7 +675,6 @@ pub async fn reveal_diagnostics(path: String) -> Result<(), AppError> {
 
 /// S-07.03-01：首装数据集固定 seed 42，与 manifest 的 `seed` 字段一致。
 pub(crate) const SIM_SEED: u64 = 42;
-
 fn sim_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, AppError> {
     use tauri::Manager;
     app.path()
