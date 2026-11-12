@@ -941,4 +941,130 @@ mod tests {
             none.rows.last().unwrap().close
         );
     }
+
+    fn test_runtime() -> tokio::runtime::Runtime {
+        tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("runtime")
+    }
+
+    /// AC-DF-01-01-1 / AC-DF-01-01-2：标的 120 条且 code 唯一、必填字段非空；
+    /// 日历 520 个交易日、升序、无重复、无周末。
+    #[test]
+    fn securities_and_calendar_match_contract() {
+        let provider = MockProvider::new();
+        let runtime = test_runtime();
+
+        let master = runtime
+            .block_on(provider.securities(Date::new(2026, 1, 1)))
+            .expect("securities");
+        assert_eq!(master.securities.len(), MOCK_SECURITY_COUNT);
+        let mut codes: Vec<&str> = master
+            .securities
+            .iter()
+            .map(|security| security.code.as_str())
+            .collect();
+        codes.sort_unstable();
+        codes.dedup();
+        assert_eq!(codes.len(), MOCK_SECURITY_COUNT, "code 必须唯一");
+        for security in &master.securities {
+            assert!(!security.code.is_empty(), "code 不得为空");
+            assert!(!security.name.is_empty(), "name 不得为空");
+            // 需求中的 exchange 在实现中以 market 表达（见 §5 需求码/字段映射）。
+            assert!(
+                matches!(security.market, Market::Sh | Market::Sz),
+                "{} 的 exchange/market 缺失",
+                security.code
+            );
+        }
+
+        let calendar = runtime
+            .block_on(provider.trading_calendar(Date::new(2023, 1, 1), Date::new(2026, 12, 31)))
+            .expect("calendar");
+        assert_eq!(calendar.len(), MOCK_BARS_PER_SECURITY);
+        assert!(
+            calendar.windows(2).all(|pair| pair[0] < pair[1]),
+            "日历必须严格升序且不重复"
+        );
+        assert!(
+            calendar.iter().all(|date| !date.is_weekend()),
+            "日历不得包含周末"
+        );
+    }
+
+    /// AC-DF-01-01-4：同一 seed 初始化两次，dataset_id 与 sha256 必须完全一致。
+    #[test]
+    fn mock_dataset_identity_is_deterministic() {
+        let first = MockProvider::new().dataset_manifest().expect("manifest");
+        let second = MockProvider::new().dataset_manifest().expect("manifest");
+        assert_eq!(first.dataset_id, second.dataset_id);
+        assert_eq!(first.sha256, second.sha256);
+        assert_eq!(first.row_count, (MOCK_SECURITY_COUNT * MOCK_BARS_PER_SECURITY) as u64);
+    }
+
+    /// AC-DF-01-01-3：未知标的必须返回错误，不得以成功空数组掩盖。
+    #[test]
+    fn unknown_security_is_an_error_not_an_empty_batch() {
+        let provider = MockProvider::new();
+        let runtime = test_runtime();
+        let result = runtime.block_on(provider.daily_bars(BarRequest {
+            security: "999999.SH".into(),
+            timeframe: Timeframe::Day,
+            adj: Adjust::None,
+            from: None,
+            to: None,
+        }));
+        match result {
+            Err(ProviderError::UnknownSecurity(code)) => assert_eq!(code, "999999.SH"),
+            other => panic!("未知标的必须返回 UnknownSecurity，实际 {other:?}"),
+        }
+    }
+
+    /// AC-DF-01-02-2：4 必需 + 4 可选 + 2 运维共 10 项能力声明必须与真实行为一致。
+    #[test]
+    fn declared_capabilities_match_actual_behaviour() {
+        let provider = MockProvider::new();
+        let runtime = test_runtime();
+        let caps = provider.capabilities();
+
+        // 4 必需：声明 true 就必须真的可用。
+        assert!(caps.daily_bars && caps.adjust_factors && caps.securities && caps.trading_calendar);
+        assert!(runtime.block_on(provider.securities(Date::new(2026, 1, 1))).is_ok());
+        assert!(runtime
+            .block_on(provider.trading_calendar(Date::new(2023, 1, 1), Date::new(2023, 12, 31)))
+            .is_ok());
+        assert!(runtime
+            .block_on(provider.daily_bars(BarRequest {
+                security: "600519.SH".into(),
+                timeframe: Timeframe::Day,
+                adj: Adjust::None,
+                from: None,
+                to: None,
+            }))
+            .is_ok());
+        assert!(runtime.block_on(provider.adjust_factors("600519.SH")).is_ok());
+
+        // 4 可选：声明 false 就必须返回 NotSupported，而不是假装成功。
+        assert!(!caps.index_members && !caps.industry && !caps.limit_flags && !caps.minute_bars);
+        let request = BarRequest {
+            security: "600519.SH".into(),
+            timeframe: Timeframe::Day,
+            adj: Adjust::None,
+            from: None,
+            to: None,
+        };
+        assert!(runtime
+            .block_on(provider.index_members("000300.SH", Date::new(2024, 1, 1)))
+            .is_err());
+        assert!(runtime.block_on(provider.industry(Date::new(2024, 1, 1))).is_err());
+        assert!(runtime.block_on(provider.limit_flags(request.clone())).is_err());
+        assert!(runtime.block_on(provider.minute_bars(request)).is_err());
+
+        // 2 运维：限流策略与健康检查必须可调用且自洽。
+        let policy = provider.rate_policy();
+        assert_eq!(policy.max_concurrent, 8);
+        let health = runtime.block_on(provider.health());
+        assert!(health.reachable);
+        assert!(health.last_error.is_none());
+    }
 }

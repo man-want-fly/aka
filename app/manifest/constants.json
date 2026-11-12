@@ -1,13 +1,13 @@
 {
   "version": "v0.1",
-  "updatedAt": "2026-11-07",
+  "updatedAt": "2026-11-12",
   "note": "指标目录、样本集、徽标与验收范围的唯一常量源。文档/代码/AC 只能引用这里的值；不一致即门禁失败。",
   "catalog": {
     "total": 105,
     "p0": 84,
     "p1": 21,
-    "planned": 60,
-    "implemented": 45,
+    "planned": 46,
+    "implemented": 59,
     "completeness": {
       "complete": 78,
       "partial": 19,
@@ -17,7 +17,7 @@
     "completionCount": 6,
     "rulings": {
       "afterT03T21Promotion": {
-        "normal": 43,
+        "normal": 57,
         "beta": 2,
         "pendingSpecAll": 15
       }

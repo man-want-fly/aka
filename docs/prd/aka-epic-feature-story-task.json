@@ -1,0 +1,1975 @@
+{
+  "project": {
+    "name": "AKA MVP",
+    "version": "1.0",
+    "generatedAt": "2026-11-11",
+    "sourceArchitecture": [
+      "aka-module-architecture.html v1.0",
+      "aka-project-architecture.html v1.0"
+    ]
+  },
+  "epics": [
+    {
+      "id": "E-01",
+      "name": "Rust 核心引擎层",
+      "domain": "技术基建 / 计算内核",
+      "priority": "P0",
+      "description": "构建 6 crate 单向依赖的 Rust workspace，提供数据源 trait、指标计算内核、编排缓存、命令层。",
+      "strategicGoal": "为整个 AKA 提供可单测、可被 CLI / 服务端复用的核心计算能力，确保架构分层稳固、依赖方向永不倒流。",
+      "acceptanceCriteria": [
+        "cargo check --workspace 通过",
+        "cargo metadata 断言依赖白名单",
+        "indicator-core 单元测试全部通过",
+        "命令层单函数 < 15 行"
+      ],
+      "features": [
+        {
+          "id": "E-01-F-01",
+          "name": "aka-desktop 应用壳与命令层",
+          "priority": "P0",
+          "dependsOn": [],
+          "stories": [
+            {
+              "id": "E-01-F-01-S-01",
+              "name": "Tauri 2 项目骨架初始化",
+              "priority": "P0",
+              "tasks": [
+                "初始化 src-tauri/ 目录结构与 Cargo.toml，声明 workspace 成员",
+                "创建 tauri.conf.json：bundle 标识、窗口尺寸（1280×800）、权限配置",
+                "编写 main.rs 入口与 lib.rs Tauri builder，注入 State<AppCore>",
+                "配置 capabilities/default.json：core:invoke、core:window 权限"
+              ],
+              "acceptanceCriteria": [
+                "cargo tauri dev 可启动双宿主应用",
+                "tauri.conf.json 配置 arm64/x86_64 双架构"
+              ]
+            },
+            {
+              "id": "E-01-F-01-S-02",
+              "name": "State<AppCore> 全局状态注入",
+              "priority": "P0",
+              "tasks": [
+                "定义 AppCore 结构体：持有 ProviderRegistry、CandleStore、Cache",
+                "实现 AppCore::new：初始化 tokio runtime handle、rayon global、provider 注册（仅 MockProvider）",
+                "实现 AppCore 的构造配置（从 tauri.conf.json 读取数据目录路径）"
+              ],
+              "acceptanceCriteria": [
+                "所有命令函数通过 state: State<AppCore> 参数共享同一编排实例",
+                "测试可独立构造 AppCore 无需 Tauri"
+              ]
+            },
+            {
+              "id": "E-01-F-01-S-03",
+              "name": "命令层实现（薄壳原则）",
+              "priority": "P0",
+              "tasks": [
+                "编写 commands.rs 模块：骨架期实现 list_securities、get_bars、indicator_registry、calc_indicators",
+                "编写统一 AppError → serde_json 映射：{ code, message, retryable, indicatorId?, field?, got?, min?, max? }",
+                "创建错误码枚举：UNKNOWN_SECURITY / PARAM_OUT_OF_RANGE / UNKNOWN_INDICATOR / INSUFFICIENT_DATA / INVALID_ARGUMENT",
+                "实现其余 9 条命令骨架（返回 NotImplemented）",
+                "为每个已实现命令写 #[cfg(test)] 单元测试"
+              ],
+              "acceptanceCriteria": [
+                "每个命令函数体 < 15 行",
+                "只做反序列化 → 调 app-core → 错误映射"
+              ]
+            },
+            {
+              "id": "E-01-F-01-S-04",
+              "name": "Tauri 菜单与窗口生命周期",
+              "priority": "P1",
+              "tasks": [
+                "在 main.rs 中配置 Menu：About / Quit / 数据源子菜单 / 诊断子菜单",
+                "注册窗口 close event：触发 AppCore graceful shutdown",
+                "未实现功能菜单项置灰"
+              ],
+              "acceptanceCriteria": [
+                "窗口关闭时优雅 shutdown AppCore",
+                "未实现的菜单项置灰"
+              ]
+            }
+          ],
+          "architecturePosition": "系统顶层薄层 — 换壳（CLI/服务端）不重写业务",
+          "hardConstraints": [
+            "命令函数体 ≤ 15 行（含注释、不含空行）",
+            "只做三件事：反序列化 → 调 app-core → 错误映射",
+            "不缓存、不算指标、不读文件、不创建线程"
+          ],
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-02",
+              "type": "硬依赖",
+              "reason": "所有命令函数调用 app_core.xxx_service()；Tauri builder 注入 State<AppCore>"
+            },
+            {
+              "feature": "E-01-F-03",
+              "type": "隐式依赖",
+              "reason": "命令层间接依赖 registry 枚举指标 id"
+            },
+            {
+              "feature": "E-01-F-04",
+              "type": "隐式依赖",
+              "reason": "MockProvider 是 AppCore 默认注册数据源"
+            },
+            {
+              "feature": "E-01-F-05",
+              "type": "隐式依赖",
+              "reason": "CandleStore 是 AppCore 默认持有存储"
+            }
+          ],
+          "downstreamConsumers": [
+            "E-02-F-02-1",
+            "E-03 全部页面"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "启动",
+              "item": "cargo tauri dev 可启动双宿主",
+              "verification": "手动 + CI e2e"
+            },
+            {
+              "dimension": "架构",
+              "item": "commands.rs 所有 #[tauri::command] ≤ 15 行",
+              "verification": "代码审查 + lint"
+            },
+            {
+              "dimension": "错误",
+              "item": "AppError JSON 结构固定（含可选字段）",
+              "verification": "schema 断言"
+            },
+            {
+              "dimension": "权限",
+              "item": "capabilities 仅放行 core:invoke/core:window/core:app",
+              "verification": "静态检查"
+            },
+            {
+              "dimension": "隔离",
+              "item": "单独编译不含 arrow/rusqlite/reqwest",
+              "verification": "cargo tree"
+            }
+          ]
+        },
+        {
+          "id": "E-01-F-02",
+          "name": "app-core 编排层",
+          "priority": "P0",
+          "dependsOn": [
+            "E-01-F-03",
+            "E-01-F-04",
+            "E-01-F-05"
+          ],
+          "stories": [
+            {
+              "id": "E-01-F-02-S-01",
+              "name": "缓存系统（键 + 世代号 + 命中统计）",
+              "priority": "P0",
+              "tasks": [
+                "实现 CacheKey 结构体：所有字段 Serialize，hash() 生成 u64",
+                "实现 Cache trait + InMemoryCache：插入 / 查询 / 世代号失效 / 命中率计数器",
+                "在 calc_service 中集成：计算前查缓存 → 命中直接返回；未命中冷算路径",
+                "实现 generation 递增器：每次 calc_indicators 请求 fetch_add(1)"
+              ],
+              "acceptanceCriteria": [
+                "缓存键 = 标的+周期+复权+指标+参数+data_version+窗口",
+                "generation 每次请求 +1，旧 generation 响应被丢弃",
+                "命中率可查询"
+              ]
+            },
+            {
+              "id": "E-01-F-02-S-02",
+              "name": "QuoteService 行情查询服务",
+              "priority": "P0",
+              "tasks": [
+                "实现 QuoteService::list_securities → 调 ProviderRegistry → MockProvider",
+                "实现 QuoteService::get_bars → 归一化 → CandleStore",
+                "实现复权归一：qfq/hfq 从 MockProvider 自产 adj_factor"
+              ],
+              "acceptanceCriteria": [
+                "get_bars 支持 D 周期、none/qfq/hfq 复权",
+                "响应含 datasetId / provenance"
+              ]
+            },
+            {
+              "id": "E-01-F-02-S-03",
+              "name": "CalcService 指标批量计算编排",
+              "priority": "P0",
+              "tasks": [
+                "实现 CalcService::validate_instances：参数校验委托 indicator-core ParamSpec",
+                "实现批量合并：按 indicatorId + params_hash 分组，每组只调一次 indicator",
+                "实现 warmup 前缀：bar_from = max(0, visible_from - indicator.warmup(params))",
+                "集成 rayon 并行：指标层分片、计算层分片"
+              ],
+              "acceptanceCriteria": [
+                "批量请求内同 (indicatorId, params) 只算一次",
+                "rayon 按指标分片并行"
+              ]
+            },
+            {
+              "id": "E-01-F-02-S-04",
+              "name": "DTO 层与 NaN → null 边界转换",
+              "priority": "P0",
+              "tasks": [
+                "定义所有 DTO struct（10+）：全部 rename_all = camelCase",
+                "实现 NaNToNone trait：f64::is_nan() → None",
+                "实现溯源字段：BarDto 每行带 provider / datasetId / qualityFlags / adjMode"
+              ],
+              "acceptanceCriteria": [
+                "CalcResponse 含完整字段",
+                "NaN 安全转换为 null"
+              ]
+            },
+            {
+              "id": "E-01-F-02-S-05",
+              "name": "ProviderRegistry 能力矩阵与健康检查",
+              "priority": "P1",
+              "tasks": [
+                "实现 ProviderRegistry：BTreeMap<ProviderId, Box<dyn DataProvider>>",
+                "实现 ProviderStatus 聚合：从各 provider capabilities + health 汇总",
+                "MockProvider 实现稳定 health（永远可达、配额无限）"
+              ],
+              "acceptanceCriteria": [
+                "capabilities() 返回 10 项布尔矩阵",
+                "health() 返回可达性 + 最近错误 + 配额"
+              ]
+            }
+          ],
+          "architecturePosition": "系统「大脑」 — 唯一映射层",
+          "hardConstraints": [
+            "不得依赖 tauri/rusqlite/arrow 直接 API",
+            "CacheKey 必须包含完整上下文",
+            "generation 必须 AtomicU64::fetch_add(1, SeqCst)"
+          ],
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-03",
+              "type": "硬依赖",
+              "reason": "CalcService 调用 Indicator::calc()、读取 warmup/ParamSpec"
+            },
+            {
+              "feature": "E-01-F-04",
+              "type": "硬依赖",
+              "reason": "ProviderRegistry 持有 Box<dyn DataProvider>"
+            },
+            {
+              "feature": "E-01-F-05",
+              "type": "硬依赖",
+              "reason": "QuoteService 读写 CandleStore"
+            }
+          ],
+          "downstreamConsumers": [
+            "E-01-F-01"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "缓存",
+              "item": "CacheKey 7 字段全覆盖",
+              "verification": "字段断言"
+            },
+            {
+              "dimension": "命中",
+              "item": "第二次请求命中率 ≥ 95%",
+              "verification": "120只基准"
+            },
+            {
+              "dimension": "并发",
+              "item": "100 并发 calc 无竞争无 panic",
+              "verification": "压力测试"
+            },
+            {
+              "dimension": "并行",
+              "item": "rayon CPU ≥ 80%（8 核）",
+              "verification": "flamegraph"
+            },
+            {
+              "dimension": "溯源",
+              "item": "BarDto 4 字段携带",
+              "verification": "结构断言"
+            },
+            {
+              "dimension": "NaN",
+              "item": "f64 NaN → null，不渲染 0",
+              "verification": "MACD 前 25 根截图"
+            },
+            {
+              "dimension": "DTO",
+              "item": "全部 rename_all=camelCase",
+              "verification": "gen-ipc-types"
+            }
+          ]
+        },
+        {
+          "id": "E-01-F-03",
+          "name": "indicator-core 指标计算内核",
+          "priority": "P0",
+          "dependsOn": [],
+          "stories": [
+            {
+              "id": "E-01-F-03-S-01",
+              "name": "指标注册表静态架构",
+              "priority": "P0",
+              "tasks": [
+                "定义 Meta / ParamSpec / OutputSpec / Indicator trait",
+                "实现 registry::all() / registry::lookup() 静态注册表",
+                "实现 ParamSpec 四种变体：Int / Float / Enum / Bool",
+                "CI 断言目录行数 = 已实现数"
+              ],
+              "acceptanceCriteria": [
+                "all().len() 由已实现注册表派生",
+                "禁止 unwrap，除零返回 NaN"
+              ]
+            },
+            {
+              "id": "E-01-F-03-S-02",
+              "name": "MA（移动平均线）指标实现",
+              "priority": "P0",
+              "tasks": [
+                "实现 ma::MaIndicator：calc(&OhlcvView, &Params, &mut [Vec<f64>])",
+                "注册 Meta：id=ma、3 个 maType、period 2-500",
+                "单测：随机输入 → MA 结果序列断言"
+              ],
+              "acceptanceCriteria": [
+                "SMA / EMA / WMA 三种",
+                "黄金用例容差 < 1e-9"
+              ]
+            },
+            {
+              "id": "E-01-F-03-S-03",
+              "name": "MACD 指标实现",
+              "priority": "P0",
+              "tasks": [
+                "实现 macd::MacdIndicator：三输出（dif, dea, macd_bar）",
+                "注册 Meta：id=macd、fast/slow/signal 参数",
+                "单测：MACD 柱 = 2×(dif - dea)"
+              ],
+              "acceptanceCriteria": [
+                "三个输出",
+                "warmup = slow + signal - 1"
+              ]
+            },
+            {
+              "id": "E-01-F-03-S-04",
+              "name": "ParamSpec 单一事实来源校验",
+              "priority": "P0",
+              "tasks": [
+                "在 indicator_registry 中序列化所有 ParamSpec → ParamSpecDto",
+                "在 calc_service 中实现 Params::validate 批量校验"
+              ],
+              "acceptanceCriteria": [
+                "参数范围只写在 Rust 注册表一处",
+                "越界返回 PARAM_OUT_OF_RANGE + got/min/max"
+              ]
+            },
+            {
+              "id": "E-01-F-03-S-05",
+              "name": "指标扩展至 P0 84 个（迭代）",
+              "priority": "P1",
+              "tasks": [
+                "按 Sprint 分批：每批 10~20 个指标",
+                "每个指标：新建 .rs + 注册 Meta + 单测 + 黄金用例",
+                "engineVersion bump（公式变更 +1）"
+              ],
+              "acceptanceCriteria": [
+                "84 个指标可用、可改参、有口径页",
+                "按 6 个 category 分组"
+              ]
+            },
+            {
+              "id": "E-01-F-03-S-06",
+              "name": "indicator-golden 黄金用例夹具（dev-only）",
+              "priority": "P1",
+              "tasks": [
+                "初始化 crates/indicator-golden/，dev-dependency 依赖 indicator-core",
+                "编写夹具加载器 + JSON 夹具格式",
+                "编写容差断言宏 assert_near_eq!(a, b, 1e-9)"
+              ],
+              "acceptanceCriteria": [
+                "release 产物不包含夹具",
+                "dev-dependency 仅测试配置"
+              ]
+            }
+          ],
+          "architecturePosition": "系统「算力核心」 — 零副作用纯函数",
+          "hardConstraints": [
+            "零 IO、零 async、零 trait object（除 Indicator）",
+            "输入 &OhlcvView 借用视图，输出预分配 &mut [Vec<f64>]",
+            "禁止 unwrap、禁止 panic；除零返回 NaN",
+            "engine_version 变更必须 bump 进缓存 key"
+          ],
+          "downstreamConsumers": [
+            "E-01-F-02",
+            "indicator-golden dev"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "纯度",
+              "item": "Cargo.toml 不含 tauri/tokio/arrow/rusqlite",
+              "verification": "静态检查"
+            },
+            {
+              "dimension": "计算",
+              "item": "MA/MACD + 黄金用例 < 1e-9",
+              "verification": "cargo test"
+            },
+            {
+              "dimension": "注册",
+              "item": "all().len() 动态派生，CI 断言",
+              "verification": "CI"
+            },
+            {
+              "dimension": "NaN",
+              "item": "前 N 根不足 warmup → NaN",
+              "verification": "单测"
+            },
+            {
+              "dimension": "扩展",
+              "item": "新增指标不修改 app-core",
+              "verification": "代码审查三问"
+            }
+          ]
+        },
+        {
+          "id": "E-01-F-04",
+          "name": "data-provider 数据源层",
+          "priority": "P0",
+          "dependsOn": [],
+          "stories": [
+            {
+              "id": "E-01-F-04-S-01",
+              "name": "DataProvider trait 定义",
+              "priority": "P0",
+              "tasks": [
+                "定义完整 trait：4 必需 + 4 可选 + 2 运维",
+                "定义 ProviderError（thiserror）+ NotSupported"
+              ],
+              "acceptanceCriteria": [
+                "所有数据源实现同一 trait",
+                "可选方法返回 NotSupported"
+              ]
+            },
+            {
+              "id": "E-01-F-04-S-02",
+              "name": "MockProvider 确定性实现",
+              "priority": "P0",
+              "tasks": [
+                "实现 securities：120 只沪深样本",
+                "实现 daily_bars：随机游走 + 成交量",
+                "实现 adjust_factors（自产 qfq/hfq）",
+                "每行附加 provider / dataset_id / quality_flags"
+              ],
+              "acceptanceCriteria": [
+                "seed 固定，同一 seed 同一输出",
+                "运行时网络请求 = 0"
+              ]
+            },
+            {
+              "id": "E-01-F-04-S-03",
+              "name": "TushareProvider 骨架",
+              "priority": "P2",
+              "tasks": [
+                "定义 TushareProvider + feature gate",
+                "实现请求构造 + 响应解析",
+                "HTTP client 不实现、不打包"
+              ],
+              "acceptanceCriteria": [
+                "feature=live-tushare 默认 off",
+                "token 配置项 MVP 不可见"
+              ]
+            },
+            {
+              "id": "E-01-F-04-S-04",
+              "name": "数据归一化管道",
+              "priority": "P0",
+              "tasks": [
+                "normalize_code：统一 6 位 .SH/.SZ",
+                "BarBatch → Candle 映射 + 逐行溯源"
+              ],
+              "acceptanceCriteria": [
+                "代码统一 6 位后缀",
+                "单位统一为元/股"
+              ]
+            }
+          ],
+          "architecturePosition": "系统「数据源抽象层」",
+          "hardConstraints": [
+            "4 必需 + 4 可选（返回 NotSupported 不伪造）+ 2 运维",
+            "每行必须带 provider_id/dataset_id/quality_flags",
+            "归一化归 app-core，不归这里"
+          ],
+          "downstreamConsumers": [
+            "E-01-F-02",
+            "E-04-F-01"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "确定性",
+              "item": "同一 seed → 同一 SHA256",
+              "verification": "基准"
+            },
+            {
+              "dimension": "覆盖",
+              "item": "沪深各 60，主板 40/创业 10/科创 5/指数 5",
+              "verification": "分布断言"
+            },
+            {
+              "dimension": "骨架",
+              "item": "Tushare feature gate 默认 off",
+              "verification": "cargo tree | grep reqwest"
+            },
+            {
+              "dimension": "可选",
+              "item": "可选方法返回 NotSupported",
+              "verification": "单元测试"
+            }
+          ]
+        },
+        {
+          "id": "E-01-F-05",
+          "name": "data-store 存储层",
+          "priority": "P0",
+          "dependsOn": [],
+          "stories": [
+            {
+              "id": "E-01-F-05-S-01",
+              "name": "Candle 模型与内存 CandleStore",
+              "priority": "P0",
+              "tasks": [
+                "定义 Candle 结构体 + 索引键",
+                "实现 InMemoryCandleStore",
+                "实现 OhlcvView 借用视图"
+              ],
+              "acceptanceCriteria": [
+                "Candle 不依赖 provider / 指标",
+                "OhlcvView 零拷贝借用"
+              ]
+            },
+            {
+              "id": "E-01-F-05-S-02",
+              "name": "Manifest + dataset_id + sha256",
+              "priority": "P0",
+              "tasks": [
+                "实现 Manifest 结构体 + 自动 sha256",
+                "dataset_id 加入缓存 key"
+              ],
+              "acceptanceCriteria": [
+                "切换数据源整体缓存失效"
+              ]
+            },
+            {
+              "id": "E-01-F-05-S-03",
+              "name": "Parquet 分区持久化（后续 Sprint）",
+              "priority": "P1",
+              "tasks": [
+                "引入 arrow / parquet / rusqlite",
+                "实现 ParquetStore",
+                "启动时自动加载 data/sim/"
+              ],
+              "acceptanceCriteria": [
+                "data/sim/ 按 security_id 分区",
+                "data/real/ MVP 不创建"
+              ]
+            },
+            {
+              "id": "E-01-F-05-S-04",
+              "name": "SQLite state.db 持久化（后续 Sprint）",
+              "priority": "P1",
+              "tasks": [
+                "定义 SQLite schema（4 表）",
+                "实现 load_state / save_state IPC",
+                "前端 debounce 500ms 自动保存"
+              ],
+              "acceptanceCriteria": [
+                "参数不持久化（D-14 约束）",
+                "启动时 load_state"
+              ]
+            }
+          ],
+          "architecturePosition": "系统「列式存储抽象层」 — API 可无缝替换",
+          "hardConstraints": [
+            "Candle 不认识上游概念",
+            "OhlcvView 零拷贝借用",
+            "data/real MVP 不创建"
+          ],
+          "downstreamConsumers": [
+            "E-01-F-02",
+            "E-04"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "骨架",
+              "item": "骨架期零外部依赖",
+              "verification": "静态检查"
+            },
+            {
+              "dimension": "索引",
+              "item": "CandleStore 查询 ≤ 1ms（10 万 bars）",
+              "verification": "基准"
+            },
+            {
+              "dimension": "分区",
+              "item": "Parquet 按 security_id 分区 schema 正确",
+              "verification": "parquet-tools"
+            },
+            {
+              "dimension": "隔离",
+              "item": "data/real/ MVP 不创建",
+              "verification": "文件系统检查"
+            }
+          ]
+        }
+      ],
+      "upstreamDependencies": [],
+      "downstreamConsumers": [
+        "E-02",
+        "E-03",
+        "E-04",
+        "E-05"
+      ],
+      "architectureConstraints": [
+        {
+          "id": "ARCH-01",
+          "desc": "crate 依赖链严格单向：aka-desktop → app-core → {indicator-core, data-provider, data-store}",
+          "source": "aka-module-architecture.html §1"
+        },
+        {
+          "id": "ARCH-02",
+          "desc": "三个底层 crate 互不依赖、禁止反向、禁止认识 Tauri / Arrow / SQLite",
+          "source": "aka-module-architecture.html §1"
+        },
+        {
+          "id": "ARCH-03",
+          "desc": "aka-desktop 命令函数体 < 15 行，业务逻辑全部下沉 app-core",
+          "source": "aka-module-architecture.html §2"
+        },
+        {
+          "id": "ARCH-04",
+          "desc": "indicator-core 除零返回 NaN、禁止 unwrap、输入仅 &[f64] 切片",
+          "source": "aka-module-architecture.html §5.2"
+        },
+        {
+          "id": "ARCH-05",
+          "desc": "data-provider 与 data-store 互不依赖，app-core 是唯一映射层",
+          "source": "aka-module-architecture.html §1"
+        },
+        {
+          "id": "ARCH-06",
+          "desc": "6 crate 全部通过 cargo check + cargo metadata 白名单断言",
+          "source": "aka-module-architecture.html §7"
+        }
+      ],
+      "detailedAcceptance": [
+        {
+          "dimension": "编译",
+          "item": "cargo check --workspace 零警告通过",
+          "verification": "CI 自动执行"
+        },
+        {
+          "dimension": "依赖",
+          "item": "cargo metadata 断言白名单外出边为 0",
+          "verification": "CI scripts/check-deps.py"
+        },
+        {
+          "dimension": "单测",
+          "item": "cargo test -p indicator-core 全部通过",
+          "verification": "CI 自动执行"
+        },
+        {
+          "dimension": "边界",
+          "item": "三个底层 Cargo.toml 不含 tauri/arrow/rusqlite",
+          "verification": "静态 grep"
+        },
+        {
+          "dimension": "代码量",
+          "item": "commands.rs 每个 #[tauri::command] 函数体 ≤ 15 行",
+          "verification": "wc -l + lint"
+        },
+        {
+          "dimension": "可复用",
+          "item": "单独编译 indicator-core 不链接 Tauri",
+          "verification": "cargo build -p indicator-core"
+        }
+      ],
+      "suggestedSprint": "S1 基建 → S2 编排 → S3 应用壳"
+    },
+    {
+      "id": "E-02",
+      "name": "前端工作台与图表",
+      "domain": "用户主场景 / 盘后复盘",
+      "priority": "P0",
+      "dependsOn": [
+        "E-01"
+      ],
+      "description": "用户的主场景——盘后复盘工作台，K 线 + 副图 + 参数面板，支持缩放平移十字光标。",
+      "strategicGoal": "MVP 唯一可运行页面必须具备「首装 → 行情 → 工作台 → 指标改参」全链路能力。",
+      "features": [
+        {
+          "id": "E-02-F-01",
+          "name": "WorkbenchPage 页面骨架",
+          "priority": "P0",
+          "dependsOn": [
+            "E-01-F-01",
+            "E-02-F-02",
+            "E-02-F-03"
+          ],
+          "stories": [
+            {
+              "id": "E-02-F-01-S-01",
+              "name": "AppShell + Sidebar + TopBar",
+              "priority": "P0",
+              "tasks": [
+                "AppShell：左侧 rail + 内容区 + 顶部状态条",
+                "6 个导航项（仅 Workbench 激活）",
+                "SimBadge：模拟标识 + dataset_id（全局不可关闭）"
+              ],
+              "acceptanceCriteria": [
+                "骨架单页，无 Router",
+                "当前 Workbench 激活"
+              ]
+            },
+            {
+              "id": "E-02-F-01-S-02",
+              "name": "QuoteHeader 证券头部",
+              "priority": "P0",
+              "tasks": [
+                "调用 list_securities 获取 120 只列表",
+                "QuoteHeader：代码 + 名称 + 最新价 + 涨跌额",
+                "SearchOverlay：实时过滤 + 回车选中"
+              ],
+              "acceptanceCriteria": [
+                "红涨绿跌可切换",
+                "数字等宽"
+              ]
+            },
+            {
+              "id": "E-02-F-01-S-03",
+              "name": "ParamPanel 参数面板",
+              "priority": "P0",
+              "tasks": [
+                "ParamSpec → 控件（Int→Slider、Float→Number、Enum→Select、Bool→Switch）",
+                "150ms debounce + 同 id 同参去重",
+                "越界 clamp + PARAM_OUT_OF_RANGE 错误提示"
+              ],
+              "acceptanceCriteria": [
+                "参数越界自动 clamp",
+                "同 id 同参只发一次 calc_indicators"
+              ]
+            },
+            {
+              "id": "E-02-F-01-S-04",
+              "name": "IndicatorDrawer 指标抽屉",
+              "priority": "P0",
+              "tasks": [
+                "调用 indicator_registry → 按 category 分组",
+                "实例管理：添加/删除 → 更新 CalcRequest.instances",
+                "主图最多 2 叠加、副图最多 3 格（超限 toast）"
+              ],
+              "acceptanceCriteria": [
+                "实例 ID 唯一",
+                "超限有提示"
+              ]
+            }
+          ],
+          "architecturePosition": "MVP 门面 — 首屏交付物",
+          "hardConstraints": [
+            "页面组件不 invoke，经 features/workbench hooks",
+            "左侧 Rail 仅 Workbench 激活",
+            "IndicatorDrawer 主图 2 叠加 / 副图 3 格"
+          ],
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-01",
+              "type": "硬依赖",
+              "reason": "调用 4 条 IPC"
+            },
+            {
+              "feature": "E-02-F-02",
+              "type": "内部依赖",
+              "reason": "渲染 MainChart + SubChart"
+            },
+            {
+              "feature": "E-02-F-03",
+              "type": "内部依赖",
+              "reason": "lib/ipc + theme + SimBadge"
+            }
+          ],
+          "downstreamConsumers": [
+            "E-03 全部页面"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "布局",
+              "item": "1280×800 无溢出；1024×640 不截断",
+              "verification": "窗口调整 + e2e"
+            },
+            {
+              "dimension": "选证",
+              "item": "搜索 600519 → 实时过滤 → 回车切换",
+              "verification": "e2e"
+            },
+            {
+              "dimension": "参数",
+              "item": "MA 20→30 → 150ms 后新线出现",
+              "verification": "console.time"
+            },
+            {
+              "dimension": "去重",
+              "item": "5 次快速变更 → 后端 1 次请求",
+              "verification": "Network 面板"
+            }
+          ]
+        },
+        {
+          "id": "E-02-F-02",
+          "name": "K 线图表渲染",
+          "priority": "P0",
+          "dependsOn": [
+            "E-01-F-02"
+          ],
+          "stories": [
+            {
+              "id": "E-02-F-02-S-01",
+              "name": "MainChart 主图 K 线 + 叠加",
+              "priority": "P0",
+              "tasks": [
+                "K 线组件：影线 + 实体（红涨绿跌）",
+                "叠加指标线 + NaN 处 break",
+                "SubChart 组件 ×3 复用"
+              ],
+              "acceptanceCriteria": [
+                "主图最多 2 叠加",
+                "NaN 处断线"
+              ]
+            },
+            {
+              "id": "E-02-F-02-S-02",
+              "name": "十字光标 + 平移 + 缩放",
+              "priority": "P0",
+              "tasks": [
+                "十字光标 + hover K 线详情 tooltip",
+                "滚轮缩放（边界不超 data bounds）",
+                "拖拽平移 + 窗口扩大按需补取 bars",
+                "前端缓存已取回 bars"
+              ],
+              "acceptanceCriteria": [
+                "均只读已取回数据，不发 IPC",
+                "窗口扩大时才补取"
+              ]
+            },
+            {
+              "id": "E-02-F-02-S-03",
+              "name": "数据不足与停牌态",
+              "priority": "P0",
+              "tasks": [
+                "EmptyState：INSUFFICIENT_DATA → 显示「需要 N 根，当前 M 根」",
+                "停牌 quality_flags → K 线跳过渲染"
+              ],
+              "acceptanceCriteria": [
+                "停牌时间轴占位，无实体"
+              ]
+            }
+          ],
+          "architecturePosition": "数据→视图转换层 — 纯展示零计算",
+          "hardConstraints": [
+            "图表组件不 invoke",
+            "NaN 渲染为断线，不是补零",
+            "停牌仅时间轴占位"
+          ],
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-02",
+              "type": "硬依赖",
+              "reason": "BarDto/SeriesDto 含渲染所需全部字段"
+            }
+          ],
+          "downstreamConsumers": [
+            "E-02-F-01"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "K 线",
+              "item": "影线+实体+成交量柱正确",
+              "verification": "截图对比"
+            },
+            {
+              "dimension": "叠加",
+              "item": "MA 正确；NaN 处断线",
+              "verification": "视觉检查"
+            },
+            {
+              "dimension": "交互",
+              "item": "十字光标+滚轮+平移不越界",
+              "verification": "e2e 鼠标事件"
+            },
+            {
+              "dimension": "性能",
+              "item": "2000 根渲染 < 8ms",
+              "verification": "基准"
+            },
+            {
+              "dimension": "空态",
+              "item": "INSUFFICIENT_DATA 显示需要 N 根当前 M 根",
+              "verification": "mock bars 不足"
+            }
+          ]
+        },
+        {
+          "id": "E-02-F-03",
+          "name": "渲染与状态规则",
+          "priority": "P0",
+          "dependsOn": [
+            "E-01-F-01"
+          ],
+          "stories": [
+            {
+              "id": "E-02-F-03-S-01",
+              "name": "lib/ipc.ts 类型化封装",
+              "priority": "P0",
+              "tasks": [
+                "invokeTyped<T> 泛型封装",
+                "GenerationManager：每次请求递增，响应比对丢弃",
+                "toastAppError：按 retryable + code 决定提示样式"
+              ],
+              "acceptanceCriteria": [
+                "所有 invoke 经此出口",
+                "旧 generation 结果丢弃"
+              ]
+            },
+            {
+              "id": "E-02-F-03-S-02",
+              "name": "主题与显示偏好",
+              "priority": "P0",
+              "tasks": [
+                "tokens.css 深/浅两套语义变量",
+                "useTheme hook + 系统主题跟随",
+                "chart.css 统一用 var(--up) 等变量"
+              ],
+              "acceptanceCriteria": [
+                "红涨绿跌可互换",
+                "数字等宽"
+              ]
+            },
+            {
+              "id": "E-02-F-03-S-03",
+              "name": "全局模拟标识不可关闭",
+              "priority": "P0",
+              "tasks": [
+                "SimBadge：全局顶栏 + 报价头渠道徽标",
+                "dataset_manifest.sim=true → 自动渲染"
+              ],
+              "acceptanceCriteria": [
+                "用户无法关闭"
+              ]
+            }
+          ],
+          "architecturePosition": "全局横切关注点",
+          "hardConstraints": [
+            "所有 invoke 经 lib/ipc.ts",
+            "generation 原子递增",
+            "模拟标识不可关闭",
+            "CSS 变量驱动主题"
+          ],
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-01",
+              "type": "硬依赖",
+              "reason": "lib/ipc.ts 封装 invoke + AppError"
+            }
+          ],
+          "downstreamConsumers": [
+            "E-02-F-01",
+            "E-03 全部页面"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "封装",
+              "item": "非 lib/ipc.ts 外 invoke → 零匹配",
+              "verification": "grep"
+            },
+            {
+              "dimension": "旧响应",
+              "item": "切周期旧 generation 丢弃",
+              "verification": "模拟延迟"
+            },
+            {
+              "dimension": "主题",
+              "item": "深↔浅 < 50ms；红绿可互换",
+              "verification": "视觉"
+            },
+            {
+              "dimension": "错误",
+              "item": "PARAM_OUT_OF_RANGE 红色边框 + got/min/max",
+              "verification": "改 MA period=1"
+            }
+          ]
+        }
+      ],
+      "upstreamDependencies": [
+        "E-01"
+      ],
+      "downstreamConsumers": [
+        "E-03"
+      ],
+      "architectureConstraints": [
+        {
+          "id": "FRONT-01",
+          "desc": "前端分层单向：main → app → pages/features → components → lib",
+          "source": "aka-module-architecture.html §2"
+        },
+        {
+          "id": "FRONT-02",
+          "desc": "所有 invoke 经 lib/ipc.ts；错误码 + generation 统一处理",
+          "source": "aka-module-architecture.html §2"
+        },
+        {
+          "id": "FRONT-03",
+          "desc": "参数变更 150ms 防抖；同 id 同参只算一次",
+          "source": "aka-module-architecture.html §3"
+        },
+        {
+          "id": "FRONT-04",
+          "desc": "平移/缩放/十字光标不产生 IPC",
+          "source": "aka-module-architecture.html §3"
+        },
+        {
+          "id": "FRONT-05",
+          "desc": "全局模拟标识不可关闭",
+          "source": "aka-module-architecture.html §2"
+        },
+        {
+          "id": "FRONT-06",
+          "desc": "MVP 运行时网络请求 = 0",
+          "source": "aka-project-architecture.html §4"
+        }
+      ],
+      "detailedAcceptance": [
+        {
+          "dimension": "链路",
+          "item": "首装→启动→K线→改 MA→新线出现（全链路无联网）",
+          "verification": "e2e + 抓包"
+        },
+        {
+          "dimension": "首屏",
+          "item": "3 副图×2000 根冷算 ≤ 120ms；单参重算 ≤ 60ms",
+          "verification": "火焰图/console.time"
+        },
+        {
+          "dimension": "交互",
+          "item": "平移/缩放不发 IPC",
+          "verification": "Network 面板断言"
+        },
+        {
+          "dimension": "视觉",
+          "item": "红绿可切换；主题切换；NaN 断线；停牌占位",
+          "verification": "截图对比"
+        },
+        {
+          "dimension": "类型",
+          "item": "tsc --noEmit 零错误；IPC 与 DTO 对齐",
+          "verification": "CI"
+        }
+      ],
+      "suggestedSprint": "S4 工作台"
+    },
+    {
+      "id": "E-03",
+      "name": "前端页面生态与导航",
+      "domain": "扩展功能 / 信息架构",
+      "priority": "P1",
+      "dependsOn": [
+        "E-01",
+        "E-02"
+      ],
+      "features": [
+        {
+          "id": "E-03-F-01",
+          "name": "Market 行情浏览页",
+          "priority": "P1",
+          "stories": [
+            {
+              "id": "E-03-F-01-S-01",
+              "name": "MarketPage 表格 + 搜索 + 跳转",
+              "priority": "P1",
+              "tasks": [
+                "MarketPage：表格 + 搜索框 + 板块过滤",
+                "调用 list_securities 渲染 120 行",
+                "双击 → 跳转到该证券的 Workbench"
+              ],
+              "acceptanceCriteria": [
+                "搜索 + 按板块过滤"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-01",
+              "type": "硬依赖",
+              "reason": "list_securities"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "列表",
+              "item": "120 行表格",
+              "verification": "e2e"
+            },
+            {
+              "dimension": "搜索",
+              "item": "600→沪市；创业板→板块",
+              "verification": "e2e 输入"
+            },
+            {
+              "dimension": "跳转",
+              "item": "双击→Workbench",
+              "verification": "点击事件"
+            }
+          ]
+        },
+        {
+          "id": "E-03-F-02",
+          "name": "Watchlist 自选列表页",
+          "priority": "P1",
+          "dependsOn": [
+            "E-04-F-03"
+          ],
+          "stories": [
+            {
+              "id": "E-03-F-02-S-01",
+              "name": "WatchlistPage + save_state 持久化",
+              "priority": "P1",
+              "tasks": [
+                "WatchlistPage：卡片列表 + 添加 + 分组 tab",
+                "save_state / load_state IPC 集成",
+                "实时行情：get_bars 取最新价"
+              ],
+              "acceptanceCriteria": [
+                "启动时 load_state 恢复"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-01",
+              "type": "硬依赖",
+              "reason": "load_state/save_state"
+            },
+            {
+              "feature": "E-04-F-03",
+              "type": "硬依赖",
+              "reason": "SQLite 持久化"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "持久化",
+              "item": "加自选→重启→仍在",
+              "verification": "e2e"
+            }
+          ]
+        },
+        {
+          "id": "E-03-F-03",
+          "name": "Catalog 指标目录 + Spec 口径页",
+          "priority": "P1",
+          "stories": [
+            {
+              "id": "E-03-F-03-S-01",
+              "name": "CatalogPage 指标目录浏览",
+              "priority": "P1",
+              "tasks": [
+                "分类 tab + 指标卡片网格",
+                "调用 indicator_registry 渲染 Meta 列表"
+              ],
+              "acceptanceCriteria": [
+                "已实现 vs 规划视觉区分"
+              ]
+            },
+            {
+              "id": "E-03-F-03-S-02",
+              "name": "IndicatorSpecPage 口径页四段式",
+              "priority": "P1",
+              "tasks": [
+                "indicator_spec IPC 实现",
+                "SpecPage：公式 + 参数 + 输出 + 场景 + engineVersion"
+              ],
+              "acceptanceCriteria": [
+                "未实现指标显示「待实现」"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-03",
+              "type": "硬依赖",
+              "reason": "registry + indicator_spec"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "目录",
+              "item": "6 category；2 绿 + 103 灰",
+              "verification": "视觉检查"
+            },
+            {
+              "dimension": "口径",
+              "item": "四段式 + engineVersion 徽章",
+              "verification": "Spec 页截图"
+            }
+          ]
+        },
+        {
+          "id": "E-03-F-04",
+          "name": "Settings 设置页",
+          "priority": "P1",
+          "dependsOn": [
+            "E-04-F-03"
+          ],
+          "stories": [
+            {
+              "id": "E-03-F-04-S-01",
+              "name": "SettingsPage 四项设置",
+              "priority": "P1",
+              "tasks": [
+                "SettingsPage：主题 / 红绿方向 / 精度 / 默认周期",
+                "save_state 持久化",
+                "启动时 load_state 恢复"
+              ],
+              "acceptanceCriteria": [
+                "全部持久化"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "hardConstraints": [
+            "参数不持久化（D-14）"
+          ],
+          "upstreamFeatures": [
+            {
+              "feature": "E-02-F-03",
+              "type": "硬依赖",
+              "reason": "theme.ts 消费主题选择"
+            },
+            {
+              "feature": "E-04-F-03",
+              "type": "硬依赖",
+              "reason": "save_state(settings)"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "持久化",
+              "item": "改主题→重启→保留",
+              "verification": "e2e"
+            },
+            {
+              "dimension": "排除",
+              "item": "参数不在 Settings 不在 schema",
+              "verification": "grep + 审查"
+            }
+          ]
+        },
+        {
+          "id": "E-03-F-05",
+          "name": "DataSource 数据源管理页",
+          "priority": "P2",
+          "stories": [
+            {
+              "id": "E-03-F-05-S-01",
+              "name": "DataSourcePage 查看与切换骨架",
+              "priority": "P2",
+              "tasks": [
+                "ProviderCard + ManifestCard",
+                "provider_status / dataset_manifest IPC 实现"
+              ],
+              "acceptanceCriteria": [
+                "切换数据源按钮置灰"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "hardConstraints": [
+            "切换数据源 MVP 置灰"
+          ],
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-04",
+              "type": "硬依赖",
+              "reason": "capabilities/health"
+            },
+            {
+              "feature": "E-01-F-05",
+              "type": "硬依赖",
+              "reason": "manifest"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "禁用",
+              "item": "切换按钮置灰不可点击",
+              "verification": "e2e"
+            }
+          ]
+        }
+      ],
+      "upstreamDependencies": [
+        "E-01",
+        "E-02"
+      ],
+      "downstreamConsumers": [],
+      "architectureConstraints": [
+        {
+          "id": "PAGES-01",
+          "desc": "所有页面经 features/* 组合数据层，不直接 invoke",
+          "source": "aka-module-architecture.html §2"
+        },
+        {
+          "id": "PAGES-02",
+          "desc": "Watchlist/Settings 状态持久化经 save_state",
+          "source": "aka-project-architecture.html §2"
+        },
+        {
+          "id": "PAGES-03",
+          "desc": "DataSource 切换数据源 MVP 置灰",
+          "source": "aka-project-architecture.html §4"
+        }
+      ],
+      "detailedAcceptance": [
+        {
+          "dimension": "骨架",
+          "item": "5 个页面目录存在 + 空组件 + 路由占位",
+          "verification": "构建检查"
+        },
+        {
+          "dimension": "导航",
+          "item": "点击 Rail → 切页面",
+          "verification": "手动验证"
+        },
+        {
+          "dimension": "禁用",
+          "item": "DataSource 切换按钮置灰不可点击",
+          "verification": "e2e"
+        }
+      ],
+      "suggestedSprint": "S6 扩展页面"
+    },
+    {
+      "id": "E-04",
+      "name": "数据持久化与版本管理",
+      "domain": "存储 / 缓存 / 元数据",
+      "priority": "P1",
+      "dependsOn": [
+        "E-01"
+      ],
+      "features": [
+        {
+          "id": "E-04-F-01",
+          "name": "Parquet 分区写入与读取",
+          "priority": "P1",
+          "stories": [
+            {
+              "id": "E-04-F-01-S-01",
+              "name": "分区写入管线",
+              "priority": "P1",
+              "tasks": [
+                "引入 arrow / parquet 依赖",
+                "ParquetStore::write_security",
+                "启动管线：无 data/sim/ → Mock 生成 → 写入"
+              ]
+            },
+            {
+              "id": "E-04-F-01-S-02",
+              "name": "分区读取 + 内存索引构建",
+              "priority": "P1",
+              "tasks": [
+                "ParquetStore::read_security",
+                "启动分支：data/sim/ 存在 → 读；不存在 → Mock → 写"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-04",
+              "type": "硬依赖",
+              "reason": "MockProvider 输出"
+            },
+            {
+              "feature": "E-01-F-05",
+              "type": "硬依赖",
+              "reason": "Candle + CandleStore"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "分区",
+              "item": "120 个 parquet 文件",
+              "verification": "ls data/sim/"
+            },
+            {
+              "dimension": "隔离",
+              "item": "data/real/ MVP 不创建",
+              "verification": "文件系统"
+            }
+          ]
+        },
+        {
+          "id": "E-04-F-02",
+          "name": "manifest.json + data_version 管理",
+          "priority": "P1",
+          "stories": [
+            {
+              "id": "E-04-F-02-S-01",
+              "name": "manifest.json 生成与校验",
+              "priority": "P1",
+              "tasks": [
+                "sha256 计算：所有 Parquet 字节拼接哈希",
+                "写入 manifest.json",
+                "启动时校验 → 不匹配标记 CORRUPTED"
+              ]
+            },
+            {
+              "id": "E-04-F-02-S-02",
+              "name": "data_version 与缓存失效",
+              "priority": "P1",
+              "tasks": [
+                "manifest.data_version：Mock 生成时 v1，rebuild 时 +1",
+                "CacheKey 加入 data_version"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "hardConstraints": [
+            "sha256 必须包含所有 Parquet 字节拼接"
+          ],
+          "upstreamFeatures": [
+            {
+              "feature": "E-04-F-01",
+              "type": "硬依赖",
+              "reason": "Parquet 写入完成后创建"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "校验",
+              "item": "sha256 不匹配→标记 CORRUPTED→警告",
+              "verification": "篡改文件"
+            },
+            {
+              "dimension": "失效",
+              "item": "rebuild→version+1→命中率归零",
+              "verification": "基准"
+            }
+          ]
+        },
+        {
+          "id": "E-04-F-03",
+          "name": "SQLite state.db 状态持久化",
+          "priority": "P1",
+          "stories": [
+            {
+              "id": "E-04-F-03-S-01",
+              "name": "schema + 迁移 + 连接池",
+              "priority": "P1",
+              "tasks": [
+                "schema DDL：settings / watchlist / watchlist_group / favorites",
+                "StateDb::init：创建表 + WAL",
+                "load_state / save_state IPC 实现"
+              ]
+            },
+            {
+              "id": "E-04-F-03-S-02",
+              "name": "状态变更 debounce 写入",
+              "priority": "P1",
+              "tasks": [
+                "前端 debouncedSave：500ms timer",
+                "后端 save_state 错误返回 STATE_WRITE_FAILED + retryable=true"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "hardConstraints": [
+            "参数不持久化（D-14）"
+          ],
+          "downstreamConsumers": [
+            "E-03-F-02",
+            "E-03-F-04"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "Schema",
+              "item": "4 表 + WAL",
+              "verification": "rusqlite .schema"
+            },
+            {
+              "dimension": "写入",
+              "item": "debounce 500ms→10 次写 1 次",
+              "verification": "SQLite 日志"
+            }
+          ]
+        },
+        {
+          "id": "E-04-F-04",
+          "name": "rebuild_dataset 重建能力",
+          "priority": "P2",
+          "stories": [
+            {
+              "id": "E-04-F-04-S-01",
+              "name": "rebuild_dataset IPC + 管线",
+              "priority": "P2",
+              "tasks": [
+                "rebuild_dataset IPC 实现",
+                "删旧 → Mock → 写新 → 更新 manifest → 清缓存",
+                "前端 DataSourcePage 重建按钮"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "upstreamFeatures": [
+            {
+              "feature": "E-04-F-01",
+              "type": "硬依赖",
+              "reason": "删旧+Mock+写新"
+            },
+            {
+              "feature": "E-04-F-02",
+              "type": "硬依赖",
+              "reason": "更新 manifest+清缓存"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "管线",
+              "item": "全流程 删→Mock→写→manifest→清缓存",
+              "verification": "端到端"
+            }
+          ]
+        }
+      ],
+      "upstreamDependencies": [
+        "E-01"
+      ],
+      "downstreamConsumers": [
+        "E-05"
+      ],
+      "architectureConstraints": [
+        {
+          "id": "STORE-01",
+          "desc": "data/sim 与 data/real 物理隔离；MVP 不创建 data/real",
+          "source": "aka-project-architecture.html §2"
+        },
+        {
+          "id": "STORE-02",
+          "desc": "参数不持久化（D-14）",
+          "source": "aka-project-architecture.html §2"
+        },
+        {
+          "id": "STORE-03",
+          "desc": "manifest.sha256 包含所有 Parquet 字节拼接",
+          "source": "aka-module-architecture.html §3"
+        },
+        {
+          "id": "STORE-04",
+          "desc": "data_version 进缓存 key；重建整体失效",
+          "source": "aka-module-architecture.html §3"
+        }
+      ],
+      "detailedAcceptance": [
+        {
+          "dimension": "冷启动",
+          "item": "无 data/sim → Mock 120 只 → 写 Parquet → < 5s",
+          "verification": "冷启动计时"
+        },
+        {
+          "dimension": "热启动",
+          "item": "已有 data/sim → 直接加载 → < 2s",
+          "verification": "热启动计时"
+        },
+        {
+          "dimension": "校验",
+          "item": "sha256 不匹配 → 标记 CORRUPTED → 警告条",
+          "verification": "篡改 + e2e"
+        },
+        {
+          "dimension": "重建",
+          "item": "rebuild → version+1 → 命中率归零",
+          "verification": "端到端基准"
+        }
+      ],
+      "suggestedSprint": "S5 持久化"
+    },
+    {
+      "id": "E-05",
+      "name": "运维诊断与外部边界",
+      "domain": "诊断 / 安全 / 预留接口",
+      "priority": "P2",
+      "dependsOn": [
+        "E-01",
+        "E-04"
+      ],
+      "features": [
+        {
+          "id": "E-05-F-01",
+          "name": "诊断包导出",
+          "priority": "P1",
+          "stories": [
+            {
+              "id": "E-05-F-01-S-01",
+              "name": "quality_report 数据质量检查",
+              "priority": "P1",
+              "tasks": [
+                "6 项检查独立函数（完整 / 连续 / 价格 / 量额 / 复权 / manifest）",
+                "quality_report IPC 聚合",
+                "DataSourcePage 展示报告"
+              ]
+            },
+            {
+              "id": "E-05-F-01-S-02",
+              "name": "export_diagnostics 导出 zip",
+              "priority": "P1",
+              "tasks": [
+                "zip 内容：版本 / 日志 / 注册表 / manifest / 系统信息",
+                "排除清单：行情 / 自选 / 持仓 / settings 敏感字段",
+                "native save dialog + 导出结果提示"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "upstreamFeatures": [
+            {
+              "feature": "E-01-F-01",
+              "type": "硬依赖",
+              "reason": "quality_report/export_diagnostics IPC"
+            },
+            {
+              "feature": "E-01-F-03",
+              "type": "硬依赖",
+              "reason": "注册表摘要"
+            },
+            {
+              "feature": "E-04-F-02",
+              "type": "硬依赖",
+              "reason": "manifest"
+            }
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "排除",
+              "item": "blacklist 硬编码",
+              "verification": "zip 清单断言"
+            },
+            {
+              "dimension": "隐私",
+              "item": "不含用户标识/持仓/交易/自选",
+              "verification": "解压审查"
+            }
+          ]
+        },
+        {
+          "id": "E-05-F-02",
+          "name": "依赖守卫与 CI",
+          "priority": "P0",
+          "stories": [
+            {
+              "id": "E-05-F-02-S-01",
+              "name": "cargo metadata 依赖白名单守卫",
+              "priority": "P0",
+              "tasks": [
+                "scripts/check-deps.py：解析 metadata → 检查白名单",
+                "CI / pre-commit 集成"
+              ]
+            },
+            {
+              "id": "E-05-F-02-S-02",
+              "name": "前端类型守卫",
+              "priority": "P0",
+              "tasks": [
+                "tsc --noEmit && vite build",
+                "gen-ipc-types.ts（未来）自动生成 TS interface"
+              ]
+            },
+            {
+              "id": "E-05-F-02-S-03",
+              "name": "注册表计数断言",
+              "priority": "P0",
+              "tasks": [
+                "indicator_registry 响应计算 plannedCount=105 / implementedCount=all().len()"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "hardConstraints": [
+            "白名单外出边一律 fail，不允许 bypass"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "白名单",
+              "item": "check-deps.py 自动断言",
+              "verification": "CI + 注入违规测试"
+            },
+            {
+              "dimension": "计数",
+              "item": "plannedCount=105 硬编码 + implementedCount 动态",
+              "verification": "日志"
+            }
+          ]
+        },
+        {
+          "id": "E-05-F-03",
+          "name": "Tushare 预留接口",
+          "priority": "P2",
+          "stories": [
+            {
+              "id": "E-05-F-03-S-01",
+              "name": "Tushare feature gate 与不编译保证",
+              "priority": "P2",
+              "tasks": [
+                "Cargo.toml feature gate",
+                "前端 token 输入框 feature gate"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "hardConstraints": [
+            "feature gate 默认 off；release 不下载 HTTP crate"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "Gate",
+              "item": "默认 off，--features live-tushare 才启用",
+              "verification": "cargo build"
+            }
+          ]
+        },
+        {
+          "id": "E-05-F-04",
+          "name": "更新通道预留",
+          "priority": "P3",
+          "stories": [
+            {
+              "id": "E-05-F-04-S-01",
+              "name": "更新检查 UI 关闭态",
+              "priority": "P3",
+              "tasks": [
+                "SettingsPage 移除更新入口或置灰"
+              ]
+            }
+          ],
+          "architecturePosition": "",
+          "hardConstraints": [
+            "MVP SettingsPage 无更新入口"
+          ],
+          "detailedAcceptance": [
+            {
+              "dimension": "关闭",
+              "item": "SettingsPage 无更新按钮；About 不联网",
+              "verification": "UI 审查 + 抓包"
+            }
+          ]
+        }
+      ],
+      "upstreamDependencies": [
+        "E-01",
+        "E-04"
+      ],
+      "downstreamConsumers": [],
+      "architectureConstraints": [
+        {
+          "id": "SEC-01",
+          "desc": "运行时网络请求 = 0（tshark 抓包零外部连接）",
+          "source": "aka-project-architecture.html §4"
+        },
+        {
+          "id": "SEC-02",
+          "desc": "无账户/登录/支付/订阅/云/遥测",
+          "source": "aka-project-architecture.html §4"
+        },
+        {
+          "id": "SEC-03",
+          "desc": "诊断包默认关闭，排除行情/自选/持仓",
+          "source": "aka-project-architecture.html §4"
+        },
+        {
+          "id": "SEC-04",
+          "desc": "Tushare feature gate 默认 off",
+          "source": "aka-project-architecture.html §4"
+        }
+      ],
+      "detailedAcceptance": [
+        {
+          "dimension": "抓包",
+          "item": "启动 10 分钟 → tshark 零外部连接",
+          "verification": "tshark/tcpdump"
+        },
+        {
+          "dimension": "构建",
+          "item": "cargo build --release && cargo tree | grep reqwest → 空",
+          "verification": "cargo tree"
+        },
+        {
+          "dimension": "导出",
+          "item": "zip 含版本/日志/注册表/manifest；不含敏感数据",
+          "verification": "解压审查"
+        },
+        {
+          "dimension": "UI",
+          "item": "SettingsPage 无更新按钮；About 只显示版本号",
+          "verification": "e2e"
+        }
+      ],
+      "suggestedSprint": "S1 守卫 + S7 诊断"
+    }
+  ],
+  "mvpAcceptanceChecklist": [
+    {
+      "id": "A-01",
+      "item": "单进程：UI 在 WebView，Rust 在 tokio 主进程，无 sidecar、无端口",
+      "source": "aka-project-architecture.html §3"
+    },
+    {
+      "id": "A-02",
+      "item": "指标按需计算：可见窗口 + warmup 前缀，不预计算全市场",
+      "source": "aka-module-architecture.html §3"
+    },
+    {
+      "id": "A-03",
+      "item": "缓存键 = 标的+周期+复权+指标+参数+data_version+窗口",
+      "source": "aka-module-architecture.html §3"
+    },
+    {
+      "id": "A-04",
+      "item": "参数变更只重算受影响实例；旧 generation 结果丢弃",
+      "source": "aka-module-architecture.html §3"
+    },
+    {
+      "id": "A-05",
+      "item": "每根 K 线携带 provider / dataset_id / qualityFlags / adjMode",
+      "source": "aka-module-architecture.html §3"
+    },
+    {
+      "id": "A-06",
+      "item": "NaN 不补零、不前向填充；指标线在 NaN 处断开",
+      "source": "aka-module-architecture.html §5"
+    },
+    {
+      "id": "A-07",
+      "item": "依赖单向：aka-desktop → app-core → {indicator-core, data-provider, data-store}",
+      "source": "aka-module-architecture.html §1"
+    },
+    {
+      "id": "A-08",
+      "item": "三兄弟之间互不依赖；禁止反向",
+      "source": "aka-module-architecture.html §1"
+    },
+    {
+      "id": "A-09",
+      "item": "命令函数体 < 15 行，业务下沉 app-core",
+      "source": "aka-module-architecture.html §2"
+    },
+    {
+      "id": "A-10",
+      "item": "运行时网络请求 = 0（tushare 默认不编译）",
+      "source": "aka-project-architecture.html §4"
+    },
+    {
+      "id": "A-11",
+      "item": "无账户 / 无登录 / 无支付 / 无订阅 / 无云控制面",
+      "source": "aka-project-architecture.html §4"
+    },
+    {
+      "id": "A-12",
+      "item": "首装 → 行情 → 工作台 → 指标改参 全链路可离线完成",
+      "source": "aka-project-architecture.html §0"
+    }
+  ],
+  "version": "v1.1",
+  "enrichedAt": "2026-11-11",
+  "globalDependencies": {
+    "epicOrder": [
+      "E-01 → E-02",
+      "E-01 → E-04",
+      "E-01+E-02 → E-03",
+      "E-01+E-04 → E-05"
+    ],
+    "crateRule": "aka-desktop → app-core → {indicator-core, data-provider, data-store}（单向、三兄弟互依禁止）",
+    "frontendRule": "main → app → pages/features → components → lib（单向、页面不直接 invoke）",
+    "offlineBoundary": "运行时网络请求=0；tushare gate 默认 off；更新通道关闭；无账户/云/遥测"
+  },
+  "sprintSchedule": [
+    {
+      "sprint": "S1",
+      "scope": "基建",
+      "features": [
+        "E-01-F-03",
+        "E-01-F-04",
+        "E-01-F-05",
+        "E-05-F-02"
+      ],
+      "storyCount": 8
+    },
+    {
+      "sprint": "S2",
+      "scope": "编排",
+      "features": [
+        "E-01-F-02"
+      ],
+      "storyCount": 5
+    },
+    {
+      "sprint": "S3",
+      "scope": "应用壳",
+      "features": [
+        "E-01-F-01"
+      ],
+      "storyCount": 4
+    },
+    {
+      "sprint": "S4",
+      "scope": "工作台",
+      "features": [
+        "E-02-F-01",
+        "E-02-F-02",
+        "E-02-F-03"
+      ],
+      "storyCount": 10
+    },
+    {
+      "sprint": "S5",
+      "scope": "持久化",
+      "features": [
+        "E-04-F-01",
+        "E-04-F-02",
+        "E-04-F-03",
+        "E-04-F-04"
+      ],
+      "storyCount": 9
+    },
+    {
+      "sprint": "S6",
+      "scope": "扩展页面",
+      "features": [
+        "E-03-F-01",
+        "E-03-F-02",
+        "E-03-F-03",
+        "E-03-F-04"
+      ],
+      "storyCount": 6
+    },
+    {
+      "sprint": "S7",
+      "scope": "诊断",
+      "features": [
+        "E-05-F-01"
+      ],
+      "storyCount": 2
+    },
+    {
+      "sprint": "S8",
+      "scope": "指标扩展",
+      "features": [
+        "E-01-S-05 84指标"
+      ],
+      "storyCount": "84 批"
+    }
+  ]
+}

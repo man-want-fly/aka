@@ -193,6 +193,11 @@ export function QualitySection() {
                         {row.errorCode}
                       </code>
                     )}
+                    {row.missingFields.length > 0 && (
+                      <span className="qa-code" data-quality-missing-fields={row.key}>
+                        缺失字段：{row.missingFields.join(" / ")}
+                      </span>
+                    )}
                   </td>
                   <td className="qa-example-cell">
                     {row.examples.length > 0 ? (

@@ -98,6 +98,13 @@ jobs:
       - name: cargo check（含 desktop crate 的图标/context 校验）
         run: cargo check --workspace --all-targets
 
+      # AKA-30：白名单外的依赖边 / 未登记的新 crate 一律红，不允许 bypass。
+      # 反例自证紧随其后：临时 workspace 注入 reqwest，守卫必须拦下（防止守卫退化成空跑）。
+      - name: 依赖白名单守卫（AKA-30）
+        run: python3 scripts/check-deps.py --ci
+      - name: 依赖白名单反例自证（注入 reqwest 必须红）
+        run: python3 scripts/check-deps.py --selftest
+
       - name: cargo test（黄金夹具在 indicator-golden 内，失败即红）
         run: cargo test --workspace --exclude aka-desktop -- --nocapture
 

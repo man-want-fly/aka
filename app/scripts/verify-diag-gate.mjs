@@ -214,6 +214,19 @@ for (const name of diagCommands) {
   if (!debug.has(name)) failures.push(`诊断命令 commands::${name} 未注册进 debug invoke_handler（调试能力被误删）`);
 }
 
+/** AC-DF-05-05-1 / AC-DF-05-01-2：release 必须比 debug 少 5 条，且差额只能是诊断命令。 */
+const debugOnly = [...debug].filter((name) => !release.has(name));
+if (debug.size - release.size !== 5) {
+  failures.push(
+    `release 命令应比 debug 少 5 条诊断命令，实际 debug=${debug.size} / release=${release.size}（差 ${debug.size - release.size}）`,
+  );
+}
+for (const name of debugOnly) {
+  if (!diagCommands.includes(name)) {
+    failures.push(`debug 专有的 commands::${name} 不是诊断命令（release 不得少非诊断命令）`);
+  }
+}
+
 /** 物质不变量：写盘 API 只能在诊断命令，或 cfg(debug) 覆盖的辅助函数里。
  *  例外：S-06.03-02 的「导出诊断包」是 release 用户功能，写盘固定在 ~/Downloads 且内容经白名单过滤。 */
 const USER_EXPORT_FNS = new Set([
@@ -312,6 +325,7 @@ if (process.argv.includes("--emit-symbols")) {
 }
 
 console.log(
-  `诊断入口源码层门禁通过：命令全集 ${commandEntries.size} 个，诊断命令 ${diagCommands.join(" / ")}；` +
-    `release ∩ 诊断 = ∅；${literals.length} 个诊断字面量全部位于 cfg 覆盖代码内；写盘调用仅存于诊断/cfg(debug) 路径。`,
+  `诊断入口源码层门禁通过：命令全集 ${commandEntries.size} 个（debug ${debug.size} / release ${release.size}，差 ${debug.size - release.size}），` +
+    `诊断命令 ${diagCommands.join(" / ")}；release ∩ 诊断 = ∅；` +
+    `${literals.length} 个诊断字面量全部位于 cfg 覆盖代码内；写盘调用仅存于诊断/cfg(debug) 路径。`,
 );

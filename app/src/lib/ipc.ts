@@ -16,6 +16,7 @@ import type {
   DiagEnvDto,
   DiagFaultsDto,
   GetBarsRequest,
+  IndexSnapshotDto,
   IndicatorFavoritesResponse,
   ManifestResponse,
   MarketSnapshotDto,
@@ -34,26 +35,40 @@ import type {
 export const isTauriRuntime = (): boolean =>
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
+/** AC-DF-05-02-3：未归类 panic 归一为 internal，且不得把堆栈路径/回溯标记抛到 UI。 */
+const STACK_MARKERS = ["panicked at", "stack backtrace", ".rs:", "RUST_BACKTRACE"];
+
+function uiSafeMessage(raw: string): string {
+  return STACK_MARKERS.some((marker) => raw.includes(marker)) ? "内部错误，请稍后重试" : raw;
+}
+
 export function describeError(error: unknown): AppError {
   if (error && typeof error === "object") {
     const candidate = error as Partial<AppError>;
     if (typeof candidate.code === "string" && typeof candidate.message === "string") {
       return {
         code: candidate.code,
-        message: candidate.message,
+        message: uiSafeMessage(candidate.message),
         retryable: Boolean(candidate.retryable),
-        details: candidate.details,
+        // AC-DF-05-02-1/6：四字段齐全，details 无内容统一为 null。
+        details: candidate.details ?? null,
       };
     }
     if ("message" in error && typeof (error as Error).message === "string") {
       return {
         code: "E_INTERNAL",
-        message: (error as Error).message,
+        message: uiSafeMessage((error as Error).message),
         retryable: false,
+        details: null,
       };
     }
   }
-  return { code: "E_INTERNAL", message: String(error), retryable: false };
+  return {
+    code: "E_INTERNAL",
+    message: uiSafeMessage(String(error)),
+    retryable: false,
+    details: null,
+  };
 }
 
 /** 取证专用旁路：只记录命令名，不改变 invoke 行为；业务代码不得使用（默认 null 即零开销）。 */
@@ -64,8 +79,67 @@ export function setInvokeAudit(listener: ((command: string) => void) | null): vo
   invokeAudit = listener;
 }
 
-const invoke = <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
+export interface InvokeDelayConfig {
+  command: string;
+  ms: number;
+  /** 只延迟 req.code 匹配的命令（用于「旧响应晚到」取证） */
+  code?: string;
+  /** 一次性：命中后立即失效 */
+  once?: boolean;
+}
+
+/**
+ * 取证专用旁路：给指定命令注入一次性延迟，用于复现「旧响应晚到/加载中」。
+ * 只延迟、不改写返回值；业务代码不设置时为零开销。
+ * persist=true 写入 sessionStorage，跨页面刷新仍生效（刷新类取证用）。
+ */
+const DELAY_KEY = "aka.diag.invokeDelay";
+let invokeDelay: InvokeDelayConfig | null = null;
+
+export function setInvokeDelay(config: InvokeDelayConfig | null, persist = false): void {
+  invokeDelay = config;
+  try {
+    if (persist) {
+      if (config) window.sessionStorage.setItem(DELAY_KEY, JSON.stringify(config));
+      else window.sessionStorage.removeItem(DELAY_KEY);
+    }
+  } catch {
+    /* 存储不可用时只影响跨刷新生效 */
+  }
+}
+
+function pendingDelay(command: string, args?: Record<string, unknown>): number {
+  let config = invokeDelay;
+  if (!config) {
+    try {
+      const raw = window.sessionStorage.getItem(DELAY_KEY);
+      if (raw) config = JSON.parse(raw) as InvokeDelayConfig;
+    } catch {
+      config = null;
+    }
+  }
+  if (!config || config.command !== command) return 0;
+  if (config.code) {
+    // 取数/计算请求的标的字段是 req.security；部分命令（如 diag）用 code
+    const req = (args as { req?: { code?: unknown; security?: unknown } } | undefined)?.req;
+    const target = req?.code ?? req?.security;
+    if (!req || target !== config.code) return 0;
+  }
+  if (config.once) {
+    invokeDelay = null;
+    try {
+      window.sessionStorage.removeItem(DELAY_KEY);
+    } catch {
+      /* 同上 */
+    }
+  }
+  return Math.max(0, config.ms);
+}
+
+const invoke = async <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
   invokeAudit?.(command);
+  const delayMs = pendingDelay(command, args);
+  if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
   return tauriInvoke<T>(command, args);
 };
 
@@ -181,6 +255,9 @@ export const ipc = {
     invoke<void>("telemetry_note", { name, fields: fields ?? {} }),
 
   marketSnapshot: (): Promise<MarketSnapshotDto> => invoke<MarketSnapshotDto>("market_snapshot"),
+
+  /** S-04.01-01：指数概览快照（独立只读命令） */
+  indexSnapshot: (): Promise<IndexSnapshotDto> => invoke<IndexSnapshotDto>("index_snapshot"),
 
   watchlist: (): Promise<WatchlistDto> => invoke<WatchlistDto>("watchlist_read"),
 

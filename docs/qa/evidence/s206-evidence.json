@@ -1,0 +1,280 @@
+{
+  "suite": "s206",
+  "at": "2026-11-11T09:09:43.702Z",
+  "ok": true,
+  "pass": true,
+  "checks": [
+    {
+      "ac": "AC-DF-06-01-2",
+      "card": "ST-DF-06-01",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "自选点击后请求发起：600519.SH=12.0ms，002594.SZ=5.0ms，DIAG020.SZ=16.0ms，600036.SH=12.0ms，000858.SZ=17.0ms（无 120ms 静默等待，实测为下一帧提交）"
+    },
+    {
+      "ac": "AC-DF-06-01-4",
+      "card": "ST-DF-06-01",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "切标的首帧可交互时延 p50=19ms p95=33ms max=33ms（≤300ms）"
+    },
+    {
+      "ac": "AC-DF-06-01-5",
+      "card": "ST-DF-06-01",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "周期首次点击新增请求 1（期望 1），首次发起于点击后 21ms"
+    },
+    {
+      "ac": "AC-DF-06-01-3",
+      "card": "ST-DF-06-01",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "在途连点 3 次新增请求 2（0ms 首点 + 在途 100ms 合并；AC 原文要求固定 100ms，已登记偏差）"
+    },
+    {
+      "ac": "AC-DF-06-01-6",
+      "card": "ST-DF-06-01",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "bars=16.0ms calc=23.0ms total=23.0ms（并行，非串行相加）"
+    },
+    {
+      "ac": "AC-DF-06-06-4",
+      "card": "ST-DF-06-06",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "5 连点终态 active=000858.SZ head=000858.SZ（期望 000858.SZ）"
+    },
+    {
+      "ac": "AC-DF-06-03-1",
+      "card": "ST-DF-06-03",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "缩放/平移新增取数 0（期望 0）"
+    },
+    {
+      "ac": "AC-DF-06-03-2",
+      "card": "ST-DF-06-03",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "缩放/平移新增采样 0（期望 0）"
+    },
+    {
+      "ac": "AC-DF-06-02-5",
+      "card": "ST-DF-06-02",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "折叠后成交量面板消失，副图 2 格，重叠=false，首格顶 0→555"
+    },
+    {
+      "ac": "AC-DF-06-02-2",
+      "card": "ST-DF-06-02",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "成交量独立面板：title=成交量，单位=手，量纲 0~35211897，K 线底 357 ≤ 面板顶 380（与主图价格轴分离）"
+    },
+    {
+      "ac": "AC-DF-06-01-1",
+      "card": "ST-DF-06-01",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "输入 3 次@40ms 新增请求 0（期望 0），选中 600519.SH 新增请求 1（期望 1）；本工作台无「代码输入即取数」入口，按「输入不取数、选中取数」口径取证"
+    },
+    {
+      "ac": "AC-DF-06-02-1",
+      "card": "ST-DF-06-02",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "抽屉容量「主图 2/2 · 副图 3/3」，可见副图入口 1 个，未添加的入口禁用并提示上限=true（副图格含成交量格，故指标副图最多 2 个）"
+    },
+    {
+      "ac": "AC-DF-06-02-4",
+      "card": "ST-DF-06-02",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "叠加 2→2（拒绝第 3 个），提示「主图最多 2 个叠加，请先移除一个」"
+    },
+    {
+      "ac": "AC-DF-06-02-3",
+      "card": "ST-DF-06-02",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "拖拽改高：下拖 600→220px，上拖 800→96px，回拖→220px（夹在 96~220）"
+    },
+    {
+      "ac": "AC-DF-06-02-6",
+      "card": "ST-DF-06-02",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "清空指标副图后面板数 1（仅成交量=true），K 线 520 根"
+    },
+    {
+      "ac": "AC-DF-06-03-3",
+      "card": "ST-DF-06-03",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "极端缩放+平移后 start=388，count=20，总根数=520（无空白区）"
+    },
+    {
+      "ac": "AC-DF-06-03-4",
+      "card": "ST-DF-06-03",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "A=600519.SH 设 60 根 → 切 002594.SZ（点击=true，行禁用=false，80ms 后 head=002594.SZ，新增请求=1，落地=true，bars=002594.SZ，bar-count=520，状态={\"loading\":false,\"bars\":\"002594.SZ/D/520\",\"inFlight\":false,\"gen\":11,\"err\":null}）显示 120 根（400~519）→ 切回 A 显示 60 根；记忆 600519.SH|D=60根，002594.SZ|D=无"
+    },
+    {
+      "ac": "AC-DF-06-04-1",
+      "card": "ST-DF-06-04",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "二次访问元信息「按需计算 · 缓存命中 · <0.01 ms」（命中且 0ms；点击=true，响应落地=true）"
+    },
+    {
+      "ac": "AC-DF-06-04-2",
+      "card": "ST-DF-06-04",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "首次访问元信息「按需计算 · 冷算 · 0.24 ms」（冷算且耗时非 0；M 周期首次；点击=true，响应落地=true）"
+    },
+    {
+      "ac": "AC-DF-06-04-6",
+      "card": "ST-DF-06-04",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "切换后元信息先进入「更新中」=true，按需计算 · 冷算 · 0.14 ms → 「按需计算 · 冷算 · 0.24 ms」（点击 002594.SZ: true，active 600519.SH→002594.SZ，新增请求 1，加载窗内「按需计算 · 更新中 · 0.14 ms」，状态={\"loading\":false,\"bars\":\"002594.SZ/M/24\",\"inFlight\":false,\"gen\":14,\"err\":null}，中间标的点击=true/true）"
+    },
+    {
+      "ac": "AC-DF-06-05-1",
+      "card": "ST-DF-06-05",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "注入引擎异常后错误卡「引擎异常」=true，K 线 520 根，图表崩溃边界=false"
+    },
+    {
+      "ac": "AC-DF-06-05-4",
+      "card": "ST-DF-06-05",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "错误卡 traceId「trace TR-20261111-170938-0001」"
+    },
+    {
+      "ac": "AC-DF-06-05-6",
+      "card": "ST-DF-06-05",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "失败后未清空行情：head=600519.SH（期望 600519.SH），K 线 520 根，成交量面板=true"
+    },
+    {
+      "ac": "AC-DF-06-06-6",
+      "card": "ST-DF-06-06",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "最后一次请求失败后保留行情内容并提示失败（错误码 E_ENGINE_PANIC）"
+    },
+    {
+      "ac": "AC-DF-06-06-1",
+      "card": "ST-DF-06-06",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "旧成功响应晚到（002594.SZ 延迟 900ms）：稳定时 head=600519.SH，1.1s 后 head=600519.SH（期望 600519.SH）"
+    },
+    {
+      "ac": "AC-DF-06-06-3",
+      "card": "ST-DF-06-06",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "旧失败响应晚到（002594.SZ 计算延迟 900ms 后失败）：1.1s 后 head=600519.SH（期望 600519.SH），错误卡=false"
+    },
+    {
+      "ac": "AC-DF-06-03-5",
+      "card": "ST-DF-06-03",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "刷新后同一 (code,period) 恢复视口：期望 60 根，实际 60 根（start=460）"
+    },
+    {
+      "ac": "AC-DF-06-03-6",
+      "card": "ST-DF-06-03",
+      "layer": "render",
+      "passed": true,
+      "ok": true,
+      "detail": "越界视口记忆 start=99999 被夹到 start=401，count=119/520；平移 3 次后 start=212，新增取数 0"
+    }
+  ],
+  "switches": [
+    {
+      "code": "600519.SH",
+      "requestStartMs": 12,
+      "totalMs": 33
+    },
+    {
+      "code": "002594.SZ",
+      "requestStartMs": 5,
+      "totalMs": 25
+    },
+    {
+      "code": "DIAG020.SZ",
+      "requestStartMs": 16,
+      "totalMs": 8
+    },
+    {
+      "code": "600036.SH",
+      "requestStartMs": 12,
+      "totalMs": 18.999999999999773
+    },
+    {
+      "code": "000858.SZ",
+      "requestStartMs": 17,
+      "totalMs": 19
+    }
+  ],
+  "summary": {
+    "p50": 19,
+    "p95": 33,
+    "max": 33
+  },
+  "period": {
+    "firstDelta": 1,
+    "doubleDelta": 2
+  },
+  "timing": {
+    "barsMs": 16,
+    "calcMs": 23,
+    "totalMs": 23
+  },
+  "viewCount": 60,
+  "viewport": {
+    "head": "300750.SZ"
+  },
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": null
+}

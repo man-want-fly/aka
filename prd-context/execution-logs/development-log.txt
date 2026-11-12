@@ -1,0 +1,122 @@
+# Code Conventions
+
+- 仓库：AKA 单机行情工作台（macOS），Tauri 2 + Rust workspace + React/Vite。
+- 后端 crate：`app/crates/{app-core,indicator-core,data-provider,data-store}`；命令注册在 `app/src-tauri`。
+- 前端：`app/src`，类型集中在 `app/src/lib/types.ts`，IPC 唯一出口 `app/src/lib/ipc.ts`。
+- 指标元数据唯一来源：`app/manifest/indicators.json`（前端只读它取默认参数，后端只读它做校验）。
+- 错误码冻结在 §5 C-22：需求码 `E_PARAM_INVALID` ≡ 实现码 `E_PARAM_OUT_OF_RANGE`，不得新增/改名。
+- 验证命令：后端 `cargo test -p app-core`；前端 `cd app && npx tsc --noEmit`。
+- 注释与提交说明用中文；改动保持最小，不做顺手重构。
+
+## 迭代记录
+
+## [2026-11-11 15:00] - AKA-104 (ST-DF-04-03) 前端半程
+- 实现了：`model.ts` 新增 `defaultParamsFor` / `withParams`，`buildInstances` 的 4 处 `params: {}` 全部改为按 manifest 补全；manifest 缺指标定义直接抛错。
+- 变更文件：`app/src/features/workbench/model.ts`
+- 验证：`npx tsc --noEmit` 通过；manifest 覆盖 45 个指标、参数均带 default；s207 诊断实例参数键与 manifest 完全一致。
+- **Learnings for future iterations:**
+  - `merge_defaults` 在 `core.rs` 共 12 处，其中 2330（请求主路径）与 6118/6139/6152/6173（诊断路径）是真正的“补齐”调用点，其余用于测试自己造期望值。
+  - 前端 `s207Diag.ts` 的 `WM_INSTANCES` 已显式传全参数，后端收紧后不会影响 s207 取证。
+---
+
+## [2026-11-11 15:40] - AKA-104 (ST-DF-04-03) 后端收口
+- 实现了：`calc_indicators` 主路径删除 `merge_defaults` 补齐，改为 `instance.params.clone()` 后直接 `validate`；缺参返回实例级参数错误（`E_PARAM_OUT_OF_RANGE` ≡ `E_PARAM_INVALID`）。
+- 变更文件：`app/crates/app-core/src/core.rs`（2330-2332 主路径；5019-5112 新增 2 条测试；5126-5134、5228-5254 修既有用例参数；6192-6208 microbench 改用 `merge_defaults` 造完整 payload）
+- 验证：`cargo test -p app-core` 123 passed / 0 failed / 1 ignored；`npx tsc --noEmit` 通过。
+- **Learnings for future iterations:**
+  - 诊断路径（6118/6139/6152/6173）仍保留 `merge_defaults`，本次刻意不动以限制影响面；若日后也收紧，需确认 s207 取证的调用方全部传全参。
+  - 两条旧用例（4779/5442）依赖「区间校验先于实例参数校验」的顺序，调整校验顺序会转红。
+---
+
+## [2026-11-11 15:30] - AKA-85 (S-04.01-01) 指数概览
+- 实现了：dataset.db 只读指数快照（指数清单 / 近两日收盘 / 成分数 / 最新日成分成交额合计），窗口函数一次取齐，不加载全量 bars；`build_index_snapshot` 产出 8 行 + 4 KPI；`index_snapshot` 命令 debug/release 双注册；IndexPage 渲染 KPI / 表格 / 样本缺失 / 无成分 / 错误卡 / 120ms 骨架。
+- 变更文件：`app/crates/data-store/src/dataset_db.rs`、`app/crates/app-core/src/index_snapshot.rs`(新增 431 行)、`dto.rs`、`error.rs`、`core.rs`、`app/src-tauri/src/{commands,lib}.rs`、`app/src/lib/{ipc,types}.ts`、`app/src/pages/indices/IndexPage.tsx`、`app/scripts/dom-contracts.json`
+- 验证：`cargo test -p data-store -p app-core` → 26 passed / 131 tests（130 passed, 1 ignored）；`npx tsc --noEmit` 退出码 0；`node scripts/verify-diag-gate.mjs` → 47/42 差 5 通过。
+- **Learnings for future iterations:**
+  - manifest 冻结 9 字段，无 `index_count/indices[]`；指数集合一律由 `securities.is_index=1` 实际数推导，别在文档口径里引用不存在的 manifest 字段。
+  - 新增 IPC 命令必须 debug/release 双注册，且非诊断命令要落在两边，否则 diag-gate 的「差 5」断言会红（当前 47/42）。
+  - 指数页取数走独立只读快照路径，严禁搭到 `get_bars` / `calc_indicators` 热路径（C-19 边界）。
+---
+
+## [2026-11-11 15:55] - AKA-86 (S-04.01-02) 区间切换与指数工作台
+- 实现了：`index_snapshot` 扩展为返回 today/d5/d20 三区间累计涨跌幅 + 各区间可用交易日数；`read_index_quotes` 取最近 22 根（`INDEX_RANGE_BARS`）；前端区间切换纯 `useMemo` 重算 + FLIP 120ms 位移，不发 IPC；数据不足 `—` + tooltip 不缩窗；点行进指数工作台（指数字段集 / 复权置灰 / 广度 16 指标置灰）；区间与滚动位置模块级缓存。
+- 变更文件：`app/crates/data-store/src/dataset_db.rs`、`app/crates/app-core/src/{dto,index_snapshot}.rs`、`app/src/pages/indices/IndexPage.tsx`、`app/src/App.tsx`、`app/src/pages/workbench/WorkbenchPage.tsx`、`app/src/features/workbench/IndicatorDrawer.tsx`、`app/src/lib/types.ts`、`app/src/styles/app.css`、`app/scripts/dom-contracts.json`
+- 验证：`cargo test -p data-store -p app-core` → 26 passed；132 passed / 1 ignored；`npx tsc --noEmit` 0；diag-gate 47/42 差 5。
+- **Learnings for future iterations:**
+  - 区间口径固定为 `close[last] / close[last-k-1] - 1`，因此 k=20 需要 22 根日线；写「数据不足」判定时按 `k+2` 算，别按 `k+1`。
+  - 工作台已支持「带标的进入 + backRoute 返回」：`App.openSecurity(code, from)`，后续从其它页面跳工作台一律复用它。
+  - 指数专用渲染分支用 `isIndex` 判定（隐藏涨跌停/停牌、复权置灰、广度指标置灰），不要按板块字符串猜。
+---
+
+## [2026-11-11 16:10] - AKA-69 (S-03.03-01) 口径页四段式收口
+- 实现了：`manifest` 新增 `engineVersion`（源自 `indicator_core::ENGINE_VERSION`，与 app-core `calc_key` 同源）；口径四段式抽成唯一样板 `IndicatorSpecSections.tsx`（公式/参数/预热/边界，边界段带 `data-catalog-engine-version`）；三处入口（目录行 / 抽屉「口径」`data-drawer-spec` / 工作台指标卡 `data-readout-spec`）统一深链 `#/catalog/<id>?from=drawer&code=…`；原「引擎 v{version}」改名「注册表 v{version}」。
+- 变更文件：`app/crates/indicator-core/src/manifest.rs`、`app/src/lib/types.ts`、`app/src/features/catalog/IndicatorSpecSections.tsx`(新增)、`app/src/pages/catalog/CatalogPage.tsx`、`app/src/features/workbench/{IndicatorDrawer,IndicatorReadouts}.tsx`、`app/src/pages/workbench/WorkbenchPage.tsx`、`app/scripts/dom-contracts.json`
+- 验证：`cargo test -p app-core` 132 passed / 0 failed（1 ignored）；`npx tsc --noEmit` 退出码 0；`node scripts/verify-diag-gate.mjs` 47/42 差 5；`node scripts/verify_dom_contracts.mjs` 126 契约 / 35 模板 / 11 取证文件。
+- **Learnings for future iterations:**
+  - 口径内容只允许存在一份实现（`IndicatorSpecSections`）；任何新入口都复用它 + 深链，禁止再复制四段 JSX。
+  - `engineVersion` 与计算缓存 key 必须同源（`indicator_core::ENGINE_VERSION`），否则改引擎版本后口径页会撒谎。
+  - MACD 柱 = `2 × (DIF − DEA)` 三处一致：`b3.rs` 实现 / manifest M06 / 故事卡 S-03.03-01；改其一时必须同步另外两处。
+---
+
+## [2026-11-11 16:20] - AKA-33 Tauri 菜单与窗口生命周期
+- 实现了：新增 `src-tauri/src/menu.rs`（关于 / 导出诊断包 / 切换数据源 / 退出四项；切换置灰；仅 ⌘⇧E 一个自定义快捷键）；`lib.rs` 挂 `.menu()`、`.on_menu_event()`、`.on_window_event(CloseRequested)`，并改为 `build().run(|handle, event| RunEvent::Exit => shutdown())`；`AppState::shutdown()`（WAL `TRUNCATE` checkpoint + `telemetry.flush()`，`AtomicBool` 幂等）；`StateDb::checkpoint()`、`Telemetry::flush()`；前端新增 `src/lib/menu.ts`（`aka:menu` 订阅 + pending 交接），`App.tsx` 收到动作后统一导航设置页，`SettingsPage` 复用既有「关于」段与 `exportDiagnostics()`。
+- 验证：`cargo test -p aka-desktop` 21 passed（新增 shutdown 幂等 + 菜单动作映射）；`cargo test -p app-core` 133 passed / 1 ignored（新增 telemetry flush）；`npx tsc --noEmit` 0；`verify-diag-gate.mjs` 47/42 差 5；`verify_dom_contracts.mjs` 126/35/11；重建二进制后运行 6s 无 panic。
+- **Learnings for future iterations:**
+  - 菜单只发 `aka:menu` 动作事件，业务一律留在前端唯一实现里；再加菜单项时只改 `menu.rs` 的 id→action 映射与前端 handler，不要在后端补业务分支。
+  - 「未实现」的菜单项用 `enabled(false)` 且 `action_for` 返回 `None` 双保险：置灰仍可能被误触，不转发才是真的没有第二入口。
+  - 退出收尾必须幂等且覆盖两条路径：`WindowEvent::CloseRequested`（关窗）+ `RunEvent::Exit`（⌘Q / 菜单退出）；`telemetry.flush()` 后必须允许重开句柄，否则关窗后进程内后续埋点会丢。
+  - 原生菜单不是 DOM，`dom-contracts` 覆盖不到；渲染层证据只能人工看一眼，自动化只到源码 + 单测 + 启动无 panic。
+---
+
+## [2026-11-11 16:27] - AKA-63 MarketPage 表格 + 搜索 + 跳转
+- 实现了：行情页页头新增内联搜索框（`data-market-search`，带清除按钮 `data-market-search-clear`），匹配直接复用 ⌘K 的 `scoreOf`（新增导出 `pinyinOf`），行情行经 `searchItemOf` 映射成 `SearchItem`；搜索无命中走独立空态（`data-market-search-empty` + 清除搜索），页脚显示 `命中 N/M`；搜索框回车进入工作台（取过滤后首行）。
+- 变更文件：`app/src/features/search/searchIndex.ts`、`app/src/pages/market/MarketPage.tsx`、`app/src/styles/app.css`
+- 验证：`npx tsc --noEmit` 0；`npm run build` 通过；`verify-diag-gate.mjs` 47/42 差 5；`verify_dom_contracts.mjs` 126/35/11。渲染层截图未采集（Computer Use 宿主超时），搜索框样式需人工确认窄宽换行。
+- **Learnings for future iterations:**
+  - 任何「搜索/过滤」都不要新写匹配函数：`scoreOf` 是唯一口径，缺字段就补导出（如 `pinyinOf`），不要复制拼音表。
+  - 过滤不得改变用户已选的排序列；空态要分「无搜索的分区为空」与「搜索无命中」，两者文案与操作不同。
+  - 行点击已经直接进工作台时，不要再加双击入口；同一点击区两种语义只会制造误触。
+---
+
+## [2026-11-11 16:32] - AKA-51 state.db 防抖 + Backlog 对账关票
+- 实现了：`MarketPage` 视图状态改为 500ms 防抖写 `view_state`，离开页面时 flush 最新值；取证脚本 `features/market/diag.ts` 读取前等待由 200ms 调到 700ms；其余 state.db 表与 load/save 已存在（10 表，D-14 的 `indicator_params` 仍不写入）。
+- 对账关票（代码已满足，仅补证据评论）：AKA-83（无更新入口、无 updater/HTTP 依赖、P04-R1/R4 运行时断言）、AKA-49（`crates/indicator-golden` 17 夹具 + 5 用例）、AKA-48（`tushare.rs` 骨架无传输层）、AKA-34（`State<AppState>` 持有 `Arc<AppCore>`）、AKA-32（47 命令薄壳）、AKA-31（`src-tauri` 骨架）、AKA-84（子卡 85/86 Done）。
+- 变更文件：`app/src/pages/market/MarketPage.tsx`、`app/src/features/market/diag.ts`
+- 验证：`npx tsc --noEmit` 0；`npm run build` 通过；`verify-diag-gate.mjs` 47/42 差 5；`verify_dom_contracts.mjs` 126/35/11；`cargo test -p indicator-golden` 5 passed。
+- **Learnings for future iterations:**
+  - 前端写 state.db 一律防抖 500ms + 卸载 flush；单次直写虽快，但排序/切板连点会放大成 N 次事务。
+  - 改防抖会打破既有取证脚本的「立即读」，同步把 diag 的等待调到 > 防抖窗口，否则门禁假红。
+  - Backlog 里有大量「已实现但未关票」的卡：先对账再开发，避免重复造；关闭时必须写清代码位置与运行证据，并明确偏差（如 `State<AppState>`、架构由 CLI 决定）。
+---
+
+## [2026-11-11 16:45] - AKA-30 依赖守卫接 CI + 反例自证
+- 实现了：`check-deps.py` 拆出 `validate()`；规则 1 不再跳过「未登记 crate」，规则 2 新增「未登记的 workspace crate 必须报错」（堵住新增 crate 绕过白名单的洞）；新增 `--selftest`（临时 workspace 注入 `evil` + `reqwest`，断言必须命中全局禁令与未登记报错、合规 `indicator-core` 不误报）；`.github/workflows/ci.yml` build-test 在 `cargo check` 后跑 `--ci` + `--selftest`。
+- 对账关票（子卡/协作卡全部 Done）：AKA-54、AKA-18~25、AKA-26、AKA-27、AKA-28、AKA-12/13/14；仍开：AKA-11（AKA-41 未完成）、AKA-29（AKA-82 未完成）。
+- 变更文件：`app/scripts/check-deps.py`、`.github/workflows/ci.yml`
+- 验证：`python3 scripts/check-deps.py --ci` exit 0（已实现 45 / 规划 105）；`--selftest` exit 0（3 条断言全绿）；`npx tsc --noEmit` 0；`npm run build` 通过；`verify-diag-gate` 47/42；`verify_dom_contracts` 126/35/11。
+- **Learnings for future iterations:**
+  - 白名单守卫最大的洞不是「放了黑名单包」，而是「新 crate 根本不在检查集合里」；任何 allowlist 都要有「未登记 = fail」这条兜底。
+  - 守卫必须带反例自证：临时 workspace 注入违规依赖，守卫生效时 3 条断言全绿，退化时立刻红。
+  - CI 中没有被调用的脚本等于不存在；落地脚本后第一时间在 `ci.yml` 挂 required step。
+---
+
+## [2026-11-12 07:45] - AKA-41 第一批 6 个量能指标扩写
+- 实现了：B4 量类新增 A/D Line（D02）、CMF（D03）、Chaikin Osc（D04）、MFI（D05）、Force Index（D06）、PVO（D10）的 Rust 计算、注册（`ALL` 45→51）、manifest 状态转 normal 并补齐 inputs/params/outputs（D10 增加 signal 输出）、常量计数同步（implemented 51 / planned 54 / normal 49）；新增 6 条单测 + 4 个黄金夹具套件（520 根基线、零量、恒定 OHLC、长度不足），期望值全部由 gen_reference.py 按公式手算生成；新增 6 个口径页。
+- 变更文件：`app/crates/indicator-core/src/indicators/b4.rs`、`mod.rs`、`manifest.rs`；`app/crates/indicator-golden/fixtures/gen_reference.py`、`src/lib.rs`；`app/manifest/indicators.json`、`constants.json`；`app/scripts/verify_constants.mjs`；`app/content/indicators/D02|D03|D04|D05|D06|D10.json`
+- 验证：`cargo test -p indicator-core -p indicator-golden` 全绿（golden 217/217）；`verify_indicator_docs.mjs` 覆盖 51/51、failed=0 skipped=0，`--self-test` 10/10；`verify_constants.mjs` PASS；`check-deps.py --ci` PASS（已实现 51）；`verify-diag-gate.mjs` 47/42；`verify_dom_contracts.mjs` 126/35/11。
+- **Learnings for future iterations：**
+  - 零量断线不能直接用 `ema_of_valid`：NaN 会永久杀死 EMA 序列，必须用「NaN 点输出 NaN 但保留递推状态」的 `ema_skip_nan`；窗口求和同理，逐窗判 NaN 而不能用 `rolling_sum`。
+  - 单个指标的 EMA 种子索引要按「首个连续 N 个有限值」推算，别照抄 `period−1`：A/D 首根为基准 NaN，Chaikin 的首个有效索引是 fast/slow 而不是 fast−1/slow−1。
+  - 新增指标会立刻进入「已实现 ∩ P0」覆盖集合，口径页必须同批落地，否则 `verify_indicator_docs` exit 1；manifest 的 status 由 specStatus 派生，改状态要同步改 specStatus 为 manualComplete。
+  - 第二批刻意避开 D07（口径待 BA 定）与 D11（量比需分钟级数据），不要替 BA 拍口径。
+---
+
+## [2026-11-12 10:20] - AKA-41 第二批 8 个指标扩写（T07/M07/M11/M17/D12/E08/E09/E10）
+- 实现了：B2 趋势新增 KAMA（T07）；B3 动量新增 MACD-V（M07）、TRIX（M11）、TSI（M17）；B4 量类新增 BOP（D12）；新建 B5 价格代理模块新增中位价（E08）、典型价（E09）、加权收盘（E10）。注册表 `ALL` 51→59，`warmup_exact` 收录单根可截断的 D12/E08/E09/E10；manifest 8 条转 normal 并补 inputs/params/outputs（M07/M11/M17 增加 signal 输出）；常量计数同步（implemented 59 / planned 46 / normal 57）。
+- 变更文件：`app/crates/indicator-core/src/indicators/{b2,b3,b4,b5,mod}.rs`、`manifest.rs`；`app/crates/indicator-golden/fixtures/gen_reference.py`、`src/lib.rs`；`app/manifest/indicators.json`、`constants.json`；`app/scripts/verify_constants.mjs`；`app/content/indicators/T07|M07|M11|M17|D12|E08|E09|E10.json`
+- 验证：`cargo test -p indicator-core -p indicator-golden` 全绿（core 67 passed，golden 249/249）；`verify_indicator_docs.mjs` 覆盖 59/59、failed=0 skipped=0，`--self-test` 10/10；`verify_constants.mjs` PASS（implemented 59 / normal 57 / beta T16,T19）；`check-deps.py --ci` PASS（已实现 59 / 规划 105）；`verify-diag-gate.mjs` 47/42 差 5；`verify_dom_contracts.mjs` 126/35/11。
+- **Learnings for future iterations：**
+  - KAMA 的稳态滞后是递推系数 `c = SC²` 的函数：线性行情 ER=1 → SC=2/3 → `L=(1−c)/c=1.25`，不要凭直觉写 0.5；单测断言按 `/c` 推导，别按「紧跟收盘」。
+  - 无参数的价类指标（D12/E08/E09/E10）也必须写「调大/调小」分句才能过 V3-04；用「图表周期调大/调小」描述聚合口径变化即可。
+  - 第二批全部是单标的 OHLCV 可算指标；F 广度类与 E01/E02/E06/E07 依赖横截面/基准数据，本轮继续跳过，第三批仍从 `planned && P0 && 单标的` 里挑。
+---

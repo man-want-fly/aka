@@ -99,6 +99,17 @@ impl Telemetry {
         self.log_path.as_deref()
     }
 
+    /// AKA-33：退出前把 JSONL 刷到磁盘并关闭句柄；之后的 `emit` 会重新打开继续追加。
+    pub fn flush(&self) {
+        let Ok(mut sink) = self.log_file.lock() else {
+            return;
+        };
+        if let Some(file) = sink.as_ref() {
+            let _ = file.sync_all();
+        }
+        *sink = None;
+    }
+
     pub fn emit(&self, name: &'static str, fields: Vec<(&'static str, Value)>) {
         let fields = fields
             .into_iter()
@@ -289,6 +300,21 @@ mod tests {
         let summary = telemetry.summary(0);
         assert_eq!(summary.cold_samples, 30);
         assert_eq!(summary.counts.get(EVENT_COLD_MS), Some(&30));
+    }
+
+    #[test]
+    fn flush_closes_sink_and_later_emit_reopens() {
+        let dir = std::env::temp_dir().join("aka-telemetry-flush-test");
+        let path = dir.join("telemetry.jsonl");
+        let _ = std::fs::remove_file(&path);
+        let telemetry = Telemetry::with_log_path(path.clone());
+        telemetry.emit(EVENT_CACHE_HIT, vec![("cacheKey", Value::from("k1"))]);
+        telemetry.flush();
+        // 退出后再次写入必须重新打开句柄，不能把后续事件吞掉。
+        telemetry.emit(EVENT_CACHE_HIT, vec![("cacheKey", Value::from("k2"))]);
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(text.lines().count(), 2);
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

@@ -19,6 +19,8 @@ interface Props {
   onGoMarket: () => void;
   /** 数据集已加载完成（用于区分「加载中」与真实的 0 只） */
   datasetReady: boolean;
+  /** AC-DF-01-01-5：数据源未就绪时禁用标的搜索/选择，且不发起行情请求 */
+  disabled?: boolean;
   /** S-01.02-03 补2：空态页动作「重新生成模拟数据」 */
   onRegenerate: () => void | Promise<void>;
 }
@@ -48,6 +50,7 @@ export function Watchlist({
   onSelect,
   onGoMarket,
   datasetReady,
+  disabled = false,
   onRegenerate,
 }: Props) {
   const [watchlist, setWatchlist] = useState<WatchlistDto | null>(null);
@@ -138,6 +141,8 @@ export function Watchlist({
   // 当前复权口径下的最新日线：根数用于「数据不足（<20）」判定，收盘价用于持仓派生。
   // 复权口径变化时按新口径重新取数，不复用旧口径的缓存。
   useEffect(() => {
+    // AC-DF-01-01-5：数据源未就绪时不发起任何行情请求
+    if (disabled) return;
     const codes = (watchlist?.items ?? [])
       .map((item) => item.security)
       .filter((code) => !(`${adj}|${code}` in quoteRef.current));
@@ -167,7 +172,7 @@ export function Watchlist({
       quoteRef.current = next;
       setQuotes(next);
     });
-  }, [watchlist, adj]);
+  }, [watchlist, adj, disabled]);
 
   // S-01.03-01 取证入口：只在 AKA_DIAG_TARGET=s010301 时触发
   useEffect(() => {
@@ -455,13 +460,19 @@ export function Watchlist({
   }
 
   return (
-    <aside className="watchlist" data-wl-root>
+    <aside className="watchlist" data-wl-root data-wl-disabled={disabled ? "1" : undefined}>
       <div className="wl-head">
         <b>自选</b>
         <span className="wl-count" data-wl-total={total}>
           {total}/{watchlist?.limit ?? 500}
         </span>
       </div>
+
+      {disabled && (
+        <div className="wl-error" data-wl-datasource-disabled>
+          数据源未就绪（E_SOURCE_NOT_READY），标的选择已禁用
+        </div>
+      )}
 
       {readError && (
         <div className="wl-error" data-wl-read-error>
@@ -502,6 +513,8 @@ export function Watchlist({
         placeholder="搜索自选 / 代码"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
+        disabled={disabled}
+        title={disabled ? "数据源未就绪，暂不可选择标的" : undefined}
         data-wl-search
       />
 
@@ -657,7 +670,10 @@ export function Watchlist({
                 <button
                   type="button"
                   className="wl-row-main"
+                  disabled={disabled}
+                  title={disabled ? "数据源未就绪，暂不可选择标的" : undefined}
                   onClick={() => {
+                    if (disabled) return;
                     setMenuFor(null);
                     onSelect(item.security);
                   }}

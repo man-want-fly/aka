@@ -286,6 +286,8 @@ pub struct QualityCheckDto {
     /// `pass` / `info` / `warning` / `failed`
     pub status: &'static str,
     pub error_code: Option<&'static str>,
+    /// AC-DF-02-04-2：失败项缺失的字段名（如 `adj_factor` / `dailyBars`）。
+    pub missing_fields: Vec<&'static str>,
     pub examples: Vec<QualityExampleDto>,
 }
 
@@ -315,6 +317,9 @@ pub struct DatasourceCapabilityDto {
     pub label_zh: &'static str,
     pub required: bool,
     pub available: bool,
+    /// 不可用原因码：必需能力缺失为 `E_SOURCE_NOT_READY`，可选能力缺失为
+    /// `E_UNSUPPORTED`；可用时为 None（页面不得把无原因项渲染成绿色）。
+    pub reason_code: Option<&'static str>,
     /// 可选能力缺失时的降级说明；可用时为 None。
     pub note: Option<&'static str>,
 }
@@ -335,6 +340,8 @@ pub struct DatasetVersionDto {
     pub dataset_id: String,
     /// 截断展示用短码；完整值仍在 `dataset_id`。
     pub dataset_id_short: String,
+    /// ST-DF-03-03：落盘 manifest 的 data_version（如 `v2`），与 provenance 同源。
+    pub data_version: String,
     /// epoch 秒；界面按本地时区格式化为 `YYYY-MM-DD HH:mm`。
     pub generated_at: i64,
     pub row_count: u64,
@@ -412,6 +419,10 @@ pub struct SeriesDto {
     pub outputs: Vec<OutputSeriesDto>,
     pub warmup: usize,
     pub engine_version: u16,
+    /// ST-DF-04-03-6 / AC-DF-04-04-3：实例级错误（参数非法/计算失败）。
+    /// 为空表示该实例正常；其他实例的结果不受影响。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<crate::error::AppError>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -427,6 +438,90 @@ pub struct CalcResponse {
     pub bar_count: usize,
     pub range: RangeDto,
     pub series: Vec<SeriesDto>,
+}
+
+// ---------- E-04 指数概览（S-04.01-01） ----------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexSnapshotDto {
+    /// 实际渲染的指数数量（数据集驱动，不等于写死的 8）
+    pub index_count: usize,
+    /// 故事卡口径的样本指数数（8）
+    pub expected_count: usize,
+    /// `expected_count - index_count > 0`；前端据此显示「样本缺失（N/8）」
+    pub sample_missing: bool,
+    /// 数据集内有指数但缺日线、被隐藏的行数
+    pub missing_count: usize,
+    /// 数据集最新交易日
+    pub data_date: String,
+    /// manifest coverage_end
+    pub coverage_end: String,
+    pub dataset_id: String,
+    pub data_version: String,
+    pub provider: String,
+    pub simulated: bool,
+    /// epoch 秒
+    pub generated_at: i64,
+    pub rows: Vec<IndexRowDto>,
+    pub kpi: IndexKpiDto,
+}
+
+/// S-04.01-02：三个交易日区间的累计涨跌幅（今日 / 5 日 / 20 日）。
+/// 数据不足的区间为 None，不缩短窗口、不退回今日。
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexRangePctDto {
+    pub today: Option<f64>,
+    pub d5: Option<f64>,
+    pub d20: Option<f64>,
+}
+
+/// S-04.01-02：每个区间可用的交易日数（用于「数据不足」tooltip）。
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexRangeDaysDto {
+    pub today: usize,
+    pub d5: usize,
+    pub d20: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexRowDto {
+    pub code: String,
+    pub name: String,
+    /// 最新收盘点位（原始点位，不复权）
+    pub point: f64,
+    pub change_abs: Option<f64>,
+    pub change_pct: Option<f64>,
+    /// 成分样本内最新交易日成交额合计（元）
+    pub amount: Option<f64>,
+    /// `index_members` 行数；无成分为 None
+    pub members: Option<u32>,
+    /// 今日 / 5 日 / 20 日累计涨跌幅；数据不足为 None
+    pub range_pct: IndexRangePctDto,
+    /// 各区间可用交易日数（按区间分别给出，便于 tooltip 直接使用）
+    pub range_days: IndexRangeDaysDto,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexKpiItemDto {
+    pub code: String,
+    pub name: String,
+    pub change_pct: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IndexKpiDto {
+    pub leader: Option<IndexKpiItemDto>,
+    pub laggard: Option<IndexKpiItemDto>,
+    /// 涨跌幅 > 0 的行数
+    pub advancers: usize,
+    /// 全部指数成交额合计；任一行缺失时不合计，避免半截数据
+    pub amount_total: Option<f64>,
 }
 
 // ---------- E-01 行情列表 ----------
@@ -541,9 +636,22 @@ pub struct DataHealthItemDto {
     pub advice: Option<&'static str>,
 }
 
+/// ST-DF-03-04：健康检查的注入开关（仅 QA/debug；正常运行全为 false）。
+#[derive(Debug, Clone, Copy, Default)]
+pub struct HealthFaults {
+    /// 模拟 manifest 为非法 JSON（AC-DF-03-04-3）。
+    pub manifest_corrupt: bool,
+    /// 模拟 manifest 只缺 sha256 一段（AC-DF-03-04-2）。
+    pub manifest_sha256_missing: bool,
+    /// 模拟数据目录为空（AC-DF-03-04-4）。
+    pub manifest_missing: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DataHealthDto {
+    /// 整体状态：`ok` / `failed` / `not_installed`；页面据此决定徽标，不再自行推导。
+    pub state: &'static str,
     pub items: Vec<DataHealthItemDto>,
     pub passed: u32,
     pub total: u32,
@@ -551,6 +659,8 @@ pub struct DataHealthDto {
     /// 检查完成时间（epoch ms）；页面按本地时区渲染。
     pub checked_at: i64,
     pub dataset_id: Option<String>,
+    /// AC-DF-03-04-1：版本六段缺失的字段名（空 = 齐全）。
+    pub missing_version_fields: Vec<&'static str>,
 }
 
 // ---------- E-08 启动数据集校验与只读兜底（S-08.02-03） ----------
@@ -587,7 +697,9 @@ impl DatasetFault {
 pub struct DatasetIntegrityDto {
     /// ok / blocked
     pub state: &'static str,
-    /// MISSING_DIR / MANIFEST_INVALID / REQUIRED_TABLE_MISSING / SHA256_MISMATCH / DB_CORRUPT
+    /// MISSING_DIR / MANIFEST_MISSING / MANIFEST_INVALID / DATASET_DB_MISSING /
+    /// REQUIRED_TABLE_MISSING / ROW_COUNT_MISMATCH / COVERAGE_MISMATCH /
+    /// SHA256_MISMATCH / DB_CORRUPT
     pub error_code: Option<&'static str>,
     pub title: Option<&'static str>,
     pub detail: Option<String>,
@@ -597,4 +709,16 @@ pub struct DatasetIntegrityDto {
     pub readable: bool,
     pub checked_at: i64,
     pub dataset_id: Option<String>,
+    /// ST-DF-03-02：manifest 的重建代数（检测通过时也返回，供版本卡使用）。
+    pub data_version: Option<String>,
+    /// ST-DF-03-02：落盘 daily_bars 实际行数（非 manifest 自述）。
+    pub row_count: Option<u64>,
+    pub coverage_start: Option<String>,
+    pub coverage_end: Option<String>,
+    /// ST-DF-03-02：manifest 缺失的字段名（camelCase），空 = 不缺。
+    pub missing_fields: Vec<String>,
+    /// ST-DF-03-02：manifest 声明的摘要（AC-3 的「期望值」）。
+    pub expected_sha256: Option<String>,
+    /// ST-DF-03-02：从落盘数据复算的摘要（AC-3 的「实际值」）。
+    pub actual_sha256: Option<String>,
 }

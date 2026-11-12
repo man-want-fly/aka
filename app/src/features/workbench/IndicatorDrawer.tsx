@@ -28,6 +28,8 @@ export interface IndicatorDrawerProps {
   subCount: number;
   /** 当前工作台是否已有有效标的；无标的不允许把指标加进图表 */
   hasTarget: boolean;
+  /** S-04.01-02：标的为指数时，广度类指标依赖成分股涨跌家数，置灰不可加 */
+  isIndexTarget: boolean;
   /** S-03.03-02：抽屉来源深链需要带标的，返回时恢复抽屉 */
   activeCode: string | null;
   onAddMain: (id: string) => void;
@@ -49,6 +51,7 @@ export function IndicatorDrawer({
   subIds,
   subCount,
   hasTarget,
+  isIndexTarget,
   activeCode,
   onAddMain,
   onAddSub,
@@ -101,6 +104,11 @@ export function IndicatorDrawer({
 
   const pick = (item: ManifestIndicatorDto) => {
     const panel = panelKey(item);
+    // 指数没有成分涨跌家数：广度类指标直接判不可用，不静默加入
+    if (isIndexTarget && item.category === "breadth") {
+      setHint("指数不适用");
+      return;
+    }
     // 无标的：指标无处可加，先给引导，不能静默失败
     if (!hasTarget) {
       setHint("请先在行情页选择一只标的");
@@ -254,6 +262,7 @@ export function IndicatorDrawer({
           <ul className="ind-drawer__list" data-drawer-list="1">
             {list.map((item) => {
               const planned = item.status === "planned";
+              const unavailable = isIndexTarget && item.category === "breadth";
               const panel = panelKey(item);
               const added = panel === "main" ? overlayIds.includes(item.id) : subIds.includes(item.id);
               const full =
@@ -264,15 +273,16 @@ export function IndicatorDrawer({
               return (
                 <li key={item.id}>
                   <div
-                    className={`ind-row${planned ? " ind-row--planned" : ""}`}
+                    className={`ind-row${planned || unavailable ? " ind-row--planned" : ""}`}
                     data-drawer-row={item.id}
                     data-drawer-status={item.status}
                     data-drawer-category={item.category}
                     data-drawer-panel={item.panel}
                     data-drawer-params={params}
+                    data-drawer-index-unavailable={unavailable ? "1" : "0"}
                     role="button"
                     tabIndex={0}
-                    aria-disabled={planned || item.priority === "P1"}
+                    aria-disabled={planned || unavailable || item.priority === "P1"}
                     onClick={() => pick(item)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") pick(item);
@@ -288,6 +298,7 @@ export function IndicatorDrawer({
                         </span>
                         <span>{PANEL_LABEL[item.panel] ?? item.panel}</span>
                         {item.priority === "P1" && <span className="tag tag--warn">P1</span>}
+                        {unavailable && <span className="tag tag--muted">指数不适用</span>}
                         {planned && <span className="tag tag--muted">规划中</span>}
                         {item.completeness === "beta" && (
                           <span className="tag tag--beta">BETA</span>
@@ -299,6 +310,24 @@ export function IndicatorDrawer({
                         )}
                       </span>
                     </div>
+                    {!planned && (
+                      <button
+                        type="button"
+                        className="fav-chip__detail caption"
+                        data-drawer-spec={item.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          // S-03.03-02：抽屉与目录行共用同一深链，口径内容只在目录页渲染一份
+                          window.location.hash = `#/catalog/${encodeURIComponent(item.id)}?from=drawer${
+                            activeCode ? `&code=${encodeURIComponent(activeCode)}` : ""
+                          }`;
+                          onClose();
+                        }}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        口径
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="add-btn"
@@ -306,9 +335,23 @@ export function IndicatorDrawer({
                       data-drawer-added={added ? "1" : "0"}
                       data-drawer-planned={planned ? "1" : "0"}
                       data-drawer-full={full ? "1" : "0"}
-                      disabled={!hasTarget || (!added && !planned && full && panel === "sub")}
-                      aria-disabled={!hasTarget || added || planned || full}
-                      title={!hasTarget ? "请先在行情页选择一只标的" : !added && !planned && full ? (panel === "main" ? `主图最多 ${MAX_MAIN_OVERLAYS} 个叠加，请先移除一个` : `副图最多 ${MAX_SUBPLOTS} 个，请先移除一个指标`) : undefined}
+                      disabled={
+                        !hasTarget ||
+                        unavailable ||
+                        (!added && !planned && full && panel === "sub")
+                      }
+                      aria-disabled={!hasTarget || unavailable || added || planned || full}
+                      title={
+                        !hasTarget
+                          ? "请先在行情页选择一只标的"
+                          : unavailable
+                            ? "指数不适用"
+                            : !added && !planned && full
+                              ? panel === "main"
+                                ? `主图最多 ${MAX_MAIN_OVERLAYS} 个叠加，请先移除一个`
+                                : `副图最多 ${MAX_SUBPLOTS} 个，请先移除一个指标`
+                              : undefined
+                      }
                       data-drawer-blocked={!hasTarget ? "1" : "0"}
                       onClick={(event) => {
                         event.stopPropagation();

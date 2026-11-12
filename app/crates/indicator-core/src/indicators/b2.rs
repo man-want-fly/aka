@@ -16,6 +16,7 @@ use crate::Params;
 
 use super::{ensure_shape, period_of, period_of_key};
 
+pub const T07_ID: &str = "T07";
 pub const T08_ID: &str = "T08";
 pub const T09_ID: &str = "T09";
 pub const T10_ID: &str = "T10";
@@ -37,6 +38,7 @@ pub const V08_ID: &str = "V08";
 pub const V09_ID: &str = "V09";
 pub const V10_ID: &str = "V10";
 
+pub static T07: Kama = Kama;
 pub static T08: Envelopes = Envelopes;
 pub static T09: Boll = Boll;
 pub static T10: Keltner = Keltner;
@@ -693,8 +695,75 @@ impl Indicator for TrueRangeIndicator {
     }
 }
 
+/// T07 Kaufman 自适应均线（KAMA）。
+///
+/// 口径：
+/// - 效率比 `ER = |C(t) − C(t−N)| / Σ|C(k) − C(k−1)|`，分母为 0 时 ER 记 0；
+/// - 平滑常数 `SC = (ER × (2/(fast+1) − 2/(slow+1)) + 2/(slow+1))²`；
+/// - 第 N 根以当根收盘价作种子（`KAMA = C`），从下一根开始递推；
+/// - 窗口内任一收盘价缺失时该根断线，状态保留，恢复后继续递推。
+pub struct Kama;
+
+impl Indicator for Kama {
+    fn meta(&self) -> &'static Meta {
+        crate::manifest::meta_for(T07_ID, kama_warmup)
+    }
+
+    fn calc(
+        &self,
+        view: &OhlcvView<'_>,
+        params: &Params,
+        out: &mut [Vec<f64>],
+    ) -> Result<(), CalcError> {
+        ensure_shape(view, out, 1, T07_ID)?;
+        let period = period_of(params, 10);
+        let fast = period_of_key(params, "fast", 2);
+        let slow = period_of_key(params, "slow", 30);
+        if fast >= slow {
+            return Err(CalcError::ParamOrder("fast 必须小于 slow".to_string()));
+        }
+        out[0].fill(f64::NAN);
+        if period < 2 || view.len() <= period {
+            return Ok(());
+        }
+
+        let alpha_fast = 2.0 / (fast as f64 + 1.0);
+        let alpha_slow = 2.0 / (slow as f64 + 1.0);
+        let mut state = f64::NAN;
+        for i in period..view.len() {
+            let window = &view.close[i + 1 - period..=i];
+            if window.iter().any(|value| !value.is_finite()) {
+                continue;
+            }
+            let change = (view.close[i] - view.close[i - period]).abs();
+            let volatility: f64 = (i + 1 - period..=i)
+                .map(|k| (view.close[k] - view.close[k - 1]).abs())
+                .sum();
+            let ratio = if volatility > 0.0 {
+                change / volatility
+            } else {
+                0.0
+            };
+            let smoothing = ratio * (alpha_fast - alpha_slow) + alpha_slow;
+            let previous = if state.is_finite() {
+                state
+            } else {
+                view.close[i]
+            };
+            state = previous + smoothing * smoothing * (view.close[i] - previous);
+            out[0][i] = state;
+        }
+        Ok(())
+    }
+}
+
 fn warmup_zero(_params: &Params) -> usize {
     0
+}
+
+/// KAMA 的首个有效值下标等于效率比周期（第 N 根以收盘价作种子）。
+fn kama_warmup(params: &Params) -> usize {
+    period_of(params, 10)
 }
 
 fn warmup_one(_params: &Params) -> usize {
@@ -890,6 +959,39 @@ mod tests {
         let out = run(V02_ID, len);
         let i = 20;
         assert!((out[0][i] - atr[i] / close[i]).abs() < 1e-12);
+    }
+
+    #[test]
+    fn t07_kama_adapts_and_seeds_on_period_bar() {
+        // 单调上行：ER=1、SC=alpha_fast，KAMA 第 10 根以收盘价作种子，之后紧跟收盘价。
+        let close: Vec<f64> = (0..40).map(|i| 100.0 + i as f64).collect();
+        let out = run_kama(&close, 10, 2, 30);
+        assert!(out[..10].iter().all(|value| value.is_nan()), "第 10 根前无输出");
+        assert_eq!(out[10], close[10], "种子取当根收盘价");
+        // ER=1 → SC=2/3，递推系数 c=SC²=4/9；线性行情稳态滞后 L=(1−c)/c=5/4。
+        assert!(out[39] > out[38], "单边上行应持续抬升");
+        assert!(
+            (close[39] - out[39] - 1.25).abs() < 1e-6,
+            "SC=2/3 时稳态滞后应为 1.25，实际 {}",
+            close[39] - out[39]
+        );
+
+        // 平盘：ER 分母为 0 记 0，SC=alpha_slow²，KAMA 保持种子不变。
+        let flat = vec![10.0; 40];
+        let out = run_kama(&flat, 10, 2, 30);
+        assert!((out[39] - 10.0).abs() < 1e-12, "零波动时 KAMA 不得跳变");
+    }
+
+    fn run_kama(close: &[f64], period: i64, fast: i64, slow: i64) -> Vec<f64> {
+        let indicator = lookup(T07_ID).unwrap();
+        let mut params = merge_defaults(indicator.meta().params, &Params::new());
+        params.insert("period".into(), ParamValue::Int(period));
+        params.insert("fast".into(), ParamValue::Int(fast));
+        params.insert("slow".into(), ParamValue::Int(slow));
+        let view = OhlcvView::new(close, close, close, close, close, close);
+        let mut out = vec![vec![0.0; close.len()]; indicator.meta().outputs.len()];
+        indicator.calc(&view, &params, &mut out).unwrap();
+        out.remove(0)
     }
 
     #[test]

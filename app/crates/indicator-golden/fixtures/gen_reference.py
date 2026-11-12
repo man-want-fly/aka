@@ -652,6 +652,138 @@ def nr7(high, low, period):
     return {"nr7": out}
 
 
+# ----------------------------- B4 量能 -----------------------------
+def money_flow_multiplier(high, low, close, volume):
+    """MFM = ((C−L) − (H−C)) / (H−L)；H=L 记 0；缺失/零量返回 None。"""
+    if high is None or low is None or close is None or volume is None:
+        return None
+    if volume <= 0.0:
+        return None
+    if high > low:
+        return ((close - low) - (high - close)) / (high - low)
+    return 0.0
+
+
+def ad_line(high, low, close, volume):
+    """首根作基准（None），零量根断线但累计值保留。"""
+    out = [NAN] * len(close)
+    acc = 0.0
+    for i in range(1, len(close)):
+        mfm = money_flow_multiplier(high[i], low[i], close[i], volume[i])
+        if mfm is None:
+            continue
+        acc += mfm * volume[i]
+        out[i] = acc
+    return out
+
+
+def cmf(high, low, close, volume, period):
+    n = len(close)
+    flow, vols = [NAN] * n, [NAN] * n
+    for i in range(n):
+        mfm = money_flow_multiplier(high[i], low[i], close[i], volume[i])
+        if mfm is None:
+            continue
+        flow[i] = mfm * volume[i]
+        vols[i] = volume[i]
+    flow_sum = window_sum_finite(flow, period)
+    vol_sum = window_sum_finite(vols, period)
+    out = [NAN] * n
+    for i in range(n):
+        if flow_sum[i] is not None and vol_sum[i] is not None and vol_sum[i] > 0.0:
+            out[i] = flow_sum[i] / vol_sum[i]
+    return out
+
+
+def ema_skip_nan(values, period):
+    """缺失根输出 None 但保留递推状态；首个连续 period 根有效值作 SMA 种子。"""
+    out = [NAN] * len(values)
+    if period < 2 or len(values) < period:
+        return out
+    start = next((i for i in range(len(values) - period + 1)
+                  if all(v is not None for v in values[i:i + period])), None)
+    if start is None:
+        return out
+    seed = sum(values[start:start + period]) / period
+    out[start + period - 1] = seed
+    alpha = 2.0 / (period + 1.0)
+    state = seed
+    for i in range(start + period, len(values)):
+        if values[i] is not None:
+            state = alpha * values[i] + (1 - alpha) * state
+            out[i] = state
+    return out
+
+
+def chaikin_osc(high, low, close, volume, fast, slow):
+    ad = ad_line(high, low, close, volume)
+    fast_ema = ema_skip_nan(ad, fast)
+    slow_ema = ema_skip_nan(ad, slow)
+    out = [NAN] * len(close)
+    for i in range(len(close)):
+        if fast_ema[i] is not None and slow_ema[i] is not None:
+            out[i] = fast_ema[i] - slow_ema[i]
+    return out
+
+
+def mfi(high, low, close, volume, period):
+    n = len(close)
+    positive, negative = [0.0] * n, [0.0] * n
+    broken = [True] * n
+    prev_tp = None
+    for i in range(n):
+        h, l, c, v = high[i], low[i], close[i], volume[i]
+        if any(x is None for x in (h, l, c, v)) or v <= 0.0:
+            prev_tp = None
+            continue
+        tp = (h + l + c) / 3.0
+        if prev_tp is not None:
+            flow = tp * v
+            if tp > prev_tp:
+                positive[i] = flow
+            elif tp < prev_tp:
+                negative[i] = flow
+            broken[i] = False
+        prev_tp = tp
+    pos_sum = window_sum_finite(positive, period)
+    neg_sum = window_sum_finite(negative, period)
+    out = [NAN] * n
+    for i in range(period, n):
+        if any(broken[i + 1 - period:i + 1]):
+            continue
+        up, down = pos_sum[i], neg_sum[i]
+        if up is None or down is None or (up <= 0.0 and down <= 0.0):
+            continue
+        if down <= 0.0:
+            out[i] = 100.0
+        elif up <= 0.0:
+            out[i] = 0.0
+        else:
+            out[i] = 100.0 - 100.0 / (1.0 + up / down)
+    return out
+
+
+def force_index(close, volume, period):
+    force = [NAN] * len(close)
+    for i in range(1, len(close)):
+        if (close[i] is not None and close[i - 1] is not None
+                and volume[i] is not None and volume[i] > 0.0):
+            force[i] = (close[i] - close[i - 1]) * volume[i]
+    return ema_skip_nan(force, period)
+
+
+def pvo(volume, fast, slow, signal):
+    vol = [v if (v is not None and v > 0.0) else NAN for v in volume]
+    fast_ema = ema_skip_nan(vol, fast)
+    slow_ema = ema_skip_nan(vol, slow)
+    value = [NAN] * len(volume)
+    for i in range(len(volume)):
+        if (fast_ema[i] is not None and slow_ema[i] is not None
+                and slow_ema[i] != 0.0):
+            value[i] = (fast_ema[i] - slow_ema[i]) / slow_ema[i] * 100.0
+    return {"value": value, "signal": ema_skip_nan(value, signal)}
+
+
 
 def roundv(value):
     return None if value is None else round(value, 9)
@@ -697,13 +829,14 @@ def case(indicator_id, params, outputs, expected, tolerance=None):
 # - 无量纲比率（T21 R²）：absolute 1e-6
 # - 百分比振荡（E13 BIAS，%）与 MACD 副图：absolute 1e-4
 # - B2 无量纲振荡（V02/V04/V05/V07/V08）：absolute 1e-4
-# - B3 摆动（M01/M02/M04/M05/M08/M09/M19/M20/M21/M25）：absolute 1e-4；M26 计数严格相等
+# - B3 摆动（M01/M02/M04/M05/M07/M08/M09/M11/M17/M19/M20/M21/M25）：absolute 1e-4；M26 计数严格相等
+# - B4 量能振荡（D03 CMF / D04 Chaikin / D05 MFI / D10 PVO / D12 BOP）：absolute 1e-4；D02/D06 随价格量纲 relative 1e-6
 # - T24 为原始窗口最值直取，用 absolute 1e-9 等价精确（容差 0）
 # - 手算类夹具（edge_manual_nonlinear / edge_arithmetic_regression）允许单 case 收紧到 absolute 1e-9
 TOLERANCE_RULES = (
     "relative:1e-6=价格/斜率类（元、元/根），分母 max(|expected|,1.0)；"
     "absolute:1e-6=R²（无量纲）；"
-    "absolute:1e-4=BIAS(%)、MACD 副图、B2 无量纲振荡（ATRP/带宽/%B/ULCER/GAPO）、B3 摆动（RSI/KDJ/%R/CCI/PPO/ROC/Aroon/Vortex/CMO/脉冲）；"
+    "absolute:1e-4=BIAS(%)、MACD 副图、B2 无量纲振荡（ATRP/带宽/%B/ULCER/GAPO）、B3 摆动（RSI/KDJ/%R/CCI/PPO/ROC/Aroon/Vortex/CMO/脉冲/MACD-V/TRIX/TSI）、B4 量能振荡（CMF/MFI/PVO/Chaikin/BOP）；"
     "absolute:1e-9=仅手算夹具单 case 收紧，或 T24 原始值直取（容差 0）；"
     "count=计数严格相等"
 )
@@ -727,7 +860,15 @@ TOLERANCE_BY_INDICATOR = {
     "M20": "absolute:1e-4",
     "M21": "absolute:1e-4",
     "M25": "absolute:1e-4",
+    "M07": "absolute:1e-4",
+    "M11": "absolute:1e-4",
+    "M17": "absolute:1e-4",
     "M26": "count",
+    "D03": "absolute:1e-4",
+    "D04": "absolute:1e-4",
+    "D05": "absolute:1e-4",
+    "D10": "absolute:1e-4",
+    "D12": "absolute:1e-4",
 }
 DEFAULT_TOLERANCE = "relative:1e-6"
 
@@ -828,6 +969,138 @@ def b3_cases(data):
         case("M25", {"fast": 12, "slow": 26, "signal": 9, "ema": 13},
              ["impulse", "state"], elder_impulse(c, 12, 26, 9, 13)),
         case("M26", {"period": 7}, ["nr7"], nr7(h, l, 7)),
+    ]
+
+
+def b4_cases(data, cmf_period=20, mfi_period=14, force_period=13,
+             pvo_params=(12, 26, 9)):
+    """B4 首批量能指标：A/D、CMF、Chaikin、MFI、Force、PVO。"""
+    h, l, c, v = data["high"], data["low"], data["close"], data["volume"]
+    return [
+        case("D02", {}, ["value"], {"value": ad_line(h, l, c, v)}),
+        case("D03", {"period": cmf_period}, ["value"],
+             {"value": cmf(h, l, c, v, cmf_period)}),
+        case("D04", {"fast": 3, "slow": 10}, ["value"],
+             {"value": chaikin_osc(h, l, c, v, 3, 10)}),
+        case("D05", {"period": mfi_period}, ["value"],
+             {"value": mfi(h, l, c, v, mfi_period)}),
+        case("D06", {"period": force_period}, ["value"],
+             {"value": force_index(c, v, force_period)}),
+        case("D10", {"fast": pvo_params[0], "slow": pvo_params[1],
+                     "signal": pvo_params[2]},
+             ["value", "signal"],
+             pvo(v, pvo_params[0], pvo_params[1], pvo_params[2])),
+    ]
+
+
+# ----------------------------- B5 参考实现（AKA-41 第二批） -----------------------------
+def kama(closes, period, fast, slow):
+    out = [NAN] * len(closes)
+    if period < 2 or len(closes) <= period:
+        return out
+    alpha_fast = 2.0 / (fast + 1.0)
+    alpha_slow = 2.0 / (slow + 1.0)
+    state = None
+    for i in range(period, len(closes)):
+        window = closes[i + 1 - period:i + 1]
+        if any(value is None for value in window):
+            continue
+        change = abs(closes[i] - closes[i - period])
+        volatility = sum(abs(closes[k] - closes[k - 1])
+                         for k in range(i + 1 - period, i + 1))
+        ratio = change / volatility if volatility > 0.0 else 0.0
+        smoothing = ratio * (alpha_fast - alpha_slow) + alpha_slow
+        previous = state if state is not None else closes[i]
+        state = previous + smoothing * smoothing * (closes[i] - previous)
+        out[i] = state
+    return out
+
+
+def macd_v(closes, high, low, fast, slow, signal, atr_period):
+    fast_ema = ema(closes, fast)
+    slow_ema = ema(closes, slow)
+    average_range = atr(high, low, closes, atr_period)
+    value = [NAN] * len(closes)
+    for i in range(len(closes)):
+        if (fast_ema[i] is not None and slow_ema[i] is not None
+                and average_range[i] is not None and average_range[i] > 0.0):
+            value[i] = (fast_ema[i] - slow_ema[i]) / average_range[i] * 100.0
+    return {"value": value, "signal": ema_of_valid(value, signal)}
+
+
+def trix(closes, period, signal):
+    first = ema(closes, period)
+    second = ema_of_valid(first, period)
+    third = ema_of_valid(second, period)
+    value = [NAN] * len(closes)
+    for i in range(1, len(closes)):
+        previous = third[i - 1]
+        if third[i] is not None and previous is not None and previous != 0.0:
+            value[i] = (third[i] - previous) / previous * 100.0
+    return {"value": value, "signal": ema_of_valid(value, signal)}
+
+
+def tsi(closes, long_period, short_period, signal):
+    n = len(closes)
+    change = [NAN] * n
+    magnitude = [NAN] * n
+    for i in range(1, n):
+        if closes[i] is not None and closes[i - 1] is not None:
+            change[i] = closes[i] - closes[i - 1]
+            magnitude[i] = abs(change[i])
+    smoothed = ema_of_valid(ema_of_valid(change, long_period), short_period)
+    scale = ema_of_valid(ema_of_valid(magnitude, long_period), short_period)
+    value = [NAN] * n
+    for i in range(n):
+        if smoothed[i] is not None and scale[i] is not None:
+            value[i] = 0.0 if scale[i] == 0.0 else smoothed[i] / scale[i] * 100.0
+    return {"value": value, "signal": ema_of_valid(value, signal)}
+
+
+def bop(open_, high, low, close):
+    out = [NAN] * len(close)
+    for i in range(len(close)):
+        if None in (open_[i], high[i], low[i], close[i]):
+            continue
+        span = high[i] - low[i]
+        out[i] = (close[i] - open_[i]) / span if span > 0.0 else 0.0
+    return out
+
+
+def median_price(high, low):
+    return [NAN if (h is None or l is None) else (h + l) / 2.0
+            for h, l in zip(high, low)]
+
+
+def typical_price(high, low, close):
+    return [NAN if (h is None or l is None or c is None) else (h + l + c) / 3.0
+            for h, l, c in zip(high, low, close)]
+
+
+def weighted_close(high, low, close):
+    return [NAN if (h is None or l is None or c is None) else (h + l + 2.0 * c) / 4.0
+            for h, l, c in zip(high, low, close)]
+
+
+def b5_cases(data):
+    return [
+        case("T07", {"period": 10, "fast": 2, "slow": 30}, ["value"],
+             {"value": kama(data["close"], 10, 2, 30)}),
+        case("M07", {"fast": 12, "slow": 26, "signal": 9, "atr": 14},
+             ["value", "signal"],
+             macd_v(data["close"], data["high"], data["low"], 12, 26, 9, 14)),
+        case("M11", {"period": 12, "signal": 9}, ["value", "signal"],
+             trix(data["close"], 12, 9)),
+        case("M17", {"long": 25, "short": 13, "signal": 7}, ["value", "signal"],
+             tsi(data["close"], 25, 13, 7)),
+        case("D12", {}, ["value"],
+             {"value": bop(data["open"], data["high"], data["low"], data["close"])}),
+        case("E08", {}, ["value"],
+             {"value": median_price(data["high"], data["low"])}),
+        case("E09", {}, ["value"],
+             {"value": typical_price(data["high"], data["low"], data["close"])}),
+        case("E10", {}, ["value"],
+             {"value": weighted_close(data["high"], data["low"], data["close"])}),
     ]
 
 
@@ -1106,6 +1379,84 @@ def main():
     # 首根：1 根 K 线，全部输出 NaN（warmup 均 ≥ 6）。
     write("edge_b3_first_bar.json",
           suite_ohlc("edge_b3_first_bar", 0, first_data, b3_cases(first_data)))
+
+    # ----------------------------- B4 夹具 -----------------------------
+    write("base_b4_volume_seed42_520.json",
+          suite_ohlc("base_b4_volume_seed42_520", 42, data, b4_cases(data)))
+
+    # 零成交量：第 10/11 根 volume=0，验证 A/D 断线后接续、MFI 窗口污染、PVO/Force 恢复。
+    zero_data = build_input(60, 19)
+    zero_data["volume"][10] = 0.0
+    zero_data["volume"][11] = 0.0
+    write("edge_b4_zero_volume.json",
+          suite_ohlc("edge_b4_zero_volume", 19, zero_data, b4_cases(zero_data)))
+
+    # 常数 OHLC：H=L=O=C=10，成交量恒定；MFM 记 0，CMF=0，MFI 全 NaN，PVO=0。
+    write("edge_b4_constant_ohlc.json",
+          suite_ohlc("edge_b4_constant_ohlc", 0, flat_data, b4_cases(flat_data)))
+
+    # 预热不足：20 根数据 + 大周期（D02/D04 仍有效，其余窗口不足）。
+    short_b4 = build_input(20, 23)
+    insufficient_b4 = [
+        case("D02", {}, ["value"],
+             {"value": ad_line(short_b4["high"], short_b4["low"],
+                               short_b4["close"], short_b4["volume"])}),
+        case("D03", {"period": 60}, ["value"],
+             {"value": cmf(short_b4["high"], short_b4["low"], short_b4["close"],
+                           short_b4["volume"], 60)}),
+        case("D04", {"fast": 3, "slow": 10}, ["value"],
+             {"value": chaikin_osc(short_b4["high"], short_b4["low"],
+                                   short_b4["close"], short_b4["volume"], 3, 10)}),
+        case("D05", {"period": 60}, ["value"],
+             {"value": mfi(short_b4["high"], short_b4["low"], short_b4["close"],
+                           short_b4["volume"], 60)}),
+        case("D06", {"period": 60}, ["value"],
+             {"value": force_index(short_b4["close"], short_b4["volume"], 60)}),
+        case("D10", {"fast": 20, "slow": 60, "signal": 9}, ["value", "signal"],
+             pvo(short_b4["volume"], 20, 60, 9)),
+    ]
+    write("edge_b4_insufficient.json",
+          suite_ohlc("edge_b4_insufficient", 23, short_b4, insufficient_b4))
+
+    # ----------------------------- B5 夹具（AKA-41 第二批） -----------------------------
+    write("base_b5_batch2_seed42_520.json",
+          suite_ohlc("base_b5_batch2_seed42_520", 42, data, b5_cases(data)))
+
+    # 常数 OHLC：H=L=O=C=10、成交量为 0；KAMA 保持种子，MACD-V 因 ATR=0 无定义，
+    # TRIX/TSI/BOP 记 0，价格代理恒为 10。
+    write("edge_b5_constant_ohlc.json",
+          suite_ohlc("edge_b5_constant_ohlc", 0, flat_data, b5_cases(flat_data)))
+
+    # 首根：1 根 K 线；D12/E08/E09/E10 当根有效，其余预热不足为 NaN。
+    write("edge_b5_first_bar.json",
+          suite_ohlc("edge_b5_first_bar", 0, first_data, b5_cases(first_data)))
+
+    # 预热不足：20 根数据 + 大周期，周期驱动的 T07/M07/M11/M17 全 NaN。
+    short_b5 = build_input(20, 31)
+    insufficient_b5 = [
+        case("T07", {"period": 60, "fast": 2, "slow": 30}, ["value"],
+             {"value": kama(short_b5["close"], 60, 2, 30)}),
+        case("M07", {"fast": 12, "slow": 60, "signal": 9, "atr": 14},
+             ["value", "signal"],
+             macd_v(short_b5["close"], short_b5["high"], short_b5["low"], 12, 60, 9, 14)),
+        case("M11", {"period": 60, "signal": 9}, ["value", "signal"],
+             trix(short_b5["close"], 60, 9)),
+        case("M17", {"long": 60, "short": 13, "signal": 7}, ["value", "signal"],
+             tsi(short_b5["close"], 60, 13, 7)),
+        case("D12", {}, ["value"],
+             {"value": bop(short_b5["open"], short_b5["high"], short_b5["low"],
+                           short_b5["close"])}),
+        case("E08", {}, ["value"],
+             {"value": median_price(short_b5["high"], short_b5["low"])}),
+        case("E09", {}, ["value"],
+             {"value": typical_price(short_b5["high"], short_b5["low"],
+                                     short_b5["close"])}),
+        case("E10", {}, ["value"],
+             {"value": weighted_close(short_b5["high"], short_b5["low"],
+                                      short_b5["close"])}),
+    ]
+    write("edge_b5_insufficient.json",
+          suite_ohlc("edge_b5_insufficient", 31, short_b5, insufficient_b5))
 
 
 if __name__ == "__main__":

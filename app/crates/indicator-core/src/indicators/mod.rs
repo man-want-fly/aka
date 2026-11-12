@@ -12,16 +12,20 @@ use crate::Params;
 pub mod b2;
 pub mod b3;
 pub mod b4;
+pub mod b5;
 
 pub use b2::{
-    T08_ID, T09_ID, T10_ID, T11_ID, T12_ID, T13_ID, T14_ID, T15_ID, T16_ID, T23_ID, T24_ID,
-    V01_ID, V02_ID, V03_ID, V04_ID, V05_ID, V07_ID, V08_ID, V09_ID, V10_ID,
+    T07_ID, T08_ID, T09_ID, T10_ID, T11_ID, T12_ID, T13_ID, T14_ID, T15_ID, T16_ID, T23_ID,
+    T24_ID, V01_ID, V02_ID, V03_ID, V04_ID, V05_ID, V07_ID, V08_ID, V09_ID, V10_ID,
 };
 pub use b3::{
-    M01_ID, M02_ID, M04_ID, M05_ID, M08_ID, M09_ID, M10_ID, M19_ID, M20_ID, M21_ID, M24_ID,
-    M25_ID, M26_ID,
+    M01_ID, M02_ID, M04_ID, M05_ID, M07_ID, M08_ID, M09_ID, M10_ID, M11_ID, M17_ID, M19_ID,
+    M20_ID, M21_ID, M24_ID, M25_ID, M26_ID,
 };
-pub use b4::D01_ID;
+pub use b4::{
+    D01_ID, D02_ID, D03_ID, D04_ID, D05_ID, D06_ID, D10_ID, D12_ID,
+};
+pub use b5::{E08_ID, E09_ID, E10_ID};
 
 pub const PLANNED_INDICATOR_COUNT: usize = 105;
 
@@ -46,6 +50,37 @@ pub fn all() -> &'static [&'static dyn Indicator] {
 
 pub fn implemented_count() -> usize {
     ALL.len()
+}
+
+/// ST-DF-04-05：该指标的“预热声明”是否足以支撑「可见窗口 + 预热前缀」的精确截断。
+///
+/// 仅当全部输出只依赖 `[i - warmup, i]` 内的输入（纯滑动窗口 + 本地算术）时为 true；
+/// 递归（EMA/RSI/KDJ/PSAR）、累积（OBV）与前视（一目均衡表迟行线）类指标返回 false，
+/// 编排层必须回退全序列计算，否则截断结果无法与全序列结果逐点一致（AC-DF-04-05-2）。
+pub fn warmup_exact(id: &str) -> bool {
+    matches!(
+        id,
+        T03_ID
+            | T11_ID
+            | T19_ID
+            | T20_ID
+            | T21_ID
+            | T22_ID
+            | T23_ID
+            | T24_ID
+            | V03_ID
+            | V07_ID
+            | V09_ID
+            | M04_ID
+            | M09_ID
+            | M10_ID
+            | M19_ID
+            | M26_ID
+            | D12_ID
+            | E08_ID
+            | E09_ID
+            | E10_ID
+    )
 }
 
 /// 先按注册表 id 精确查；未命中再用 manifest alias 解析（`ma`→`T01`、`macd`→`M06`）。
@@ -90,14 +125,18 @@ static T22: LinRegIndicator = LinRegIndicator {
 static E13: Bias = Bias;
 static M06: Macd = Macd;
 
-static ALL: [&dyn Indicator; 45] = [
+static ALL: [&dyn Indicator; 59] = [
     &T01, &T02, &T03, &T04, &T05, &T19, &T20, &T21, &T22, &E13, &M06,
+    &b2::T07,
     &b2::T08, &b2::T09, &b2::T10, &b2::T11, &b2::T12, &b2::T13, &b2::T14, &b2::T15,
     &b2::T16, &b2::T23, &b2::T24,
     &b2::V01, &b2::V02, &b2::V03, &b2::V04, &b2::V05, &b2::V07, &b2::V08, &b2::V09, &b2::V10,
     &b3::M01, &b3::M02, &b3::M04, &b3::M05, &b3::M08, &b3::M09, &b3::M10, &b3::M19,
     &b3::M20, &b3::M21, &b3::M24, &b3::M25, &b3::M26,
-    &b4::Obv,
+    &b3::M07, &b3::M11, &b3::M17,
+    &b4::Obv, &b4::AdLine, &b4::Cmf, &b4::ChaikinOsc, &b4::Mfi, &b4::ForceIndex, &b4::Pvo,
+    &b4::Bop,
+    &b5::MedianPrice, &b5::TypicalPrice, &b5::WeightedClose,
 ];
 
 #[derive(Debug, Clone, Copy)]
@@ -578,14 +617,17 @@ mod tests {
 
     #[test]
     fn registry_ids_and_aliases() {
-        assert_eq!(implemented_count(), 45);
+        assert_eq!(implemented_count(), 59);
         assert_eq!(PLANNED_INDICATOR_COUNT, 105);
         for id in [
-            T01_ID, T02_ID, T03_ID, T04_ID, T05_ID, T19_ID, T20_ID, T21_ID, T22_ID, E13_ID, MACD_ID,
+            T01_ID, T02_ID, T03_ID, T04_ID, T05_ID, T07_ID, T19_ID, T20_ID, T21_ID, T22_ID,
+            E13_ID, MACD_ID,
             T08_ID, T09_ID, T10_ID, T11_ID, T12_ID, T13_ID, T14_ID, T15_ID, T16_ID, T23_ID, T24_ID,
             V01_ID, V02_ID, V03_ID, V04_ID, V05_ID, V07_ID, V08_ID, V09_ID, V10_ID,
-            M01_ID, M02_ID, M04_ID, M05_ID, M08_ID, M09_ID, M10_ID, M19_ID, M20_ID, M21_ID,
-            M24_ID, M25_ID, M26_ID, D01_ID,
+            M01_ID, M02_ID, M04_ID, M05_ID, M07_ID, M08_ID, M09_ID, M10_ID, M11_ID, M17_ID,
+            M19_ID, M20_ID, M21_ID, M24_ID, M25_ID, M26_ID,
+            D01_ID, D02_ID, D03_ID, D04_ID, D05_ID, D06_ID, D10_ID, D12_ID,
+            E08_ID, E09_ID, E10_ID,
         ] {
             assert!(lookup(id).is_some(), "缺少注册指标 {id}");
         }
@@ -638,5 +680,74 @@ mod tests {
             zero_bias[0][119].is_nan(),
             "BIAS 零均值应输出 NaN 而不是 Infinity"
         );
+    }
+
+    /// ST-DF-04-05：声明为 `warmup_exact` 的指标，按「可见窗口 + 预热前缀」截断输入后，
+    /// 可见窗口内每个输出必须与全序列计算逐点一致（含 NaN 位置）；否则不得声明。
+    /// 调试时可设置 `PROBE=1` 打印全部指标的截断一致性与预热声明，便于核对清单。
+    #[test]
+    fn exact_warmup_indicators_match_full_series() {
+        // 用非退化序列（价格/量都有变化）核对，避免常数序列把偏移错误掩盖成“恰好相等”。
+        let n = 520usize;
+        let close: Vec<f64> = (0..n)
+            .map(|i| 10.0 + ((i * 37) % 23) as f64 * 0.13 + (i as f64 * 0.7).sin() * 0.4)
+            .collect();
+        let open: Vec<f64> = (0..n)
+            .map(|i| close[i] - (((i * 11) % 7) as f64 - 3.0) * 0.02)
+            .collect();
+        let high: Vec<f64> = (0..n).map(|i| close[i].max(open[i]) + 0.2 + (i % 5) as f64 * 0.03).collect();
+        let low: Vec<f64> = (0..n).map(|i| close[i].min(open[i]) - 0.25 - (i % 3) as f64 * 0.04).collect();
+        let volume: Vec<f64> = (0..n).map(|i| 100.0 + ((i * 13) % 97) as f64).collect();
+        let amount: Vec<f64> = (0..n).map(|i| volume[i] * close[i]).collect();
+        let view = |start: usize, end: usize| {
+            OhlcvView::new(
+                &open[start..end],
+                &high[start..end],
+                &low[start..end],
+                &close[start..end],
+                &volume[start..end],
+                &amount[start..end],
+            )
+        };
+        let (vis_start, vis_end) = (200usize, 320usize);
+        for indicator in all() {
+            let meta = indicator.meta();
+            let params = params(meta);
+            let warmup = (meta.warmup)(&params);
+            let input_start = vis_start.saturating_sub(warmup);
+
+            let mut full = vec![vec![0.0; n]; meta.outputs.len()];
+            indicator.calc(&view(0, n), &params, &mut full).unwrap();
+            let mut part = vec![vec![0.0; vis_end - input_start]; meta.outputs.len()];
+            indicator
+                .calc(&view(input_start, vis_end), &params, &mut part)
+                .unwrap();
+
+            let offset = vis_start - input_start;
+            let mut mismatch = 0usize;
+            for (full_row, part_row) in full.iter().zip(part.iter()) {
+                for i in vis_start..vis_end {
+                    let expected = full_row[i];
+                    let actual = part_row[offset + (i - vis_start)];
+                    let same = (expected.is_nan() && actual.is_nan())
+                        || expected.to_bits() == actual.to_bits();
+                    if !same {
+                        mismatch += 1;
+                    }
+                }
+            }
+            if warmup_exact(meta.id) {
+                assert_eq!(
+                    mismatch, 0,
+                    "{} 声明 warmup_exact，但截断结果与全序列有 {mismatch} 个点不一致",
+                    meta.id
+                );
+            } else if std::env::var("PROBE").is_ok() {
+                println!(
+                    "PROBE {} warmup={} mismatch={}",
+                    meta.id, warmup, mismatch
+                );
+            }
+        }
     }
 }

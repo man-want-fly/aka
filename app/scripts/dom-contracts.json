@@ -54,11 +54,11 @@
     {
       "key": "catalog.section",
       "selector": "[data-catalog-section='formula|params|warmup|boundary']",
-      "source": "src/pages/catalog/CatalogPage.tsx",
+      "source": "src/features/catalog/IndicatorSpecSections.tsx",
       "markers": [
         "data-catalog-section=\"formula\""
       ],
-      "note": "右侧四段口径；期望值必须来自 manifest，不是 registry 快照"
+      "note": "右侧四段口径；单一渲染实现在 features/catalog，期望值必须来自 manifest，不是 registry 快照"
     },
     {
       "key": "catalog.detail",
@@ -78,6 +78,33 @@
       ],
       "note": "行内真正的选择按钮（P3 只有它有 onClick）",
       "key": "catalog.selectButton"
+    },
+    {
+      "key": "catalog.engineVersion",
+      "selector": "[data-catalog-engine-version]",
+      "source": "src/features/catalog/IndicatorSpecSections.tsx",
+      "markers": [
+        "data-catalog-engine-version"
+      ],
+      "note": "口径区引擎版本；值来自 manifest.engineVersion（与 calc_key 同源），不得前端硬编码"
+    },
+    {
+      "key": "drawer.specLink",
+      "selector": "[data-drawer-spec='<id>']",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-spec"
+      ],
+      "note": "抽屉指标行口径入口；点击跳 #/catalog/<id>?from=drawer，规划项不渲染"
+    },
+    {
+      "key": "readout.specLink",
+      "selector": "[data-readout-spec='<id>']",
+      "source": "src/components/IndicatorReadouts.tsx",
+      "markers": [
+        "data-readout-spec"
+      ],
+      "note": "工作台指标卡口径入口；与图例「?」共用同一深链"
     },
     {
       "key": "s070503.overlay",
@@ -158,16 +185,17 @@
       "markers": [
         "data-indices-kpi"
       ],
-      "note": "4 张 KPI；骨架阶段值为占位，不构成任何 AC 证据"
+      "note": "4 张 KPI；数值与指数表同源同帧（S-04.01-01）"
     },
     {
       "key": "p6.table",
       "selector": "[data-indices-table]",
       "source": "src/pages/indices/IndexPage.tsx",
       "markers": [
-        "data-indices-table"
+        "data-indices-table",
+        "data-indices-row"
       ],
-      "note": "指数表容器；行锚点由 S-04.01-01 实装时登记"
+      "note": "指数表容器；每行 data-indices-row + data-index-code，行数随数据集实际数量变化"
     },
     {
       "key": "p6.breadth",
@@ -205,6 +233,15 @@
       "source": "src/pages/workbench/WorkbenchPage.tsx",
       "markers": [
         "data-adj-badge"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-adj-disabled",
+      "selector": "[data-adj-disabled='1']",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-adj-disabled"
       ],
       "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
     },
@@ -462,6 +499,15 @@
       "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
     },
     {
+      "key": "auto.data-drawer-index-unavailable",
+      "selector": "[data-drawer-index-unavailable='1']",
+      "source": "src/features/workbench/IndicatorDrawer.tsx",
+      "markers": [
+        "data-drawer-index-unavailable"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
       "key": "auto.data-drawer-no-target",
       "selector": "[data-drawer-no-target]",
       "source": "src/features/workbench/IndicatorDrawer.tsx",
@@ -539,6 +585,15 @@
       "source": "src/components/CandleChart.tsx",
       "markers": [
         "data-index"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-indices-range-pct",
+      "selector": "[data-indices-range-pct='today|d5|d20']",
+      "source": "src/pages/indices/IndexPage.tsx",
+      "markers": [
+        "data-indices-range-pct"
       ],
       "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
     },
@@ -792,6 +847,15 @@
       "source": "src/pages/datasource/QualitySection.tsx",
       "markers": [
         "data-quality-section"
+      ],
+      "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "auto.data-quote-amplitude",
+      "selector": "[data-quote-amplitude]",
+      "source": "src/pages/workbench/WorkbenchPage.tsx",
+      "markers": [
+        "data-quote-amplitude"
       ],
       "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
     },
@@ -1073,6 +1137,24 @@
         "data-wl-item"
       ],
       "note": "自动登记：取证代码读取该属性名（新增选择器必须先改清单）"
+    },
+    {
+      "key": "s0203.unknown-quality",
+      "selector": "[data-chart=\"candle\"]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "data-unknown-quality"
+      ],
+      "note": "ST-DF-02-03 AC-6：未知质量标记只记录、不渲染，未知值登记在图表根节点"
+    },
+    {
+      "key": "s0203.suspended-no-line",
+      "selector": "[data-chart=\"candle\"]",
+      "source": "src/components/CandleChart.tsx",
+      "markers": [
+        "withoutSuspended"
+      ],
+      "note": "ST-DF-02-03 AC-2/5：停牌下标线值置空，pathFor 断开，不跨停牌连线"
     }
   ],
   "templates": [

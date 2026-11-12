@@ -206,6 +206,25 @@ export function readSubPlots(): SubPlotSetting[] {
   }
 }
 
+const VOLUME_COLLAPSED_KEY = "aka.workbench.volumeCollapsed.v1";
+
+/** AC-DF-06-02-5：成交量折叠是纯显示开关，不改变副图成员，折叠后其余格重新分配高度 */
+export function readVolumeCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(VOLUME_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeVolumeCollapsed(collapsed: boolean) {
+  try {
+    window.localStorage.setItem(VOLUME_COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch {
+    // 存储不可用时只影响本次会话之外的记忆
+  }
+}
+
 export function writeSubPlots(plots: SubPlotSetting[]) {
   try {
     window.localStorage.setItem(
@@ -229,59 +248,86 @@ const B3_IDS = [
 /** B1 回归族 + BIAS，补齐 AC-03.04-11 / -15 的上图范围。 */
 const B1_CHART_IDS = ["T19", "T20", "T21", "T22", "E13"] as const;
 
-/** 前端只做「表单 → 实例」的装配；范围校验以后端 ParamSpec 为准。 */
+/** C-23：manifest 参数默认值的唯一来源；前端不再依赖后端静默补齐。 */
+const manifestParamsById = new Map<string, ParamSpec[]>(
+  (manifestJson.indicators as Array<{ id: string; params: ParamSpec[] }>).map((item) => [
+    item.id,
+    item.params,
+  ]),
+);
+
+/** 按 manifest 的 ParamSpec 生成该指标的完整默认参数；缺定义即报错，不猜测。 */
+export function defaultParamsFor(indicatorId: string): ParamValueMap {
+  const specs = manifestParamsById.get(indicatorId);
+  if (!specs) {
+    throw new Error(`manifest 缺少指标 ${indicatorId} 的参数定义`);
+  }
+  const values: ParamValueMap = {};
+  for (const spec of specs) {
+    values[spec.key] = spec.default;
+  }
+  return values;
+}
+
+/** 完整参数 = manifest 默认值 + 用户覆盖值。 */
+function withParams(indicatorId: string, override: ParamValueMap = {}): ParamValueMap {
+  return { ...defaultParamsFor(indicatorId), ...override };
+}
+
+/** 前端只做「表单 → 实例」的装配；参数必须补全，范围校验以后端 ParamSpec 为准。 */
 export function buildInstances(params: WorkbenchParams): InstanceRequest[] {
   const maId = { sma: "T01", ema: "T02", wma: "T03" }[params.maType];
   return [
     {
       instanceId: "main-ma",
       indicatorId: maId,
-      params: { period: params.maPeriod },
+      params: withParams(maId, { period: params.maPeriod }),
     },
     // B1 渲染层证据（TD-B1-02）：T01–T05 图线与 T19–T22 / E13 读数
     ...(["T01", "T02", "T03", "T04", "T05"] as const).map((indicatorId) => ({
       instanceId: `overlay-${indicatorId}`,
       indicatorId,
-      params: { period: params.maPeriod },
+      params: withParams(indicatorId, { period: params.maPeriod }),
     })),
     ...(["T19", "T20", "T21", "T22"] as const).map((indicatorId) => ({
       instanceId: `stat-${indicatorId}`,
       indicatorId,
-      params: { period: 20 },
+      params: withParams(indicatorId, { period: 20 }),
     })),
     {
       instanceId: "stat-E13",
       indicatorId: "E13",
-      params: { period1: 6, period2: 12, period3: 24 },
+      params: withParams("E13", { period1: 6, period2: 12, period3: 24 }),
     },
     {
       instanceId: "sub-macd",
       indicatorId: "M06",
-      params: {
+      params: withParams("M06", {
         fast: params.fast,
         slow: params.slow,
         signal: params.signal,
-      },
+      }),
     },
     // B2 全量 20 个：主图叠加与副图选择都在客户端切换，不额外触发 IPC。
-    // 参数留空即用 manifest 默认值（与后端 fallback 同源）。
+    // 参数按 manifest 补全（C-23），后端不再为缺参兜底。
     ...B2_IDS.map((indicatorId) => ({
       instanceId: `b2-${indicatorId}`,
       indicatorId,
-      params: (indicatorId === "T09"
-        ? { period: params.bollPeriod, mult: params.bollMult }
-        : {}) as ParamValueMap,
+      params: withParams(
+        indicatorId,
+        indicatorId === "T09" ? { period: params.bollPeriod, mult: params.bollMult } : {},
+      ),
     })),
-    // B3 全量 13 个：全部为副图候选，参数留空走 manifest 默认值。
+    // B3 全量 13 个：全部为副图候选，参数按 manifest 补全。
     ...B3_IDS.map((indicatorId) => ({
       instanceId: `b3-${indicatorId}`,
       indicatorId,
-      params: {},
+      params: withParams(indicatorId),
     })),
     ...B1_CHART_IDS.map((indicatorId) => ({
       instanceId: `b1x-${indicatorId}`,
       indicatorId,
-      params: {},
+      params: withParams(indicatorId),
     })),
   ];
 }

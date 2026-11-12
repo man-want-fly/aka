@@ -288,6 +288,17 @@ impl StateDb {
         self.degraded_reason.as_deref()
     }
 
+    /// AKA-33：退出前把 WAL 合并回主库并截断，下一次启动不依赖 WAL 恢复。
+    /// 内存降级库没有 WAL，直接视为成功。
+    pub fn checkpoint(&self) -> Result<(), DbError> {
+        if self.degraded || self.path == Path::new(":memory:") {
+            return Ok(());
+        }
+        self.conn
+            .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_| Ok(()))
+            .map_err(|err| DbError::Write(err.to_string()))
+    }
+
     /// QA 注入（`--readonly-db`）：让连接进入 SQLite 只读模式。
     /// 后续写操作由 SQLite 自己返回 `attempt to write a readonly database`，
     /// 走产品真实的只读错误映射，而不是另造一条假错误。
@@ -771,6 +782,28 @@ impl StateDb {
     }
 
     // ---------- dataset meta ----------
+
+    /// ST-DF-03-03：最近一次落盘的版本身份，供启动时与磁盘 manifest 比对。
+    pub fn latest_dataset_meta(&self) -> Result<Option<DatasetMeta>, DbError> {
+        self.conn
+            .query_row(
+                "SELECT dataset_id, provider, data_version, simulated, checksum, generated_at
+                 FROM dataset_meta ORDER BY rowid DESC LIMIT 1",
+                [],
+                |row| {
+                    Ok(DatasetMeta {
+                        dataset_id: row.get(0)?,
+                        provider: row.get(1)?,
+                        data_version: row.get(2)?,
+                        simulated: row.get::<_, i64>(3)? != 0,
+                        checksum: row.get(4)?,
+                        generated_at: row.get(5)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(|err| DbError::Read(err.to_string()))
+    }
 
     pub fn dataset_meta(&self, dataset_id: &str) -> Result<Option<DatasetMeta>, DbError> {
         self.conn

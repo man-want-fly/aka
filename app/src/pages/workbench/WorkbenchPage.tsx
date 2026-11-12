@@ -28,7 +28,9 @@ import {
   VOLUME_PANEL_ID,
   clampSubHeight,
   readSubPlots,
+  readVolumeCollapsed,
   writeSubPlots,
+  writeVolumeCollapsed,
   type SubPlotSetting,
   buildInstances,
   defaultsFromIndicators,
@@ -59,6 +61,7 @@ import { runS203Diagnostics } from "../../features/workbench/s203Diag";
 import { runS20202Diagnostics } from "../../features/workbench/s20202Diag";
 import { runS20101Diagnostics } from "../../features/workbench/s20101Diag";
 import { runS207Diagnostics } from "../../features/workbench/s207Diag";
+import { runS206Diagnostics } from "../../features/workbench/s206Diag";
 import { runS070503Diagnostics } from "../../features/workbench/s070503Diag";
 import { runS080202Diagnostics } from "../../features/workbench/s080202Diag";
 import { runCrossPageCountDiagnostics } from "../../features/catalog/crossPageDiag";
@@ -80,6 +83,7 @@ import type {
   RegistryResponse,
   SecurityDto,
   DatasetManifestDto,
+  SeriesDto,
 } from "../../lib/types";
 import {
   formatAmount,
@@ -94,6 +98,8 @@ import type { ColorMode, ThemeMode } from "../../lib/theme";
 interface Props {
   /** 从行情列表点行进入时携带的标的代码；S-01.01-03 返回态依赖它 */
   initialCode?: string | null;
+  /** 返回目标页：指数行进入时回指数页，其余回行情页（S-04.01-02） */
+  backRoute?: RouteKey;
   themeMode: ThemeMode;
   onThemeMode: (mode: ThemeMode) => void;
   colorMode: ColorMode;
@@ -140,6 +146,28 @@ const RANGES = [
   { label: "250", value: 250 },
   { label: "全部", value: 9999 },
 ];
+
+/**
+ * AC-DF-06-05-5：后端按实例隔离错误（series[].error），前端只在该指标上提示，
+ * 其余指标继续绘制，不升级成整页错误。
+ */
+function noticesFromSeries(series: SeriesDto[]): Record<string, string> | null {
+  const notices: Record<string, string> = {};
+  for (const item of series) {
+    if (item.error) notices[item.indicatorId] = item.error.message;
+  }
+  return Object.keys(notices).length > 0 ? notices : null;
+}
+
+function mergeNotices(
+  ...parts: Array<Record<string, string> | null>
+): Record<string, string> | null {
+  const merged: Record<string, string> = {};
+  for (const part of parts) {
+    if (part) Object.assign(merged, part);
+  }
+  return Object.keys(merged).length > 0 ? merged : null;
+}
 
 /** 输入静默 120ms 后才发请求：连续输入（典型间隔 40ms）只保留最后一次，避免抖动请求 */
 const REQUEST_DEBOUNCE_MS = 120;
@@ -217,6 +245,7 @@ function provTime(value: number | null, missing: Set<string>): string {
 
 export function WorkbenchPage({
   initialCode,
+  backRoute = "market",
   themeMode,
   onThemeMode,
   colorMode,
@@ -294,10 +323,13 @@ export function WorkbenchPage({
   }, []);
 
   const viewportKey = `${activeCode}|${timeframe}`;
+  // 回调里用 ref 读当前键：否则切标的后仍可能把视口写进上一个 (code, period) 的记忆
+  const viewportKeyRef = useRef(viewportKey);
+  viewportKeyRef.current = viewportKey;
   const setViewport = useCallback((next: ChartViewport) => {
     viewportRef.current = next;
     setViewportState(next);
-    viewportMemory.current.set(viewportKey, next);
+    viewportMemory.current.set(viewportKeyRef.current, next);
     try {
       window.sessionStorage.setItem(
         "aka.chart.viewport",
@@ -306,7 +338,7 @@ export function WorkbenchPage({
     } catch {
       /* 存储不可用时只保留内存记忆 */
     }
-  }, [viewportKey]);
+  }, []);
 
   // S-02.05-02 会话记忆：同一会话内切页/切标的保留参数；重启回到 manifest 默认值
   useEffect(() => {
@@ -359,8 +391,8 @@ export function WorkbenchPage({
       /* 存储不可用不阻塞主流程 */
     }
   }, [overlayIds]);
-  /** 切换计时起点：复权/周期按钮点击时写入，数据落图后打 switch.*_ms */
-  const switchStartRef = useRef<{ at: number; kind: "period" | "adj" } | null>(null);
+  /** 切换计时起点：复权/周期按钮与自选点击时写入，数据落图后打 switch.*_ms */
+  const switchStartRef = useRef<{ at: number; kind: "period" | "adj" | "security" } | null>(null);
   const pendingSwitchRef = useRef<{
     at: number;
     kind: "period" | "adj";
@@ -373,6 +405,17 @@ export function WorkbenchPage({
   const lastSwitchKeyRef = useRef(`${adj}|${timeframe}`);
   /** 首次切换立即发请求；请求在途时的后续连点仍走 100ms 防抖，只保留最后一次 */
   const inFlightRef = useRef(false);
+  /** FEAT-DF-06 取证：每次真正发起的取数自增，用于「缩放/平移 0 IPC」断言 */
+  const requestSeqRef = useRef(0);
+  /** FEAT-DF-06 取证：最近一次请求的分段耗时，用于并行判据 */
+  const lastTimingRef = useRef<{ barsMs: number; calcMs: number; totalMs: number } | null>(null);
+  /** FEAT-DF-06 取证：最近一次请求的发起时刻，用于证明切标的 0ms 触发 */
+  const lastRequestStartMsRef = useRef(0);
+  /** AC-DF-06-01-2：自选点击是显式动作，切标的 0ms 发请求，不套输入静默防抖 */
+  const selectSecurity = useCallback((code: string) => {
+    switchStartRef.current = { at: performance.now(), kind: "security" };
+    setActiveCode(code);
+  }, []);
   // S-02.03-01：副图格（含成交量）的顺序与高度，全局持久化
   const [subPlots, setSubPlots] = useState<SubPlotSetting[]>(readSubPlots);
   const subIds = useMemo(
@@ -380,12 +423,24 @@ export function WorkbenchPage({
     [subPlots],
   );
   const commitSubPlots = useCallback((next: SubPlotSetting[]) => {
-    const clamped = next
-      .slice(0, MAX_SUBPLOTS)
-      .map((item) => ({ id: item.id, height: clampSubHeight(item.height) }));
-    setSubPlots(clamped);
-    writeSubPlots(clamped);
+    setSubPlots((prev) => {
+      // AC-DF-06-02-5：折叠只影响渲染，存储里成交量格始终常驻；图表回传的高度列表不含 VOL 时补回
+      const vol = prev.find((item) => item.id === VOLUME_PANEL_ID);
+      const merged =
+        vol && !next.some((item) => item.id === VOLUME_PANEL_ID) ? [vol, ...next] : next;
+      const clamped = merged
+        .slice(0, MAX_SUBPLOTS)
+        .map((item) => ({ id: item.id, height: clampSubHeight(item.height) }));
+      writeSubPlots(clamped);
+      return clamped;
+    });
   }, []);
+  /** AC-DF-06-02-5：成交量折叠开关（持久化），折叠后其余副图格吃掉释放的空间 */
+  const [volumeCollapsed, setVolumeCollapsed] = useState(readVolumeCollapsed);
+  const visibleSubPlots = useMemo(
+    () => (volumeCollapsed ? subPlots.filter((item) => item.id !== VOLUME_PANEL_ID) : subPlots),
+    [subPlots, volumeCollapsed],
+  );
   /** 取证读取当前副图配置（effect 闭包不随 state 更新） */
   const subPlotsRef = useRef(subPlots);
   subPlotsRef.current = subPlots;
@@ -485,6 +540,8 @@ export function WorkbenchPage({
     setViewportState(next);
   }, [bars, activeCode, timeframe, viewportKey]);
   const [loading, setLoading] = useState(false);
+  /** AC-DF-06-01-4：一次取数超过 300ms 仍未落图时提示，并继续保留上一组图表 */
+  const [barsTimeout, setBarsTimeout] = useState(false);
   /** 切换超过 120ms 才换骨架；120ms 内保留旧图 + 半透明遮罩 */
   const [slowLoading, setSlowLoading] = useState(false);
   useEffect(() => {
@@ -580,6 +637,9 @@ export function WorkbenchPage({
   const footerReady = !datasetManifestPending && calcSettled;
   const restartStarted = useRef(false);
   const watchlistStarted = useRef(false);
+  // FEAT-DF-06 套件含刷新阶段：按「本文档」计一次，刷新后 ref 自然重置，
+  // 不能再用 sessionStorage 标记（刷新时会残留，挡住恢复阶段）。
+  const s206Started = useRef(false);
   const generation = useRef(0);
 
   // S2 实机取证（TD-S0-04/06/07）：只在 AKA_DIAG=1 时激活，采样只来自真实 IPC 路径
@@ -591,9 +651,16 @@ export function WorkbenchPage({
   activeCodeRef.current = activeCode;
   const timeframeRef = useRef(timeframe);
   timeframeRef.current = timeframe;
+  /** 取证辅助：只读取数状态真值，不参与渲染 */
+  const loadingRef = useRef(false);
+  loadingRef.current = loading;
   const [diagStatus, setDiagStatus] = useState<string | null>(null);
   /** S-07.01-01（补1）：必需能力缺口文案；非空时工作台入口出现「查看数据源状态」。 */
   const [datasourceIssue, setDatasourceIssue] = useState<string | null>(null);
+  /** AC-DF-01-01-5：null=探测未完成，false=必需能力缺失（禁用标的与取数） */
+  const [datasourceReady, setDatasourceReady] = useState<boolean | null>(null);
+  /** AC-DF-01-04-4：受影响功能清单（必需能力缺失项的中文名） */
+  const [datasourceAffected, setDatasourceAffected] = useState<string[]>([]);
 
   // S-07.05-03：浮层关闭（ESC / 点外 / 切标的 / 切周期 / 切复权均清空，不保留上一条）
   const closeProvenance = useCallback(() => {
@@ -748,6 +815,7 @@ export function WorkbenchPage({
         message:
           "当前不在 Tauri 容器内。请执行 npm run tauri dev（或构建后打开 AKA.app），浏览器预览无法访问 Rust 指标引擎。",
         retryable: false,
+        details: null,
       });
       return;
     }
@@ -788,11 +856,11 @@ export function WorkbenchPage({
       if (event.key !== "Escape") return;
       if (drawerOpenRef.current) return; // 先由抽屉自己关，Esc 不穿透到返回行情
       event.preventDefault();
-      onNavigate("market");
+      onNavigate(backRoute);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [initialCode, onNavigate]);
+  }, [initialCode, onNavigate, backRoute]);
 
   // S-08.02-02 补2：切标的后旧错误立即消失，不等下一次请求回来。
   useEffect(() => {
@@ -804,25 +872,39 @@ export function WorkbenchPage({
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
+    // AC-DF-01-01-5：数据源未就绪（含探测未完成）时不发起 get_bars，避免空图而非原因
+    if (datasourceReady !== true) return;
     let cancelled = false;
     // 复权/周期切换：首次点击立即取数（AC-02.02-02 总耗时 ≤150ms）；在途连点按 100ms 防抖只留最后一次
     const switchKey = `${adj}|${timeframe}`;
     const isSwitch = lastSwitchKeyRef.current !== switchKey;
     lastSwitchKeyRef.current = switchKey;
+    // AC-DF-06-01-2：自选点击切标的必须 0ms 立即发请求；输入静默仍走 120ms
+    const switchInfo = switchStartRef.current;
     const debounceMs =
-      isSwitch && switchStartRef.current
-        ? inFlightRef.current
-          ? 100
-          : 0
-        : REQUEST_DEBOUNCE_MS;
+      switchInfo?.kind === "security"
+        ? 0
+        : isSwitch && switchInfo
+          ? inFlightRef.current
+            ? 100
+            : 0
+          : REQUEST_DEBOUNCE_MS;
     const timer = window.setTimeout(() => {
       if (cancelled) return;
       const current = ++generation.current;
       inFlightRef.current = true;
+      requestSeqRef.current += 1;
+      lastRequestStartMsRef.current = performance.now();
       setLoading(true);
       setError(null);
+      setBarsTimeout(false);
       // W-119：本轮计算重新开始，计算段回到「计算中」，页脚未就绪
       setCalcSettled(false);
+      // AC-DF-06-01-4：300ms 未落图即提示，期间继续展示上一组图表
+      const timeoutTimer = window.setTimeout(() => {
+        if (current !== generation.current) return;
+        setBarsTimeout(true);
+      }, 300);
 
       const requestParams = appliedParams;
       const request = {
@@ -859,6 +941,7 @@ export function WorkbenchPage({
       Promise.all([barsPromise, calcPromise])
         .then(([nextBars, calcResult]) => {
           if (current !== generation.current) return;
+          window.clearTimeout(timeoutTimer);
           // W-114：计时终点＝两份响应都到手那一刻，不含其后的状态提交与取证哈希
           const totalMs = performance.now() - startedAt;
           inFlightRef.current = false;
@@ -883,7 +966,12 @@ export function WorkbenchPage({
             }
             setCalc(calcResult.value);
             calcRef.current = calcResult.value;
-            setCalcNotices(noticesForBars(nextBars.bars.length, subIds, manifest));
+            setCalcNotices(
+              mergeNotices(
+                noticesForBars(nextBars.bars.length, subIds, manifest),
+                noticesFromSeries(calcResult.value.series),
+              ),
+            );
             setError(null);
             failureStreakRef.current = 0;
             setFailureStreak(0);
@@ -907,17 +995,25 @@ export function WorkbenchPage({
 
           // S-02.02-02：复权/周期切换总耗时写入 telemetry（AC-02.02-02 的 switch.period_ms 取证）。
           // 打点推迟到本批状态提交之后（useLayoutEffect），避免把 rAF 排队的一帧算进切换耗时。
-          if (isSwitch && switchStartRef.current) {
-            pendingSwitchRef.current = {
-              ...switchStartRef.current,
-              security: activeCode,
-              timeframe,
-              adj,
-              barsMs,
-              calcMs,
-            };
+          const switchInfoNow = switchStartRef.current;
+          if (switchInfoNow && (switchInfoNow.kind === "security" || isSwitch)) {
+            // 切标的只用于 s206 计时，不写 switch.*_ms（那是周期/复权口径）
+            if (switchInfoNow.kind !== "security") {
+              pendingSwitchRef.current = {
+                at: switchInfoNow.at,
+                kind: switchInfoNow.kind,
+                security: activeCode,
+                timeframe,
+                adj,
+                barsMs,
+                calcMs,
+              };
+            }
             switchStartRef.current = null;
           }
+
+          // 分段耗时对 DF-06 取证恒可用（不依赖 cold/warm 采样阶段）
+          lastTimingRef.current = { barsMs, calcMs, totalMs };
 
           if (phaseAtIssue !== "debounce" && phaseAtIssue !== "cold" && phaseAtIssue !== "warm") {
             return;
@@ -939,6 +1035,7 @@ export function WorkbenchPage({
               seriesPoints: signature.points,
             };
             diagSamples.current.push(sample);
+            lastTimingRef.current = { barsMs, calcMs, totalMs };
             const waiter = diagWaiters.current.shift();
             if (waiter) waiter(sample);
             return;
@@ -960,6 +1057,42 @@ export function WorkbenchPage({
             error: `${calcResult.failure.code}: ${calcResult.failure.message}`,
           };
           diagSamples.current.push(sample);
+          lastTimingRef.current = { barsMs, calcMs, totalMs: sample.totalMs };
+          const waiter = diagWaiters.current.shift();
+          if (waiter) waiter(sample);
+        })
+        .catch((err) => {
+          if (current !== generation.current) return;
+          window.clearTimeout(timeoutTimer);
+          // AC-DF-06-06-6 / AC-DF-06-05-1：行情取数失败不清空当前图，保留上一次成功内容并提示
+          const failure = describeError(err);
+          inFlightRef.current = false;
+          setLoading(false);
+          setCalcSettled(true);
+          setError(failure);
+          failureStreakRef.current += 1;
+          setFailureStreak(failureStreakRef.current);
+          if (switchStartRef.current) switchStartRef.current = null;
+
+          if (phaseAtIssue !== "debounce" && phaseAtIssue !== "cold" && phaseAtIssue !== "warm") {
+            return;
+          }
+          const sample: DiagSample = {
+            phase: phaseAtIssue,
+            security: activeCode,
+            timeframe,
+            adj,
+            barsMs,
+            calcMs,
+            totalMs: performance.now() - startedAt,
+            cacheHit: false,
+            computedMs: Number.NaN,
+            barCount: 0,
+            seriesHash: "error",
+            seriesPoints: 0,
+            error: `get_bars: ${failure.code}: ${failure.message}`,
+          };
+          diagSamples.current.push(sample);
           const waiter = diagWaiters.current.shift();
           if (waiter) waiter(sample);
         });
@@ -969,7 +1102,7 @@ export function WorkbenchPage({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeCode, adj, appliedParams, dateFrom, dateTo, retryNonce, timeframe]);
+  }, [activeCode, adj, appliedParams, dateFrom, dateTo, retryNonce, timeframe, datasourceReady]);
 
   /** S-08.02-02：重试 / 降低参数 / 导出诊断包（连续失败 3 次后可见）。 */
   const retryCalc = useCallback(() => {
@@ -1786,6 +1919,64 @@ export function WorkbenchPage({
     };
   }, [manifest, registry, securities]);
 
+  // FEAT-DF-06 工作台渲染与交互取证：AKA_DIAG_TARGET=s206 时自跑一次
+  useEffect(() => {
+    if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
+    if (s206Started.current) return;
+    s206Started.current = true;
+    let alive = true;
+    (async () => {
+      const target = await ipc.diagTarget();
+      if ((target !== "s206" && target !== "s206-meta" && target !== "s206-readonly") || !alive) {
+        return;
+      }
+      setDiagStatus("FEAT-DF-06 取证：运行中");
+      try {
+        const report = await runS206Diagnostics(target, {
+          getActiveCode: () => activeCodeRef.current,
+          // 走真实周期按钮（会写 switchStartRef.kind="period"），不能直接调 setState
+          setTimeframe: (tf) => {
+            document
+              .querySelector<HTMLButtonElement>(`button[data-timeframe="${tf}"]`)
+              ?.click();
+          },
+          setRange: (count) => {
+            const total = barsRef.current?.bars.length ?? 0;
+            if (total === 0) return;
+            const shown = Math.min(count, total);
+            setViewport({ start: total - shown, end: total - 1 });
+          },
+          sampleCount: () => diagSamples.current.length,
+          requestCount: () => requestSeqRef.current,
+          requestStartedAt: () => lastRequestStartMsRef.current,
+          timing: () => lastTimingRef.current,
+          debug: () => ({
+            loading: loadingRef.current,
+            bars: barsRef.current
+              ? `${barsRef.current.security}/${barsRef.current.timeframe}/${barsRef.current.bars.length}`
+              : null,
+            inFlight: inFlightRef.current,
+            gen: generation.current,
+            err: document
+              .querySelector("[data-calc-error]")
+              ?.getAttribute("data-calc-error") ?? null,
+          }),
+        });
+        if (!alive) return;
+        // 刷新状态机阶段只回 reloading，不带 checks，不能当成红项
+        const list = report.checks ?? [];
+        const passed = list.filter((item) => item.ok).length;
+        setDiagStatus(`FEAT-DF-06 取证：${report.pass ? "全绿" : "有红项"}（${passed}/${list.length}）`);
+      } catch (err) {
+        if (!alive) return;
+        setDiagStatus(`FEAT-DF-06 取证失败：${describeError(err).message}`);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [manifest, registry, securities]);
+
   // S-02.05-02 物理重启验证：AKA_DIAG_TARGET=restart 时按 localStorage 标记跑第一次或第二次启动
   useEffect(() => {
     if (!isTauriRuntime() || !manifest || !registry || securities.length === 0) return;
@@ -1887,14 +2078,20 @@ export function WorkbenchPage({
   }, [manifest, appliedParams.fast, appliedParams.slow, appliedParams.signal]);
 
   const security = securities.find((item) => item.code === activeCode);
+  const isIndex = Boolean(security?.isIndex);
   const lastIndex = bars && bars.bars.length > 0 ? bars.bars.length - 1 : -1;
   const lastBar = lastIndex >= 0 ? bars!.bars[lastIndex] : undefined;
   const prevBar = lastIndex > 0 ? bars!.bars[lastIndex - 1] : undefined;
   const changePct =
     lastBar && prevBar ? (lastBar.close / prevBar.close - 1) * 100 : Number.NaN;
   const changeAbs = lastBar && prevBar ? lastBar.close - prevBar.close : Number.NaN;
+  // 指数无复权、无涨跌停/停牌语义（S-04.01-02）：报价头只走指数字段集。
+  const amplitude =
+    lastBar && prevBar && prevBar.close > 0
+      ? ((lastBar.high - lastBar.low) / prevBar.close) * 100
+      : Number.NaN;
   // AC-02.01-01：停牌由合成行判定（量/额为 0），涨跌停价按板块规则推导
-  const suspended = lastBar ? !(lastBar.volume > 0) : false;
+  const suspended = !isIndex && lastBar ? !(lastBar.volume > 0) : false;
   const limitPrices = deriveLimitPrices(prevBar?.close, security?.board ?? "");
   const limitApprox = showLimitApprox({
     board: security?.board ?? "",
@@ -1926,6 +2123,7 @@ export function WorkbenchPage({
   };
 
   // S-07.01-01（补1）：必需能力有缺口时，工作台入口出现「查看数据源状态」。
+  // AC-DF-01-01-5 / AC-DF-01-04-4：缺口同时决定取数闸门与受影响功能清单。
   useEffect(() => {
     if (!isTauriRuntime()) return;
     let alive = true;
@@ -1933,13 +2131,19 @@ export function WorkbenchPage({
       .datasourceStatus()
       .then((status) => {
         if (!alive) return;
+        const missing = status.capabilities.filter((cap) => cap.required && !cap.available);
+        setDatasourceReady(missing.length === 0);
+        setDatasourceAffected(missing.map((cap) => cap.labelZh));
         setDatasourceIssue(
           status.requiredOk < status.requiredTotal
             ? `${status.requiredOk}/${status.requiredTotal} 必需能力可用`
             : null,
         );
       })
-      .catch(() => undefined);
+      .catch(() => {
+        // 探测自身失败不等于数据源不可用：不冻结工作台，真实取数失败由图表错误层解释。
+        if (alive) setDatasourceReady(true);
+      });
     return () => {
       alive = false;
     };
@@ -1956,7 +2160,10 @@ export function WorkbenchPage({
       <div className="workbench" data-workbench-root="1">
         {datasourceIssue && (
           <div className="watch-error-bar" data-wb-datasource-entry="1" role="alert">
-            <span>数据源必需能力不可用（{datasourceIssue}）</span>
+            <span>
+              数据源未就绪（E_SOURCE_NOT_READY）：{datasourceIssue}；受影响功能：
+              {datasourceAffected.join("、") || "—"}。标的选择与取数已禁用
+            </span>
             <button type="button" onClick={() => onNavigate("datasource")}>
               查看数据源状态
             </button>
@@ -1977,10 +2184,10 @@ export function WorkbenchPage({
                 type="button"
                 className="crumb"
                 data-wb-back="1"
-                title="返回行情（Esc）"
-                onClick={() => onNavigate("market")}
+                title={`返回${backRoute === "indices" ? "指数" : "行情"}（Esc）`}
+                onClick={() => onNavigate(backRoute)}
               >
-                行情 /
+                {backRoute === "indices" ? "指数 /" : "行情 /"}
               </button>
             )}
             <h1 data-wb-name>{security?.name ?? "未选择标的"}</h1>
@@ -2021,22 +2228,28 @@ export function WorkbenchPage({
             <span data-quote-prev-close="1">
               昨收<b>{prevBar ? formatPrice(prevBar.close) : "—"}</b>
             </span>
-            <span data-limit-row="1" data-limit-approx={limitApprox ? "1" : "0"}>
-              涨停
-              <b
-                data-limit-price="up"
-                title={limitApprox ? LIMIT_APPROX_TITLE : undefined}
-              >
-                {limitApprox && limitPrices ? `≈${formatPrice(limitPrices.up)}` : "—"}
-              </b>
-              跌停
-              <b
-                data-limit-price="down"
-                title={limitApprox ? LIMIT_APPROX_TITLE : undefined}
-              >
-                {limitApprox && limitPrices ? `≈${formatPrice(limitPrices.down)}` : "—"}
-              </b>
-            </span>
+            {isIndex ? (
+              <span data-quote-amplitude="1">
+                振幅<b>{Number.isFinite(amplitude) ? formatPct(amplitude) : "—"}</b>
+              </span>
+            ) : (
+              <span data-limit-row="1" data-limit-approx={limitApprox ? "1" : "0"}>
+                涨停
+                <b
+                  data-limit-price="up"
+                  title={limitApprox ? LIMIT_APPROX_TITLE : undefined}
+                >
+                  {limitApprox && limitPrices ? `≈${formatPrice(limitPrices.up)}` : "—"}
+                </b>
+                跌停
+                <b
+                  data-limit-price="down"
+                  title={limitApprox ? LIMIT_APPROX_TITLE : undefined}
+                >
+                  {limitApprox && limitPrices ? `≈${formatPrice(limitPrices.down)}` : "—"}
+                </b>
+              </span>
+            )}
             <span>
               量<b>{lastBar ? formatVolume(lastBar.volume) : "—"}</b>
             </span>
@@ -2095,9 +2308,10 @@ export function WorkbenchPage({
           <Watchlist
             securities={securities}
             activeCode={activeCode}
-            onSelect={setActiveCode}
+            onSelect={selectSecurity}
             onGoMarket={() => onNavigate("market")}
             datasetReady={datasetReady}
+            disabled={datasourceReady === false}
             onRegenerate={async () => {
               try {
                 const items = await ipc.datasetRegenerate();
@@ -2151,7 +2365,11 @@ export function WorkbenchPage({
                     type="button"
                     aria-pressed={adj === mode}
                     data-adj-mode={mode}
+                    data-adj-disabled={isIndex ? "1" : "0"}
+                    disabled={isIndex}
+                    title={isIndex ? "指数无复权" : undefined}
                     onClick={() => {
+                      if (isIndex) return;
                       switchStartRef.current = { at: performance.now(), kind: "adj" };
                       setAdj(mode);
                     }}
@@ -2159,6 +2377,23 @@ export function WorkbenchPage({
                     {label}
                   </button>
                 ))}
+              </div>
+
+              <span className="caption">副图</span>
+              <div className="seg">
+                <button
+                  type="button"
+                  aria-pressed={!volumeCollapsed}
+                  data-volume-toggle={volumeCollapsed ? "collapsed" : "shown"}
+                  title={volumeCollapsed ? "展开成交量" : "折叠成交量"}
+                  onClick={() => {
+                    const next = !volumeCollapsed;
+                    setVolumeCollapsed(next);
+                    writeVolumeCollapsed(next);
+                  }}
+                >
+                  量
+                </button>
               </div>
 
               <span className="caption">显示</span>
@@ -2281,7 +2516,7 @@ export function WorkbenchPage({
 
               <div className="grow" />
               <span className="engine-note">
-                按需计算 · {loading ? "更新中" : calc?.cacheHit ? "缓存命中" : "已计算"} ·{" "}
+                按需计算 · {loading ? "更新中" : calc?.cacheHit ? "缓存命中" : "冷算"} ·{" "}
                 <b>{calc ? formatComputedMs(calc.computedMs) : "—"} ms</b>
               </span>
             </div>
@@ -2308,9 +2543,12 @@ export function WorkbenchPage({
                 </div>
                 <p className="calc-error-message">{error.message}</p>
                 <div className="calc-error-actions">
-                  <button type="button" data-calc-retry onClick={retryCalc}>
-                    重试
-                  </button>
+                  {/* AC-DF-05-02-2/5：只有 retryable=true 才给重试入口。 */}
+                  {error.retryable && (
+                    <button type="button" data-calc-retry onClick={retryCalc}>
+                      重试
+                    </button>
+                  )}
                   <button type="button" data-calc-reduce onClick={reduceCalcParams}>
                     降低参数
                   </button>
@@ -2348,6 +2586,11 @@ export function WorkbenchPage({
                   计算超时，参数可能过大，已恢复上一组有效参数
                 </div>
               )}
+              {barsTimeout && (
+                <div className="param-timeout" data-bars-timeout="1" role="status">
+                  行情加载超过 300ms，已保留上一组图表
+                </div>
+              )}
               {adj === "none" && (
                 <span className="adj-badge" data-adj-badge="none">
                   不复权
@@ -2370,15 +2613,17 @@ export function WorkbenchPage({
                   <ChartCrashBoundary>
                   <CandleChart
                     bars={bars.bars}
+                    barsCode={bars.security}
                     series={calc?.series ?? []}
                     viewport={
                       viewport ?? { start: Math.max(0, bars.bars.length - 120), end: bars.bars.length - 1 }
                     }
                     onViewportChange={setViewport}
                     overlayIds={overlayIds}
-                    subPlots={subPlots}
+                    subPlots={visibleSubPlots}
                     onSubPlotsChange={commitSubPlots}
                     subNotices={calcNotices ?? undefined}
+                    overlayNotices={calcNotices ?? undefined}
                     subLabels={subLabels}
                     units={units}
                     adjMode={adj}
@@ -2395,6 +2640,10 @@ export function WorkbenchPage({
                     subIds={subIds}
                     subCount={subPlots.length}
                     units={units}
+                    onOpenDetail={(indicatorId) => {
+                      // S-03.03-02：指标卡口径与图例「?」共用同一深链
+                      window.location.hash = `#/catalog/${encodeURIComponent(indicatorId)}?from=chart&code=${encodeURIComponent(activeCode)}`;
+                    }}
                   />
                   {provSel && (
                     <div
@@ -2502,6 +2751,7 @@ export function WorkbenchPage({
                 subIds={subIds}
                 subCount={subPlots.length}
                 hasTarget={Boolean(security)}
+                isIndexTarget={isIndex}
                 activeCode={activeCode}
                 onAddMain={(id) =>
                   setOverlayIds((prev) =>

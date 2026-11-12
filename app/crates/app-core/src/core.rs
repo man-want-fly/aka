@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
+
+use serde::Serialize;
 
 use data_provider::mock::MockProvider;
 use data_provider::{
@@ -19,8 +21,8 @@ use crate::dto::{
     BarDto, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
     DatasetFault, DatasetIntegrityDto, DatasetVersionDto, DataHealthDto, DataHealthItemDto,
     DatasourceCapabilityDto, DatasourceOpsDto, DatasourceStatusDto,
-    GetBarsRequest, IndicatorFavoriteDto, IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto,
-    ListSecuritiesRequest, MarketRowDto,
+    GetBarsRequest, HealthFaults, IndexSnapshotDto, IndicatorFavoriteDto,
+    IndicatorFavoritesResponse, IndicatorMetaDto, InputsDto, ListSecuritiesRequest, MarketRowDto,
     MarketSnapshotDto, OutputSeriesDto, OutputSpecDto, PositionDto, ProvenanceDto,
     QualityCheckDto, QualityExampleDto, QualityReportDto, RangeDto, RecentViewDto, RegistryResponse,
     SecurityDto,
@@ -144,6 +146,22 @@ fn yes_no(flag: bool) -> &'static str {
         "✓"
     } else {
         "—"
+    }
+}
+
+/// ST-DF-03-04：版本第 6 段口径与 `DatasetManifest::validate` 保持一致（64 位小写十六进制）。
+fn valid_sha256(text: &str) -> bool {
+    text.len() == 64
+        && text
+            .chars()
+            .all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase())
+}
+
+/// ST-DF-03-04：版本第 5 段（覆盖区间）必须可解析且起点不晚于终点。
+fn coverage_valid(start: &str, end: &str) -> bool {
+    match (Date::parse(start), Date::parse(end)) {
+        (Some(from), Some(to)) => from <= to,
+        _ => false,
     }
 }
 
@@ -304,6 +322,67 @@ fn summary_row(sec: &Security, rows: &[data_provider::BarRow]) -> MarketRowDto {
     }
 }
 
+/// ST-DF-04-06：计算缓存容量上限（main 与 dev2 对齐，FIFO 淘汰）。
+pub const CALC_CACHE_MAX: usize = 512;
+
+/// ST-DF-04-05：一次计算实际覆盖的输入区间。
+/// `start` 是输入首根在数据集中的下标；输出按输入长度存储，读取时再按可见窗口偏移切片。
+struct CachedCalc {
+    start: usize,
+    values: Vec<Vec<f64>>,
+}
+
+/// ST-DF-04-06：容量受限的计算缓存。
+/// 按首次插入顺序 FIFO 淘汰；命中/重复插入都不改变已有键的排队位置。
+#[derive(Default)]
+struct CalcCache {
+    entries: HashMap<String, Arc<CachedCalc>>,
+    order: VecDeque<String>,
+}
+
+impl CalcCache {
+    fn get(&self, key: &str) -> Option<Arc<CachedCalc>> {
+        self.entries.get(key).cloned()
+    }
+
+    fn insert(&mut self, key: String, value: Arc<CachedCalc>) {
+        if self.entries.contains_key(&key) {
+            self.entries.insert(key, value);
+            return;
+        }
+        if self.entries.len() >= CALC_CACHE_MAX {
+            if let Some(oldest) = self.order.pop_front() {
+                self.entries.remove(&oldest);
+            }
+        }
+        self.order.push_back(key.clone());
+        self.entries.insert(key, value);
+    }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+        self.order.clear();
+    }
+
+    fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    fn keys(&self) -> Vec<String> {
+        self.order.iter().cloned().collect()
+    }
+}
+
+/// ST-DF-04-06：计算缓存统计（只含计算缓存，不含序列缓存）。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CalcCacheStats {
+    pub entries: usize,
+    pub capacity: usize,
+    pub hits: u64,
+    pub misses: u64,
+}
+
 /// 编排层：唯一知道「provider + store + 指标 + 缓存」如何协作的地方。
 /// 命令层不得绕过它直接访问任一子系统。
 pub struct AppCore {
@@ -314,7 +393,7 @@ pub struct AppCore {
     daily_batches: Mutex<HashMap<String, Arc<BarBatch>>>,
     /// 数据集 manifest 覆盖区间（provider 自报，独立于行内最新交易日）
     dataset_coverage: Option<(String, String)>,
-    calc_cache: Mutex<HashMap<String, Arc<Vec<Vec<f64>>>>>,
+    calc_cache: Mutex<CalcCache>,
     calc_stats: Mutex<CacheStats>,
     /// S-07.05-01：按 dataset_id 缓存的最近一次质量报告（跨命令复用）。
     quality_report: Mutex<Option<QualityReportDto>>,
@@ -322,6 +401,27 @@ pub struct AppCore {
     /// rusqlite `Connection` 是 `Send` 但不是 `Sync`，因此包一层 Mutex 才能随 `AppCore`
     /// 被 Tauri 的 `State` 共享。
     state: Option<Mutex<StateDb>>,
+    /// ST-DF-03-03：启动判定的版本身份。默认 `Provider` 保持既有内存口径，
+    /// 启动接线后由 `apply_dataset_startup` 接管落盘 manifest。
+    dataset_runtime: Mutex<DatasetRuntime>,
+}
+
+/// ST-DF-03-03：运行期采用的数据集身份来源。
+#[derive(Debug, Clone)]
+enum DatasetRuntime {
+    /// 未做启动判定（测试/无 state.db 路径）：沿用 provider 自报。
+    Provider,
+    /// 已安装：provenance 与版本卡统一展示落盘 manifest；
+    /// 同时记住安装目录与 seed，健康检查按落盘内容复算 sha256（ST-DF-03-04）。
+    Installed {
+        manifest: data_provider::DatasetManifest,
+        data_dir: std::path::PathBuf,
+        seed: u64,
+    },
+    /// 明确未安装：版本卡显示缺失并给安装入口；取数继续走内存 Provider（方案 B）。
+    NotInstalled { code: &'static str },
+    /// 已安装但不可用：阻断加载（版本不一致/描述文件损坏）。
+    Blocked { code: &'static str, detail: String },
 }
 
 /// 取证运行注入短序列 / 停牌 / 报价样本；正常启动不注入，产品行为不变。
@@ -388,11 +488,12 @@ impl AppCore {
             store: Mutex::new(CandleStore::new()),
             daily_batches: Mutex::new(HashMap::new()),
             dataset_coverage,
-            calc_cache: Mutex::new(HashMap::new()),
+            calc_cache: Mutex::new(CalcCache::default()),
             calc_stats: Mutex::new(CacheStats::default()),
             telemetry: Telemetry::in_memory(),
             quality_report: Mutex::new(None),
             state: None,
+            dataset_runtime: Mutex::new(DatasetRuntime::Provider),
         })
     }
 
@@ -933,8 +1034,189 @@ impl AppCore {
 
     /// S-02.08-01：页脚 7 段全部从这份 manifest 派生，页面不另写数字。
     /// provider 侧按需计算并缓存（mock 为 OnceLock），不在启动路径上付全量摘要成本。
+    ///
+    /// ST-DF-03-03：启动判定后以落盘 manifest 为准；未安装/被阻断时不展示内存版本，
+    /// 避免把内存数据冒充已安装版本。
     pub fn dataset_manifest(&self) -> Option<data_provider::DatasetManifest> {
-        self.provider.dataset_manifest()
+        match &*self.dataset_runtime_lock() {
+            DatasetRuntime::Provider => self.provider.dataset_manifest(),
+            DatasetRuntime::Installed { manifest, .. } => Some(manifest.clone()),
+            DatasetRuntime::NotInstalled { .. } | DatasetRuntime::Blocked { .. } => None,
+        }
+    }
+
+    /// S-04.01-01：指数概览快照。独立只读取数路径，不复用 get_bars / calc_indicators 热路径。
+    pub fn index_snapshot(&self) -> Result<IndexSnapshotDto, AppError> {
+        let (manifest, data_dir, seed) = match &*self.dataset_runtime_lock() {
+            DatasetRuntime::Installed {
+                manifest,
+                data_dir,
+                seed,
+            } => (manifest.clone(), data_dir.clone(), *seed),
+            _ => {
+                return Err(AppError::new(
+                    ErrorCode::DatasetMissing,
+                    "数据集未安装，无法读取指数概览",
+                ))
+            }
+        };
+
+        let db_path = crate::sim_install::dataset_dir(&data_dir, seed).join("dataset.db");
+        let conn = data_store::dataset_db::open_read_only(&db_path).map_err(|_| {
+            AppError::new(
+                ErrorCode::DatasetMissing,
+                format!("数据集文件缺失：{}", db_path.display()),
+            )
+        })?;
+        let raw = data_store::dataset_db::read_index_snapshot(&conn).map_err(|err| {
+            AppError::new(
+                ErrorCode::DatasetCorrupt,
+                format!("指数数据读取失败：{err}"),
+            )
+        })?;
+
+        crate::index_snapshot::build_index_snapshot(
+            &manifest,
+            raw.data_date.as_deref(),
+            &raw.indices,
+            &raw.quotes,
+            &raw.member_stats,
+        )
+    }
+
+    fn dataset_runtime_lock(&self) -> MutexGuard<'_, DatasetRuntime> {
+        self.dataset_runtime
+            .lock()
+            .unwrap_or_else(|err| err.into_inner())
+    }
+
+    fn dataset_runtime_snapshot(&self) -> DatasetRuntime {
+        self.dataset_runtime_lock().clone()
+    }
+
+    /// ST-DF-03-03：启动时读取落盘 manifest，与 `state.db.dataset_meta` 比对后接管身份。
+    ///
+    /// - 一致（或首次接管）→ `Installed`，provenance/版本卡展示落盘版本；
+    /// - 未安装 → `NotInstalled`，版本卡显示缺失并给安装入口，取数继续走内存 Provider；
+    /// - 身份不一致/描述文件损坏 → `Blocked`，阻断加载。
+    ///
+    /// `read_only` 为真时不写 `dataset_meta`（AC-DF-03-03-5）。
+    pub fn apply_dataset_startup(
+        &self,
+        data_dir: &std::path::Path,
+        seed: u64,
+        read_only: bool,
+    ) {
+        let cached = self
+            .state_db()
+            .and_then(|db| db.latest_dataset_meta().ok().flatten());
+        match crate::sim_install::startup_dataset(data_dir, seed, cached.as_ref()) {
+            crate::sim_install::StartupDataset::Installed(manifest) => {
+                // 首次接管（库中尚无记录）才补写；已有且一致则不重复写。
+                if !read_only && cached.is_none() {
+                    self.write_dataset_meta(&manifest);
+                }
+                self.reset_dataset_caches();
+                *self.dataset_runtime_lock() = DatasetRuntime::Installed {
+                    manifest,
+                    data_dir: data_dir.to_path_buf(),
+                    seed,
+                };
+            }
+            crate::sim_install::StartupDataset::NotInstalled { code, .. } => {
+                *self.dataset_runtime_lock() = DatasetRuntime::NotInstalled { code };
+            }
+            crate::sim_install::StartupDataset::Blocked { code, detail } => {
+                *self.dataset_runtime_lock() = DatasetRuntime::Blocked { code, detail };
+            }
+        }
+    }
+
+    /// ST-DF-03-03：安装/重建成功后接管新版本，并显式写入新的 `dataset_meta`。
+    /// 这是「只有重建成功才放行」的唯一升级入口。
+    pub fn adopt_installed_dataset(
+        &self,
+        data_dir: &std::path::Path,
+        seed: u64,
+        read_only: bool,
+    ) {
+        if let crate::sim_install::StartupDataset::Installed(manifest) =
+            crate::sim_install::startup_dataset(data_dir, seed, None)
+        {
+            // 轮询会重复调用：身份已一致时直接返回，避免无意义写库。
+            if matches!(
+                &*self.dataset_runtime_lock(),
+                DatasetRuntime::Installed { manifest: current, .. }
+                    if current.dataset_id == manifest.dataset_id
+                        && current.data_version == manifest.data_version
+            ) {
+                return;
+            }
+            if !read_only {
+                self.write_dataset_meta(&manifest);
+            }
+            self.reset_dataset_caches();
+            *self.dataset_runtime_lock() = DatasetRuntime::Installed {
+                manifest,
+                data_dir: data_dir.to_path_buf(),
+                seed,
+            };
+        }
+    }
+
+    fn write_dataset_meta(&self, manifest: &data_provider::DatasetManifest) {
+        if let Some(db) = self.state_db() {
+            let meta = data_store::state_db::DatasetMeta {
+                dataset_id: manifest.dataset_id.clone(),
+                provider: manifest.provider.clone(),
+                data_version: manifest.data_version.clone(),
+                simulated: manifest.provider == "sim",
+                checksum: manifest.sha256.clone(),
+                generated_at: manifest.generated_at,
+            };
+            let _ = db.upsert_dataset_meta(&meta);
+        }
+    }
+
+    /// ST-DF-04-06：计算缓存统计（容量、当前条目、命中/未命中）。
+    /// 只统计计算缓存，序列缓存不计入（AC-DF-04-06-4 口径）。
+    pub fn calc_cache_stats(&self) -> Result<CalcCacheStats, AppError> {
+        let entries = self
+            .calc_cache
+            .lock()
+            .map_err(|_| AppError::internal("计算缓存锁中毒"))?
+            .len();
+        let stats = self
+            .calc_stats
+            .lock()
+            .map_err(|_| AppError::internal("计算缓存统计锁中毒"))?;
+        Ok(CalcCacheStats {
+            entries,
+            capacity: CALC_CACHE_MAX,
+            hits: stats.hits,
+            misses: stats.misses,
+        })
+    }
+
+    /// 身份切换后清空派生缓存，避免同一进程内混用两个版本。
+    fn reset_dataset_caches(&self) {
+        if let Ok(mut batches) = self.daily_batches.lock() {
+            batches.clear();
+        }
+        if let Ok(mut store) = self.store.lock() {
+            store.clear();
+        }
+        if let Ok(mut cache) = self.calc_cache.lock() {
+            cache.clear();
+        }
+    }
+
+    /// ST-DF-03-03：版本卡/错误提示使用的实现码；未安装按 `E_DATASET_MISSING`。
+    fn dataset_error_code(&self) -> &'static str {
+        match &*self.dataset_runtime_lock() {
+            DatasetRuntime::NotInstalled { code } | DatasetRuntime::Blocked { code, .. } => code,
+            _ => "E_DATASET_MISSING",
+        }
     }
 
     fn current_dataset_id(&self) -> String {
@@ -1005,6 +1287,7 @@ impl AppCore {
                 label_zh: "日线行情",
                 required: true,
                 available: daily_ok,
+                reason_code: if daily_ok { None } else { Some("E_SOURCE_NOT_READY") },
                 note: None,
             },
             DatasourceCapabilityDto {
@@ -1012,6 +1295,7 @@ impl AppCore {
                 label_zh: "复权因子",
                 required: true,
                 available: adjust_ok,
+                reason_code: if adjust_ok { None } else { Some("E_SOURCE_NOT_READY") },
                 note: None,
             },
             DatasourceCapabilityDto {
@@ -1019,6 +1303,7 @@ impl AppCore {
                 label_zh: "证券主数据",
                 required: true,
                 available: securities_ok,
+                reason_code: if securities_ok { None } else { Some("E_SOURCE_NOT_READY") },
                 note: None,
             },
             DatasourceCapabilityDto {
@@ -1026,6 +1311,7 @@ impl AppCore {
                 label_zh: "交易日历",
                 required: true,
                 available: calendar_ok,
+                reason_code: if calendar_ok { None } else { Some("E_SOURCE_NOT_READY") },
                 note: None,
             },
             DatasourceCapabilityDto {
@@ -1033,6 +1319,7 @@ impl AppCore {
                 label_zh: "行业映射",
                 required: false,
                 available: caps.industry,
+                reason_code: if caps.industry { None } else { Some("E_UNSUPPORTED") },
                 note: Some("无行业映射：板块区按内置样本分组"),
             },
             DatasourceCapabilityDto {
@@ -1040,6 +1327,7 @@ impl AppCore {
                 label_zh: "指数成分",
                 required: false,
                 available: caps.index_members,
+                reason_code: if caps.index_members { None } else { Some("E_UNSUPPORTED") },
                 note: Some("无指数成分：指数页仅展示内置样本"),
             },
             DatasourceCapabilityDto {
@@ -1047,6 +1335,7 @@ impl AppCore {
                 label_zh: "ST 标记",
                 required: false,
                 available: caps.limit_flags,
+                reason_code: if caps.limit_flags { None } else { Some("E_UNSUPPORTED") },
                 note: Some("无 ST 标记：涨跌停按普通规则推导"),
             },
             DatasourceCapabilityDto {
@@ -1055,6 +1344,7 @@ impl AppCore {
                 required: false,
                 // 数据契约里没有停牌标记字段，如实标不可用，不按零成交量猜测。
                 available: false,
+                reason_code: Some("E_UNSUPPORTED"),
                 note: Some("无停牌标记：零成交量不区分停牌"),
             },
         ];
@@ -1073,6 +1363,7 @@ impl AppCore {
         let version = manifest.as_ref().map(|manifest| DatasetVersionDto {
             dataset_id: manifest.dataset_id.clone(),
             dataset_id_short: manifest.dataset_id.chars().take(24).collect(),
+            data_version: manifest.data_version.clone(),
             generated_at: manifest.generated_at,
             row_count: manifest.row_count,
             coverage_start: manifest.coverage_start.clone(),
@@ -1082,7 +1373,7 @@ impl AppCore {
         });
 
         let (state, error_code): (&'static str, Option<&'static str>) = match &version {
-            None => ("missing", Some("E_DATASET_MISSING")),
+            None => ("missing", Some(self.dataset_error_code())),
             Some(_) if required_ok < required_total => {
                 if errors >= 3 {
                     ("probe_failed", Some("E_PROBE_FAILED"))
@@ -1139,15 +1430,33 @@ impl AppCore {
         status
     }
 
-    /// S-07.01-02：P9 健康检查 6 项（只读、0 网络）。
-    /// ①失败 → ②~⑥ SKIP；②失败 → ③~⑥ SKIP；④必须由 provider 独立复算，不得回读 manifest 缓存。
-    pub async fn data_health_check(&self, manifest_corrupt: bool) -> DataHealthDto {
+    /// S-07.01-02 / ST-DF-03-04：P9 健康检查 6 项（只读、0 网络）。
+    ///
+    /// 分支顺序：
+    /// ①未安装 → ②~⑥ SKIP，整体 `not_installed`（AC-4，不是「损坏」）；
+    /// 启动期身份/描述文件被阻断 → ②FAIL、③~⑥ SKIP，整体 `failed`（AC-3）；
+    /// ②版本六段除 sha256 外的字段缺失 → ③~⑥ SKIP，整体 `failed`（AC-1）；
+    /// sha256 只由 ④ 判定，缺字段时仅 ④ FAIL、其余项照常返回（AC-2）。
+    pub async fn data_health_check(&self, faults: HealthFaults) -> DataHealthDto {
         let total_started = Instant::now();
         let checked_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis() as i64)
             .unwrap_or(0);
-        let manifest = self.dataset_manifest();
+        let runtime = self.dataset_runtime_snapshot();
+        let blocked = match &runtime {
+            DatasetRuntime::Blocked { code, detail } => Some((*code, detail.clone())),
+            _ => None,
+        };
+        let not_installed = faults.manifest_missing
+            || (blocked.is_none() && matches!(runtime, DatasetRuntime::NotInstalled { .. }));
+        let mut manifest = if not_installed { None } else { self.dataset_manifest() };
+        // AC-2：只缺 sha256 时其余段原样，仅 ④ 指出字段缺失。
+        if faults.manifest_sha256_missing {
+            if let Some(current) = manifest.as_mut() {
+                current.sha256.clear();
+            }
+        }
 
         let skip = |key: &str, label: &str| DataHealthItemDto {
             key: key.to_string(),
@@ -1167,6 +1476,7 @@ impl AppCore {
                     ("passed", serde_json::json!(report.passed)),
                     ("total", serde_json::json!(report.total)),
                     ("durationMs", serde_json::json!(report.duration_ms)),
+                    ("state", serde_json::json!(report.state)),
                 ],
             );
             report
@@ -1174,7 +1484,7 @@ impl AppCore {
 
         let mut items: Vec<DataHealthItemDto> = Vec::with_capacity(6);
         let step = Instant::now();
-        let present = manifest.is_some();
+        let present = manifest.is_some() || blocked.is_some();
         items.push(DataHealthItemDto {
             key: "dataset_present".to_string(),
             label_zh: "数据集存在".to_string(),
@@ -1182,14 +1492,21 @@ impl AppCore {
             duration_ms: step.elapsed().as_millis() as u64,
             error_code: if present { None } else { Some("E_DATASET_MISSING") },
             detail: Some(if present {
-                "模拟数据源已装配".to_string()
+                match &blocked {
+                    Some(_) => "数据集已装配，但版本被阻断".to_string(),
+                    None => "模拟数据源已装配".to_string(),
+                }
             } else {
-                "未装配任何数据集".to_string()
+                "未安装样本包（数据目录为空）".to_string()
             }),
-            advice: if present { None } else { Some("去设置页重建样本包") },
+            advice: if present {
+                None
+            } else {
+                Some("去设置页安装样本包")
+            },
         });
 
-        if !present {
+        let skip_rest = |items: &mut Vec<DataHealthItemDto>| {
             for (key, label) in [
                 ("manifest_parse", "manifest 可解析"),
                 ("data_readable", "数据可读"),
@@ -1199,32 +1516,92 @@ impl AppCore {
             ] {
                 items.push(skip(key, label));
             }
+        };
+
+        // AC-4：空目录/未安装 → 「未安装」，不是「损坏」。
+        if !present {
+            skip_rest(&mut items);
             return finish(DataHealthDto {
+                state: "not_installed",
                 items,
                 passed: 0,
                 total: 6,
                 duration_ms: total_started.elapsed().as_millis() as u64,
                 checked_at,
                 dataset_id: None,
+                missing_version_fields: Vec::new(),
             });
         }
+
+        // AC-3：启动期已判定描述文件损坏/身份阻断 → 整体 failed，进程不崩溃。
+        if let Some((code, detail)) = blocked {
+            let step = Instant::now();
+            items.push(DataHealthItemDto {
+                key: "manifest_parse".to_string(),
+                label_zh: "manifest 可解析".to_string(),
+                status: "FAIL",
+                duration_ms: step.elapsed().as_millis() as u64,
+                error_code: Some(code),
+                detail: Some(detail),
+                advice: Some("去设置页重建样本包"),
+            });
+            for (key, label) in [
+                ("data_readable", "数据可读"),
+                ("sha256_match", "sha256 匹配"),
+                ("sample_rows", "行数抽检"),
+                ("required_tables", "必需表齐全"),
+            ] {
+                items.push(skip(key, label));
+            }
+            return finish(DataHealthDto {
+                state: "failed",
+                items,
+                passed: 1,
+                total: 6,
+                duration_ms: total_started.elapsed().as_millis() as u64,
+                checked_at,
+                dataset_id: None,
+                missing_version_fields: Vec::new(),
+            });
+        }
+
         let manifest = manifest.expect("present 分支已判定 manifest 存在");
 
+        // AC-1：版本六段（与版本卡同源）；sha256 单独留给 ④，避免 AC-2 被前置阻断。
+        let mut missing_version_fields: Vec<&'static str> = Vec::new();
+        if manifest.dataset_id.trim().is_empty() {
+            missing_version_fields.push("datasetId");
+        }
+        if manifest.data_version.trim().is_empty() {
+            missing_version_fields.push("dataVersion");
+        }
+        if manifest.generated_at <= 0 {
+            missing_version_fields.push("generatedAt");
+        }
+        if manifest.row_count == 0 {
+            missing_version_fields.push("rowCount");
+        }
+        if !coverage_valid(&manifest.coverage_start, &manifest.coverage_end) {
+            missing_version_fields.push("coverage");
+        }
+        if !valid_sha256(&manifest.sha256) {
+            missing_version_fields.push("sha256");
+        }
+        let structural_missing: Vec<&str> = missing_version_fields
+            .iter()
+            .copied()
+            .filter(|field| *field != "sha256")
+            .collect();
+
         let step = Instant::now();
-        let parse_ok = !manifest_corrupt
-            && !manifest.dataset_id.trim().is_empty()
-            && manifest.row_count > 0
-            && Date::parse(&manifest.coverage_start).is_some()
-            && Date::parse(&manifest.coverage_end).is_some()
-            && manifest.sha256.len() == 64
-            && manifest.sha256.chars().all(|ch| ch.is_ascii_hexdigit());
+        let parse_ok = !faults.manifest_corrupt && structural_missing.is_empty();
         items.push(DataHealthItemDto {
             key: "manifest_parse".to_string(),
             label_zh: "manifest 可解析".to_string(),
             status: if parse_ok { "PASS" } else { "FAIL" },
             duration_ms: step.elapsed().as_millis() as u64,
             error_code: if parse_ok { None } else { Some("E_MANIFEST_CORRUPT") },
-            detail: Some(if manifest_corrupt {
+            detail: Some(if faults.manifest_corrupt {
                 "manifest 不可解析（故障注入）".to_string()
             } else if parse_ok {
                 format!(
@@ -1232,7 +1609,7 @@ impl AppCore {
                     manifest.dataset_id, manifest.row_count, manifest.coverage_start, manifest.coverage_end
                 )
             } else {
-                "dataset_id / 行数 / 区间 / sha256 至少一项不合法".to_string()
+                format!("版本字段缺失或不合法：{}", structural_missing.join("、"))
             }),
             advice: if parse_ok { None } else { Some("去设置页重建样本包") },
         });
@@ -1247,12 +1624,14 @@ impl AppCore {
                 items.push(skip(key, label));
             }
             return finish(DataHealthDto {
+                state: "failed",
                 items,
                 passed: 1,
                 total: 6,
                 duration_ms: total_started.elapsed().as_millis() as u64,
                 checked_at,
                 dataset_id: Some(manifest.dataset_id.clone()),
+                missing_version_fields,
             });
         }
 
@@ -1278,28 +1657,56 @@ impl AppCore {
             advice: if readable { None } else { Some("去设置页重建样本包") },
         });
 
-        // ④ sha256 匹配：provider 独立重算，禁止回读缓存。
+        // ④ sha256 匹配：字段缺失只让本项 FAIL；字段完整时独立复算。
+        // 已安装 → 复算落盘 dataset.db（manifest.sha256 的原始口径）；
+        // 未安装（方案 B 沿用内存 Provider）→ 复算内存数据集。
         let step = Instant::now();
-        match self.provider.dataset_digest() {
-            Some((sha, rows)) => {
-                let matched = sha == manifest.sha256 && rows == manifest.row_count;
-                items.push(DataHealthItemDto {
-                    key: "sha256_match".to_string(),
-                    label_zh: "sha256 匹配".to_string(),
-                    status: if matched { "PASS" } else { "FAIL" },
-                    duration_ms: step.elapsed().as_millis() as u64,
-                    error_code: if matched { None } else { Some("E_SHA_MISMATCH") },
-                    detail: Some(format!(
-                        "复算 {}/{} 行，manifest {}/{} 行",
-                        &sha[..12.min(sha.len())],
-                        rows,
-                        &manifest.sha256[..12.min(manifest.sha256.len())],
-                        manifest.row_count
-                    )),
-                    advice: if matched { None } else { Some("数据可能已损坏，建议重建样本包") },
-                });
+        if !valid_sha256(&manifest.sha256) {
+            items.push(DataHealthItemDto {
+                key: "sha256_match".to_string(),
+                label_zh: "sha256 匹配".to_string(),
+                status: "FAIL",
+                duration_ms: step.elapsed().as_millis() as u64,
+                error_code: Some("E_SHA256_MISSING"),
+                detail: Some("manifest 缺少 sha256 字段（版本第 6 段）".to_string()),
+                advice: Some("去设置页重建样本包"),
+            });
+        } else {
+            let disk = match &runtime {
+                DatasetRuntime::Installed { data_dir, seed, .. } => {
+                    Some(crate::sim_install::disk_facts(data_dir, *seed))
+                }
+                _ => None,
+            };
+            let recomputed = match &disk {
+                Some(facts) => facts
+                    .actual_sha256
+                    .clone()
+                    .map(|sha| (sha, facts.row_count.unwrap_or(0))),
+                None => self.provider.dataset_digest(),
+            };
+            match recomputed {
+                Some((sha, rows)) => {
+                    let matched = sha == manifest.sha256 && rows == manifest.row_count;
+                    let source = if disk.is_some() { "落盘" } else { "内存" };
+                    items.push(DataHealthItemDto {
+                        key: "sha256_match".to_string(),
+                        label_zh: "sha256 匹配".to_string(),
+                        status: if matched { "PASS" } else { "FAIL" },
+                        duration_ms: step.elapsed().as_millis() as u64,
+                        error_code: if matched { None } else { Some("E_SHA_MISMATCH") },
+                        detail: Some(format!(
+                            "{source}复算 {}/{} 行，manifest {}/{} 行",
+                            &sha[..12.min(sha.len())],
+                            rows,
+                            &manifest.sha256[..12.min(manifest.sha256.len())],
+                            manifest.row_count
+                        )),
+                        advice: if matched { None } else { Some("数据可能已损坏，建议重建样本包") },
+                    });
+                }
+                None => items.push(skip("sha256_match", "sha256 匹配")),
             }
-            None => items.push(skip("sha256_match", "sha256 匹配")),
         }
 
         // ⑤ 行数抽检：最近 5 个交易日必须存在、按日递增且开高低收合法。
@@ -1358,13 +1765,17 @@ impl AppCore {
         });
 
         let passed = items.iter().filter(|item| item.status == "PASS").count() as u32;
+        // AC-6：任一项非 PASS（含 SKIP 的前置失败）都不允许整体判为 ok。
+        let state = if passed == 6 { "ok" } else { "failed" };
         finish(DataHealthDto {
+            state,
             items,
             passed,
             total: 6,
             duration_ms: total_started.elapsed().as_millis() as u64,
             checked_at,
             dataset_id: Some(manifest.dataset_id.clone()),
+            missing_version_fields,
         })
     }
     /// S-08.02-03：启动校验（只读、0 网络）。
@@ -1387,6 +1798,13 @@ impl AppCore {
             readable: false,
             checked_at,
             dataset_id: manifest.as_ref().map(|m| m.dataset_id.clone()),
+            data_version: manifest.as_ref().map(|m| m.data_version.clone()),
+            row_count: manifest.as_ref().map(|m| m.row_count),
+            coverage_start: manifest.as_ref().map(|m| m.coverage_start.clone()),
+            coverage_end: manifest.as_ref().map(|m| m.coverage_end.clone()),
+            missing_fields: Vec::new(),
+            expected_sha256: manifest.as_ref().map(|m| m.sha256.clone()),
+            actual_sha256: None,
         };
 
         if fault == DatasetFault::Missing || manifest.is_none() {
@@ -1460,6 +1878,199 @@ impl AppCore {
         self.finish_dataset_integrity(report)
     }
 
+    /// ST-DF-03-02：安装后自动校验落盘一致性（只读）。
+    ///
+    /// 有故障注入时沿用 QA 口径（内存分类）；否则只要安装目录存在，就以磁盘事实为准：
+    /// manifest 缺失/缺字段 → dataset.db 缺失/损坏 → 行数 → 覆盖区间 → sha256。
+    /// 全程只读：数据库以只读标志打开，校验不写任何文件。
+    pub fn dataset_integrity_at(
+        &self,
+        fault: DatasetFault,
+        data_dir: Option<&std::path::Path>,
+        seed: u64,
+    ) -> DatasetIntegrityDto {
+        if fault != DatasetFault::None {
+            return self.dataset_integrity(fault);
+        }
+        let Some(data_dir) = data_dir else {
+            return self.dataset_integrity(fault);
+        };
+        // ST-DF-03-03：启动判定已阻断（身份不一致/描述文件损坏）时先返回该结论，
+        // 不再用落盘事实覆盖，也不回退内存口径。
+        if let DatasetRuntime::Blocked { code, detail } = self.dataset_runtime_snapshot() {
+            let (integrity_code, title) = match code {
+                "E_DATASET_VERSION_MISMATCH" => ("VERSION_MISMATCH", "数据集版本不一致"),
+                _ => ("MANIFEST_INVALID", "数据集描述文件损坏"),
+            };
+            let checked_at = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as i64)
+                .unwrap_or(0);
+            let report = DatasetIntegrityDto {
+                state: "blocked",
+                error_code: Some(integrity_code),
+                title: Some(title),
+                detail: Some(detail),
+                trace_id: trace_id(),
+                dataset_path: crate::sim_install::dataset_dir(data_dir, seed)
+                    .display()
+                    .to_string(),
+                readable: false,
+                checked_at,
+                dataset_id: None,
+                data_version: None,
+                row_count: None,
+                coverage_start: None,
+                coverage_end: None,
+                missing_fields: Vec::new(),
+                expected_sha256: None,
+                actual_sha256: None,
+            };
+            return self.finish_dataset_integrity(report);
+        }
+        let facts = crate::sim_install::disk_facts(data_dir, seed);
+        if !facts.dir_present {
+            return self.dataset_integrity(fault);
+        }
+
+        let checked_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .unwrap_or(0);
+        let mut report = DatasetIntegrityDto {
+            state: "ok",
+            error_code: None,
+            title: None,
+            detail: None,
+            trace_id: trace_id(),
+            dataset_path: crate::sim_install::dataset_dir(data_dir, seed)
+                .display()
+                .to_string(),
+            readable: false,
+            checked_at,
+            dataset_id: facts.manifest.as_ref().map(|m| m.dataset_id.clone()),
+            data_version: facts.manifest.as_ref().map(|m| m.data_version.clone()),
+            row_count: facts.row_count,
+            coverage_start: facts.coverage_start.clone(),
+            coverage_end: facts.coverage_end.clone(),
+            missing_fields: facts.missing_fields.clone(),
+            expected_sha256: facts.manifest.as_ref().map(|m| m.sha256.clone()),
+            actual_sha256: facts.actual_sha256.clone(),
+        };
+
+        if !facts.manifest_present {
+            report.state = "blocked";
+            report.error_code = Some("MANIFEST_MISSING");
+            report.title = Some("数据集描述文件缺失");
+            report.detail = Some("安装目录存在但缺少 manifest.json，请重新安装样本包".to_string());
+            return self.finish_dataset_integrity(report);
+        }
+
+        if facts.manifest.is_none() {
+            report.state = "blocked";
+            report.error_code = Some("MANIFEST_INVALID");
+            report.title = Some("数据集描述文件损坏");
+            report.detail = Some(if !facts.missing_fields.is_empty() {
+                format!("manifest 缺失字段：{}", facts.missing_fields.join("、"))
+            } else if facts.manifest_json_invalid {
+                "manifest 不是可解析的 JSON 对象".to_string()
+            } else {
+                "manifest 字段类型不合法".to_string()
+            });
+            return self.finish_dataset_integrity(report);
+        }
+        let manifest = facts.manifest.expect("manifest 已判定存在");
+
+        if !facts.db_present {
+            report.state = "blocked";
+            report.error_code = Some("DATASET_DB_MISSING");
+            report.title = Some("数据文件缺失");
+            report.detail = Some(format!(
+                "{} 不存在，请重新安装样本包",
+                crate::sim_install::dataset_dir(data_dir, seed)
+                    .join("dataset.db")
+                    .display()
+            ));
+            return self.finish_dataset_integrity(report);
+        }
+
+        if let Some(err) = &facts.db_error {
+            report.state = "blocked";
+            report.error_code = Some("DB_CORRUPT");
+            report.title = Some("数据文件损坏");
+            report.readable = true;
+            report.detail = Some(err.clone());
+            return self.finish_dataset_integrity(report);
+        }
+
+        let short = |text: &str| text[..12.min(text.len())].to_string();
+        let actual_rows = facts.row_count.unwrap_or(0);
+
+        if actual_rows != manifest.row_count {
+            report.state = "blocked";
+            report.error_code = Some("ROW_COUNT_MISMATCH");
+            report.title = Some("数据集行数不一致");
+            report.readable = true;
+            report.detail = Some(format!(
+                "manifest {} 行，落盘 {actual_rows} 行",
+                manifest.row_count
+            ));
+            return self.finish_dataset_integrity(report);
+        }
+
+        if facts.coverage_start.as_deref() != Some(manifest.coverage_start.as_str())
+            || facts.coverage_end.as_deref() != Some(manifest.coverage_end.as_str())
+        {
+            report.state = "blocked";
+            report.error_code = Some("COVERAGE_MISMATCH");
+            report.title = Some("数据集覆盖区间不一致");
+            report.readable = true;
+            report.detail = Some(format!(
+                "manifest {} ~ {}，落盘 {} ~ {}",
+                manifest.coverage_start,
+                manifest.coverage_end,
+                facts.coverage_start.as_deref().unwrap_or("—"),
+                facts.coverage_end.as_deref().unwrap_or("—")
+            ));
+            return self.finish_dataset_integrity(report);
+        }
+
+        if let Some(actual) = &facts.actual_sha256 {
+            if actual != &manifest.sha256 {
+                report.state = "blocked";
+                report.error_code = Some("SHA256_MISMATCH");
+                report.title = Some("数据集校验失败");
+                report.readable = true;
+                report.detail = Some(format!(
+                    "manifest {}（{} 行），复算 {}（{actual_rows} 行）",
+                    short(&manifest.sha256),
+                    manifest.row_count,
+                    short(actual)
+                ));
+                return self.finish_dataset_integrity(report);
+            }
+        }
+
+        // 身份一致性（dataset_id 与生成规则不符、seed/provider 非法等）复用冻结校验器。
+        if let Some(actual) = &facts.actual_sha256 {
+            if let Err(issues) = manifest.validate(actual_rows, actual) {
+                report.state = "blocked";
+                report.error_code = Some("MANIFEST_INVALID");
+                report.title = Some("数据集身份不一致");
+                report.detail = Some(
+                    issues
+                        .iter()
+                        .map(|issue| format!("{}：{}", issue.field, issue.message))
+                        .collect::<Vec<_>>()
+                        .join("；"),
+                );
+                return self.finish_dataset_integrity(report);
+            }
+        }
+
+        self.finish_dataset_integrity(report)
+    }
+
     /// 校验失败落 `dataset.error`（只记分类 / trace id / 路径，不记用户数据）。
     fn finish_dataset_integrity(&self, report: DatasetIntegrityDto) -> DatasetIntegrityDto {
         if let Some(code) = report.error_code {
@@ -1487,22 +2098,42 @@ impl AppCore {
 
     /// 全量扫描 6 项质量检查；成功后才覆盖缓存（失败保留上一次报告）。
     pub async fn quality_scan(&self) -> Result<QualityReportDto, AppError> {
-        let started = std::time::Instant::now();
         let dataset_id = self.current_dataset_id();
+
+        // AC-DF-02-04-4：同一 dataset_id 重复扫描直接复用上次报告，不再遍历 provider。
+        // dataset_id（含 data_version）变化时缓存自然失效，进入全量重扫（AC-5）。
+        if let Ok(guard) = self.quality_report.lock() {
+            if let Some(cached) = guard.as_ref() {
+                if cached.based_on_dataset_id == dataset_id {
+                    return Ok(cached.clone());
+                }
+            }
+        }
+
+        let started = std::time::Instant::now();
         let has_adjust_factors = self.provider.capabilities().adjust_factors;
 
         let mut inputs = Vec::with_capacity(self.securities.len());
         let mut observed_dates = std::collections::BTreeSet::new();
+        let mut failed_securities = Vec::new();
         for security in &self.securities {
-            let batch = self.daily_batch(&security.code, data_provider::Adjust::None).await?;
-            for row in &batch.rows {
-                observed_dates.insert(row.date);
+            // AC-DF-02-04-6：单证券读取失败只影响对应项，报告整体仍可返回。
+            match self
+                .daily_batch(&security.code, data_provider::Adjust::None)
+                .await
+            {
+                Ok(batch) => {
+                    for row in &batch.rows {
+                        observed_dates.insert(row.date);
+                    }
+                    inputs.push(SecurityQualityInput {
+                        security: security.clone(),
+                        bars: batch.rows.clone(),
+                        has_adjust_factors,
+                    });
+                }
+                Err(_) => failed_securities.push(security.code.clone()),
             }
-            inputs.push(SecurityQualityInput {
-                security: security.clone(),
-                bars: batch.rows.clone(),
-                has_adjust_factors,
-            });
         }
 
         let fallback: Vec<data_provider::Date> = observed_dates.into_iter().collect();
@@ -1525,7 +2156,7 @@ impl AppCore {
 
         let result = quality::scan(&calendar, &inputs);
         let duration_ms = started.elapsed().as_millis() as u64;
-        let rows: Vec<QualityCheckDto> = result
+        let mut rows: Vec<QualityCheckDto> = result
             .rows
             .into_iter()
             .map(|row| QualityCheckDto {
@@ -1537,6 +2168,7 @@ impl AppCore {
                 treatment: row.treatment,
                 status: row.status.as_str(),
                 error_code: row.error_code,
+                missing_fields: row.missing_fields,
                 examples: row
                     .examples
                     .into_iter()
@@ -1548,7 +2180,26 @@ impl AppCore {
             })
             .collect();
 
+        // AC-DF-02-04-6：有证券读取失败时，缺失项计 failed 并给出缺失字段名，报告照常返回。
+        if !failed_securities.is_empty() {
+            for row in rows.iter_mut().filter(|row| row.key == "MISSING") {
+                row.status = "failed";
+                row.error_code = Some("E_DAILY_READ_FAILED");
+                row.missing_fields = vec!["dailyBars"];
+                row.hits = 0;
+                row.base = 0;
+                row.ratio_pct = 0.0;
+                row.treatment = "行情表读取失败，无法判定缺失";
+                row.examples.clear();
+            }
+        }
+
         let total_count = rows.len();
+        // 与 quality::scan 同口径：「通过」= PASS + INFO；读取失败把 MISSING 改为 failed 后自然少计。
+        let passed_count = rows
+            .iter()
+            .filter(|row| row.status == "pass" || row.status == "info")
+            .count();
         let report = QualityReportDto {
             dataset_id: dataset_id.clone(),
             based_on_dataset_id: dataset_id.clone(),
@@ -1559,7 +2210,7 @@ impl AppCore {
                 .map(|d| d.as_secs() as i64)
                 .unwrap_or(0),
             duration_ms,
-            passed_count: result.passed_count,
+            passed_count,
             total_count,
             rows,
         };
@@ -1680,8 +2331,9 @@ impl AppCore {
                 .unwrap_or(candle.close)
         };
 
-        // 卡面要求 dataset_id 与 manifest 一致，不用序列缓存里的批次 id。
-        let dataset_id = self.current_dataset_id();
+        // AC-DF-05-04-6：溯源 dataset_id 必须指向该 K 线实际所属版本——
+        // 与同一响应的 `BarsResponse.dataset_id` 同源，而不是另取当前 manifest 计算值。
+        let dataset_id = series.dataset_id.clone();
         Ok(build_bar_provenance(
             &series.security,
             candle,
@@ -1700,14 +2352,13 @@ impl AppCore {
         let total = series.len();
         let window = resolve_window(&series, req.from.as_deref(), req.to.as_deref())?;
         let columns = SeriesColumns::new(&series);
-        let view = columns.view();
 
         let mut computed_ms = 0.0;
         let mut cache_hit = true;
         let mut computed = 0u64;
         let mut skipped = 0u64;
         // 同请求内同键去重：5 个实例引用同一指标参数时只算一次，其余实例复用结果。
-        let mut request_cache: HashMap<String, Arc<Vec<Vec<f64>>>> = HashMap::new();
+        let mut request_cache: HashMap<String, Arc<CachedCalc>> = HashMap::new();
         let mut output = Vec::with_capacity(req.instances.len());
 
         for (index, instance) in req.instances.iter().enumerate() {
@@ -1715,21 +2366,46 @@ impl AppCore {
                 .ok_or_else(|| AppError::unknown_indicator(&instance.indicator_id))?;
             let meta = indicator.meta();
 
-            let params = merge_defaults(meta.params, &instance.params);
-            validate(meta.params, &params).map_err(|err| param_error(meta.id, err))?;
+            // AKA-104 / AC-DF-04-03-4：缺参必须报错，不得用注册表默认值静默补齐；
+            // 前端已按 manifest 下发完整参数，这里的请求参数即最终参数。
+            let params = instance.params.clone();
+            // AC-DF-04-03-6 / AC-DF-04-04-3：参数非法只让该实例返回错误，其余实例照常计算；
+            // 不写缓存、不产生 `indicator.compute`，连续请求得到同一错误。
+            if let Err(err) = validate(meta.params, &params) {
+                cache_hit = false;
+                output.push(failed_series(
+                    instance,
+                    meta.id,
+                    meta.engine_version,
+                    param_error(meta.id, err),
+                ));
+                continue;
+            }
 
             let warmup = (meta.warmup)(&params);
             // S-02.07-02 前置 2：预热不足的指标由引擎输出全段 NaN（`short_series_respects_warmup_for_every_indicator`
             // 已覆盖全部 44 个实现指标），不在这里让整个请求失败；否则月线 24 根时 T01/T03 也会被 T02 连坐。
 
+            // ST-DF-04-05：仅“预热声明足以精确截断”的指标按 [可见窗口 + 预热前缀] 计算；
+            // 递归/累积/前视类指标仍取全序列，保证与全序列结果逐点一致（AC-DF-04-05-2/4）。
+            let precise = indicator_core::warmup_exact(meta.id);
+            let input_start = if precise {
+                window.start.saturating_sub(warmup)
+            } else {
+                0
+            };
+            let input_end = if precise { window.end } else { total };
+            let input_bars = input_end - input_start;
+
             let key = calc_key(&series, meta, &params, &window.range);
-            let params_hash = params_hash(&params);
+            let params_hash = params_hash(meta, &params);
             let context = telemetry_context(
                 meta.id,
                 &params_hash,
                 &key,
                 &series,
                 window.end - window.start,
+                input_bars,
             );
 
             let raw = if let Some(values) = request_cache.get(&key) {
@@ -1749,8 +2425,7 @@ impl AppCore {
                     .calc_cache
                     .lock()
                     .map_err(|_| AppError::internal("计算缓存锁中毒"))?
-                    .get(&key)
-                    .cloned();
+                    .get(&key);
 
                 match cached {
                     Some(values) => {
@@ -1761,13 +2436,21 @@ impl AppCore {
                         cache_hit = false;
                         self.telemetry.emit(EVENT_CACHE_MISS, context.clone());
                         let started = Instant::now();
-                        let mut values = vec![vec![f64::NAN; total]; meta.outputs.len()];
-                        indicator
-                            .calc(&view, &params, &mut values)
-                            .map_err(|err| calc_error(meta.id, err))?;
+                        let mut values = vec![vec![f64::NAN; input_bars]; meta.outputs.len()];
+                        let view = columns.view_range(input_start, input_end);
+                        if let Err(err) = indicator.calc(&view, &params, &mut values) {
+                            output.push(failed_series(
+                                instance,
+                                meta.id,
+                                meta.engine_version,
+                                calc_error(meta.id, err),
+                            ));
+                            continue;
+                        }
                         // S-08.02-04 取证注入：正常启动与发布构建都编译掉，产品行为不变（W-47）。
+                        // 注入点按可见窗口末根在输入数组中的偏移换算。
                         #[cfg(debug_assertions)]
-                        diag_inject_indefinite(index, window.end, &mut values);
+                        diag_inject_indefinite(index, window.end - input_start, &mut values);
                         let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
                         computed_ms += elapsed_ms;
                         computed += 1;
@@ -1781,10 +2464,14 @@ impl AppCore {
                                 ("indicatorId", serde_json::json!(meta.id)),
                                 ("cacheKey", serde_json::json!(key.clone())),
                                 ("barCount", serde_json::json!(window.end - window.start)),
+                                ("inputBars", serde_json::json!(input_bars)),
                             ],
                         );
 
-                        let values = Arc::new(values);
+                        let values = Arc::new(CachedCalc {
+                            start: input_start,
+                            values,
+                        });
                         self.calc_cache
                             .lock()
                             .map_err(|_| AppError::internal("计算缓存锁中毒"))?
@@ -1796,14 +2483,16 @@ impl AppCore {
 
             request_cache.insert(key, raw.clone());
 
+            // 输出按缓存的实际输入起点切片：精确截断时可见窗口不在数组 0 处。
+            let offset = window.start - raw.start;
             let outputs = meta
                 .outputs
                 .iter()
-                .zip(raw.iter())
+                .zip(raw.values.iter())
                 .map(|(spec, values)| {
                     let mut indefinite = false;
                     let mut out = Vec::with_capacity(window.end - window.start);
-                    for value in &values[window.start..window.end] {
+                    for value in &values[offset..offset + (window.end - window.start)] {
                         if value.is_finite() {
                             out.push(Some(*value));
                         } else {
@@ -1840,6 +2529,7 @@ impl AppCore {
                 outputs,
                 warmup,
                 engine_version: meta.engine_version,
+                error: None,
             });
         }
 
@@ -1898,7 +2588,20 @@ impl AppCore {
         }
 
         // 日/周/月都从同一份日线批次派生：周/月聚合只在 app-core 做一次口径转换。
-        let batch = self.daily_batch(&found.code, adj).await?;
+        let mut batch = self.daily_batch(&found.code, adj).await?;
+
+        // AC-DF-02-02-3：复权因子缺失（数据源不提供因子，或因子非正/非有限）时
+        // 降级为不复权原始价，并显式标记 ADJ_COVERAGE；绝不静默按 1.0 复权。
+        let degrade_to_raw = adj != Adjust::None
+            && (!self.provider.capabilities().adjust_factors
+                || batch
+                    .rows
+                    .iter()
+                    .any(|row| !row.adj_factor.is_finite() || row.adj_factor <= 0.0));
+        if degrade_to_raw {
+            batch = self.daily_batch(&found.code, Adjust::None).await?;
+        }
+
         let rows = match timeframe {
             Timeframe::Day => batch.rows.clone(),
             Timeframe::Week => aggregate_bars(&batch.rows, AggregatePeriod::Week),
@@ -1912,6 +2615,10 @@ impl AppCore {
             .map(|(index, row)| {
                 let mut quality: Vec<String> =
                     row.quality.iter().map(|q| q.as_str().to_string()).collect();
+                // 因子缺失的降级结果逐根带 ADJ_COVERAGE，供溯源抽屉与质量面板识别。
+                if degrade_to_raw {
+                    push_flag(&mut quality, "ADJ_COVERAGE");
+                }
                 let suspended = row
                     .quality
                     .iter()
@@ -1992,7 +2699,18 @@ impl AppCore {
     }
 
     /// 日线原始批次缓存：同一标的/复权只取一次，换算周/月时不重复打 provider。
+    ///
+    /// ST-DF-03-03：这里是把落盘版本身份注入到全部行情/DTO 的唯一入口。
+    /// 已安装时覆盖 `dataset_id/data_version/generation/generated_at`，保证 bars 与
+    /// provenance 不会混用内存版本（AC-DF-03-03-6）；被阻断时直接拒绝取数。
     async fn daily_batch(&self, code: &str, adj: Adjust) -> Result<Arc<BarBatch>, AppError> {
+        let runtime = self.dataset_runtime_snapshot();
+        if let DatasetRuntime::Blocked { detail, .. } = &runtime {
+            return Err(AppError::new(
+                ErrorCode::DatasetVersionMismatch,
+                detail.clone(),
+            ));
+        }
         let key = format!("{}|{}", code, adj.as_str());
         if let Some(cached) = self
             .daily_batches
@@ -2004,7 +2722,7 @@ impl AppCore {
             return Ok(cached);
         }
 
-        let batch = self
+        let mut batch = self
             .provider
             .daily_bars(BarRequest {
                 security: code.to_string(),
@@ -2015,6 +2733,12 @@ impl AppCore {
             })
             .await
             .map_err(AppError::from)?;
+        if let DatasetRuntime::Installed { manifest, .. } = &runtime {
+            batch.dataset_id = manifest.dataset_id.clone();
+            batch.data_version = manifest.data_version.clone();
+            batch.dataset_generation = manifest.generation();
+            batch.generated_at = manifest.generated_at;
+        }
         let batch = Arc::new(batch);
         self.daily_batches
             .lock()
@@ -2089,10 +2813,12 @@ fn resolve_window(
                 .with_details(serde_json::json!({"from": f.iso(), "to": t.iso()})));
         }
         if t.epoch_secs() / 86_400 - f.epoch_secs() / 86_400 > MAX_RANGE_DAYS {
-            return Err(AppError::invalid_argument(format!(
-                "区间超长：{f} 至 {t} 超过 {MAX_RANGE_DAYS} 天上限"
-            ))
-            .with_details(serde_json::json!({"maxDays": MAX_RANGE_DAYS})));
+            return Err(AppError::range_too_large(serde_json::json!({
+                "reason": "DAYS",
+                "maxDays": MAX_RANGE_DAYS,
+                "requestedFrom": f.iso(),
+                "requestedTo": t.iso(),
+            })));
         }
     }
 
@@ -2151,10 +2877,11 @@ fn resolve_window(
 
     let bar_count = end - start;
     if bar_count > MAX_RANGE_BARS {
-        return Err(AppError::invalid_argument(format!(
-            "区间包含 {bar_count} 根 K 线，超过 {MAX_RANGE_BARS} 根上限"
-        ))
-        .with_details(serde_json::json!({"maxBars": MAX_RANGE_BARS, "requestedBars": bar_count})));
+        return Err(AppError::range_too_large(serde_json::json!({
+            "reason": "BARS",
+            "maxBars": MAX_RANGE_BARS,
+            "requestedBars": bar_count,
+        })));
     }
 
     let actual_from = series.candles[start].date.clone();
@@ -2224,21 +2951,23 @@ impl SeriesColumns {
         }
     }
 
-    fn view(&self) -> OhlcvView<'_> {
+    /// ST-DF-04-05：只暴露 `[start, end)` 的输入窗口（可见区间 + 预热前缀）。
+    fn view_range(&self, start: usize, end: usize) -> OhlcvView<'_> {
         OhlcvView::new(
-            &self.open,
-            &self.high,
-            &self.low,
-            &self.close,
-            &self.volume,
-            &self.amount,
+            &self.open[start..end],
+            &self.high[start..end],
+            &self.low[start..end],
+            &self.close[start..end],
+            &self.volume[start..end],
+            &self.amount[start..end],
         )
     }
 }
 
 /// 参数指纹：FNV-1a(JSON 序列化后的 Params)，用于埋点与缓存键排查，不参与缓存键本体。
-fn params_hash(params: &Params) -> String {
-    let text = serde_json::to_string(params).unwrap_or_default();
+/// ST-DF-04-03：参数哈希与缓存键共用同一份规范化编码，保证两者口径一致。
+fn params_hash(meta: &'static indicator_core::Meta, params: &Params) -> String {
+    let text = canonical_params(meta, params);
     let mut hash = 0xCBF2_9CE4_8422_2325u64;
     for byte in text.as_bytes() {
         hash ^= *byte as u64;
@@ -2253,6 +2982,7 @@ fn telemetry_context(
     cache_key: &str,
     series: &CandleSeries,
     bar_count: usize,
+    input_bars: usize,
 ) -> Vec<(&'static str, serde_json::Value)> {
     vec![
         ("indicatorId", serde_json::json!(indicator_id)),
@@ -2264,23 +2994,68 @@ fn telemetry_context(
         ("datasetId", serde_json::json!(series.dataset_id)),
         ("datasetGeneration", serde_json::json!(series.dataset_generation)),
         ("barCount", serde_json::json!(bar_count)),
+        // ST-DF-04-05：实际传入计算的根数（可见窗口 + 预热前缀）；可观测裁剪是否生效。
+        ("inputBars", serde_json::json!(input_bars)),
     ]
 }
 
 /// 缓存键 = 6 个原有维度（数据集版本、标的、周期、复权、指标 id、参数）+ DateRange，
 /// 共 7 维；DateRange 用规范化后的实际起止日参与哈希（未指定时记 `*`）。
 /// 不再保留旧六元组键：日期区间变化必须视为新的计算结果。
+/// ST-DF-04-03：参数进入缓存键前的规范化编码。
+///
+/// 按 manifest 声明的类型打标签（`i:`/`f:`/`s:`/`b:`），不同类型永不会共用缓存键；
+/// 同一数值的 Int/Float 表示（如 `5` 与 `5.0`）归一为同一个键，避免语义相同的请求重复计算。
+/// 键序由 `Params`（BTreeMap）保证，与请求中的书写顺序无关。
+fn canonical_params(meta: &'static indicator_core::Meta, params: &Params) -> String {
+    let mut out = String::new();
+    for spec in meta.params {
+        out.push_str(spec.key());
+        out.push('=');
+        match spec {
+            indicator_core::ParamSpec::Int { .. } => match indicator_core::param_int(params, spec.key())
+            {
+                Some(value) => out.push_str(&format!("i:{value}")),
+                None => out.push_str("i:?"),
+            },
+            indicator_core::ParamSpec::Float { .. } => match params.get(spec.key()).and_then(|v| v.as_f64())
+            {
+                Some(value) => out.push_str(&format!("f:{:016x}", value.to_bits())),
+                None => out.push_str("f:?"),
+            },
+            indicator_core::ParamSpec::Enum { .. } => match params.get(spec.key()) {
+                Some(indicator_core::ParamValue::Text(value)) => {
+                    out.push_str("s:");
+                    out.push_str(value);
+                }
+                _ => out.push_str("s:?"),
+            },
+            indicator_core::ParamSpec::Bool { .. } => match params.get(spec.key()) {
+                Some(indicator_core::ParamValue::Bool(value)) => {
+                    out.push_str(if *value { "b:1" } else { "b:0" });
+                }
+                _ => out.push_str("b:?"),
+            },
+        }
+        out.push(';');
+    }
+    out
+}
+
 fn calc_key(
     series: &CandleSeries,
     meta: &'static indicator_core::Meta,
     params: &Params,
     range: &RangeDto,
 ) -> String {
-    let params = serde_json::to_string(params).unwrap_or_default();
+    let params = canonical_params(meta, params);
+    // v4（AKA-72）：把 data_version 显式并入缓存键。重建后版本号 +1，
+    // 即使 dataset_id 因口径调整而未变，旧缓存也不会被误命中。
     format!(
-        "v2|{}|{}|{}|{}|{}|{}|{}|{}~{}",
+        "v4|{}|{}|{}|{}|{}|{}|{}|{}|{}~{}",
         ENGINE_VERSION,
         series.dataset_id,
+        series.data_version,
         series.security,
         series.timeframe,
         series.adj,
@@ -2289,6 +3064,24 @@ fn calc_key(
         range.returned_from.as_deref().unwrap_or("*"),
         range.returned_to.as_deref().unwrap_or("*"),
     )
+}
+
+/// ST-DF-04-03-6 / AC-DF-04-04-3：实例级失败时仍返回该实例的占位结果，
+/// 用 `error` 携带错误码，其他实例的输出不受影响。
+fn failed_series(
+    instance: &crate::dto::InstanceRequest,
+    indicator_id: &'static str,
+    engine_version: u16,
+    error: AppError,
+) -> SeriesDto {
+    SeriesDto {
+        instance_id: instance.instance_id.clone(),
+        indicator_id: indicator_id.to_string(),
+        outputs: Vec::new(),
+        warmup: 0,
+        engine_version,
+        error: Some(error),
+    }
 }
 
 fn param_error(indicator_id: &str, err: ParamError) -> AppError {
@@ -2535,6 +3328,134 @@ mod tests {
         assert_eq!(cached.current_dataset_id, report.dataset_id);
     }
 
+    /// AC-DF-02-04-4：同一 dataset_id 重复扫描直接复用上一次报告，不再遍历 provider。
+    #[tokio::test]
+    async fn quality_scan_reuses_report_for_same_dataset() {
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let core = AppCore::new(Box::new(ProxyProvider {
+            inner: data_provider::mock::MockProvider::new(),
+            adjust_factors: true,
+            patch: None,
+            fail_security: None,
+            calls: calls.clone(),
+        }))
+        .await
+        .unwrap();
+
+        let first = core.quality_scan().await.unwrap();
+        let after_first = calls.load(std::sync::atomic::Ordering::SeqCst);
+        assert!(after_first > 0, "首次扫描必然读取 provider");
+
+        let second = core.quality_scan().await.unwrap();
+        assert_eq!(
+            calls.load(std::sync::atomic::Ordering::SeqCst),
+            after_first,
+            "同数据集重复扫描不得再请求 provider"
+        );
+        assert_eq!(
+            serde_json::to_value(&first).unwrap(),
+            serde_json::to_value(&second).unwrap(),
+            "重复扫描结果必须与上次报告逐字段一致"
+        );
+    }
+
+    /// AC-DF-02-04-5：dataset_id（数据版本）变化后缓存失效，必须全量重扫。
+    #[tokio::test]
+    async fn quality_scan_rescans_when_dataset_id_changes() {
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let core = AppCore::new(Box::new(ProxyProvider {
+            inner: data_provider::mock::MockProvider::new(),
+            adjust_factors: true,
+            patch: None,
+            fail_security: None,
+            calls: calls.clone(),
+        }))
+        .await
+        .unwrap();
+
+        let first = core.quality_scan().await.unwrap();
+        let after_first = calls.load(std::sync::atomic::Ordering::SeqCst);
+        assert!(after_first > 0);
+
+        // 模拟数据版本切换：把缓存报告的绑定 id 改成旧值。
+        core.quality_report
+            .lock()
+            .unwrap()
+            .as_mut()
+            .unwrap()
+            .based_on_dataset_id = "dataset-old".to_string();
+
+        let rescanned = core.quality_scan().await.unwrap();
+        assert_ne!(
+            rescanned.based_on_dataset_id, "dataset-old",
+            "数据版本变化后不得复用旧报告"
+        );
+        assert_eq!(
+            rescanned.based_on_dataset_id,
+            core.current_dataset_id(),
+            "重扫结果绑定当前数据集"
+        );
+        assert_eq!(
+            serde_json::to_value(&first.rows).unwrap(),
+            serde_json::to_value(&rescanned.rows).unwrap(),
+            "同一数据内容重扫结果稳定"
+        );
+    }
+
+    /// AC-DF-02-04-2：复权因子缺失时 ADJ_COVERAGE 失败并给出缺失字段名。
+    #[tokio::test]
+    async fn quality_scan_adj_coverage_failure_names_missing_field() {
+        let core = AppCore::new(Box::new(ProxyProvider {
+            inner: data_provider::mock::MockProvider::new(),
+            adjust_factors: false,
+            patch: None,
+            fail_security: None,
+            calls: Default::default(),
+        }))
+        .await
+        .unwrap();
+
+        let report = core.quality_scan().await.unwrap();
+        let coverage = report
+            .rows
+            .iter()
+            .find(|row| row.key == "ADJ_COVERAGE")
+            .unwrap();
+        assert_eq!(coverage.status, "failed");
+        assert_eq!(coverage.error_code, Some("E_ADJ_FACTOR_MISSING"));
+        assert_eq!(coverage.missing_fields, vec!["adj_factor"]);
+        assert_eq!(coverage.hits, 0, "失败项不得显示为 0 命中");
+    }
+
+    /// AC-DF-02-04-6：单证券读取失败时报告整体可返回，该项计 failed。
+    #[tokio::test]
+    async fn quality_scan_marks_failed_security_instead_of_aborting() {
+        let core = AppCore::new(Box::new(ProxyProvider {
+            inner: data_provider::mock::MockProvider::new(),
+            adjust_factors: true,
+            patch: None,
+            fail_security: Some("600519.SH"),
+            calls: Default::default(),
+        }))
+        .await
+        .unwrap();
+
+        let report = core
+            .quality_scan()
+            .await
+            .expect("单证券读取失败不得让整次扫描返回错误");
+        assert_eq!(report.total_count, 6, "报告仍返回六项");
+        let missing = report
+            .rows
+            .iter()
+            .find(|row| row.key == "MISSING")
+            .unwrap();
+        assert_eq!(missing.status, "failed");
+        assert_eq!(missing.error_code, Some("E_DAILY_READ_FAILED"));
+        assert_eq!(missing.missing_fields, vec!["dailyBars"]);
+        assert!(report.passed_count < 6, "失败项不计入通过");
+    }
+
     #[tokio::test]
     async fn quality_scan_suspended_diagnostic_sample_hits_three_checks() {
         let core = AppCore::new(Box::new(
@@ -2642,6 +3563,135 @@ mod tests {
         }
     }
 
+    /// FEAT-DF-02 专用：代理 mock provider，可裁剪复权能力位、指定读取失败标的并统计取数次数。
+    struct ProxyProvider {
+        inner: data_provider::mock::MockProvider,
+        adjust_factors: bool,
+        patch: Option<Box<dyn Fn(&mut data_provider::BarBatch, data_provider::Adjust) + Send + Sync>>,
+        fail_security: Option<&'static str>,
+        calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    }
+
+    #[async_trait::async_trait]
+    impl data_provider::DataProvider for ProxyProvider {
+        fn id(&self) -> data_provider::ProviderId {
+            self.inner.id()
+        }
+
+        fn capabilities(&self) -> data_provider::Capabilities {
+            let mut caps = self.inner.capabilities();
+            caps.adjust_factors = self.adjust_factors;
+            caps
+        }
+
+        async fn securities(
+            &self,
+            as_of: data_provider::Date,
+        ) -> Result<data_provider::SecurityMaster, data_provider::ProviderError> {
+            self.inner.securities(as_of).await
+        }
+
+        async fn trading_calendar(
+            &self,
+            from: data_provider::Date,
+            to: data_provider::Date,
+        ) -> Result<Vec<data_provider::Date>, data_provider::ProviderError> {
+            self.inner.trading_calendar(from, to).await
+        }
+
+        async fn daily_bars(
+            &self,
+            req: data_provider::BarRequest,
+        ) -> Result<data_provider::BarBatch, data_provider::ProviderError> {
+            let data_provider::BarRequest {
+                security,
+                timeframe,
+                adj,
+                from,
+                to,
+            } = req;
+            self.calls
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            if Some(security.as_str()) == self.fail_security {
+                return Err(data_provider::ProviderError::Network(format!(
+                    "{security} 读取失败（测试注入）"
+                )));
+            }
+            // 能力位缺失时数据源只能返回不复权原始行。
+            let effective = if self.adjust_factors {
+                adj
+            } else {
+                data_provider::Adjust::None
+            };
+            let mut batch = self
+                .inner
+                .daily_bars(data_provider::BarRequest {
+                    security,
+                    timeframe,
+                    adj: effective,
+                    from,
+                    to,
+                })
+                .await?;
+            if let Some(patch) = &self.patch {
+                patch(&mut batch, effective);
+            }
+            Ok(batch)
+        }
+
+        async fn adjust_factors(
+            &self,
+            security: &str,
+        ) -> Result<data_provider::FactorBatch, data_provider::ProviderError> {
+            self.inner.adjust_factors(security).await
+        }
+
+        async fn index_members(
+            &self,
+            index: &str,
+            as_of: data_provider::Date,
+        ) -> Result<Vec<String>, data_provider::NotSupported> {
+            self.inner.index_members(index, as_of).await
+        }
+
+        async fn industry(
+            &self,
+            as_of: data_provider::Date,
+        ) -> Result<Vec<(String, String)>, data_provider::NotSupported> {
+            self.inner.industry(as_of).await
+        }
+
+        async fn limit_flags(
+            &self,
+            req: data_provider::BarRequest,
+        ) -> Result<Vec<data_provider::BarRow>, data_provider::NotSupported> {
+            self.inner.limit_flags(req).await
+        }
+
+        async fn minute_bars(
+            &self,
+            req: data_provider::BarRequest,
+        ) -> Result<data_provider::BarBatch, data_provider::NotSupported> {
+            self.inner.minute_bars(req).await
+        }
+
+        fn rate_policy(&self) -> data_provider::RatePolicy {
+            self.inner.rate_policy()
+        }
+
+        async fn health(&self) -> data_provider::Health {
+            self.inner.health().await
+        }
+
+        fn dataset_coverage(&self) -> Option<(data_provider::Date, data_provider::Date)> {
+            self.inner.dataset_coverage()
+        }
+
+        fn dataset_manifest(&self) -> Option<data_provider::DatasetManifest> {
+            self.inner.dataset_manifest()
+        }
+    }
+
     #[tokio::test]
     async fn datasource_status_reports_required_green_optional_truthful_and_version_six() {
         let core = AppCore::new_mock().await.unwrap();
@@ -2674,6 +3724,15 @@ mod tests {
             .unwrap();
         assert!(!st.available);
         assert_eq!(st.note, Some("无 ST 标记：涨跌停按普通规则推导"));
+        // AC-DF-01-04-6：不可用项必须带原因码，页面不得只显示灰色而没有依据。
+        assert_eq!(st.reason_code, Some("E_UNSUPPORTED"));
+        let daily = status
+            .capabilities
+            .iter()
+            .find(|cap| cap.key == "daily_bars")
+            .unwrap();
+        assert!(daily.available);
+        assert_eq!(daily.reason_code, None, "可用项不得带原因码");
 
         // 数据版本 6 字段齐全（generated_at 交给界面按本地时区格式化）。
         let version = status.version.as_ref().unwrap();
@@ -2715,13 +3774,16 @@ mod tests {
             .find(|cap| cap.key == "trading_calendar")
             .unwrap();
         assert!(!calendar.available, "日历查询为空时必须判不可用");
+        // AC-DF-01-02-5：未声明/探测失败的必需能力必须给出原因，不能默认绿色。
+        assert_eq!(calendar.reason_code, Some("E_SOURCE_NOT_READY"));
     }
 
     #[tokio::test]
     async fn health_check_all_six_pass_on_mock() {
         let core = AppCore::new_mock().await.unwrap();
-        let report = core.data_health_check(false).await;
+        let report = core.data_health_check(HealthFaults::default()).await;
 
+        assert_eq!(report.state, "ok");
         assert_eq!(report.total, 6);
         assert_eq!(report.passed, 6);
         let keys: Vec<&str> = report.items.iter().map(|item| item.key.as_str()).collect();
@@ -2740,6 +3802,12 @@ mod tests {
         assert!(report.items.iter().all(|item| item.error_code.is_none()));
         assert!(report.checked_at > 0);
         assert!(report.dataset_id.is_some());
+        // AC-DF-03-04-1：版本六段齐全时缺失列表必须为空。
+        assert!(
+            report.missing_version_fields.is_empty(),
+            "完整数据集不得报版本字段缺失：{:?}",
+            report.missing_version_fields
+        );
 
         let events = core.telemetry().summary(10);
         assert!(
@@ -2748,17 +3816,172 @@ mod tests {
         );
     }
 
-    /// AC-07.01-02（补3）：manifest 损坏 → ②FAIL、③~⑥SKIP、汇总 1/6。
+    /// AC-DF-03-04-3 / AC-DF-03-04-6：manifest 损坏 → ②FAIL、③~⑥SKIP、整体 failed。
     #[tokio::test]
     async fn health_check_corrupt_manifest_fails_at_step_two() {
         let core = AppCore::new_mock().await.unwrap();
-        let report = core.data_health_check(true).await;
+        let report = core
+            .data_health_check(HealthFaults {
+                manifest_corrupt: true,
+                ..Default::default()
+            })
+            .await;
 
+        assert_eq!(report.state, "failed");
         assert_eq!(report.items[0].status, "PASS", "样本包仍在，①应通过");
         assert_eq!(report.items[1].status, "FAIL");
         assert_eq!(report.items[1].error_code, Some("E_MANIFEST_CORRUPT"));
         assert!(report.items[2..].iter().all(|item| item.status == "SKIP"));
         assert_eq!(report.passed, 1);
+    }
+
+    /// AC-DF-03-04-3：落盘 manifest 是非法 JSON → 整体 failed（不是未安装），进程不崩溃。
+    #[tokio::test]
+    async fn health_check_invalid_json_on_disk_reports_failed_not_not_installed() {
+        let data_dir = integrity_data_dir("health-invalid-json");
+        install_sample(&data_dir);
+        std::fs::write(sample_manifest_path(&data_dir), "{ this is not json").unwrap();
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        core.apply_dataset_startup(&data_dir, 42, false);
+
+        let report = core.data_health_check(HealthFaults::default()).await;
+        assert_eq!(report.state, "failed", "非法 JSON 必须判损坏，而不是未安装");
+        assert_eq!(report.items[0].status, "PASS", "文件仍在，①存在应通过");
+        assert_eq!(report.items[1].status, "FAIL");
+        assert_eq!(report.items[1].error_code, Some("E_DATASET_CORRUPT"));
+        assert!(report.items[2..].iter().all(|item| item.status == "SKIP"));
+        assert_eq!(report.passed, 1);
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-04-2：只缺 sha256 → 仅 ④ 指出缺失，①~③/⑤/⑥ 照常返回。
+    #[tokio::test]
+    async fn health_check_missing_sha256_keeps_other_items_running() {
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core
+            .data_health_check(HealthFaults {
+                manifest_sha256_missing: true,
+                ..Default::default()
+            })
+            .await;
+
+        assert_eq!(report.state, "failed");
+        assert_eq!(report.items[0].status, "PASS", "① 数据集存在不依赖 sha256");
+        assert_eq!(report.items[1].status, "PASS", "② 不得因 sha256 缺失而整条链路 SKIP");
+        assert_eq!(report.items[2].status, "PASS");
+        assert_eq!(report.items[3].key, "sha256_match");
+        assert_eq!(report.items[3].status, "FAIL");
+        assert_eq!(report.items[3].error_code, Some("E_SHA256_MISSING"));
+        assert!(report.items[3].detail.as_deref().unwrap_or("").contains("sha256"));
+        assert_eq!(report.items[4].status, "PASS");
+        assert_eq!(report.items[5].status, "PASS");
+        assert_eq!(report.passed, 5);
+        assert_eq!(report.missing_version_fields, vec!["sha256"]);
+    }
+
+    /// AC-DF-03-04-4：空目录/未安装 → 返回「未安装」，不得误判为损坏。
+    #[tokio::test]
+    async fn health_check_empty_directory_reports_not_installed() {
+        let data_dir = integrity_data_dir("health-empty");
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        core.apply_dataset_startup(&data_dir, 42, false);
+
+        let report = core.data_health_check(HealthFaults::default()).await;
+        assert_eq!(report.state, "not_installed");
+        assert_eq!(report.passed, 0);
+        assert_eq!(report.items[0].key, "dataset_present");
+        assert_eq!(report.items[0].status, "FAIL");
+        assert_eq!(report.items[0].error_code, Some("E_DATASET_MISSING"));
+        assert!(report.items[0].detail.as_deref().unwrap_or("").contains("未安装"));
+        assert!(
+            report.items[0]
+                .advice
+                .as_deref()
+                .unwrap_or("")
+                .contains("安装"),
+            "未安装必须给安装入口提示"
+        );
+        assert!(report.items[1..].iter().all(|item| item.status == "SKIP"));
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-04-1：版本六段缺一段（这里是 dataVersion）→ ②FAIL 且列出缺失字段。
+    #[tokio::test]
+    async fn health_check_missing_version_segment_fails_with_field_name() {
+        let core = AppCore::new_mock().await.unwrap();
+        let mut manifest = core.provider.dataset_manifest().expect("mock manifest");
+        manifest.data_version.clear();
+        *core.dataset_runtime_lock() = DatasetRuntime::Installed {
+            manifest,
+            data_dir: std::path::PathBuf::new(),
+            seed: 42,
+        };
+
+        let report = core.data_health_check(HealthFaults::default()).await;
+        assert_eq!(report.state, "failed");
+        assert_eq!(report.items[1].status, "FAIL");
+        assert_eq!(report.items[1].error_code, Some("E_MANIFEST_CORRUPT"));
+        assert!(report.items[1].detail.as_deref().unwrap_or("").contains("dataVersion"));
+        assert!(report.items[2..].iter().all(|item| item.status == "SKIP"));
+        assert_eq!(report.missing_version_fields, vec!["dataVersion"]);
+    }
+
+    /// AC-DF-03-04-5：只读模式可执行且不写库，数据集文件字节与 mtime 不变。
+    #[tokio::test]
+    async fn health_check_is_read_only_and_leaves_files_untouched() {
+        let data_dir = integrity_data_dir("health-readonly");
+        install_sample(&data_dir);
+        let dataset_db = crate::sim_install::dataset_dir(&data_dir, 42).join("dataset.db");
+        let manifest_path = sample_manifest_path(&data_dir);
+        let state_db_path = data_dir.join("state.db");
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_with_fallback(&state_db_path));
+        core.apply_dataset_startup(&data_dir, 42, true);
+
+        let dataset_bytes = std::fs::read(&dataset_db).unwrap();
+        let manifest_bytes = std::fs::read(&manifest_path).unwrap();
+        let state_bytes = std::fs::read(&state_db_path).unwrap();
+        let dataset_mtime = std::fs::metadata(&dataset_db).unwrap().modified().unwrap();
+        let manifest_mtime = std::fs::metadata(&manifest_path).unwrap().modified().unwrap();
+
+        let report = core.data_health_check(HealthFaults::default()).await;
+        assert_eq!(
+            report.state,
+            "ok",
+            "items: {:?}",
+            report
+                .items
+                .iter()
+                .map(|item| (item.key.as_str(), item.status, item.error_code, item.detail.as_deref()))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(report.passed, 6);
+
+        assert_eq!(std::fs::read(&dataset_db).unwrap(), dataset_bytes, "健康检查不得改写 dataset.db");
+        assert_eq!(std::fs::read(&manifest_path).unwrap(), manifest_bytes, "健康检查不得改写 manifest");
+        assert_eq!(std::fs::read(&state_db_path).unwrap(), state_bytes, "健康检查不得写 state.db");
+        assert_eq!(
+            std::fs::metadata(&dataset_db).unwrap().modified().unwrap(),
+            dataset_mtime,
+            "dataset.db mtime 不得变化"
+        );
+        assert_eq!(
+            std::fs::metadata(&manifest_path).unwrap().modified().unwrap(),
+            manifest_mtime,
+            "manifest mtime 不得变化"
+        );
+
+        let _ = std::fs::remove_dir_all(&data_dir);
     }
 
     /// S-08.02-03：正常数据集 → ok，且不落 dataset.error。
@@ -2809,6 +4032,452 @@ mod tests {
             5,
             "每次校验失败都应落一条 dataset.error"
         );
+    }
+
+    // ---------- ST-DF-03-02：安装后落盘完整性校验 ----------
+
+    fn integrity_data_dir(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "aka-df0302-{}-{name}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn install_sample(data_dir: &std::path::Path) -> data_provider::DatasetManifest {
+        crate::sim_install::install(data_dir, 42).expect("install sample");
+        let text = std::fs::read_to_string(
+            crate::sim_install::dataset_dir(data_dir, 42).join("manifest.json"),
+        )
+        .expect("manifest");
+        data_provider::DatasetManifest::from_json(&text).expect("parse manifest")
+    }
+
+    fn sample_manifest_path(data_dir: &std::path::Path) -> std::path::PathBuf {
+        crate::sim_install::dataset_dir(data_dir, 42).join("manifest.json")
+    }
+
+    fn read_manifest_value(path: &std::path::Path) -> serde_json::Value {
+        serde_json::from_str(&std::fs::read_to_string(path).expect("read manifest"))
+            .expect("json")
+    }
+
+    /// AC-DF-03-02-1：安装完成后校验返回 ok，且带 dataset_id / 实际行数 / 覆盖区间。
+    #[tokio::test]
+    async fn dataset_integrity_at_reports_installed_facts() {
+        let data_dir = integrity_data_dir("ok");
+        let manifest = install_sample(&data_dir);
+        let core = AppCore::new_mock().await.unwrap();
+
+        let report = core.dataset_integrity_at(DatasetFault::None, Some(&data_dir), 42);
+        assert_eq!(report.state, "ok");
+        assert!(report.error_code.is_none());
+        assert!(!report.readable, "校验通过时不进入只读浏览");
+        assert_eq!(
+            report.dataset_id.as_deref(),
+            Some(manifest.dataset_id.as_str())
+        );
+        assert_eq!(report.data_version.as_deref(), Some("v1"));
+        assert_eq!(report.row_count, Some(62_400));
+        assert_eq!(report.coverage_start.as_deref(), Some("2023-01-02"));
+        assert_eq!(report.coverage_end.as_deref(), Some("2024-12-27"));
+        assert!(report.missing_fields.is_empty());
+        assert_eq!(report.expected_sha256, report.actual_sha256);
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-02-2：落盘少 1 行 → 行数不符分类，不得返回 ok。
+    #[tokio::test]
+    async fn dataset_integrity_at_flags_deleted_row() {
+        let data_dir = integrity_data_dir("row");
+        install_sample(&data_dir);
+        let db_path = crate::sim_install::dataset_dir(&data_dir, 42).join("dataset.db");
+        {
+            let conn = rusqlite::Connection::open(&db_path).expect("open db");
+            let removed = conn
+                .execute(
+                    "DELETE FROM daily_bars WHERE rowid = (SELECT rowid FROM daily_bars LIMIT 1 OFFSET 260)",
+                    [],
+                )
+                .expect("delete one row");
+            assert_eq!(removed, 1);
+        }
+
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core.dataset_integrity_at(DatasetFault::None, Some(&data_dir), 42);
+        assert_eq!(report.state, "blocked");
+        assert_eq!(report.error_code, Some("ROW_COUNT_MISMATCH"));
+        assert!(report.readable, "行数不一致仍允许只读浏览可读部分");
+        assert_eq!(report.row_count, Some(62_399));
+        assert!(report.detail.unwrap().contains("62399"));
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-02-3：篡改 manifest 的 checksum → 返回期望值与实际值。
+    #[tokio::test]
+    async fn dataset_integrity_at_reports_expected_and_actual_checksum() {
+        let data_dir = integrity_data_dir("sha");
+        let manifest = install_sample(&data_dir);
+        let path = sample_manifest_path(&data_dir);
+        let mut value = read_manifest_value(&path);
+        let zeros = "0".repeat(64);
+        value["sha256"] = serde_json::json!(zeros);
+        std::fs::write(&path, serde_json::to_string_pretty(&value).unwrap()).expect("write");
+
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core.dataset_integrity_at(DatasetFault::None, Some(&data_dir), 42);
+        assert_eq!(report.state, "blocked");
+        assert_eq!(report.error_code, Some("SHA256_MISMATCH"));
+        assert!(report.readable);
+        assert_eq!(report.expected_sha256.as_deref(), Some(zeros.as_str()));
+        assert_eq!(
+            report.actual_sha256.as_deref(),
+            Some(manifest.sha256.as_str()),
+            "实际值必须来自落盘复算，而不是 manifest 自述"
+        );
+        let detail = report.detail.expect("detail");
+        assert!(detail.contains(&manifest.sha256[..12]), "{detail}");
+        assert!(detail.contains(&zeros[..12]), "{detail}");
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-02-4：manifest 缺字段 → 返回字段名清单，不得只报「格式错误」。
+    #[tokio::test]
+    async fn dataset_integrity_at_lists_missing_manifest_fields() {
+        let data_dir = integrity_data_dir("missing-field");
+        install_sample(&data_dir);
+        let path = sample_manifest_path(&data_dir);
+        let mut value = read_manifest_value(&path);
+        value
+            .as_object_mut()
+            .expect("object")
+            .remove("sha256")
+            .expect("sha256 存在");
+        std::fs::write(&path, serde_json::to_string_pretty(&value).unwrap()).expect("write");
+
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core.dataset_integrity_at(DatasetFault::None, Some(&data_dir), 42);
+        assert_eq!(report.state, "blocked");
+        assert_eq!(report.error_code, Some("MANIFEST_INVALID"));
+        assert_eq!(report.missing_fields, vec!["sha256".to_string()]);
+        assert!(report.detail.unwrap().contains("sha256"));
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-02-5：校验只读——文件内容、mtime 与目录条目都不变。
+    #[tokio::test]
+    async fn dataset_integrity_at_does_not_modify_data_files() {
+        let data_dir = integrity_data_dir("readonly");
+        install_sample(&data_dir);
+        let dir = crate::sim_install::dataset_dir(&data_dir, 42);
+        let manifest_path = dir.join("manifest.json");
+        let db_path = dir.join("dataset.db");
+
+        let manifest_before = std::fs::read(&manifest_path).expect("manifest bytes");
+        let db_before = std::fs::read(&db_path).expect("db bytes");
+        let manifest_mtime = std::fs::metadata(&manifest_path).unwrap().modified().unwrap();
+        let db_mtime = std::fs::metadata(&db_path).unwrap().modified().unwrap();
+        let mut entries_before: Vec<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().to_string())
+            .collect();
+        entries_before.sort();
+
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core.dataset_integrity_at(DatasetFault::None, Some(&data_dir), 42);
+        assert_eq!(report.state, "ok", "只读模式可执行校验");
+
+        assert_eq!(std::fs::read(&manifest_path).unwrap(), manifest_before);
+        assert_eq!(std::fs::read(&db_path).unwrap(), db_before);
+        assert_eq!(
+            std::fs::metadata(&manifest_path).unwrap().modified().unwrap(),
+            manifest_mtime
+        );
+        assert_eq!(
+            std::fs::metadata(&db_path).unwrap().modified().unwrap(),
+            db_mtime
+        );
+        let mut entries_after: Vec<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().to_string())
+            .collect();
+        entries_after.sort();
+        assert_eq!(entries_after, entries_before, "校验不得新增/删除文件");
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-02-6：dataset.db 不存在 → 文件缺失分类，不 panic。
+    #[tokio::test]
+    async fn dataset_integrity_at_missing_db_is_classified() {
+        let data_dir = integrity_data_dir("missing-db");
+        install_sample(&data_dir);
+        let db_path = crate::sim_install::dataset_dir(&data_dir, 42).join("dataset.db");
+        std::fs::remove_file(&db_path).expect("remove db");
+
+        let core = AppCore::new_mock().await.unwrap();
+        let report = core.dataset_integrity_at(DatasetFault::None, Some(&data_dir), 42);
+        assert_eq!(report.state, "blocked");
+        assert_eq!(report.error_code, Some("DATASET_DB_MISSING"));
+        assert!(report.dataset_id.is_some(), "manifest 仍可读时保留身份");
+        assert!(report.detail.unwrap().contains("dataset.db"));
+        assert!(!db_path.exists(), "校验不得重建 dataset.db");
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    // ---------- ST-DF-03-03：启动读取落盘 manifest / dataset_meta ----------
+
+    fn promote_manifest_to_v2(data_dir: &std::path::Path) -> data_provider::DatasetManifest {
+        let path = sample_manifest_path(data_dir);
+        let mut value = read_manifest_value(&path);
+        value["dataVersion"] = serde_json::json!("v2");
+        value["datasetId"] = serde_json::json!("sim-42-disk-v2");
+        std::fs::write(&path, serde_json::to_string_pretty(&value).unwrap()).expect("write");
+        data_provider::DatasetManifest::from_json(&std::fs::read_to_string(&path).unwrap())
+            .expect("parse v2 manifest")
+    }
+
+    fn cached_meta(dataset_id: &str, data_version: &str) -> data_store::state_db::DatasetMeta {
+        data_store::state_db::DatasetMeta {
+            dataset_id: dataset_id.to_string(),
+            provider: "sim".to_string(),
+            data_version: data_version.to_string(),
+            simulated: true,
+            checksum: "0".repeat(64),
+            generated_at: 1_730_000_000,
+        }
+    }
+
+    /// AC-DF-03-03-1：已安装 v2 → 重启后 provenance 与版本卡都展示落盘 v2。
+    #[tokio::test]
+    async fn startup_adopts_disk_version_into_provenance_and_version_card() {
+        let data_dir = integrity_data_dir("startup-adopt");
+        install_sample(&data_dir);
+        let manifest = promote_manifest_to_v2(&data_dir);
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+
+        core.apply_dataset_startup(&data_dir, 42, false);
+
+        let status = core.datasource_status().await;
+        let version = status.version.expect("版本卡应展示落盘版本");
+        assert_eq!(version.data_version, "v2");
+        assert_eq!(version.dataset_id, manifest.dataset_id);
+
+        let bars = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+        assert_eq!(bars.dataset_id, manifest.dataset_id);
+        assert_eq!(bars.provenance.dataset_id, manifest.dataset_id);
+        assert_eq!(bars.provenance.data_version, "v2");
+        assert_eq!(bars.provenance.dataset_generation, 2);
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-05-04-6：溯源 dataset_id 必须跟随该 K 线所属版本；版本切换后不得沿用旧 id。
+    #[tokio::test]
+    async fn bar_provenance_dataset_id_follows_served_version() {
+        let core = AppCore::new_mock().await.unwrap();
+        let before_bars = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+        let date = before_bars.bars.last().unwrap().date.clone();
+        let req = || BarProvenanceRequest {
+            security: "600519.SH".into(),
+            date: date.clone(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+        };
+        let before = core.bar_provenance(&req()).await.unwrap();
+        assert_eq!(before.dataset_id, before_bars.dataset_id);
+
+        let data_dir = integrity_data_dir("provenance-version");
+        install_sample(&data_dir);
+        let manifest = promote_manifest_to_v2(&data_dir);
+        core.apply_dataset_startup(&data_dir, 42, false);
+
+        let after_bars = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+        assert_eq!(after_bars.dataset_id, manifest.dataset_id, "取数应切到 v2");
+        let after = core.bar_provenance(&req()).await.unwrap();
+        assert_eq!(
+            after.dataset_id, after_bars.dataset_id,
+            "溯源必须与当前 K 线同版本"
+        );
+        assert_ne!(before.dataset_id, after.dataset_id, "不得沿用旧版本 id");
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-03-2：重启不点安装 → 不重建、不覆盖 dataset.db，文件与 mtime 不变。
+    #[tokio::test]
+    async fn startup_does_not_rewrite_installed_dataset() {
+        let data_dir = integrity_data_dir("startup-readonly-disk");
+        install_sample(&data_dir);
+        let db_path = crate::sim_install::dataset_dir(&data_dir, 42).join("dataset.db");
+        let manifest_path = sample_manifest_path(&data_dir);
+        let db_bytes = std::fs::read(&db_path).unwrap();
+        let db_mtime = std::fs::metadata(&db_path).unwrap().modified().unwrap();
+        let manifest_mtime = std::fs::metadata(&manifest_path).unwrap().modified().unwrap();
+
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        core.apply_dataset_startup(&data_dir, 42, false);
+        core.get_bars(&bars_req("D", None, None)).await.unwrap();
+
+        assert_eq!(std::fs::read(&db_path).unwrap(), db_bytes);
+        assert_eq!(
+            std::fs::metadata(&db_path).unwrap().modified().unwrap(),
+            db_mtime
+        );
+        assert_eq!(
+            std::fs::metadata(&manifest_path).unwrap().modified().unwrap(),
+            manifest_mtime
+        );
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-03-3：dataset.db 被删除 → 明确「未安装」并提供安装入口；
+    /// 取数继续走内存 Provider（方案 B，已登记为产品偏差）。
+    #[tokio::test]
+    async fn startup_missing_db_reports_not_installed_without_blocking_data() {
+        let data_dir = integrity_data_dir("startup-missing-db");
+        install_sample(&data_dir);
+        let db_path = crate::sim_install::dataset_dir(&data_dir, 42).join("dataset.db");
+        std::fs::remove_file(&db_path).expect("remove db");
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+
+        core.apply_dataset_startup(&data_dir, 42, false);
+
+        let status = core.datasource_status().await;
+        assert!(status.version.is_none(), "未安装时不得展示内存版本");
+        assert_eq!(status.error_code, Some("E_DATASET_MISSING"));
+        assert!(core.dataset_manifest().is_none());
+        // 方案 B：不阻断取数（与 AC-3「静默使用内存数据判失败」的差异已登记）。
+        let bars = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+        assert!(!bars.bars.is_empty(), "方案 B 下取数不阻断");
+        assert!(!db_path.exists(), "启动不得重建 dataset.db");
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-03-4：缓存身份 v1、落盘 manifest v2 → 阻断并报版本不一致；
+    /// 不回退、不静默升级 dataset_meta。
+    #[tokio::test]
+    async fn startup_blocks_cached_version_mismatch_without_silent_upgrade() {
+        let data_dir = integrity_data_dir("startup-mismatch");
+        install_sample(&data_dir);
+        promote_manifest_to_v2(&data_dir);
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        core.state_db()
+            .unwrap()
+            .upsert_dataset_meta(&cached_meta("sim-42-disk-v1", "v1"))
+            .unwrap();
+
+        core.apply_dataset_startup(&data_dir, 42, false);
+
+        let status = core.datasource_status().await;
+        assert!(status.version.is_none(), "阻断时不得展示任一版本");
+        assert_eq!(status.error_code, Some("E_DATASET_VERSION_MISMATCH"));
+        assert!(core.dataset_manifest().is_none());
+
+        let err = core
+            .get_bars(&bars_req("D", None, None))
+            .await
+            .expect_err("版本不一致必须阻断取数");
+        assert_eq!(err.code, ErrorCode::DatasetVersionMismatch);
+
+        let cached = core
+            .state_db()
+            .unwrap()
+            .latest_dataset_meta()
+            .unwrap()
+            .expect("缓存记录仍在");
+        assert_eq!(cached.data_version, "v1", "不得静默升级为 v2");
+
+        let report = core.dataset_integrity_at(DatasetFault::None, Some(&data_dir), 42);
+        assert_eq!(report.state, "blocked");
+        assert_eq!(report.error_code, Some("VERSION_MISMATCH"));
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-03-5：只读启动读取落盘版本但不写 dataset_meta。
+    #[tokio::test]
+    async fn readonly_startup_reads_version_without_writing_meta() {
+        let data_dir = integrity_data_dir("startup-readonly-meta");
+        install_sample(&data_dir);
+        promote_manifest_to_v2(&data_dir);
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+
+        core.apply_dataset_startup(&data_dir, 42, true);
+
+        assert!(
+            core.state_db()
+                .unwrap()
+                .latest_dataset_meta()
+                .unwrap()
+                .is_none(),
+            "只读启动不得写 dataset_meta"
+        );
+        let status = core.datasource_status().await;
+        assert_eq!(status.version.unwrap().data_version, "v2");
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-03-03-6：所有标的/周期都使用同一落盘身份，不混用内存版本。
+    #[tokio::test]
+    async fn startup_identity_applies_to_all_timeframes() {
+        let data_dir = integrity_data_dir("startup-all-tf");
+        install_sample(&data_dir);
+        let manifest = promote_manifest_to_v2(&data_dir);
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        core.apply_dataset_startup(&data_dir, 42, false);
+
+        let codes: Vec<String> = core
+            .securities
+            .iter()
+            .filter(|item| !item.is_index)
+            .take(2)
+            .map(|item| item.code.clone())
+            .collect();
+        assert_eq!(codes.len(), 2);
+        for security in codes {
+            for timeframe in ["D", "W", "M"] {
+                let mut req = bars_req(timeframe, None, None);
+                req.security = security.clone();
+                let bars = core.get_bars(&req).await.unwrap();
+                assert_eq!(bars.dataset_id, manifest.dataset_id, "{security}/{timeframe}");
+                assert_eq!(
+                    bars.provenance.dataset_id, manifest.dataset_id,
+                    "{security}/{timeframe}"
+                );
+                assert_eq!(bars.provenance.data_version, "v2", "{security}/{timeframe}");
+            }
+        }
+
+        let _ = std::fs::remove_dir_all(&data_dir);
     }
 
     #[tokio::test]
@@ -3051,9 +4720,989 @@ mod tests {
         let err = resolve_window(&s, Some("2024-12-24"), Some("2024-12-23")).unwrap_err();
         assert_eq!(err.code, ErrorCode::InvalidArgument);
 
+        // AC-DF-04-01-3：跨度超 3660 天用独立错误码，便于前端区分「参数倒置」与「区间过大」。
         let err = resolve_window(&s, Some("2014-01-01"), Some("2024-12-31")).unwrap_err();
-        assert_eq!(err.code, ErrorCode::InvalidArgument);
+        assert_eq!(err.code, ErrorCode::RangeTooLarge);
+        assert_eq!(err.details.as_ref().unwrap()["reason"], "DAYS");
         assert_eq!(err.details.as_ref().unwrap()["maxDays"], MAX_RANGE_DAYS);
+    }
+
+    /// AC-DF-04-01-6：端点吸附后区间内没有任何交易日 → E_INSUFFICIENT_DATA，不得静默回退全量。
+    #[test]
+    fn absorbed_window_without_trading_day_is_insufficient() {
+        // 2024-12-20 为周五；周六、周日吸附后落在同一空档。
+        let s = series(Date::new(2024, 12, 20), 5);
+        let err = resolve_window(&s, Some("2024-12-21"), Some("2024-12-22")).unwrap_err();
+        assert_eq!(err.code, ErrorCode::InsufficientData);
+    }
+
+    // ---- FEAT-DF-04 查询编排与指标计算定向测试 ----
+
+    use indicator_core::ParamValue as PV;
+
+    fn df_instance(
+        id: &str,
+        indicator: &str,
+        params: &[(&str, PV)],
+    ) -> crate::dto::InstanceRequest {
+        crate::dto::InstanceRequest {
+            instance_id: id.into(),
+            indicator_id: indicator.into(),
+            params: params
+                .iter()
+                .map(|(key, value)| (key.to_string(), value.clone()))
+                .collect(),
+        }
+    }
+
+    fn df_request(
+        from: Option<&str>,
+        to: Option<&str>,
+        instances: Vec<crate::dto::InstanceRequest>,
+    ) -> CalcRequest {
+        CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: "qfq".into(),
+            from: from.map(str::to_string),
+            to: to.map(str::to_string),
+            generation: 1,
+            instances,
+        }
+    }
+
+    /// 把测试序列放进序列缓存：`series_for` 命中后不再走 provider。
+    fn seed_series(core: &AppCore, s: &CandleSeries) {
+        let key = SeriesKey {
+            security: s.security.clone(),
+            timeframe: "D".into(),
+            adj: s.adj.clone(),
+        };
+        core.store_lock().unwrap().put(key, Arc::new(s.clone()));
+    }
+
+    fn event_count(core: &AppCore, name: &str) -> u64 {
+        core.telemetry()
+            .summary(0)
+            .counts
+            .get(name)
+            .copied()
+            .unwrap_or(0)
+    }
+
+    fn last_event(core: &AppCore, name: &str) -> crate::telemetry::TelemetryEvent {
+        core.telemetry()
+            .events()
+            .into_iter()
+            .rev()
+            .find(|event| event.name == name)
+            .unwrap_or_else(|| panic!("缺少事件 {name}"))
+    }
+
+    /// 直接用指标内核跑全序列，作为「可见窗口 + 预热前缀」的逐点对照基准。
+    fn full_indicator_values(s: &CandleSeries, id: &str, params: &Params) -> Vec<Vec<f64>> {
+        let indicator = lookup(id).unwrap();
+        let meta = indicator.meta();
+        let merged = merge_defaults(meta.params, params);
+        let columns = SeriesColumns::new(s);
+        let view = columns.view_range(0, s.len());
+        let mut out = vec![vec![f64::NAN; s.len()]; meta.outputs.len()];
+        indicator.calc(&view, &merged, &mut out).unwrap();
+        out
+    }
+
+    /// AC-DF-04-01-3：超根数/超跨度在解析阶段就被拒绝，不进入计算、不写缓存。
+    #[tokio::test]
+    async fn over_limit_range_is_rejected_before_compute_and_cache() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2015, 1, 5), 2_600);
+        seed_series(&core, &s);
+        let instances = || vec![df_instance("a", "T01", &[])];
+
+        let err = core
+            .calc_indicators(&df_request(None, None, instances()))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, ErrorCode::RangeTooLarge);
+        assert_eq!(err.details.as_ref().unwrap()["reason"], "BARS");
+
+        let err = core
+            .calc_indicators(&df_request(
+                Some("2010-01-01"),
+                Some("2030-12-31"),
+                instances(),
+            ))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, ErrorCode::RangeTooLarge);
+        assert_eq!(err.details.as_ref().unwrap()["reason"], "DAYS");
+
+        assert_eq!(core.calc_cache_stats().unwrap().entries, 0);
+        assert_eq!(
+            event_count(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE),
+            0,
+            "区间超限不得进入计算"
+        );
+    }
+
+    /// AC-DF-04-02-1 / 2 / 6：同参重查零成本、逐点一致，且不新增 compute 事件。
+    #[tokio::test]
+    async fn cache_hit_costs_nothing_and_values_are_identical() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 520);
+        seed_series(&core, &s);
+        let from = s.candles[320].date.clone();
+        let to = s.candles[439].date.clone();
+        let request = || {
+            df_request(
+                Some(&from),
+                Some(&to),
+                vec![df_instance("w", "T03", &[("period", PV::Int(61))])],
+            )
+        };
+
+        let first = core.calc_indicators(&request()).await.unwrap();
+        assert!(!first.cache_hit);
+
+        let second = core.calc_indicators(&request()).await.unwrap();
+        assert!(second.cache_hit, "AC-DF-04-02-6：命中必须 cache_hit=true");
+        assert_eq!(second.computed_ms, 0.0, "AC-DF-04-02-1：命中零耗时");
+        assert_eq!(
+            first.series[0].outputs[0].values, second.series[0].outputs[0].values,
+            "AC-DF-04-02-1：命中值必须逐点一致"
+        );
+        assert_eq!(
+            event_count(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE),
+            1,
+            "AC-DF-04-02-2：命中不得新增 compute 事件"
+        );
+        assert_eq!(event_count(&core, crate::telemetry::EVENT_CACHE_HIT), 1);
+    }
+
+    /// AC-DF-04-02-3：数据集版本变化必须让缓存失效并重算。
+    #[tokio::test]
+    async fn dataset_version_change_invalidates_calc_cache() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 300);
+        seed_series(&core, &s);
+        let request = || {
+            df_request(
+                None,
+                None,
+                vec![df_instance("a", "T01", &[("period", PV::Int(20))])],
+            )
+        };
+
+        let first = core.calc_indicators(&request()).await.unwrap();
+        assert!(!first.cache_hit);
+
+        let mut rebuilt = s.clone();
+        rebuilt.dataset_id = "ds-v2".into();
+        rebuilt.dataset_generation = 2;
+        seed_series(&core, &rebuilt);
+
+        let third = core.calc_indicators(&request()).await.unwrap();
+        assert!(!third.cache_hit, "数据集版本变化后必须重算");
+        assert_eq!(third.dataset_id, "ds-v2");
+        assert_eq!(third.dataset_generation, 2);
+        assert_eq!(
+            first.series[0].outputs[0].values, third.series[0].outputs[0].values,
+            "重算值应与首次一致（数据未变，仅版本号变）"
+        );
+    }
+
+    /// AKA-72：rebuild → 版本 +1 → 计算缓存整体失效（命中率归零）。
+    #[tokio::test]
+    async fn rebuild_bumps_version_and_resets_calc_cache() {
+        let data_dir = integrity_data_dir("cache-reset-rebuild");
+        install_sample(&data_dir);
+        let core = AppCore::new_mock()
+            .await
+            .unwrap()
+            .with_state_db(StateDb::open_in_memory().unwrap());
+        core.apply_dataset_startup(&data_dir, 42, false);
+
+        let first = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+        assert_eq!(first.provenance.data_version, "v1");
+
+        // 先算一次指标，填充计算缓存
+        core.calc_indicators(&df_request(
+            None,
+            None,
+            vec![df_instance("a", "T01", &[("period", PV::Int(20))])],
+        ))
+        .await
+        .unwrap();
+        assert!(
+            core.calc_cache_stats().unwrap().entries > 0,
+            "首次计算后应有缓存条目"
+        );
+
+        crate::sim_install::rebuild(&data_dir, 42).expect("rebuild");
+        // 重建成功后的唯一接管入口（IPC 层同款调用）
+        core.adopt_installed_dataset(&data_dir, 42, false);
+
+        assert_eq!(
+            core.calc_cache_stats().unwrap().entries,
+            0,
+            "重建后旧版本缓存必须全部失效"
+        );
+
+        let second = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+        assert_eq!(second.provenance.data_version, "v2");
+        assert_eq!(second.provenance.dataset_generation, 2);
+
+        let _ = std::fs::remove_dir_all(&data_dir);
+    }
+
+    /// AC-DF-04-02-4：参数书写顺序无关，语义相同即命中同一缓存条目。
+    /// 同时覆盖 AC-DF-04-03-3 的正向部分：`Int(20)` 与 `Float(20.0)` 归一为同一键。
+    #[tokio::test]
+    async fn semantically_equal_params_hit_the_same_entry() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 200);
+        seed_series(&core, &s);
+
+        let first = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![df_instance("a", "T01", &[("period", PV::Int(20))])],
+            ))
+            .await
+            .unwrap();
+        assert!(!first.cache_hit);
+
+        let second = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![df_instance("b", "T01", &[("period", PV::Float(20.0))])],
+            ))
+            .await
+            .unwrap();
+        assert!(second.cache_hit, "Int(20) 与 Float(20.0) 语义相同，应命中同一键");
+        assert_eq!(core.calc_cache_stats().unwrap().entries, 1);
+    }
+
+    /// AC-DF-04-02-5：仅复权口径不同 → 分别计算，结果不串用。
+    #[tokio::test]
+    async fn adj_modes_do_not_share_calc_cache() {
+        let core = AppCore::new_mock().await.unwrap();
+        let qfq = series(Date::new(2024, 1, 2), 200);
+        let mut raw = series(Date::new(2024, 1, 2), 200);
+        raw.adj = "none".into();
+        for candle in &mut raw.candles {
+            candle.close += 100.0;
+        }
+        seed_series(&core, &qfq);
+        seed_series(&core, &raw);
+
+        let request = |adj: &str| CalcRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: adj.into(),
+            from: None,
+            to: None,
+            generation: 1,
+            instances: vec![df_instance("a", "T01", &[("period", PV::Int(20))])],
+        };
+        let with_qfq = core.calc_indicators(&request("qfq")).await.unwrap();
+        let with_raw = core.calc_indicators(&request("none")).await.unwrap();
+        assert!(!with_qfq.cache_hit);
+        assert!(!with_raw.cache_hit, "复权口径不同不得命中 qfq 的缓存");
+        assert_ne!(
+            with_qfq.series[0].outputs[0].values, with_raw.series[0].outputs[0].values,
+            "不同复权口径的结果不得串用"
+        );
+        assert_eq!(core.calc_cache_stats().unwrap().entries, 2);
+    }
+
+    /// AC-DF-04-03-1 / 2：非法参数返回实例级错误（含指标 id 与字段名），且零副作用。
+    #[tokio::test]
+    async fn invalid_param_is_isolated_and_side_effect_free() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 300);
+        seed_series(&core, &s);
+        let request = || {
+            df_request(
+                None,
+                None,
+                vec![df_instance("bad", "T01", &[("period", PV::Int(0))])],
+            )
+        };
+
+        let first = core.calc_indicators(&request()).await.unwrap();
+        assert!(!first.cache_hit);
+        let err = first.series[0]
+            .error
+            .as_ref()
+            .expect("AC-DF-04-03-1：非法参数必须返回实例级错误");
+        assert_eq!(err.code, ErrorCode::ParamOutOfRange);
+        assert_eq!(err.details.as_ref().unwrap()["indicatorId"], "T01");
+        assert_eq!(err.details.as_ref().unwrap()["field"], "period");
+        assert!(err.message.contains("T01"));
+
+        let second = core.calc_indicators(&request()).await.unwrap();
+        let err2 = second.series[0].error.as_ref().unwrap();
+        assert_eq!(err2.code, err.code, "AC-DF-04-03-2：第二次仍返回同一错误");
+        assert_eq!(err2.message, err.message);
+        assert_eq!(core.calc_cache_stats().unwrap().entries, 0, "非法参数不写缓存");
+        assert_eq!(
+            event_count(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE),
+            0,
+            "非法参数不产生 compute 事件"
+        );
+    }
+
+    /// AC-DF-04-03-4：缺参不得用注册表默认值静默补齐，必须返回含指标 id 与字段名的参数错误。
+    #[tokio::test]
+    async fn missing_param_is_reported_instead_of_defaulting() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 300);
+        seed_series(&core, &s);
+        let request = || {
+            df_request(
+                None,
+                None,
+                vec![
+                    // 空参数：T01 的 `period` 缺失。
+                    df_instance("empty", "T01", &[]),
+                    // 部分参数：M06 只缺 `signal`。
+                    df_instance(
+                        "partial",
+                        "M06",
+                        &[("fast", PV::Int(12)), ("slow", PV::Int(26))],
+                    ),
+                ],
+            )
+        };
+
+        let first = core.calc_indicators(&request()).await.unwrap();
+        for (index, field) in [(0, "period"), (1, "signal")] {
+            let series = &first.series[index];
+            let err = series
+                .error
+                .as_ref()
+                .expect("AC-DF-04-03-4：缺参必须返回实例级错误");
+            assert_eq!(err.code, ErrorCode::ParamOutOfRange);
+            let details = err.details.as_ref().unwrap();
+            assert_eq!(details["indicatorId"], series.indicator_id.as_str());
+            assert_eq!(details["field"], field, "错误必须指出缺失的字段名");
+            assert!(
+                err.message.contains(&series.indicator_id),
+                "错误信息必须含指标 id：{}",
+                err.message
+            );
+            assert!(err.message.contains("缺少参数"), "{}", err.message);
+            assert!(series.outputs.is_empty(), "缺参不得产出计算结果");
+        }
+
+        let second = core.calc_indicators(&request()).await.unwrap();
+        for (before, after) in first.series.iter().zip(&second.series) {
+            assert_eq!(
+                after.error.as_ref().unwrap().message,
+                before.error.as_ref().unwrap().message,
+                "第二次请求仍返回同一错误"
+            );
+        }
+        assert_eq!(core.calc_cache_stats().unwrap().entries, 0, "缺参不写缓存");
+        assert_eq!(
+            event_count(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE),
+            0,
+            "缺参不产生 compute 事件"
+        );
+    }
+
+    /// AC-DF-04-03-4（正向）：按 manifest 下发完整参数时正常计算并写缓存。
+    #[tokio::test]
+    async fn complete_manifest_params_compute_normally() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 300);
+        seed_series(&core, &s);
+        let request = || {
+            df_request(
+                None,
+                None,
+                vec![
+                    df_instance("ma", "T01", &[("period", PV::Int(20))]),
+                    df_instance(
+                        "macd",
+                        "M06",
+                        &[
+                            ("fast", PV::Int(12)),
+                            ("slow", PV::Int(26)),
+                            ("signal", PV::Int(9)),
+                        ],
+                    ),
+                ],
+            )
+        };
+
+        let first = core.calc_indicators(&request()).await.unwrap();
+        for series in &first.series {
+            assert!(series.error.is_none(), "完整参数不应报错：{:?}", series.error);
+            assert!(!series.outputs.is_empty(), "完整参数应产出结果");
+        }
+        assert_eq!(core.calc_cache_stats().unwrap().entries, 2, "合法参数写缓存");
+
+        let second = core.calc_indicators(&request()).await.unwrap();
+        assert!(second.cache_hit, "同参重查应命中缓存");
+    }
+
+    /// AC-DF-04-03-3：类型标签进入缓存键，`5`(int) 与 `"5"`(string) 不得共用条目。
+    #[test]
+    fn canonical_params_tags_types_and_normalizes_numbers() {
+        let meta = lookup("T01").unwrap().meta();
+        let int5: Params = [("period".to_string(), PV::Int(5))].into_iter().collect();
+        let float5: Params = [("period".to_string(), PV::Float(5.0))].into_iter().collect();
+        let text5: Params = [("period".to_string(), PV::Text("5".into()))].into_iter().collect();
+
+        assert_eq!(
+            canonical_params(meta, &int5),
+            canonical_params(meta, &float5),
+            "等值 Int/Float 应归一"
+        );
+        assert_ne!(
+            canonical_params(meta, &int5),
+            canonical_params(meta, &text5),
+            "int 5 与 string \"5\" 必须是不同键"
+        );
+        assert_eq!(params_hash(meta, &int5), params_hash(meta, &float5));
+        assert_ne!(params_hash(meta, &int5), params_hash(meta, &text5));
+
+        let s = series(Date::new(2024, 1, 2), 20);
+        let window = resolve_window(&s, Some("2024-01-02"), Some("2024-01-31")).unwrap();
+        assert_ne!(
+            calc_key(&s, meta, &int5, &window.range),
+            calc_key(&s, meta, &text5, &window.range),
+            "缓存键必须区分参数类型"
+        );
+    }
+
+    /// AC-DF-04-03-3：字符串形态的数字在整数参数上直接报错，绝不会命中 int 的缓存条目。
+    #[tokio::test]
+    async fn numeric_string_param_does_not_share_int_entry() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 100);
+        seed_series(&core, &s);
+
+        let int_req = df_request(
+            None,
+            None,
+            vec![df_instance("i", "T01", &[("period", PV::Int(5))])],
+        );
+        let text_req = df_request(
+            None,
+            None,
+            vec![df_instance("s", "T01", &[("period", PV::Text("5".into()))])],
+        );
+
+        let int_resp = core.calc_indicators(&int_req).await.unwrap();
+        assert!(int_resp.series[0].error.is_none());
+        let text_resp = core.calc_indicators(&text_req).await.unwrap();
+        assert!(
+            text_resp.series[0].error.is_some(),
+            "字符串 \"5\" 不是整数参数，必须报错"
+        );
+        assert_eq!(core.calc_cache_stats().unwrap().entries, 1, "只有合法请求写缓存");
+    }
+
+    /// AC-DF-04-03-5：声明的最小/最大边界可用，越界 1 个单位即报错。
+    #[tokio::test]
+    async fn declared_min_max_boundaries_are_accepted_and_off_by_one_rejected() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 520);
+        seed_series(&core, &s);
+        let meta = lookup("T01").unwrap().meta();
+        let (min, max) = match meta.params[0] {
+            indicator_core::ParamSpec::Int { min, max, .. } => (min, max),
+            other => panic!("T01 首参应为 Int，实际 {other:?}"),
+        };
+
+        let request = |period: i64| {
+            df_request(
+                None,
+                None,
+                vec![df_instance("a", "T01", &[("period", PV::Int(period))])],
+            )
+        };
+
+        let lower = core.calc_indicators(&request(min)).await.unwrap();
+        assert!(lower.series[0].error.is_none(), "下边界值应可用");
+        let upper = core.calc_indicators(&request(max)).await.unwrap();
+        assert!(upper.series[0].error.is_none(), "上边界值应可用");
+        let below = core.calc_indicators(&request(min - 1)).await.unwrap();
+        assert!(
+            below.series[0].error.is_some(),
+            "下边界外 1 个单位必须报错"
+        );
+        let above = core.calc_indicators(&request(max + 1)).await.unwrap();
+        assert!(
+            above.series[0].error.is_some(),
+            "上边界外 1 个单位必须报错"
+        );
+    }
+
+    /// AC-DF-04-03-6：批量中某指标参数非法只影响该实例。
+    #[tokio::test]
+    async fn batch_with_one_invalid_instance_keeps_others() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 300);
+        seed_series(&core, &s);
+        let response = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![
+                    df_instance("ok-1", "T01", &[("period", PV::Int(20))]),
+                    df_instance("bad", "T01", &[("period", PV::Int(0))]),
+                    df_instance(
+                        "ok-2",
+                        "M06",
+                        &[
+                            ("fast", PV::Int(12)),
+                            ("slow", PV::Int(26)),
+                            ("signal", PV::Int(9)),
+                        ],
+                    ),
+                ],
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(response.series.len(), 3);
+        assert!(response.series[0].error.is_none());
+        assert!(response.series[1].error.is_some());
+        assert!(response.series[2].error.is_none());
+        assert!(!response.series[0].outputs.is_empty());
+        assert!(!response.series[2].outputs.is_empty());
+        assert_eq!(
+            event_count(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE),
+            2,
+            "只有两个合法实例进入计算"
+        );
+    }
+
+    /// AC-DF-04-04-1 / 6：重复实例只算一次，输出仍为两份且逐点一致。
+    #[tokio::test]
+    async fn duplicate_instances_compute_once_and_return_two_copies() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 300);
+        seed_series(&core, &s);
+        let response = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![
+                    df_instance("copy-1", "T01", &[("period", PV::Int(20))]),
+                    df_instance("copy-2", "T01", &[("period", PV::Int(20))]),
+                ],
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(response.series.len(), 2, "输出与请求实例一一对应");
+        assert_eq!(
+            event_count(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE),
+            1,
+            "同键实例只计算一次"
+        );
+        assert_eq!(event_count(&core, crate::telemetry::EVENT_COMPUTE_SKIP), 1);
+        assert_eq!(
+            response.series[0].outputs[0].values,
+            response.series[1].outputs[0].values
+        );
+    }
+
+    /// AC-DF-04-04-2：任一实例未命中则整批 cache_hit=false。
+    #[tokio::test]
+    async fn mixed_hit_and_miss_marks_whole_batch_miss() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 300);
+        seed_series(&core, &s);
+        let warm = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![df_instance("sma", "T01", &[("period", PV::Int(20))])],
+            ))
+            .await
+            .unwrap();
+        assert!(!warm.cache_hit);
+
+        let mixed = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![
+                    df_instance("sma", "T01", &[("period", PV::Int(20))]),
+                    df_instance("ema", "T02", &[("period", PV::Int(20))]),
+                ],
+            ))
+            .await
+            .unwrap();
+        assert!(!mixed.cache_hit, "T02 未命中，整批不得标记为命中");
+        assert_eq!(event_count(&core, crate::telemetry::EVENT_CACHE_HIT), 1);
+        assert_eq!(event_count(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE), 2);
+    }
+
+    /// AC-DF-04-04-4：请求顺序不同，按 instanceId 对齐后输出列序与数值一致。
+    #[tokio::test]
+    async fn output_columns_follow_registry_order_regardless_of_request_order() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 300);
+        seed_series(&core, &s);
+        let forward = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![
+                    df_instance("sma", "T01", &[("period", PV::Int(20))]),
+                    df_instance(
+                        "macd",
+                        "M06",
+                        &[
+                            ("fast", PV::Int(12)),
+                            ("slow", PV::Int(26)),
+                            ("signal", PV::Int(9)),
+                        ],
+                    ),
+                ],
+            ))
+            .await
+            .unwrap();
+        let reversed = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![
+                    df_instance(
+                        "macd",
+                        "M06",
+                        &[
+                            ("fast", PV::Int(12)),
+                            ("slow", PV::Int(26)),
+                            ("signal", PV::Int(9)),
+                        ],
+                    ),
+                    df_instance("sma", "T01", &[("period", PV::Int(20))]),
+                ],
+            ))
+            .await
+            .unwrap();
+        assert!(reversed.cache_hit, "第二次全部命中");
+
+        for id in ["sma", "macd"] {
+            let a = forward
+                .series
+                .iter()
+                .find(|series| series.instance_id == id)
+                .unwrap();
+            let b = reversed
+                .series
+                .iter()
+                .find(|series| series.instance_id == id)
+                .unwrap();
+            let meta = lookup(&a.indicator_id).unwrap().meta();
+            let expected: Vec<&str> = meta.outputs.iter().map(|out| out.key).collect();
+            let keys: Vec<&str> = a.outputs.iter().map(|out| out.key).collect();
+            assert_eq!(keys, expected, "{id} 输出列序必须与注册表一致");
+            assert_eq!(a.outputs.len(), b.outputs.len(), "{id} 输出列数一致");
+            for (left, right) in a.outputs.iter().zip(&b.outputs) {
+                assert_eq!(left.key, right.key);
+                assert_eq!(left.values, right.values, "{id} 换序后数值必须一致");
+            }
+        }
+    }
+
+    /// AC-DF-04-04-5：空批量返回空结果且不报错。
+    #[tokio::test]
+    async fn empty_batch_returns_empty_ok() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 200);
+        seed_series(&core, &s);
+        let response = core.calc_indicators(&df_request(None, None, vec![])).await.unwrap();
+        assert!(response.series.is_empty());
+        assert_eq!(response.computed_ms, 0.0);
+        assert_eq!(response.bar_count, 200);
+        assert!(response.cache_hit, "没有实例需要计算，整批视为命中");
+    }
+
+    /// AC-DF-04-05-1 / 2 / 6：520 根取 120 根、预热 60 → 实际输入 180 根且逐点一致；
+    /// 预热大于窗口时输入 = 窗口 + 预热。
+    #[tokio::test]
+    async fn visible_window_plus_warmup_limits_input_bars() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 520);
+        seed_series(&core, &s);
+        let params: Params = [("period".to_string(), PV::Int(61))].into_iter().collect();
+        let full = full_indicator_values(&s, "T03", &params);
+
+        let from = s.candles[320].date.clone();
+        let to = s.candles[439].date.clone();
+        let response = core
+            .calc_indicators(&df_request(
+                Some(&from),
+                Some(&to),
+                vec![df_instance("wma", "T03", &[("period", PV::Int(61))])],
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.bar_count, 120);
+        let event = last_event(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE);
+        assert_eq!(event.fields["barCount"].as_u64(), Some(120));
+        assert_eq!(event.fields["inputBars"].as_u64(), Some(180), "AC-DF-04-05-1");
+
+        for (output, reference) in response.series[0].outputs.iter().zip(&full) {
+            for (offset, value) in output.values.iter().enumerate() {
+                let expected = reference[320 + offset];
+                assert_eq!(
+                    value.is_some(),
+                    expected.is_finite(),
+                    "AC-DF-04-05-2：{} 第 {offset} 根有效性与全量不一致",
+                    output.key
+                );
+                if let Some(value) = value {
+                    assert_eq!(*value, expected, "AC-DF-04-05-2：{} 第 {offset} 根与全量不一致", output.key);
+                }
+            }
+        }
+
+        // AC-DF-04-05-6：预热 60 > 可见窗口 40 → 输入 = 40 + 60。
+        let narrow_from = s.candles[400].date.clone();
+        let narrow_to = s.candles[439].date.clone();
+        let narrow = core
+            .calc_indicators(&df_request(
+                Some(&narrow_from),
+                Some(&narrow_to),
+                vec![df_instance("narrow", "T03", &[("period", PV::Int(61))])],
+            ))
+            .await
+            .unwrap();
+        assert_eq!(narrow.bar_count, 40);
+        let event = last_event(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE);
+        assert_eq!(event.fields["inputBars"].as_u64(), Some(100));
+    }
+
+    /// AC-DF-04-05-3：窗口贴左边界时向前扩到可得数据，不越界。
+    #[tokio::test]
+    async fn window_at_left_edge_clamps_input_to_available_data() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 520);
+        seed_series(&core, &s);
+        let params: Params = [("period".to_string(), PV::Int(61))].into_iter().collect();
+        let full = full_indicator_values(&s, "T03", &params);
+
+        let from = s.candles[0].date.clone();
+        let to = s.candles[199].date.clone();
+        let response = core
+            .calc_indicators(&df_request(
+                Some(&from),
+                Some(&to),
+                vec![df_instance("edge", "T03", &[("period", PV::Int(61))])],
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.bar_count, 200);
+        let event = last_event(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE);
+        assert_eq!(event.fields["inputBars"].as_u64(), Some(200), "左边界无前缀可补");
+        for (output, reference) in response.series[0].outputs.iter().zip(&full) {
+            for (offset, value) in output.values.iter().enumerate() {
+                let expected = reference[offset];
+                assert_eq!(value.is_some(), expected.is_finite());
+                if let Some(value) = value {
+                    assert_eq!(*value, expected);
+                }
+            }
+        }
+    }
+
+    /// AC-DF-04-05-4：未声明可精确截断的指标退化为全量，不得少算前段。
+    #[tokio::test]
+    async fn non_precise_indicator_falls_back_to_full_series() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 520);
+        seed_series(&core, &s);
+        let params: Params = [("period".to_string(), PV::Int(20))].into_iter().collect();
+        let full = full_indicator_values(&s, "T02", &params);
+
+        let from = s.candles[320].date.clone();
+        let to = s.candles[439].date.clone();
+        let response = core
+            .calc_indicators(&df_request(
+                Some(&from),
+                Some(&to),
+                vec![df_instance("ema", "T02", &[("period", PV::Int(20))])],
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.bar_count, 120);
+        let event = last_event(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE);
+        assert_eq!(
+            event.fields["inputBars"].as_u64(),
+            Some(520),
+            "递归指标必须回退全序列"
+        );
+        for (output, reference) in response.series[0].outputs.iter().zip(&full) {
+            for (offset, value) in output.values.iter().enumerate() {
+                let expected = reference[320 + offset];
+                assert_eq!(value.is_some(), expected.is_finite());
+                if let Some(value) = value {
+                    assert_eq!(*value, expected);
+                }
+            }
+        }
+    }
+
+    /// AC-DF-05-03-1/2/5：输出序列里的 NaN/∞ 经 IPC 一律是 JSON null，不得回退为 0。
+    #[tokio::test]
+    async fn calc_output_serializes_non_finite_values_as_null() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 120);
+        seed_series(&core, &s);
+        let response = core
+            .calc_indicators(&df_request(
+                None,
+                None,
+                vec![df_instance("ma", "T01", &[("period", PV::Int(20))])],
+            ))
+            .await
+            .unwrap();
+
+        let json = serde_json::to_value(&response).unwrap();
+        let values = json["series"][0]["outputs"][0]["values"]
+            .as_array()
+            .expect("输出必须是数组");
+        assert_eq!(values.len(), 120);
+        // 预热期 NaN → null；若被写成 0 会破坏 K 线断线语义。
+        for value in &values[..5] {
+            assert!(value.is_null(), "预热期必须序列化为 null：{value}");
+        }
+        assert!(
+            !values.iter().any(|value| value.as_f64() == Some(0.0)),
+            "null 不得回退为 0：{}",
+            response.series[0].outputs[0].values.len()
+        );
+        assert!(values
+            .iter()
+            .all(|value| value.is_null() || value.is_f64()));
+    }
+
+    /// AC-DF-04-05-5：可见窗口为空时不进入计算，返回上游数据不足错误。
+    #[tokio::test]
+    async fn empty_visible_window_is_rejected_before_compute() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 100);
+        seed_series(&core, &s);
+        let err = core
+            .calc_indicators(&df_request(
+                Some("2030-01-01"),
+                Some("2030-02-01"),
+                vec![df_instance("a", "T01", &[])],
+            ))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, ErrorCode::InsufficientData);
+        assert_eq!(core.calc_cache_stats().unwrap().entries, 0);
+        assert_eq!(event_count(&core, crate::telemetry::EVENT_INDICATOR_COMPUTE), 0);
+    }
+
+    // ---- ST-DF-04-06 计算缓存容量与 FIFO 淘汰 ----
+
+    fn cached_value(value: f64) -> Arc<CachedCalc> {
+        Arc::new(CachedCalc {
+            start: 0,
+            values: vec![vec![value]],
+        })
+    }
+
+    /// AC-DF-04-06-1 / 5：512 上限 + 最早键被淘汰，新键排在队尾。
+    #[test]
+    fn calc_cache_keeps_capacity_and_evicts_fifo() {
+        let mut cache = CalcCache::default();
+        for index in 0..CALC_CACHE_MAX {
+            cache.insert(format!("k{index}"), cached_value(index as f64));
+        }
+        assert_eq!(cache.len(), CALC_CACHE_MAX);
+
+        cache.insert("k512".into(), cached_value(512.0));
+        assert_eq!(cache.len(), CALC_CACHE_MAX, "插入第 513 个键后仍为 512");
+        assert!(cache.get("k0").is_none(), "最早键必须被淘汰");
+        assert!(cache.get("k512").is_some());
+        let keys = cache.keys();
+        assert_eq!(keys.first().map(String::as_str), Some("k1"));
+        assert_eq!(keys.last().map(String::as_str), Some("k512"));
+    }
+
+    /// AC-DF-04-06-2：重复插入同键不改变顺序，也不额外占位。
+    #[test]
+    fn duplicate_insert_does_not_reorder_or_evict() {
+        let mut cache = CalcCache::default();
+        for index in 0..CALC_CACHE_MAX {
+            cache.insert(format!("k{index}"), cached_value(index as f64));
+        }
+        cache.insert("k1".into(), cached_value(999.0));
+        assert_eq!(cache.len(), CALC_CACHE_MAX, "重复插入不新增条目");
+        assert_eq!(cache.get("k1").unwrap().values[0][0], 999.0, "值被刷新");
+
+        cache.insert("k512".into(), cached_value(512.0));
+        assert!(cache.get("k0").is_none(), "淘汰的仍是最早键 k0");
+        assert!(cache.get("k1").is_some(), "重复插入的 k1 不得被误淘汰");
+        let keys = cache.keys();
+        assert_eq!(keys[0], "k1", "重复插入不改变 k1 的原始顺序，队首变成 k1");
+        assert_eq!(keys.last().unwrap(), "k512");
+    }
+
+    /// AC-DF-04-06-6：连续插入 5000 个不同键，条目数封顶 512。
+    #[test]
+    fn five_thousand_keys_never_exceed_capacity() {
+        let mut cache = CalcCache::default();
+        for index in 0..5_000 {
+            cache.insert(format!("k{index}"), cached_value(index as f64));
+        }
+        assert_eq!(cache.len(), CALC_CACHE_MAX);
+        assert_eq!(cache.keys().len(), CALC_CACHE_MAX);
+        assert!(cache.get("k0").is_none());
+        assert!(cache.get("k4999").is_some());
+    }
+
+    /// AC-DF-04-06-3 / 4：键被淘汰后重算结果与首次一致，统计口径与实际条数一致。
+    #[tokio::test]
+    async fn evicted_key_is_recomputed_with_identical_values() {
+        let core = AppCore::new_mock().await.unwrap();
+        let s = series(Date::new(2024, 1, 2), 200);
+        seed_series(&core, &s);
+        let request = || {
+            df_request(
+                None,
+                None,
+                vec![df_instance("a", "T01", &[("period", PV::Int(20))])],
+            )
+        };
+
+        let first = core.calc_indicators(&request()).await.unwrap();
+        assert!(!first.cache_hit);
+
+        for index in 0..CALC_CACHE_MAX {
+            core.calc_cache
+                .lock()
+                .unwrap()
+                .insert(format!("noise-{index}"), cached_value(index as f64));
+        }
+
+        let recomputed = core.calc_indicators(&request()).await.unwrap();
+        assert!(!recomputed.cache_hit, "被淘汰的键必须重算");
+        assert_eq!(
+            recomputed.series[0].outputs[0].values, first.series[0].outputs[0].values,
+            "重算结果必须与首次逐点一致"
+        );
+        let stats = core.calc_cache_stats().unwrap();
+        assert_eq!(stats.capacity, CALC_CACHE_MAX);
+        assert_eq!(stats.entries, CALC_CACHE_MAX, "条目数封顶 512");
+        assert_eq!(stats.entries, core.calc_cache.lock().unwrap().len());
+        assert_eq!(stats.misses, 2, "首次与淘汰后各一次未命中");
+        assert_eq!(stats.hits, 0);
     }
 
     #[test]
@@ -3100,7 +5749,25 @@ mod tests {
         let key_b = calc_key(&s, meta, &params, &b.range);
         assert_ne!(key_a, key_b, "区间变化必须产生不同缓存键");
         assert!(key_a.contains("2024-12-24~2024-12-24") || key_a.contains("2024-12-20~2024-12-24"));
-        assert_eq!(key_a.matches('|').count(), 8, "v2 + 7 个维度 + 1 段 range");
+        assert_eq!(key_a.matches('|').count(), 9, "v4 前缀 + 8 个维度 + 1 段 range");
+    }
+
+    /// AKA-72：缓存键显式携带 data_version —— 版本变化即换键，不依赖 dataset_id。
+    #[test]
+    fn cache_key_includes_data_version() {
+        let v1 = series(Date::new(2024, 12, 20), 10);
+        let mut v2 = v1.clone();
+        v2.data_version = "v2".into();
+
+        let meta = lookup("ma").unwrap().meta();
+        let params = merge_defaults(meta.params, &Params::new());
+        let window = resolve_window(&v1, Some("2024-12-20"), Some("2024-12-26")).unwrap();
+
+        let key_v1 = calc_key(&v1, meta, &params, &window.range);
+        let key_v2 = calc_key(&v2, meta, &params, &window.range);
+        assert_ne!(key_v1, key_v2, "data_version 变化必须产生不同缓存键");
+        assert!(key_v1.contains("|v0|"), "键里应能直接看到版本号：{key_v1}");
+        assert!(key_v2.contains("|v2|"), "键里应能直接看到版本号：{key_v2}");
     }
 
     /// S2：D/W/M 切换必须换缓存键，不得命中旧周期缓存。
@@ -3258,10 +5925,9 @@ mod tests {
         assert_eq!(split.provider, "mock");
         assert_eq!(split.batch_id.as_deref(), Some("b-20260101-01"));
         assert_eq!(split.ingested_at, Some(1_767_225_600));
-        assert_eq!(
-            split.dataset_id,
-            core.dataset_manifest().unwrap().dataset_id
-        );
+        // AC-DF-05-04-6：与同一标的取数响应的 datasetId 同源（契约快照也是这个值）。
+        let bars = core.get_bars(&bars_req("D", None, None)).await.unwrap();
+        assert_eq!(split.dataset_id, bars.dataset_id);
         assert_eq!(split.adj_mode, "qfq");
         assert!(split.quality_flags.iter().any(|flag| flag == "EX_RIGHTS"));
         assert!(split.missing_fields.is_empty());
@@ -3562,17 +6228,21 @@ mod tests {
             };
             core.store_lock().unwrap().put(key.clone(), series.clone());
 
-            // 实例集合 = 前端一次请求的真实规模（44 个已实现指标 + 空参数走默认值）
+            // 实例集合 = 前端一次请求的真实规模（44 个已实现指标 + manifest 全参数）
             let mut instance_ids: Vec<&'static str> =
                 all().iter().map(|ind| ind.meta().id).collect();
             instance_ids.sort_unstable();
             instance_ids.dedup();
             let instances: Vec<crate::dto::InstanceRequest> = instance_ids
                 .iter()
-                .map(|id| crate::dto::InstanceRequest {
-                    instance_id: format!("bench-{id}"),
-                    indicator_id: id.to_string(),
-                    params: Default::default(),
+                .map(|id| {
+                    let meta = lookup(id).unwrap().meta();
+                    crate::dto::InstanceRequest {
+                        instance_id: format!("bench-{id}"),
+                        indicator_id: id.to_string(),
+                        // 缺参已改为报错：基准按 manifest 默认值构造完整 payload。
+                        params: merge_defaults(meta.params, &Params::new()),
+                    }
                 })
                 .collect();
             let request = |generation: u64| CalcRequest {
@@ -3612,13 +6282,14 @@ mod tests {
                     let params = merge_defaults(meta.params, &instance.params);
                     validate(meta.params, &params).unwrap();
                     let key = calc_key(&series, meta, &params, &window.range);
-                    let hash = params_hash(&params);
+                    let hash = params_hash(meta, &params);
                     let context = telemetry_context(
                         meta.id,
                         &hash,
                         &key,
                         &series,
                         window.end - window.start,
+                        series.len(),
                     );
                     std::hint::black_box((key, hash, context));
                 }
@@ -3631,20 +6302,20 @@ mod tests {
                     let meta = indicator.meta();
                     let params = merge_defaults(meta.params, &instance.params);
                     let key = calc_key(&series, meta, &params, &window.range);
-                    let hit = core.calc_cache.lock().unwrap().get(&key).cloned();
+                    let hit = core.calc_cache.lock().unwrap().get(&key);
                     std::hint::black_box(hit);
                 }
             });
 
             let mut missing: Vec<&'static str> = Vec::new();
-            let raws: Vec<(&'static str, std::sync::Arc<Vec<Vec<f64>>>)> = instances
+            let raws: Vec<(&'static str, std::sync::Arc<CachedCalc>)> = instances
                 .iter()
                 .filter_map(|instance| {
                     let indicator = lookup(&instance.indicator_id).unwrap();
                     let meta = indicator.meta();
                     let params = merge_defaults(meta.params, &instance.params);
                     let key = calc_key(&series, meta, &params, &window.range);
-                    match core.calc_cache.lock().unwrap().get(&key).cloned() {
+                    match core.calc_cache.lock().unwrap().get(&key) {
                         Some(values) => Some((meta.id, values)),
                         None => {
                             missing.push(meta.id);
@@ -3654,7 +6325,8 @@ mod tests {
                 })
                 .collect();
             if !missing.is_empty() {
-                let stored: Vec<String> = core.calc_cache.lock().unwrap().keys().cloned().take(3).collect();
+                let mut stored: Vec<String> = core.calc_cache.lock().unwrap().keys();
+                stored.truncate(3);
                 let probe = {
                     let instance = instances
                         .iter()
@@ -3677,13 +6349,15 @@ mod tests {
                         instance_id: instance.instance_id.clone(),
                         indicator_id: id.to_string(),
                         outputs: raw
+                            .values
                             .iter()
                             .map(|values| OutputSeriesDto {
                                 key: "bench",
                                 label_zh: "基准",
                                 kind: indicator_core::OutputKind::Line,
                                 color: "--pos",
-                                values: values[window.start..window.end]
+                                values: values[window.start - raw.start
+                                    ..window.end - raw.start]
                                     .iter()
                                     .map(|v| if v.is_finite() { Some(*v) } else { None })
                                     .collect(),
@@ -3691,6 +6365,7 @@ mod tests {
                             .collect(),
                         warmup: 0,
                         engine_version: 1,
+                        error: None,
                     })
                     .collect();
                 std::hint::black_box(&built);
@@ -3713,13 +6388,15 @@ mod tests {
                         instance_id: instance.instance_id.clone(),
                         indicator_id: id.to_string(),
                         outputs: raw
+                            .values
                             .iter()
                             .map(|values| OutputSeriesDto {
                                 key: "bench",
                                 label_zh: "基准",
                                 kind: indicator_core::OutputKind::Line,
                                 color: "--pos",
-                                values: values[window.start..window.end]
+                                values: values[window.start - raw.start
+                                    ..window.end - raw.start]
                                     .iter()
                                     .map(|v| if v.is_finite() { Some(*v) } else { None })
                                     .collect(),
@@ -3727,6 +6404,7 @@ mod tests {
                             .collect(),
                         warmup: 0,
                         engine_version: 1,
+                        error: None,
                     })
                     .collect(),
             };
@@ -3738,7 +6416,7 @@ mod tests {
             println!("    ⑥ 报文大小 = {:.1} KB", json_bytes as f64 / 1024.0);
 
             // ⑦ 埋点：每实例一条 cache.hit，分别测「仅内存」与「内存 + JSONL 追加写」
-            let per_context = telemetry_context("T01", "deadbeef", "k", &series, 520);
+            let per_context = telemetry_context("T01", "deadbeef", "k", &series, 520, 520);
             let fields = |id: &'static str| {
                 let mut fields = per_context.clone();
                 fields[0] = ("indicatorId", serde_json::json!(id));
@@ -3822,5 +6500,225 @@ mod tests {
         let counts = core.telemetry().summary(0).counts;
         assert_eq!(counts.get(crate::telemetry::EVENT_CACHE_HIT), Some(&1));
         assert_eq!(counts.get(crate::telemetry::EVENT_INDICATOR_COMPUTE), Some(&1));
+    }
+
+    // ---- FEAT-DF-02-02 复权口径定向测试 ----
+
+    fn round2(value: f64) -> f64 {
+        (value * 100.0).round() / 100.0
+    }
+
+    fn adj_req(adj: &str) -> GetBarsRequest {
+        GetBarsRequest {
+            security: "600519.SH".into(),
+            timeframe: "D".into(),
+            adj: adj.into(),
+            from: None,
+            to: None,
+        }
+    }
+
+    /// AC-DF-02-02-1/2/5：因子≠1 时按口径缩放 OHLC、量额不变，溯源 raw_close 保留原值。
+    #[tokio::test]
+    async fn qfq_scales_ohlc_by_factor_and_keeps_volume_untouched() {
+        let core = AppCore::new_mock().await.unwrap();
+        let raw = core.get_bars(&adj_req("none")).await.unwrap();
+        let qfq = core.get_bars(&adj_req("qfq")).await.unwrap();
+        assert_eq!(raw.bars.len(), qfq.bars.len());
+
+        // AC-2：复权只作用于 OHLC，成交量/成交额逐根完全一致。
+        for (before, after) in raw.bars.iter().zip(&qfq.bars) {
+            assert_eq!(before.date, after.date);
+            assert_eq!(before.volume, after.volume, "{} 成交量被复权缩放", after.date);
+            assert_eq!(before.amount, after.amount, "{} 成交额被复权缩放", after.date);
+        }
+
+        // AC-1：600519.SH 拆分前因子 0.5 → 前复权价 = 原始价 × 0.5。
+        let raw_pre = raw
+            .bars
+            .iter()
+            .find(|bar| bar.date == "2024-04-26")
+            .expect("夹具应含拆分前交易日");
+        let qfq_pre = qfq
+            .bars
+            .iter()
+            .find(|bar| bar.date == "2024-04-26")
+            .unwrap();
+        assert_eq!(raw_pre.adj_factor, 0.5);
+        assert_eq!(qfq_pre.close, round2(raw_pre.close * 0.5));
+
+        // AC-5：溯源口径与界面选择一致，raw_close 保留原始收盘。
+        let prov = core
+            .bar_provenance(&BarProvenanceRequest {
+                security: "600519.SH".into(),
+                date: "2024-04-26".into(),
+                timeframe: "D".into(),
+                adj: "qfq".into(),
+            })
+            .await
+            .unwrap();
+        assert_eq!(prov.adj_mode, "qfq");
+        assert_eq!(prov.raw_close, raw_pre.close);
+        assert_eq!(prov.close, qfq_pre.close);
+        assert_eq!(prov.adj_factor, 0.5);
+    }
+
+    /// AC-DF-02-02-4：前复权与后复权各自正确，缓存按口径隔离、不互相污染。
+    #[tokio::test]
+    async fn adjust_modes_are_cache_isolated() {
+        let core = AppCore::new_mock().await.unwrap();
+        let raw = core.get_bars(&adj_req("none")).await.unwrap();
+        let qfq_first = core.get_bars(&adj_req("qfq")).await.unwrap();
+        let hfq = core.get_bars(&adj_req("hfq")).await.unwrap();
+        let qfq_again = core.get_bars(&adj_req("qfq")).await.unwrap();
+
+        let closes = |resp: &BarsResponse| -> Vec<(String, f64)> {
+            resp.bars
+                .iter()
+                .map(|bar| (bar.date.clone(), bar.close))
+                .collect()
+        };
+        assert_eq!(
+            closes(&qfq_first),
+            closes(&qfq_again),
+            "同口径重复请求必须逐根一致，不受后复权缓存污染"
+        );
+
+        let close_at = |resp: &BarsResponse, date: &str| -> f64 {
+            resp.bars.iter().find(|bar| bar.date == date).unwrap().close
+        };
+        let post_split = raw
+            .bars
+            .iter()
+            .find(|bar| bar.date.as_str() > "2024-04-29" && bar.adj_factor == 1.0)
+            .expect("应存在拆分后交易日");
+        let raw_pre = close_at(&raw, "2024-04-26");
+        let raw_post = post_split.close;
+
+        // 前复权锚定最新交易日：拆分前 ×0.5，拆分后不变。
+        assert_eq!(close_at(&qfq_first, "2024-04-26"), round2(raw_pre * 0.5));
+        assert_eq!(close_at(&qfq_first, &post_split.date), raw_post);
+        // 后复权锚定最早交易日：拆分前不变，拆分后 ×2。
+        assert_eq!(close_at(&hfq, "2024-04-26"), raw_pre);
+        assert_eq!(close_at(&hfq, &post_split.date), round2(raw_post * 2.0));
+        assert_ne!(
+            close_at(&qfq_first, &post_split.date),
+            close_at(&hfq, &post_split.date),
+            "两种口径结果不得串用"
+        );
+    }
+
+    async fn assert_adj_coverage_degraded(core: &AppCore) {
+        let raw = core.get_bars(&adj_req("none")).await.unwrap();
+        let qfq = core.get_bars(&adj_req("qfq")).await.unwrap();
+        assert_eq!(qfq.adj, "qfq", "请求口径仍需回传，供界面与溯源对齐");
+        assert_eq!(raw.bars.len(), qfq.bars.len());
+        for (before, after) in raw.bars.iter().zip(&qfq.bars) {
+            assert!(
+                after.quality.iter().any(|flag| flag == "ADJ_COVERAGE"),
+                "{} 缺因子必须标 ADJ_COVERAGE",
+                after.date
+            );
+            assert_eq!(
+                before.close, after.close,
+                "{} 缺因子必须按原始价展示，不能静默按 1.0 复权",
+                after.date
+            );
+        }
+        let prov = core
+            .bar_provenance(&BarProvenanceRequest {
+                security: "600519.SH".into(),
+                date: "2024-04-26".into(),
+                timeframe: "D".into(),
+                adj: "qfq".into(),
+            })
+            .await
+            .unwrap();
+        assert!(prov.quality_flags.iter().any(|flag| flag == "ADJ_COVERAGE"));
+        assert_eq!(prov.raw_close, prov.close);
+    }
+
+    /// AC-DF-02-02-3：因子缺失（能力位缺失或行内因子非法）降级原始价并标 ADJ_COVERAGE。
+    #[tokio::test]
+    async fn missing_adjust_factors_degrade_to_raw_and_mark_adj_coverage() {
+        // 场景 1：数据源能力位声明不支持复权。
+        let core = AppCore::new(Box::new(ProxyProvider {
+            inner: data_provider::mock::MockProvider::new(),
+            adjust_factors: false,
+            patch: None,
+            fail_security: None,
+            calls: Default::default(),
+        }))
+        .await
+        .unwrap();
+        assert_adj_coverage_degraded(&core).await;
+
+        // 场景 2：能力位声称支持，但行内 adj_factor 缺失（0.0）。
+        let core = AppCore::new(Box::new(ProxyProvider {
+            inner: data_provider::mock::MockProvider::new(),
+            adjust_factors: true,
+            patch: Some(Box::new(|batch, adj| {
+                if adj != data_provider::Adjust::None {
+                    for row in &mut batch.rows {
+                        row.adj_factor = 0.0;
+                    }
+                }
+            })),
+            fail_security: None,
+            calls: Default::default(),
+        }))
+        .await
+        .unwrap();
+        assert_adj_coverage_degraded(&core).await;
+    }
+
+    /// AC-DF-02-02-6：停牌行保留、不叠 ZERO_VOLUME，价格仍按复权口径处理。
+    #[tokio::test]
+    async fn suspended_bar_is_kept_and_still_adjusted_by_mode() {
+        let core = AppCore::new(Box::new(ProxyProvider {
+            inner: data_provider::mock::MockProvider::new(),
+            adjust_factors: true,
+            patch: Some(Box::new(|batch, adj| {
+                if adj == data_provider::Adjust::None {
+                    return;
+                }
+                if let Some(row) = batch
+                    .rows
+                    .iter_mut()
+                    .find(|row| row.date == Date::new(2024, 4, 26))
+                {
+                    row.volume = 0.0;
+                    row.amount = 0.0;
+                    if !row.quality.contains(&data_provider::QualityFlag::Suspended) {
+                        row.quality.push(data_provider::QualityFlag::Suspended);
+                    }
+                }
+            })),
+            fail_security: None,
+            calls: Default::default(),
+        }))
+        .await
+        .unwrap();
+
+        let raw = core.get_bars(&adj_req("none")).await.unwrap();
+        let qfq = core.get_bars(&adj_req("qfq")).await.unwrap();
+        let raw_pre = raw
+            .bars
+            .iter()
+            .find(|bar| bar.date == "2024-04-26")
+            .unwrap();
+        let suspended = qfq
+            .bars
+            .iter()
+            .find(|bar| bar.date == "2024-04-26")
+            .expect("停牌行必须保留，不能因 volume=0 被过滤");
+        assert!(suspended.quality.iter().any(|flag| flag == "SUSPENDED"));
+        assert!(!suspended.quality.iter().any(|flag| flag == "ZERO_VOLUME"));
+        assert_eq!(suspended.volume, 0.0);
+        assert_eq!(
+            suspended.close,
+            round2(raw_pre.close * 0.5),
+            "停牌行价格字段仍按前复权口径处理"
+        );
     }
 }

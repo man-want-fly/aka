@@ -26,6 +26,9 @@ pub struct Manifest {
     /// 缓存键维度（只作文档用途，实际实现在 app-core::calc_key）
     #[serde(default)]
     pub cache_key: Vec<String>,
+    /// 引擎版本：与 `calc_key` 用的 `ENGINE_VERSION` 同源，前端只渲染不拼接。
+    #[serde(default)]
+    pub engine_version: String,
     pub indicators: Vec<ManifestIndicator>,
 }
 
@@ -149,7 +152,11 @@ pub struct ManifestOutput {
 pub fn manifest() -> &'static Manifest {
     static PARSED: OnceLock<Manifest> = OnceLock::new();
     PARSED.get_or_init(|| {
-        serde_json::from_str(RAW).expect("manifest/indicators.json 解析失败（这是构建期错误）")
+        let mut parsed: Manifest =
+            serde_json::from_str(RAW).expect("manifest/indicators.json 解析失败（这是构建期错误）");
+        // 版本不写进 JSON：唯一来源是常量，避免口径页与缓存键出现两份版本。
+        parsed.engine_version = crate::ENGINE_VERSION.to_string();
+        parsed
     })
 }
 
@@ -368,8 +375,8 @@ mod tests {
             .iter()
             .filter(|item| item.status != "planned")
             .count();
-        assert_eq!(implemented, 45, "已实现条目数不得被规划项污染");
-        assert_eq!(manifest.indicators.iter().filter(|i| i.status == "planned").count(), 60);
+        assert_eq!(implemented, 59, "已实现条目数不得被规划项污染");
+        assert_eq!(manifest.indicators.iter().filter(|i| i.status == "planned").count(), 46);
     }
 
     #[test]

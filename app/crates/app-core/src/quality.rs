@@ -49,6 +49,8 @@ pub struct QualityCheckRow {
     pub status: CheckStatus,
     /// 检查自身无法执行时的错误码（该行不显示 0）
     pub error_code: Option<&'static str>,
+    /// 缺失的字段名（AC-DF-02-04-2）：失败项必须能指出缺什么，而不是笼统报错。
+    pub missing_fields: Vec<&'static str>,
     pub examples: Vec<QualityExample>,
 }
 
@@ -117,6 +119,7 @@ fn row(
         treatment,
         status,
         error_code,
+        missing_fields: Vec::new(),
         examples,
     }
 }
@@ -302,16 +305,20 @@ pub fn scan(calendar: &[Date], securities: &[SecurityQualityInput]) -> QualitySc
             None,
         ),
         if coverage_failed {
-            row(
-                "ADJ_COVERAGE",
-                "复权覆盖",
-                0,
-                0,
-                "标记 ADJ_COVERAGE，区间列显示 —",
-                CheckStatus::Failed,
-                Vec::new(),
-                Some("E_ADJ_FACTOR_MISSING"),
-            )
+            QualityCheckRow {
+                // AC-DF-02-04-2：失败项给出缺失字段名，不用 0 掩盖。
+                missing_fields: vec!["adj_factor"],
+                ..row(
+                    "ADJ_COVERAGE",
+                    "复权覆盖",
+                    0,
+                    0,
+                    "标记 ADJ_COVERAGE，区间列显示 —",
+                    CheckStatus::Failed,
+                    Vec::new(),
+                    Some("E_ADJ_FACTOR_MISSING"),
+                )
+            }
         } else {
             row(
                 "ADJ_COVERAGE",
@@ -534,6 +541,7 @@ mod tests {
         let coverage = row(&result, "ADJ_COVERAGE");
         assert_eq!(coverage.status, CheckStatus::Failed);
         assert_eq!(coverage.error_code, Some("E_ADJ_FACTOR_MISSING"));
+        assert_eq!(coverage.missing_fields, vec!["adj_factor"]);
         assert_eq!(coverage.hits, 0);
         assert_eq!(result.passed_count, 5, "失败项不计入通过");
     }

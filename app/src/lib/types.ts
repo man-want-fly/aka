@@ -165,6 +165,8 @@ export interface ManifestResponse {
   catalogTotal: number;
   /** 缓存键维度（七元组：后三项固定为 indicatorId、params、dateRange） */
   cacheKey: string[];
+  /** 引擎版本：与后端 calc_key 的 ENGINE_VERSION 同源，前端只渲染不拼接 */
+  engineVersion: string;
   indicators: ManifestIndicatorDto[];
 }
 
@@ -274,6 +276,8 @@ export interface DatasourceCapabilityDto {
   labelZh: string;
   required: boolean;
   available: boolean;
+  /** 不可用原因码：必需能力为 E_SOURCE_NOT_READY，可选能力为 E_UNSUPPORTED */
+  reasonCode: string | null;
   /** 可选能力缺失时的降级说明 */
   note: string | null;
 }
@@ -289,6 +293,8 @@ export interface DatasourceOpsDto {
 export interface DatasetVersionDto {
   datasetId: string;
   datasetIdShort: string;
+  /** ST-DF-03-03：落盘 manifest 的 dataVersion（如 v2），与 provenance 同源 */
+  dataVersion: string;
   /** epoch 秒，界面按本地时区格式化 */
   generatedAt: number;
   rowCount: number;
@@ -328,8 +334,12 @@ export interface DataHealthItemDto {
   advice: string | null;
 }
 
+/** ST-DF-03-04：健康检查整体状态，页面不再自行推导徽标。 */
+export type DataHealthState = "ok" | "failed" | "not_installed";
+
 /** S-07.01-02：P9 健康检查汇总（6 项） */
 export interface DataHealthDto {
+  state: DataHealthState;
   items: DataHealthItemDto[];
   passed: number;
   total: number;
@@ -337,15 +347,22 @@ export interface DataHealthDto {
   /** epoch 毫秒，界面按本地时区格式化 */
   checkedAt: number;
   datasetId: string | null;
+  /** AC-DF-03-04-1：版本六段缺失字段（空 = 齐全） */
+  missingVersionFields: string[];
 }
 
-/** S-08.02-03：启动数据集校验失败分类 */
+/** S-08.02-03：启动数据集校验失败分类（ST-DF-03-02 补落盘口径） */
 export type DatasetErrorCode =
   | "MISSING_DIR"
+  | "MANIFEST_MISSING"
   | "MANIFEST_INVALID"
+  | "DATASET_DB_MISSING"
   | "REQUIRED_TABLE_MISSING"
+  | "ROW_COUNT_MISMATCH"
+  | "COVERAGE_MISMATCH"
   | "SHA256_MISMATCH"
-  | "DB_CORRUPT";
+  | "DB_CORRUPT"
+  | "VERSION_MISMATCH";
 
 export type DatasetFaultValue = "none" | "missing" | "manifest" | "table" | "sha" | "db";
 
@@ -361,6 +378,18 @@ export interface DatasetIntegrityDto {
   readable: boolean;
   checkedAt: number;
   datasetId: string | null;
+  /** ST-DF-03-02：重建代数（manifest.dataVersion） */
+  dataVersion?: string | null;
+  /** ST-DF-03-02：落盘实际行数（非 manifest 自述） */
+  rowCount?: number | null;
+  coverageStart?: string | null;
+  coverageEnd?: string | null;
+  /** ST-DF-03-02：manifest 缺失的字段名 */
+  missingFields?: string[];
+  /** ST-DF-03-02：manifest 声明的摘要 */
+  expectedSha256?: string | null;
+  /** ST-DF-03-02：落盘复算摘要 */
+  actualSha256?: string | null;
 }
 
 /** S-07.05-01：质量检查报告 */
@@ -378,6 +407,8 @@ export interface QualityCheckDto {
   treatment: string;
   status: "pass" | "info" | "warning" | "failed";
   errorCode: string | null;
+  /** 失败项缺失的字段名（AC-DF-02-04-2） */
+  missingFields: string[];
   examples: QualityExampleDto[];
 }
 
@@ -434,6 +465,8 @@ export interface SeriesDto {
   outputs: OutputSeriesDto[];
   warmup: number;
   engineVersion: number;
+  /** 实例级错误：参数非法或计算失败只影响该实例（FEAT-DF-04） */
+  error?: AppError;
 }
 
 export interface CalcResponse {
@@ -453,7 +486,8 @@ export interface AppError {
   code: string;
   message: string;
   retryable: boolean;
-  details?: Record<string, unknown>;
+  /** 统一错误结构四字段之一：无内容时为 null，不得省略。 */
+  details: Record<string, unknown> | null;
 }
 
 export interface TelemetryEventDto {
@@ -541,6 +575,69 @@ export interface MarketSnapshotDto {
   simulated: boolean;
   generatedAt: number;
   rows: MarketRowDto[];
+}
+
+/** S-04.01-01：指数概览快照（指数表 + KPI）。 */
+export interface IndexSnapshotDto {
+  indexCount: number;
+  /** 故事卡口径的样本指数数（8） */
+  expectedCount: number;
+  sampleMissing: boolean;
+  /** 数据集内有指数但缺日线、被隐藏的行数 */
+  missingCount: number;
+  dataDate: string;
+  coverageEnd: string;
+  datasetId: string;
+  dataVersion: string;
+  provider: string;
+  simulated: boolean;
+  generatedAt: number;
+  rows: IndexRowDto[];
+  kpi: IndexKpiDto;
+}
+
+/** S-04.01-02：三个交易日区间的累计涨跌幅（百分数）。 */
+export interface IndexRangePctDto {
+  today: number | null;
+  d5: number | null;
+  d20: number | null;
+}
+
+/** S-04.01-02：每个区间可用的交易日数，用于「数据不足」提示。 */
+export interface IndexRangeDaysDto {
+  today: number;
+  d5: number;
+  d20: number;
+}
+
+export interface IndexRowDto {
+  code: string;
+  name: string;
+  point: number;
+  changeAbs: number | null;
+  changePct: number | null;
+  /** 成分样本内最新交易日成交额合计（元） */
+  amount: number | null;
+  /** `index_members` 行数；无成分为 null */
+  members: number | null;
+  /** 今日 / 5 日 / 20 日累计涨跌幅；数据不足为 null */
+  rangePct: IndexRangePctDto;
+  /** 各区间可用交易日数 */
+  rangeDays: IndexRangeDaysDto;
+}
+
+export interface IndexKpiItemDto {
+  code: string;
+  name: string;
+  changePct: number;
+}
+
+export interface IndexKpiDto {
+  leader: IndexKpiItemDto | null;
+  laggard: IndexKpiItemDto | null;
+  advancers: number;
+  /** 全部指数成交额合计；任一行缺失时为 null */
+  amountTotal: number | null;
 }
 
 export interface WatchGroupDto {

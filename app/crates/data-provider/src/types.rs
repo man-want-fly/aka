@@ -225,6 +225,10 @@ impl std::error::Error for NotSupported {}
 pub enum ProviderError {
     #[error("provider 不支持该能力：{0}")]
     Unsupported(&'static str),
+    /// 数据源未配置/未启用（如 Tushare 骨架），与「不支持该能力」区分：
+    /// 前者是源整体不可用，后者是可选能力缺失。
+    #[error("数据源未就绪：{0}")]
+    SourceNotReady(&'static str),
     #[error("未知标的：{0}")]
     UnknownSecurity(String),
     #[error("数据源网络错误：{0}")]

@@ -1393,6 +1393,45 @@ select {
   font-size: 10.5px;
 }
 
+/* AKA-63：行情页内联搜索，复用 ⌘K 的匹配口径，只做过滤。 */
+.market-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface2);
+}
+
+.market-search input {
+  width: 168px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.market-search input::placeholder {
+  color: var(--faint);
+}
+
+.market-search button {
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.market-search button:hover {
+  color: var(--accent);
+}
+
 .seg button.selected,
 .seg button[aria-pressed="true"] {
   background: var(--surface3);
@@ -4151,6 +4190,16 @@ mark {
 
 .indices-row:last-child {
   border-bottom: 0;
+}
+
+.indices-row--clickable {
+  cursor: pointer;
+}
+
+.indices-row--clickable:hover,
+.indices-row--clickable:focus-visible {
+  background: var(--surface2);
+  outline: none;
 }
 
 .indices-row--head {

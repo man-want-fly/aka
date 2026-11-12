@@ -165,6 +165,9 @@ export function DatasourcePage({ onNavigate }: Props) {
 
   const state = status?.state ?? (error ? "probe_failed" : null);
   const version = status?.version ?? null;
+  // AC-DF-01-04-4：必需能力失败时列出受影响功能，入口统一置灰。
+  const missingRequired =
+    status?.capabilities.filter((cap) => cap.required && !cap.available) ?? [];
 
   const locateIssue = () => {
     const target = status?.capabilities.find((cap) => !cap.available);
@@ -220,25 +223,33 @@ export function DatasourcePage({ onNavigate }: Props) {
     }
   };
 
+  // ST-DF-03-04：整体状态由后端给出，页面不再按 passed/total 自行猜测。
   const healthState = !health
     ? checking
       ? "检查中"
       : "尚未检查"
-    : health.passed === health.total
+    : health.state === "ok"
       ? "正常"
-      : health.items.some((item) => item.status === "SKIP")
-        ? "前置失败"
-        : "部分失败";
+      : health.state === "not_installed"
+        ? "未安装"
+        : "失败";
   const healthTone =
     healthState === "正常"
       ? "ok"
-      : health && healthState !== "检查中"
-        ? "bad"
-        : "warn";
-  const brokenPrefix = health?.items.some(
-    (item) =>
-      item.status === "FAIL" && (item.key === "dataset_present" || item.key === "manifest_parse"),
-  );
+      : healthState === "未安装"
+        ? "warn"
+        : health && healthState !== "检查中"
+          ? "bad"
+          : "warn";
+  // AC-DF-03-04-4：未安装不是损坏，不能给「重建」入口，要给「安装」入口。
+  const healthNotInstalled = health?.state === "not_installed";
+  const brokenPrefix =
+    health?.state === "failed" &&
+    health.items.some(
+      (item) =>
+        item.status === "FAIL" &&
+        (item.key === "dataset_present" || item.key === "manifest_parse"),
+    );
 
   return (
     <AppShell active="datasource" onNavigate={onNavigate}>
@@ -266,6 +277,19 @@ export function DatasourcePage({ onNavigate }: Props) {
             <span>检查失败：{error}</span>
             <button type="button" onClick={() => void load()}>
               重试
+            </button>
+          </div>
+        )}
+
+        {missingRequired.length > 0 && (
+          <div className="ds-error" data-ds-required-warning="1" role="alert">
+            <span>
+              数据源未就绪（E_SOURCE_NOT_READY）：{missingRequired.length}/
+              {status?.requiredTotal ?? 0} 项必需能力不可用。受影响功能：
+              {missingRequired.map((cap) => cap.labelZh).join("、")}；相关入口已禁用。
+            </span>
+            <button type="button" onClick={locateIssue}>
+              查看受影响项
             </button>
           </div>
         )}
@@ -303,9 +327,15 @@ export function DatasourcePage({ onNavigate }: Props) {
 
           {!version && state !== "probe_failed" && (
             <div className="ds-missing" data-ds-missing="1">
-              <span>未安装样本包</span>
+              <span>
+                {status?.errorCode === "E_DATASET_VERSION_MISMATCH"
+                  ? "数据集版本不一致，已阻断加载"
+                  : "未安装样本包"}
+              </span>
               <button type="button" onClick={() => onNavigate("install")}>
-                去环境页生成
+                {status?.errorCode === "E_DATASET_VERSION_MISMATCH"
+                  ? "去重建数据集"
+                  : "去环境页生成"}
               </button>
             </div>
           )}
@@ -331,8 +361,19 @@ export function DatasourcePage({ onNavigate }: Props) {
                         </span>
                         {!cap.required && <span className="ds-cap-tag">可选</span>}
                       </div>
-                      {!cap.available && cap.note && (
-                        <span className="ds-cap-note">{cap.note}</span>
+                      {!cap.available && (cap.reasonCode || cap.note) && (
+                        <span className="ds-cap-note">
+                          {cap.reasonCode && (
+                            <code
+                              className="qa-code"
+                              data-capability-reason={cap.key}
+                            >
+                              {cap.reasonCode}
+                            </code>
+                          )}
+                          {cap.reasonCode && cap.note ? " · " : null}
+                          {cap.note}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -365,6 +406,10 @@ export function DatasourcePage({ onNavigate }: Props) {
               <b className="mono" title={version?.datasetId ?? ""}>
                 {version?.datasetIdShort ?? MISSING}
               </b>
+            </div>
+            <div className="ds-version-row" data-version-field="dataVersion">
+              <span>数据版本</span>
+              <b className="mono">{version?.dataVersion ?? MISSING}</b>
             </div>
             <div className="ds-version-row" data-version-field="generatedAt">
               <span>生成时间</span>
@@ -496,6 +541,27 @@ export function DatasourcePage({ onNavigate }: Props) {
                   ))}
                 </tbody>
               </table>
+
+              {healthNotInstalled && (
+                <div className="ds-missing" data-health-install-box="1">
+                  <span>
+                    未安装样本包：这不是数据损坏，健康检查只能确认安装状态。
+                  </span>
+                  <button
+                    type="button"
+                    data-health-install="1"
+                    onClick={() => onNavigate("install")}
+                  >
+                    去环境页安装
+                  </button>
+                </div>
+              )}
+
+              {health.missingVersionFields.length > 0 && (
+                <p className="ds-op-note" data-health-missing-version="1">
+                  版本缺失字段：{health.missingVersionFields.join("、")}
+                </p>
+              )}
 
               {brokenPrefix && (
                 <div className="ds-missing" data-health-rebuild-box="1">

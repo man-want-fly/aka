@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 取证并归档：当次 evidence JSON + meta 一起落到 docs/qa/evidence/（W-41 第 2 项）。
-# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market|s2|s20602|s070503|s080202|s080203|s080203-readonly|s010301
+# 用法：scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market|s2|s206|s206-meta|s206-readonly|s20602|s070503|s080202|s080203|s080203-readonly|s010301
 # 前置：app/ 根目录执行 npm run build 与 cargo build -p aka-desktop --features tauri/custom-protocol
 # 取证必须用 debug 构建：QA 注入开关在 release 里已整体编译掉（W-47）。
 set -euo pipefail
@@ -14,7 +14,7 @@ LAYOUT="$APP_DIR/scripts/evidence-layout.json"
 EVIDENCE_REL="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1],encoding="utf-8"))["evidenceRoot"])' "$LAYOUT")"
 OUT="$APP_DIR/../$EVIDENCE_REL"
 DB="$HOME/Library/Application Support/aka/state.db"
-SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market|s2|s20602|s070503|s080202|s080203|s080203-readonly|s010301}"
+SUITE="${1:?用法: scripts/diag-evidence.sh watchlist|watchlist-empty|watchlist-corrupt|watchlist-readonly|s0602|star|s080204|market|s2|s206|s206-meta|s206-readonly|s20602|s070503|s080202|s080203|s080203-readonly|s010301}"
 LABEL="$(date +%Y%m%d-%H%M%S)"
 # 本次取证运行的起始时刻（epoch ms）：文件断言只认此时间窗之后落盘的文件，排除历史残档。
 RUN_STARTED_MS="$(python3 -c 'import time; print(int(time.time()*1000))')"
@@ -114,6 +114,43 @@ PY
     JSON="$DIAG_DIR/s2-evidence.json"
     NAME="s2-evidence"
     FIXTURE="默认固定批次（instances=50 = 1 主图均线 + 5 叠加 + 5 统计 + 1 M06 + 20 B2 + 13 B3 + 5 B1，skip=6）；冷/热各切 30/90 次标的；连键 1→12→120 与 1→12→60；只读行情，不改库"
+    BAK=""
+    ;;
+  s206)
+    TARGET="s206"
+    JSON="$DIAG_DIR/s206-evidence.json"
+    NAME="s206-evidence"
+    FIXTURE="默认 state.db；自选注入 6 只用于点击切标的；FEAT-DF-06 套件测首帧可交互、周期首次/连点、5 连点终态、bars 与 calc 并行、滚轮/拖拽 0 取数、成交量折叠重排；取证后 .backup 还原"
+    BAK="/tmp/aka-state-s206-$LABEL.db"
+    sqlite3 "$DB" ".backup '$BAK'"
+    python3 - "$DB" <<'PY'
+import sqlite3, sys
+conn = sqlite3.connect(sys.argv[1])
+rows = [(code, None, i, 1700000000 + i) for i, code in enumerate(
+    ["600519.SH", "002594.SZ", "300750.SZ", "600036.SH", "000858.SZ", "601318.SH"]
+)]
+conn.executemany(
+    "INSERT OR IGNORE INTO watchlist_items(security, group_name, sort_order, added_at) VALUES (?,?,?,?)",
+    rows,
+)
+conn.commit()
+print(f"s206 fixture：自选已具备 {len(rows)} 只目标标的")
+PY
+    ;;
+  s206-meta)
+    TARGET="s206-meta"
+    JSON="$DIAG_DIR/s206-meta-evidence.json"
+    NAME="s206-meta-evidence"
+    FLAGS="--missing-manifest-sha256"
+    FIXTURE="默认 state.db；--missing-manifest-sha256（trigger=injected）让 dataset_manifest 只清 sha256；首轮注入 dataset_manifest 延迟 2500ms 后自动刷新，验证页脚 7 段「加载中」（AC-06.04-03）与仅 sha256 段「缺失」（AC-06.04-04）；只读，不改库"
+    BAK=""
+    ;;
+  s206-readonly)
+    TARGET="s206-readonly"
+    JSON="$DIAG_DIR/s206-readonly-evidence.json"
+    NAME="s206-readonly-evidence"
+    FLAGS="--readonly-db"
+    FIXTURE="默认 state.db；启动带 --readonly-db（PRAGMA query_only=ON），观察窗 1.2s 内统计写入类命令（应为 0），并核对元信息与页脚 7 段就绪（AC-06.04-05）"
     BAK=""
     ;;
   s20602)

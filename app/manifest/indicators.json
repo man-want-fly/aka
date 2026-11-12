@@ -299,7 +299,35 @@
       "inputs": {
         "close": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "效率比周期",
+          "min": 2,
+          "max": 500,
+          "default": 10,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "fast",
+          "label": "快速平滑周期",
+          "min": 1,
+          "max": 100,
+          "default": 2,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "slow",
+          "label": "慢速平滑周期",
+          "min": 2,
+          "max": 500,
+          "default": 30,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
@@ -311,9 +339,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
-      "unit": "—",
-      "notes": "规划中（未上线）：默认参数 10 / 2 / 30；手册 §2.1｜A股主口径：效率系数=净变动/总路径，快慢 2/30｜变体：无｜平滑常数手册未列，取 PRD 附录 A",
+      "status": "normal",
+      "unit": "元",
+      "notes": "默认参数 10 / 2 / 30；效率比 ER 度量净变动占总路径的比例，平滑常数在快慢 α 之间按 ER 插值；第 N 根以当根收盘价作种子；零波动时 ER 记 0，KAMA 保持种子。",
       "formulaSummary": "ER = ｜C − C(N)｜ / Σ｜C − C(1)｜；SC = (ER×(2/3 − 2/31) + 2/31)²；KAMA = KAMA(1) + SC×(C − KAMA(1))，参数 10/2/30",
       "warmupBars": 40,
       "completeness": "部分",
@@ -1688,21 +1716,64 @@
       "inputs": {
         "close": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "fast",
+          "label": "快线",
+          "min": 2,
+          "max": 200,
+          "default": 12,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "slow",
+          "label": "慢线",
+          "min": 2,
+          "max": 200,
+          "default": 26,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "signal",
+          "label": "信号线",
+          "min": 2,
+          "max": 100,
+          "default": 9,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "atr",
+          "label": "ATR 周期",
+          "min": 2,
+          "max": 200,
+          "default": 14,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
           "labelZh": "MACD-V",
           "kind": "line",
           "color": "var(--muted)"
+        },
+        {
+          "key": "signal",
+          "labelZh": "信号线",
+          "kind": "line",
+          "color": "var(--accent)"
         }
       ],
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
+      "status": "normal",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 12/26/9 · ATR 14；手册 §3.1｜A股主口径：以 ATR 归一化做横向比较｜变体：ATR 周期手册未列（取 PRD 14）；阈值手册未给，由 BA 定",
+      "notes": "默认参数 12/26/9 · ATR 14；以 ATR 归一化 MACD，便于跨标的横向比较；ATR 为 0（全平盘）时该根无定义，输出 NaN；阈值由 BA 定。",
       "formulaSummary": "MACD = EMA(C,12) − EMA(C,26)；MACD-V = MACD / ATR(14) × 100；柱 = MACD-V − EMA(MACD-V,9)",
       "warmupBars": 34,
       "completeness": "部分",
@@ -1892,21 +1963,46 @@
       "inputs": {
         "close": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "平滑周期",
+          "min": 2,
+          "max": 200,
+          "default": 12,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "signal",
+          "label": "信号线",
+          "min": 2,
+          "max": 100,
+          "default": 9,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
           "labelZh": "TRIX",
           "kind": "line",
           "color": "var(--muted)"
+        },
+        {
+          "key": "signal",
+          "labelZh": "信号线",
+          "kind": "line",
+          "color": "var(--accent)"
         }
       ],
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
-      "unit": "—",
-      "notes": "规划中（未上线）：默认参数 12 · 9；手册 §3.1｜A股主口径：三次 EMA 后取变动率｜变体：无｜中线用，金叉少而稳",
+      "status": "normal",
+      "unit": "%",
+      "notes": "默认参数 12 · 9；三次 EMA 后取单期变动率，输出为百分比；信号线为 TRIX 的 9 期 EMA；信号少而稳，偏中线使用。",
       "formulaSummary": "TRIX = (EMA(EMA(EMA(C,12),12),12) − 前值) / 前值 × 100；信号线 = EMA(TRIX,9)",
       "warmupBars": 45,
       "completeness": "部分",
@@ -2120,21 +2216,55 @@
       "inputs": {
         "close": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "long",
+          "label": "长周期",
+          "min": 2,
+          "max": 200,
+          "default": 25,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "short",
+          "label": "短周期",
+          "min": 2,
+          "max": 200,
+          "default": 13,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "signal",
+          "label": "信号线",
+          "min": 2,
+          "max": 100,
+          "default": 7,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
           "labelZh": "TSI",
           "kind": "line",
           "color": "var(--muted)"
+        },
+        {
+          "key": "signal",
+          "labelZh": "信号线",
+          "kind": "line",
+          "color": "var(--accent)"
         }
       ],
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
-      "unit": "—",
-      "notes": "规划中（未上线）：默认参数 25 / 13；手册 §3.1｜A股主口径：双重 EMA 平滑动量｜变体：信号线周期手册未列（取 7）；±100 标度为主口径",
+      "status": "normal",
+      "unit": "%",
+      "notes": "默认参数 25 / 13 · 信号 7；双重 EMA 平滑有向动量与绝对动量之比，标度 −100~100；全平盘时分母为 0，记 0。",
       "formulaSummary": "TSI = 100 × EMA(EMA(ΔC,25),13) / EMA(EMA(｜ΔC｜,25),13)；信号线 = EMA(TSI,7)",
       "warmupBars": 40,
       "completeness": "部分",
@@ -3124,7 +3254,10 @@
       "priority": "P0",
       "category": "volume",
       "inputs": {
-        "close": true
+        "high": true,
+        "low": true,
+        "close": true,
+        "volume": true
       },
       "params": [],
       "outputs": [
@@ -3138,9 +3271,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
+      "status": "normal",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 —；手册 §3.2｜A股主口径：MFM 用收盘价｜变体：收盘价 vs 加权收盘 (2C+H+L)/4，差异点=分子口径，A股软件多用收盘",
+      "notes": "手册 §3.2｜A股主口径：MFM 用收盘价｜零量/停牌根断线，累计值保留｜变体：收盘价 vs 加权收盘 (2C+H+L)/4，差异点=分子口径，A股软件多用收盘",
       "formulaSummary": "MFM = ((C−L) − (H−C)) / (H−L)；A/D = Σ(MFM×V)；H=L 时 MFM 记 0",
       "warmupBars": 2,
       "completeness": "完整",
@@ -3162,9 +3295,22 @@
       "priority": "P0",
       "category": "volume",
       "inputs": {
-        "close": true
+        "high": true,
+        "low": true,
+        "close": true,
+        "volume": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 500,
+          "default": 20,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
@@ -3176,9 +3322,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
+      "status": "normal",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 20；手册 §3.2｜A股主口径：同 ChartSchool｜变体：无",
+      "notes": "默认参数 20；手册 §3.2｜A股主口径：同 ChartSchool｜零量根使窗口失效并断线｜变体：无",
       "formulaSummary": "CMF = Σ(20日 MFM×V) / Σ(20日 V)，MFM = ((C−L)−(H−C))/(H−L)，范围 −1~+1",
       "warmupBars": 20,
       "completeness": "完整",
@@ -3200,9 +3346,31 @@
       "priority": "P0",
       "category": "volume",
       "inputs": {
-        "close": true
+        "high": true,
+        "low": true,
+        "close": true,
+        "volume": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "fast",
+          "label": "快线",
+          "min": 2,
+          "max": 200,
+          "default": 3,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "slow",
+          "label": "慢线",
+          "min": 2,
+          "max": 200,
+          "default": 10,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
@@ -3214,9 +3382,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
+      "status": "normal",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 3 / 10；手册 §3.2｜A股主口径：快慢 3/10｜变体：EMA vs SMA 平滑，主口径 EMA",
+      "notes": "默认参数 3 / 10；手册 §3.2｜A股主口径：快慢 3/10｜零量根断线，EMA 状态保留｜变体：EMA vs SMA 平滑，主口径 EMA",
       "formulaSummary": "Chaikin = EMA(A/D,3) − EMA(A/D,10)",
       "warmupBars": 20,
       "completeness": "完整",
@@ -3238,9 +3406,22 @@
       "priority": "P0",
       "category": "volume",
       "inputs": {
-        "close": true
+        "high": true,
+        "low": true,
+        "close": true,
+        "volume": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 500,
+          "default": 14,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
@@ -3252,9 +3433,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
+      "status": "normal",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 14；手册 §3.2｜A股主口径：TP 作价格代理｜变体：TP vs 收盘价，主口径 TP；零成交量日必须断线（PRD D-21）",
+      "notes": "默认参数 14；手册 §3.2｜A股主口径：TP 作价格代理｜变体：TP vs 收盘价，主口径 TP；零成交量日必须断线（PRD D-21）",
       "formulaSummary": "TP=(H+L+C)/3；MF=TP×V；MFI = 100 − 100/(1 + Σ正MF/Σ负MF)，N=14",
       "warmupBars": 14,
       "completeness": "完整",
@@ -3276,9 +3457,20 @@
       "priority": "P0",
       "category": "volume",
       "inputs": {
-        "close": true
+        "close": true,
+        "volume": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "period",
+          "label": "周期",
+          "min": 2,
+          "max": 500,
+          "default": 13,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
@@ -3290,9 +3482,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
+      "status": "normal",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 13 · EMA；手册 §3.2｜A股主口径：EMA 平滑 13｜变体：原始值 / EMA(13) / EMA(EMA(13)) 三种，主口径 EMA13",
+      "notes": "默认参数 13 · EMA；手册 §3.2｜A股主口径：EMA 平滑 13｜变体：原始值 / EMA(13) / EMA(EMA(13)) 三种，主口径 EMA13",
       "formulaSummary": "Force = (C − C(1))×V；FI = EMA(Force,13)",
       "warmupBars": 14,
       "completeness": "完整",
@@ -3428,23 +3620,57 @@
       "priority": "P0",
       "category": "volume",
       "inputs": {
-        "close": true
+        "volume": true
       },
-      "params": [],
+      "params": [
+        {
+          "kind": "int",
+          "key": "fast",
+          "label": "快线",
+          "min": 2,
+          "max": 200,
+          "default": 12,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "slow",
+          "label": "慢线",
+          "min": 2,
+          "max": 200,
+          "default": 26,
+          "step": 1
+        },
+        {
+          "kind": "int",
+          "key": "signal",
+          "label": "信号线",
+          "min": 2,
+          "max": 100,
+          "default": 9,
+          "step": 1
+        }
+      ],
       "outputs": [
         {
           "key": "value",
           "labelZh": "PVO",
           "kind": "line",
           "color": "var(--muted)"
+        },
+        {
+          "key": "signal",
+          "labelZh": "Signal",
+          "kind": "line",
+          "color": "var(--accent)"
         }
       ],
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
-      "unit": "—",
-      "notes": "规划中（未上线）：默认参数 12 / 26 · 9；手册 §3.2｜A股主口径：同 PPO 结构｜变体：无",
+      "status": "normal",
+      "unit": "%",
+      "notes": "默认参数 12 / 26 · 9；手册 §3.2｜A股主口径：同 PPO 结构｜零量根断线，EMA 状态保留｜变体：无",
       "formulaSummary": "PVO = (EMA(V,12) − EMA(V,26)) / EMA(V,26) × 100；信号线 = EMA(PVO,9)",
       "warmupBars": 34,
       "completeness": "完整",
@@ -3504,6 +3730,9 @@
       "priority": "P0",
       "category": "volume",
       "inputs": {
+        "open": true,
+        "high": true,
+        "low": true,
         "close": true
       },
       "params": [],
@@ -3518,9 +3747,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
+      "status": "normal",
       "unit": "—",
-      "notes": "规划中（未上线）：默认参数 —；手册 §3.2｜A股主口径：同 ChartSchool｜变体：无｜仅作情绪辅助",
+      "notes": "默认参数 —；单根即算，无需预热；H=L（一字板）时分母为 0，记 0；仅作情绪辅助，不单独出结论。",
       "formulaSummary": "BOP = (C − O) / (H − L)；H=L 记 0",
       "warmupBars": 2,
       "completeness": "完整",
@@ -3932,7 +4161,8 @@
       "priority": "P0",
       "category": "stat",
       "inputs": {
-        "close": true
+        "high": true,
+        "low": true
       },
       "params": [],
       "outputs": [
@@ -3946,9 +4176,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
-      "unit": "—",
-      "notes": "规划中（未上线）：默认参数 —；手册 §3.5｜A股主口径：同｜变体：无｜作 CCI/MFI 输入",
+      "status": "normal",
+      "unit": "元",
+      "notes": "中价 = (H + L) / 2，单根即算；常作为 CCI、MFI 等指标的输入价格。",
       "formulaSummary": "中价 = (H + L) / 2",
       "warmupBars": 2,
       "completeness": "完整",
@@ -3970,6 +4200,8 @@
       "priority": "P0",
       "category": "stat",
       "inputs": {
+        "high": true,
+        "low": true,
         "close": true
       },
       "params": [],
@@ -3984,9 +4216,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
-      "unit": "—",
-      "notes": "规划中（未上线）：默认参数 —；手册 §3.5｜A股主口径：同｜变体：无",
+      "status": "normal",
+      "unit": "元",
+      "notes": "典型价 = (H + L + C) / 3，单根即算；资金流量类指标的常用价格。",
       "formulaSummary": "典型价 = (H + L + C) / 3",
       "warmupBars": 2,
       "completeness": "完整",
@@ -4008,6 +4240,8 @@
       "priority": "P0",
       "category": "stat",
       "inputs": {
+        "high": true,
+        "low": true,
         "close": true
       },
       "params": [],
@@ -4022,9 +4256,9 @@
       "formulaRef": "docs/prd/aka-prd-v0.1.md#附录-a-指标注册表",
       "version": 1,
       "specStatus": "manualComplete",
-      "status": "planned",
-      "unit": "—",
-      "notes": "规划中（未上线）：默认参数 —；手册 §3.5｜A股主口径：2C 权重｜变体：等价写法 (H+L+C+C)/4",
+      "status": "normal",
+      "unit": "元",
+      "notes": "加权收盘 = (H + L + 2C) / 4，收盘价权重占一半；单根即算。",
       "formulaSummary": "加权收盘 = (H + L + 2C) / 4",
       "warmupBars": 2,
       "completeness": "完整",

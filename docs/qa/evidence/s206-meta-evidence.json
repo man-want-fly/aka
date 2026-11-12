@@ -1,0 +1,64 @@
+{
+  "suite": "s206-meta",
+  "at": "2026-11-11T09:10:04.355Z",
+  "ok": false,
+  "pass": false,
+  "checks": [
+    {
+      "ac": "AC-DF-06-04-3",
+      "card": "ST-DF-06-04",
+      "layer": "render",
+      "passed": false,
+      "ok": false,
+      "detail": "manifest 延迟 2500ms 期间页脚 7 段均为「加载中」=false（实测 4/7）"
+    },
+    {
+      "ac": "AC-DF-06-04-4",
+      "card": "ST-DF-06-04",
+      "layer": "render",
+      "passed": false,
+      "ok": false,
+      "detail": "缺 sha256 时仅该段「缺失」=false，其余 4 段缺失"
+    }
+  ],
+  "segments": [
+    {
+      "key": "provider",
+      "text": "—",
+      "missing": true
+    },
+    {
+      "key": "version",
+      "text": "—",
+      "missing": true
+    },
+    {
+      "key": "adj",
+      "text": "前复权",
+      "missing": false
+    },
+    {
+      "key": "timeframe",
+      "text": "日线",
+      "missing": false
+    },
+    {
+      "key": "range",
+      "text": "—",
+      "missing": true
+    },
+    {
+      "key": "rows",
+      "text": "—",
+      "missing": true
+    },
+    {
+      "key": "calc",
+      "text": "3.27ms · 冷算",
+      "missing": false
+    }
+  ],
+  "activateAttempts": 1,
+  "focusedAtLaunch": true,
+  "focusedAtAssert": null
+}

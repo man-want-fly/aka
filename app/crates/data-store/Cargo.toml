@@ -7,3 +7,14 @@ rust-version.workspace = true
 [dependencies]
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+# Sprint-5 AKA-70/73 Parquet 分区持久化
+arrow-array = "60"
+arrow-schema = "60"
+arrow-buffer = "60"
+parquet = { version = "60", default-features = false, features = ["arrow", "snap"] }
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "3"

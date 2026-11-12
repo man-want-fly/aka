@@ -6,7 +6,7 @@ use app_core::sim_install::{self, SimInstallReport, SimInstallStatus};
 use app_core::{
     AppError, BarProvenanceDto, BarProvenanceRequest, BarsResponse, CalcRequest, CalcResponse,
     DatasetManifest, DatasourceStatusDto, DataHealthDto, ErrorCode, GetBarsRequest,
-    IndicatorFavoritesResponse,
+    HealthFaults, IndexSnapshotDto, IndicatorFavoritesResponse,
     ListSecuritiesRequest, Manifest, MarketSnapshotDto, PositionDto, QualityReportDto,
     RecentViewDto, RegistryRequest, RegistryResponse, SecurityDto, TelemetrySummary,
     WatchToggleResult, WatchlistDto,
@@ -92,6 +92,7 @@ pub async fn set_indicator_favorite(
     favorited: bool,
 ) -> Result<IndicatorFavoritesResponse, AppError> {
     tracked!(state, "set_indicator_favorite", {
+        state.ensure_writable()?;
         state.core.set_indicator_favorite(&indicator_id, favorited)
     })
 }
@@ -111,6 +112,7 @@ pub async fn touch_recent_view(
     code: String,
 ) -> Result<Vec<RecentViewDto>, AppError> {
     tracked!(state, "touch_recent_view", {
+        state.ensure_writable()?;
         state.core.touch_recent_view(&code)
     })
 }
@@ -185,31 +187,43 @@ pub async fn data_health_check(
     state: State<'_, AppState>,
 ) -> Result<DataHealthDto, AppError> {
     tracked!(state, "data_health_check", {
+        let faults = state.faults();
         Ok(state
             .core
-            .data_health_check(state.faults().manifest_corrupt)
+            .data_health_check(HealthFaults {
+                manifest_corrupt: faults.manifest_corrupt,
+                manifest_sha256_missing: faults.manifest_sha256_missing,
+                manifest_missing: faults.manifest_missing,
+            })
             .await)
     })
 }
 
 /// S-08.02-03：启动数据集校验；失败时前端只渲染全屏错误卡。
+/// ST-DF-03-02：已安装时以落盘内容为准（行数/覆盖区间/checksum 复算），未安装回退内存口径。
 #[tauri::command]
 pub async fn dataset_integrity(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<app_core::DatasetIntegrityDto, AppError> {
     tracked!(state, "dataset_integrity", {
-        Ok(state.core.dataset_integrity(state.faults().dataset_fault))
+        let data_dir = sim_data_dir(&app).ok();
+        Ok(state.core.dataset_integrity_at(
+            state.faults().dataset_fault,
+            data_dir.as_deref(),
+            SIM_SEED,
+        ))
     })
 }
 
-/// S-08.02-03：进入/退出只读浏览（内存态，不写 state.db）。
+/// S-08.02-03 / ST-DF-03-05：进入/退出只读浏览，开关持久化到 state.db settings。
 #[tauri::command]
 pub async fn dataset_set_readonly(
     state: State<'_, AppState>,
     read_only: bool,
 ) -> Result<bool, AppError> {
     tracked!(state, "dataset_set_readonly", {
-        state.set_read_only(read_only);
+        state.persist_read_only(read_only)?;
         Ok(read_only)
     })
 }
@@ -233,6 +247,8 @@ pub async fn calc_indicators(
     req: CalcRequest,
 ) -> Result<CalcResponse, AppError> {
     tracked!(state, "calc_indicators", {
+        // ST-DF-03-05：只读浏览下禁用指标计算（页面同时置灰，这里兜底）。
+        state.ensure_writable()?;
         let started = std::time::Instant::now();
         let indicator = req.instances.first().map(|item| item.indicator_id.clone());
         // S-08.02-02：注入生效一次即回落；timeout 真实等待，不伪造错误。
@@ -308,6 +324,12 @@ pub async fn market_snapshot(state: State<'_, AppState>) -> Result<MarketSnapsho
     tracked!(state, "market_snapshot", { state.core.market_snapshot().await })
 }
 
+/// S-04.01-01：指数概览快照（独立只读路径，不触碰 get_bars / calc_indicators 热路径）。
+#[tauri::command]
+pub async fn index_snapshot(state: State<'_, AppState>) -> Result<IndexSnapshotDto, AppError> {
+    tracked!(state, "index_snapshot", { state.core.index_snapshot() })
+}
+
 #[tauri::command]
 pub async fn watchlist_read(state: State<'_, AppState>) -> Result<WatchlistDto, AppError> {
     tracked!(state, "watchlist_read", { state.core.watchlist() })
@@ -320,13 +342,17 @@ pub async fn watch_toggle(
     group: Option<String>,
 ) -> Result<WatchToggleResult, AppError> {
     tracked!(state, "watch_toggle", {
+        state.ensure_writable()?;
         state.core.toggle_watch(&security, group.as_deref())
     })
 }
 
 #[tauri::command]
 pub async fn watch_group_create(state: State<'_, AppState>, name: String) -> Result<(), AppError> {
-    tracked!(state, "watch_group_create", { state.core.create_watch_group(&name) })
+    tracked!(state, "watch_group_create", {
+        state.ensure_writable()?;
+        state.core.create_watch_group(&name)
+    })
 }
 
 #[tauri::command]
@@ -336,6 +362,7 @@ pub async fn watch_group_rename(
     new: String,
 ) -> Result<(), AppError> {
     tracked!(state, "watch_group_rename", {
+        state.ensure_writable()?;
         state.core.rename_watch_group(&old, &new)
     })
 }
@@ -343,6 +370,7 @@ pub async fn watch_group_rename(
 #[tauri::command]
 pub async fn watch_group_delete(state: State<'_, AppState>, name: String) -> Result<(), AppError> {
     tracked!(state, "watch_group_delete", {
+        state.ensure_writable()?;
         state.core.delete_watch_group(&name)
     })
 }
@@ -354,6 +382,8 @@ pub async fn dataset_regenerate(
     req: ListSecuritiesRequest,
 ) -> Result<Vec<SecurityDto>, AppError> {
     tracked!(state, "dataset_regenerate", {
+        // ST-DF-03-05：「重新生成」属于写操作，只读下不得清故障位或重发数据。
+        state.ensure_writable()?;
         state.set_dataset_empty(false);
         // 重建后 manifest 恢复可读（清掉 S-07.01-02 的损坏注入）。
         state.set_manifest_corrupt(false);
@@ -365,6 +395,8 @@ pub async fn dataset_regenerate(
 #[tauri::command]
 pub async fn storage_rebuild(state: State<'_, AppState>) -> Result<(), AppError> {
     tracked!(state, "storage_rebuild", {
+        // ST-DF-03-05：state.db 原地重建必须被只读开关拦截。
+        state.ensure_writable()?;
         let path = state
             .db_path
             .clone()
@@ -416,6 +448,7 @@ pub async fn view_state_set(
     value: Value,
 ) -> Result<(), AppError> {
     tracked!(state, "view_state_set", {
+        state.ensure_writable()?;
         state.core.set_view_state(&scope, &value)
     })
 }
@@ -433,6 +466,7 @@ pub async fn position_save(
     shares: i64,
 ) -> Result<(), AppError> {
     tracked!(state, "position_save", {
+        state.ensure_writable()?;
         state.core.save_position(&security, cost_price, shares)
     })
 }
@@ -440,6 +474,7 @@ pub async fn position_save(
 #[tauri::command]
 pub async fn position_delete(state: State<'_, AppState>, security: String) -> Result<(), AppError> {
     tracked!(state, "position_delete", {
+        state.ensure_writable()?;
         state.core.delete_position(&security)
     })
 }
@@ -638,7 +673,7 @@ pub async fn reveal_diagnostics(path: String) -> Result<(), AppError> {
 }
 
 /// S-07.03-01：首装数据集固定 seed 42，与 manifest 的 `seed` 字段一致。
-const SIM_SEED: u64 = 42;
+pub(crate) const SIM_SEED: u64 = 42;
 
 fn sim_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, AppError> {
     use tauri::Manager;
@@ -654,7 +689,16 @@ pub async fn sim_install_status(
     state: State<'_, AppState>,
 ) -> Result<SimInstallStatus, AppError> {
     tracked!(state, "sim_install_status", {
-        Ok(sim_install::status(&sim_data_dir(&app)?, SIM_SEED))
+        let dir = sim_data_dir(&app)?;
+        let status = sim_install::status(&dir, SIM_SEED);
+        // ST-DF-03-03：安装/重建成功后同步接管落盘版本并写入 dataset_meta；
+        // 这是「只有重建成功才放行」的写入口，失败时保留旧身份。
+        if status.state == "installed" {
+            state
+                .core
+                .adopt_installed_dataset(&dir, SIM_SEED, state.read_only());
+        }
+        Ok(status)
     })
 }
 
@@ -666,20 +710,18 @@ pub async fn sim_install_start(
 ) -> Result<SimInstallStatus, AppError> {
     tracked!(state, "sim_install_start", {
         let dir = sim_data_dir(&app)?;
-        let current = sim_install::status(&dir, SIM_SEED);
-        if current.state == "installing" {
-            return Ok(current);
-        }
+        let permit = state.begin_sim_install()?;
         let (tx, rx) = std::sync::mpsc::channel();
         let worker_dir = dir.clone();
         std::thread::spawn(move || {
+            let _permit = permit;
             let _ = tx.send(sim_install::install(&worker_dir, SIM_SEED));
         });
         wait_for_sim_start(&dir, &rx)
     })
 }
 
-/// 已安装页「重建」：删除旧 seed 目录后从步骤①重跑，`data_version` +1。
+/// 已安装页「重建」：staging 构建完成后原子替换，`data_version` +1；失败保留旧版本。
 #[tauri::command]
 pub async fn sim_install_rebuild(
     app: tauri::AppHandle,
@@ -687,13 +729,11 @@ pub async fn sim_install_rebuild(
 ) -> Result<SimInstallStatus, AppError> {
     tracked!(state, "sim_install_rebuild", {
         let dir = sim_data_dir(&app)?;
-        let current = sim_install::status(&dir, SIM_SEED);
-        if current.state == "installing" {
-            return Ok(current);
-        }
+        let permit = state.begin_sim_install()?;
         let (tx, rx) = std::sync::mpsc::channel();
         let worker_dir = dir.clone();
         std::thread::spawn(move || {
+            let _permit = permit;
             let _ = tx.send(sim_install::rebuild(&worker_dir, SIM_SEED));
         });
         wait_for_sim_start(&dir, &rx)
@@ -744,5 +784,68 @@ mod tests {
             cargo.contains("[profile.dev]") && cargo.contains("opt-level = 1"),
             "app/Cargo.toml 的 dev opt-level 变化，请同步 commands::DEV_OPT_LEVEL"
         );
+    }
+
+    /// ST-DF-03-05 AC-2/AC-4：守卫必须在命令层（绕过 UI 直调同样拒绝），
+    /// 且安装/重建先拿只读+互斥凭证再落盘。
+    #[test]
+    fn every_write_command_guards_against_read_only() {
+        const WRITE_COMMANDS: &[&str] = &[
+            "set_indicator_favorite",
+            "touch_recent_view",
+            "calc_indicators",
+            "watch_toggle",
+            "watch_group_create",
+            "watch_group_rename",
+            "watch_group_delete",
+            "dataset_regenerate",
+            "storage_rebuild",
+            "view_state_set",
+            "position_save",
+            "position_delete",
+        ];
+        const READ_COMMANDS: &[&str] = &[
+            "list_securities",
+            "get_bars",
+            "data_health_check",
+            "watchlist_read",
+            "view_state_get",
+            "positions_read",
+            "dataset_set_readonly",
+        ];
+        let source = include_str!("commands.rs");
+        for name in WRITE_COMMANDS {
+            let body = command_body(source, name);
+            assert!(
+                body.contains("state.ensure_writable()?;"),
+                "{name} 缺少只读守卫，绕过 UI 直调会放行"
+            );
+        }
+        for name in READ_COMMANDS {
+            let body = command_body(source, name);
+            assert!(
+                !body.contains("ensure_writable"),
+                "{name} 是读接口，不得被只读开关拦截"
+            );
+        }
+        for name in ["sim_install_start", "sim_install_rebuild"] {
+            let body = command_body(source, name);
+            let guard = body
+                .find("state.begin_sim_install()?;")
+                .expect("安装/重建缺少只读+互斥守卫");
+            let io = body.find("std::thread::spawn").expect("缺少安装线程");
+            assert!(guard < io, "{name} 必须先过守卫再写盘");
+        }
+    }
+
+    /// 截取单个命令函数体（到下一个命令属性或文件末尾）。
+    fn command_body<'a>(source: &'a str, name: &str) -> &'a str {
+        let marker = format!("pub async fn {name}(");
+        let start = source
+            .find(&marker)
+            .unwrap_or_else(|| panic!("{name} 不存在"));
+        let rest = &source[start..];
+        let end = rest.find("\n#[tauri::command]").unwrap_or(rest.len());
+        &rest[..end]
     }
 }

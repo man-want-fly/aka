@@ -34,6 +34,8 @@ interface Props {
   onSubPlotsChange: (next: SubPlotSetting[]) => void;
   /** 单个副图数据不足时的内联提示（键为指标 id），不阻塞主图 */
   subNotices?: Record<string, string>;
+  /** AC-DF-06-05-5：单指标计算失败时只在该指标上提示，其余照常绘制 */
+  overlayNotices?: Record<string, string>;
   /** 副图面板标题（含参数口径，如 MACD(12,26,9)） */
   subLabels: Record<string, string>;
   /** 指标单位（来自 manifest，避免前端二次维护） */
@@ -44,6 +46,8 @@ interface Props {
   onOpenIndicatorDetail?: (indicatorId: string) => void;
   /** S-07.05-03：主图单根 K 线点击（位移 ≤4px 视为点击），入参为 bars 绝对下标 */
   onCandleClick?: (index: number) => void;
+  /** 当前渲染的行情所属标的（用于取证「图表渲染的是哪只标的」） */
+  barsCode?: string;
 }
 
 const W = 1000;
@@ -107,6 +111,11 @@ function pathFor(
   return path.trim();
 }
 
+/** AC-DF-05-03-6：整条序列全为 null 判定，供空态文案使用。 */
+function hasFiniteValue(values: (number | null)[]): boolean {
+  return values.some((value) => value !== null && Number.isFinite(value));
+}
+
 /** 中间 NaN（左右两侧都有有限值）的可见下标——用于断点空心点；预热段不画点 */
 function hollowIndexes(
   values: (number | null)[],
@@ -142,6 +151,17 @@ function firstFiniteIndex(values: (number | null)[]): number {
 function isSuspended(bar: BarDto): boolean {
   return !(bar.volume > 0);
 }
+
+/** ST-DF-02-03：图表只识别这些已定义标记；未知值记录一次并忽略，不影响整图渲染。 */
+const KNOWN_QUALITY_FLAGS = [
+  "splitDay",
+  "SUSPENDED",
+  "EX_RIGHTS",
+  "ZERO_VOLUME",
+  "PRICE_ANOMALY",
+];
+
+const reportedUnknownQuality = new Set<string>();
 
 function isSplitDay(bar: BarDto): boolean {
   return bar.quality.includes("splitDay");
@@ -191,11 +211,13 @@ export function CandleChart({
   subPlots,
   onSubPlotsChange,
   subNotices,
+  overlayNotices,
   subLabels,
   units,
   adjMode,
   onOpenIndicatorDetail,
   onCandleClick,
+  barsCode,
 }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const [cursor, setCursor] = useState<{
@@ -257,6 +279,25 @@ export function CandleChart({
     return { H: height, priceBottom, boxes, plots };
   }, [subPlots]);
 
+  /** ST-DF-02-03 AC-6：未知质量标记只记录、不渲染，也不让整图报错。 */
+  const unknownQuality = useMemo(() => {
+    const unknown: string[] = [];
+    bars.forEach((bar) => {
+      (bar.quality ?? []).forEach((flag) => {
+        if (!KNOWN_QUALITY_FLAGS.includes(flag) && !unknown.includes(flag)) {
+          unknown.push(flag);
+        }
+      });
+    });
+    unknown.forEach((flag) => {
+      if (!reportedUnknownQuality.has(flag)) {
+        reportedUnknownQuality.add(flag);
+        console.warn(`[candle-chart] 未定义的质量标记已忽略：${flag}`);
+      }
+    });
+    return unknown;
+  }, [bars]);
+
   const setOverdragBoth = (value: number) => {
     overdragRef.current = value;
     setOverdrag(value);
@@ -269,6 +310,16 @@ export function CandleChart({
     const endAbs = clamp(Math.round(viewport.end), startAbs, total - 1);
     const count = endAbs - startAbs + 1;
     const visible = bars.slice(startAbs, endAbs + 1);
+
+    // AC-DF-02-03-2/5：停牌位保留占位但不连线——线值在停牌下标注为空，pathFor 自然断开。
+    const suspendedRel = new Set<number>();
+    visible.forEach((bar, index) => {
+      if (isSuspended(bar)) suspendedRel.add(index);
+    });
+    const withoutSuspended = (values: (number | null)[]) =>
+      suspendedRel.size === 0
+        ? values
+        : values.map((value, index) => (suspendedRel.has(index) ? null : value));
 
     // 主图叠加：只为用户所选的 overlayIds（容量 2，K 线本身不计入，S-02.02-02）
     const seen = new Set<string>();
@@ -301,7 +352,7 @@ export function CandleChart({
           unit: units[indicatorId] ?? "",
           color: output.color,
           kind: output.kind,
-          values: output.values.slice(startAbs, endAbs + 1),
+          values: withoutSuspended(output.values.slice(startAbs, endAbs + 1)),
           warmup: item.warmup,
           insufficient: total < item.warmup + 1,
           firstValid: firstFiniteIndex(output.values),
@@ -378,7 +429,7 @@ export function CandleChart({
         label: output.labelZh,
         kind: output.kind,
         color: output.color,
-        values: output.values.slice(startAbs, endAbs + 1),
+        values: withoutSuspended(output.values.slice(startAbs, endAbs + 1)),
         firstValid: firstFiniteIndex(output.values),
       }));
       let min = Infinity;
@@ -407,6 +458,9 @@ export function CandleChart({
         hi = max + padValue;
       }
       const warmup = sub?.warmup ?? 0;
+      const insufficient = sub ? total < warmup + 1 : false;
+      // AC-DF-05-03-6：数据足够但整段输出都是 null 时，也不能静默空白。
+      const noValue = !insufficient && lines.length > 0 && !lines.some((line) => hasFiniteValue(line.values));
       return {
         ...base,
         kind: "indicator",
@@ -421,10 +475,12 @@ export function CandleChart({
           plotBottom - ((value - lo) / (hi - lo)) * (plotBottom - plotTop),
         warmup,
         // 整段数据不足：不画任何线段与平线，面板居中提示（S-02.07-02 AC-02.07-03）
-        insufficient: sub ? total < warmup + 1 : false,
-        notice: sub
+        insufficient,
+        notice: insufficient
           ? `${(subLabels[box.id] ?? box.id).split("(")[0]} 需要 ${warmup + 1} 根，当前 ${total} 根`
-          : subNotices?.[box.id],
+          : noValue
+            ? "当前区间无有效值"
+            : subNotices?.[box.id],
       };
     });
 
@@ -820,6 +876,12 @@ export function CandleChart({
   };
 
   const insufficientOverlays = view.overlayLines.filter((line) => line.insufficient);
+  // AC-DF-06-05-5：主图叠加里失败的指标只提示自身，其他叠加与 K 线照常绘制。
+  const errorOverlays = overlayIds.filter((id) => Boolean(overlayNotices?.[id]));
+  // AC-DF-05-03-6：数据够长但整段输出都是 null，也要给空态文案而不是静默空白。
+  const noValueOverlays = view.overlayLines.filter(
+    (line) => !line.insufficient && !hasFiniteValue(line.values),
+  );
   const lastBox = layout.boxes[layout.boxes.length - 1];
   const insertY =
     panelDrag?.kind === "reorder" && panelDrag.target !== undefined
@@ -841,9 +903,11 @@ export function CandleChart({
         ref={svgRef}
         className="chart-svg"
         data-chart="candle"
+        data-bars-code={barsCode}
         data-view-start={view.startAbs}
         data-view-end={view.endAbs}
         data-bar-count={view.total}
+        data-unknown-quality={unknownQuality.length > 0 ? unknownQuality.join(",") : undefined}
         viewBox={`0 0 ${W} ${layout.H}`}
         preserveAspectRatio="xMidYMid meet"
         style={{ cursor: dragging ? "grabbing" : "crosshair", touchAction: "none" }}
@@ -1100,6 +1164,30 @@ export function CandleChart({
             ),
           )}
 
+          {/* AC-DF-06-05-5：失败的叠加指标单独提示，不产生整页错误 */}
+          {errorOverlays.length > 0 && (
+            <g data-overlay-error="1">
+              {errorOverlays.map((id, index) => (
+                <text
+                  key={`overlay-error-${id}`}
+                  data-overlay-error-id={id}
+                  x={(LEFT + RIGHT) / 2}
+                  y={
+                    (PRICE_TOP + layout.priceBottom) / 2 -
+                    16 +
+                    (index - (errorOverlays.length - 1) / 2) * 13
+                  }
+                  textAnchor="middle"
+                  fontSize={10.5}
+                  fill="var(--neg)"
+                  className="mono"
+                >
+                  {`${subLabels[id] ?? id} 计算失败：${overlayNotices?.[id]}`}
+                </text>
+              ))}
+            </g>
+          )}
+
           {/* 全段 NaN：不画线，主图区居中提示（S-02.07-02 AC-02.07-03） */}
           {insufficientOverlays.length > 0 && (
             <g data-overlay-empty="1">
@@ -1123,6 +1211,29 @@ export function CandleChart({
             </g>
           )}
 
+          {/* AC-DF-05-03-6：整段 null 的主图输出同样给空态文案，不得静默空白 */}
+          {noValueOverlays.length > 0 && (
+            <g data-overlay-empty="no-value">
+              {noValueOverlays.map((line, index) => (
+                <text
+                  key={`overlay-novalue-${line.id}`}
+                  data-overlay-notice={`${line.indicatorId}-${line.key}`}
+                  x={(LEFT + RIGHT) / 2}
+                  y={
+                    (PRICE_TOP + layout.priceBottom) / 2 +
+                    (index - (noValueOverlays.length - 1) / 2) * 13
+                  }
+                  textAnchor="middle"
+                  fontSize={10.5}
+                  fill="var(--accent)"
+                  className="mono"
+                >
+                  {`${line.label} 当前区间无有效值`}
+                </text>
+              ))}
+            </g>
+          )}
+
           {/* 副图：最多 3 格（含成交量格），顺序与高度由 subPlots 决定（S-02.03-01） */}
           {view.subPanels.map((panel, panelIndex) => {
             const isMacd = panel.id === "M06";
@@ -1132,6 +1243,9 @@ export function CandleChart({
                 data-sub-panel={panel.id}
                 data-sub-index={panel.index}
                 data-sub-height={panel.height}
+                data-sub-unit={panel.unit}
+                data-sub-lo={panel.lo}
+                data-sub-hi={panel.hi}
                 data-sub-empty={panel.insufficient ? "1" : undefined}
                 data-warmup={panel.warmup}
                 className="sub-panel"

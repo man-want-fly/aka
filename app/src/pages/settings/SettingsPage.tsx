@@ -1,7 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell, type RouteKey } from "../../app/AppShell";
 import { formatAmount, formatPct, formatPrice, formatVolume } from "../../lib/format";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
+import {
+  MENU_ACTION_EVENT,
+  takePendingMenuAction,
+  type MenuAction,
+} from "../../lib/menu";
 import { runSettingsDiagnostics } from "../../features/settings/diag";
 import {
   DISPLAY_SCOPE,
@@ -178,6 +183,27 @@ export function SettingsPage({ onNavigate }: Props) {
           ? "no-log"
           : "success"
         : "idle";
+
+  // AKA-33：菜单「关于 / 导出诊断包」落到本页既有实现，不再另写一份。
+  // 跨路由时由 App 存 pending，挂载后消费一次；已在本页时走窗口事件。
+  const exportRef = useRef(exportDiagnostics);
+  exportRef.current = exportDiagnostics;
+  useEffect(() => {
+    const run = (action: MenuAction) => {
+      if (action === "about") {
+        document
+          .querySelector("[data-about-page]")
+          ?.scrollIntoView({ block: "start", behavior: "smooth" });
+        return;
+      }
+      exportRef.current();
+    };
+    const pending = takePendingMenuAction();
+    if (pending) run(pending);
+    const onAction = (event: Event) => run((event as CustomEvent<MenuAction>).detail);
+    window.addEventListener(MENU_ACTION_EVENT, onAction);
+    return () => window.removeEventListener(MENU_ACTION_EVENT, onAction);
+  }, []);
 
   const retry = () => {
     setError(null);

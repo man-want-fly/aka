@@ -420,7 +420,8 @@ export async function runMarketDiagnostics(): Promise<MarketDiagReport> {
         await sleep(60);
       }
     }
-    await sleep(200);
+    // AKA-51：视图状态改为 500ms 防抖落盘，等过一拍再读 state.db。
+    await sleep(700);
     const stored = (await ipc.viewStateGet("view.market")) as {
       board?: string;
       sortKey?: string;

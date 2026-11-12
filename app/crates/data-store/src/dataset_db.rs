@@ -55,6 +55,47 @@ pub struct FactorRecord {
     pub factor: f64,
 }
 
+/// S-04.01-01：指数清单行（名称/代码不写死，由数据集驱动）。
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexSecurityRow {
+    pub code: String,
+    pub name: String,
+}
+
+/// S-04.01-02：区间计算所需的最大日线根数（20 日 + 区间前收盘 + 最新一根）。
+pub const INDEX_RANGE_BARS: usize = 22;
+
+/// S-04.01-01/02：指数最近交易日点位与区间计算用的收盘序列（`close` 即点位，不做复权）。
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexQuoteRow {
+    pub code: String,
+    pub date: String,
+    pub close: f64,
+    /// 前一交易日收盘；只有一根日线时为 None
+    pub prev_close: Option<f64>,
+    /// 最近 [`INDEX_RANGE_BARS`] 个交易日收盘，按日期升序，末位即最新点位。
+    pub closes: Vec<f64>,
+}
+
+/// S-04.01-01：指数成分数与最新交易日成交额合计。
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexMemberStatRow {
+    pub index_code: String,
+    pub members: i64,
+    /// 无成分或成分当日无日线时为 None
+    pub amount: Option<f64>,
+}
+
+/// S-04.01-01：一次查询即可支撑 8 行 + 4 张 KPI，避免逐指数全表扫描。
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexSnapshotRows {
+    pub indices: Vec<IndexSecurityRow>,
+    pub quotes: Vec<IndexQuoteRow>,
+    pub member_stats: Vec<IndexMemberStatRow>,
+    /// daily_bars 最新交易日
+    pub data_date: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct DatasetSummary {
     pub securities: i64,
@@ -119,6 +160,12 @@ pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     )?;
     init_schema(&conn)?;
     Ok(conn)
+}
+
+/// ST-DF-03-02：只读打开已存在的 dataset.db；文件不存在时直接报错，绝不创建。
+pub fn open_read_only(path: &Path) -> rusqlite::Result<Connection> {
+    use rusqlite::OpenFlags;
+    Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)
 }
 
 pub fn init_schema(conn: &Connection) -> rusqlite::Result<()> {
@@ -423,6 +470,112 @@ pub fn read_securities(conn: &Connection) -> rusqlite::Result<Vec<SecurityRow>> 
     rows.collect()
 }
 
+/// S-04.01-01：指数清单（`is_index = 1`），名称/代码全部来自数据集。
+pub fn read_index_securities(conn: &Connection) -> rusqlite::Result<Vec<IndexSecurityRow>> {
+    let mut stmt = conn.prepare(
+        "SELECT code, name FROM securities WHERE is_index = 1 ORDER BY code",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(IndexSecurityRow {
+            code: row.get(0)?,
+            name: row.get(1)?,
+        })
+    })?;
+    rows.collect()
+}
+
+/// S-04.01-01/02：每个指数最近 [`INDEX_RANGE_BARS`] 根日线收盘。
+/// 窗口函数只为指数行编号，不读全量日线。
+pub fn read_index_quotes(conn: &Connection) -> rusqlite::Result<Vec<IndexQuoteRow>> {
+    let mut stmt = conn.prepare(
+        "SELECT code, date, close FROM (
+             SELECT b.code, b.date, b.close,
+                    ROW_NUMBER() OVER (PARTITION BY b.code ORDER BY b.date DESC) AS rn
+             FROM daily_bars b
+             JOIN securities s ON s.code = b.code
+             WHERE s.is_index = 1
+         )
+         WHERE rn <= ?1
+         ORDER BY code, date DESC",
+    )?;
+    let rows = stmt.query_map([INDEX_RANGE_BARS as i64], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, f64>(2)?,
+        ))
+    })?;
+
+    let mut quotes: Vec<IndexQuoteRow> = Vec::new();
+    for row in rows {
+        let (code, date, close) = row?;
+        match quotes.last_mut() {
+            // 同一指数按日期降序：第一行是最新，第二行是前收。
+            Some(last) if last.code == code => {
+                last.prev_close.get_or_insert(close);
+                last.closes.push(close);
+            }
+            _ => quotes.push(IndexQuoteRow {
+                code,
+                date,
+                close,
+                prev_close: None,
+                closes: vec![close],
+            }),
+        }
+    }
+    // 查询是日期降序，区间计算需要升序。
+    for quote in &mut quotes {
+        quote.closes.reverse();
+    }
+    Ok(quotes)
+}
+
+/// S-04.01-01：成分数 = `index_members` 行数；成交额合计只取最新交易日。
+/// `data_date` 由调用方先算好，避免 256 个成分行各自重复扫描 `daily_bars`。
+/// 用 LEFT JOIN 保留「有指数无成分」的行，成交额为 NULL 时由上层映射为 `—`。
+pub fn read_index_member_stats(
+    conn: &Connection,
+    data_date: &str,
+) -> rusqlite::Result<Vec<IndexMemberStatRow>> {
+    let mut stmt = conn.prepare(
+        "SELECT m.index_code, COUNT(*), SUM(b.amount)
+         FROM index_members m
+         LEFT JOIN daily_bars b
+                ON b.code = m.security_code
+               AND b.date = ?1
+         GROUP BY m.index_code
+         ORDER BY m.index_code",
+    )?;
+    let rows = stmt.query_map([data_date], |row| {
+        Ok(IndexMemberStatRow {
+            index_code: row.get(0)?,
+            members: row.get(1)?,
+            amount: row.get(2)?,
+        })
+    })?;
+    rows.collect()
+}
+
+pub fn latest_trade_date(conn: &Connection) -> rusqlite::Result<Option<String>> {
+    conn.query_row("SELECT MAX(date) FROM daily_bars", [], |row| row.get(0))
+}
+
+/// S-04.01-01：一次取齐指数清单、最近两日点位、成分数与成交额。
+pub fn read_index_snapshot(conn: &Connection) -> rusqlite::Result<IndexSnapshotRows> {
+    let data_date = latest_trade_date(conn)?;
+    let member_stats = match data_date.as_deref() {
+        Some(date) => read_index_member_stats(conn, date)?,
+        None => Vec::new(),
+    };
+    Ok(IndexSnapshotRows {
+        indices: read_index_securities(conn)?,
+        quotes: read_index_quotes(conn)?,
+        member_stats,
+        data_date,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -495,6 +648,135 @@ mod tests {
             }],
         );
         assert!(result.is_err());
+        let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    /// S-04.01-01：最近两日点位、成分数与最新交易日成交额一次取齐。
+    #[test]
+    fn index_snapshot_reads_quotes_members_and_amounts() {
+        let path = temp_path("index-snapshot");
+        let mut conn = open(&path).unwrap();
+        write_securities(
+            &mut conn,
+            &[
+                SecurityRow {
+                    code: "000001.SH".into(),
+                    name: "上证指数".into(),
+                    market: "SH".into(),
+                    board: "指数".into(),
+                    is_index: true,
+                    base_price: 3000.0,
+                },
+                SecurityRow {
+                    code: "399001.SZ".into(),
+                    name: "深证成指".into(),
+                    market: "SZ".into(),
+                    board: "指数".into(),
+                    is_index: true,
+                    base_price: 9000.0,
+                },
+                SecurityRow {
+                    code: "600519.SH".into(),
+                    name: "贵州茅台".into(),
+                    market: "SH".into(),
+                    board: "沪主板".into(),
+                    is_index: false,
+                    base_price: 1600.0,
+                },
+                SecurityRow {
+                    code: "000858.SZ".into(),
+                    name: "五粮液".into(),
+                    market: "SZ".into(),
+                    board: "深主板".into(),
+                    is_index: false,
+                    base_price: 150.0,
+                },
+            ],
+        )
+        .unwrap();
+
+        let bar = |code: &str, date: &str, close: f64, amount: f64| BarRecord {
+            code: code.into(),
+            date: date.into(),
+            open: close,
+            high: close,
+            low: close,
+            close,
+            volume: 1.0,
+            amount,
+            adj_factor: 1.0,
+            quality: String::new(),
+            batch_id: None,
+            ingested_at: None,
+        };
+        write_bars(
+            &mut conn,
+            &[
+                bar("000001.SH", "2024-04-29", 3000.0, 0.0),
+                bar("000001.SH", "2024-04-30", 3030.0, 0.0),
+                bar("399001.SZ", "2024-04-30", 9000.0, 0.0),
+                bar("600519.SH", "2024-04-30", 1600.0, 1.2e8),
+                bar("000858.SZ", "2024-04-30", 150.0, 8.0e7),
+            ],
+        )
+        .unwrap();
+        write_index_members(
+            &mut conn,
+            &[
+                MemberRow {
+                    index_code: "000001.SH".into(),
+                    security_code: "600519.SH".into(),
+                    as_of: "2024-04-30".into(),
+                    ordinal: 1,
+                },
+                MemberRow {
+                    index_code: "000001.SH".into(),
+                    security_code: "000858.SZ".into(),
+                    as_of: "2024-04-30".into(),
+                    ordinal: 2,
+                },
+            ],
+        )
+        .unwrap();
+
+        let snapshot = read_index_snapshot(&conn).unwrap();
+        assert_eq!(snapshot.data_date.as_deref(), Some("2024-04-30"));
+        assert_eq!(snapshot.indices.len(), 2);
+        assert_eq!(snapshot.quotes.len(), 2);
+
+        let sh = snapshot
+            .quotes
+            .iter()
+            .find(|row| row.code == "000001.SH")
+            .unwrap();
+        assert_eq!(sh.close, 3030.0);
+        assert_eq!(sh.prev_close, Some(3000.0));
+        assert_eq!(sh.closes, vec![3000.0, 3030.0], "区间收盘按日期升序");
+
+        let sz = snapshot
+            .quotes
+            .iter()
+            .find(|row| row.code == "399001.SZ")
+            .unwrap();
+        assert_eq!(sz.close, 9000.0);
+        assert_eq!(sz.prev_close, None, "只有一根日线时不得伪造前收");
+        assert_eq!(sz.closes, vec![9000.0]);
+
+        let sh_members = snapshot
+            .member_stats
+            .iter()
+            .find(|row| row.index_code == "000001.SH")
+            .unwrap();
+        assert_eq!(sh_members.members, 2);
+        assert_eq!(sh_members.amount, Some(2.0e8));
+        assert!(
+            !snapshot
+                .member_stats
+                .iter()
+                .any(|row| row.index_code == "399001.SZ"),
+            "无成分的指数不应出现在聚合结果里"
+        );
+
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
     }
 }

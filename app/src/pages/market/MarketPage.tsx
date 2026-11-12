@@ -21,6 +21,7 @@ import { runMarketDiagnostics } from "../../features/market/diag";
 import { runIndefiniteDiagnostics } from "../../features/market/s080204Diag";
 import { StarButton } from "../../components/StarButton";
 import { runStarDiagnostics } from "../../features/watchlist/starDiag";
+import { pinyinOf, scoreOf, type SearchItem } from "../../features/search/searchIndex";
 import type {
   AppError,
   MarketRowDto,
@@ -84,6 +85,22 @@ const DEFAULT_VIEW: MarketViewState = {
   sortDir: "desc",
   columns: MARKET_COLUMNS.map((column) => column.key),
 };
+
+/** 行情行转搜索索引项：口径与 ⌘K 完全一致，拼音表同源，缺失则不参与拼音匹配。 */
+function searchItemOf(row: MarketRowDto): SearchItem {
+  return {
+    code: row.security,
+    bareCode: row.code,
+    name: row.name,
+    board: row.board,
+    isIndex: row.isIndex,
+    price: row.lastPrice,
+    changePct: row.changePct,
+    amount: row.amount,
+    suspended: row.suspended,
+    pinyin: pinyinOf(row.security),
+  };
+}
 
 export function sameBoard(row: MarketRowDto, board: MarketBoard): boolean {
   switch (board) {
@@ -182,6 +199,7 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
   const [columnPanel, setColumnPanel] = useState(false);
   const [density, setDensity] = useState<Density>(currentDensity);
   const [narrow, setNarrow] = useState(false);
+  const [query, setQuery] = useState("");
   const [diagStatus, setDiagStatus] = useState<string | null>(null);
   const diagStarted = useRef(false);
   const tableRef = useRef<HTMLDivElement | null>(null);
@@ -222,12 +240,27 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
     };
   }, []);
 
+  // AKA-51：视图状态 500ms 防抖落盘，连续排序/切板只写最后一次。
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
   useEffect(() => {
     if (!viewLoaded) return;
-    void ipc.viewStateSet(VIEW_SCOPE, view).catch((err) => {
-      setToast(`设置未保存：${describeError(err).message}`);
-    });
+    const timer = window.setTimeout(() => {
+      void ipc.viewStateSet(VIEW_SCOPE, viewRef.current).catch((err) => {
+        setToast(`设置未保存：${describeError(err).message}`);
+      });
+    }, 500);
+    return () => window.clearTimeout(timer);
   }, [view, viewLoaded]);
+
+  // 离开页面时补一次写入，避免未到期的变更被防抖计时器丢弃。
+  useEffect(() => {
+    if (!viewLoaded) return;
+    return () => {
+      void ipc.viewStateSet(VIEW_SCOPE, viewRef.current).catch(() => undefined);
+    };
+  }, [viewLoaded]);
 
   useEffect(() => {
     if (!snapshot || loading) return;
@@ -339,9 +372,14 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
 
   const rows = useMemo(() => {
     if (!snapshot) return [];
-    const filtered = snapshot.rows.filter((row) => sameBoard(row, view.board));
+    const q = query.trim();
+    // AKA-63：搜索复用 ⌘K 的同一套权重（代码/名称/拼音首字母），只做过滤不做重排，
+    // 用户选的排序列在过滤前后保持一致。
+    const filtered = snapshot.rows.filter(
+      (row) => sameBoard(row, view.board) && (q === "" || scoreOf(searchItemOf(row), q) > 0),
+    );
     return sortRows(filtered, view.sortKey, view.sortDir);
-  }, [snapshot, view.board, view.sortKey, view.sortDir]);
+  }, [snapshot, view.board, view.sortKey, view.sortDir, query]);
 
   const boardCounts = useMemo(() => {
     const counts: Record<MarketBoard, number> = { all: 0, sh: 0, sz: 0, chinext: 0, star: 0 };
@@ -441,6 +479,27 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
                 {snapshot.dataVersion || snapshot.datasetId.slice(0, 8)}
               </span>
             )}
+            <label className="market-search" data-market-search>
+              <input
+                type="search"
+                value={query}
+                placeholder="搜索代码、名称或拼音首字母"
+                aria-label="搜索标的"
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  // AKA-63：回车直接进工作台，标的取过滤后的当前首行。
+                  if (event.key === "Enter" && rows.length > 0) {
+                    event.preventDefault();
+                    openRow(rows[0].security);
+                  }
+                }}
+              />
+              {query !== "" && (
+                <button type="button" aria-label="清除搜索" data-market-search-clear onClick={() => setQuery("")}>
+                  ×
+                </button>
+              )}
+            </label>
             <div className="seg" role="group" aria-label="板块分区">
               {MARKET_BOARDS.map((board) => (
                 <button
@@ -530,14 +589,25 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
         )}
 
         {!error && !loading && (rows.length === 0 ? (
-          <StateCard
-            tone="empty"
-            title="该分区暂无样本"
-            description="当前板块分区内没有可展示的证券。"
-            actionLabel="切回全部"
-            onAction={() => setView((current) => ({ ...current, board: "all" }))}
-            anchor="market-empty"
-          />
+          query.trim() !== "" ? (
+            <StateCard
+              tone="empty"
+              title={`没有匹配「${query.trim()}」的标的`}
+              description="试试代码、名称或拼音首字母；清空搜索后恢复当前分区全部样本。"
+              actionLabel="清除搜索"
+              onAction={() => setQuery("")}
+              anchor="market-search-empty"
+            />
+          ) : (
+            <StateCard
+              tone="empty"
+              title="该分区暂无样本"
+              description="当前板块分区内没有可展示的证券。"
+              actionLabel="切回全部"
+              onAction={() => setView((current) => ({ ...current, board: "all" }))}
+              anchor="market-empty"
+            />
+          )
         ) : (
           <div className="market-table-wrap">
             <div
@@ -681,7 +751,11 @@ export function MarketPage({ onNavigate, onOpenSecurity }: Props) {
         <footer className="market-foot">
           <span>视图设置保存在本地 state.db（分区 / 排序 / 列显隐）</span>
           {diagStatus && <span data-market-diag>{diagStatus}</span>}
-          <span data-market-count>当前 {rows.length} 行</span>
+          <span data-market-count>
+            当前 {rows.length} 行
+            {query.trim() !== "" &&
+              ` · 搜索「${query.trim()}」命中 ${rows.length}/${snapshot?.rows.length ?? 0}`}
+          </span>
         </footer>
       </main>
     </AppShell>

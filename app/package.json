@@ -46,16 +46,18 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@rollup/rollup-darwin-x64": "^4.22.5",
     "@tauri-apps/api": "^2.2.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "rollup": "^4.22.5"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.2.0",
+    "@tauri-apps/cli": "^2.12.4",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.7.2",
-    "vite": "^5.4.11"
+    "vite": "^5.4.10"
   }
 }

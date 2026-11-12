@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "feature": "ep-df-dataflow",
+    "source": "docs/requirements/ep-df-end-to-end-data-flow-requirements.md",
+    "linearProject": "P-AKA-2 / EP-DF 端到端行情数据流",
+    "techStack": {
+      "language": "Rust + TypeScript",
+      "backend": "Tauri 2 + Rust workspace (app/crates/*)",
+      "frontend": "React + Vite (app/src)",
+      "buildTool": "cargo",
+      "backendTest": "cargo test -p app-core",
+      "typecheck": "cd app && npx tsc --noEmit"
+    }
+  },
+  "stories": [
+    {
+      "id": "AKA-104",
+      "storyId": "ST-DF-04-03",
+      "title": "参数校验与缓存隔离 —— AC-4 缺参必须报错",
+      "priority": 1,
+      "passes": true,
+      "blocked": false,
+      "dependencies": [],
+      "estimate": 5,
+      "iteration": 2,
+      "context": "前端 model.ts 已改为按 manifest 下发完整参数（defaultParamsFor / withParams），因此后端可以安全地取消 merge_defaults 静默补齐。",
+      "acceptanceCriteria": [
+        "AC-DF-04-03-1 period=0 计算 MA 返回 E_PARAM_INVALID（实现码 E_PARAM_OUT_OF_RANGE），信息含指标 id 与字段名",
+        "AC-DF-04-03-2 参数非法时连续两次请求：不写缓存、不产生 indicator.compute 事件，第二次仍返回同一错误",
+        "AC-DF-04-03-3 Int(5) 与 Text(\"5\") 不共用缓存条目（既有实现，勿回退）",
+        "AC-DF-04-03-4 参数缺失时返回缺参错误，用默认值静默代替判失败",
+        "AC-DF-04-03-5 声明的最小/最大边界值可用，边界外 1 个单位报错（既有实现，勿回退）",
+        "AC-DF-04-03-6 批量中某指标参数非法只让该实例失败，其余实例结果不受影响"
+      ],
+      "scope": "仅后端参数校验路径：app/crates/app-core/src/core.rs 的 calc_indicators 请求处理；不改冻结的 IPC 错误码与快照。",
+      "notes": "AC-4 是本故事唯一未满足项；其余 5 条已有测试覆盖。"
+    },
+    {
+      "id": "AKA-101",
+      "storyId": "ST-DF-03-03",
+      "title": "重启后使用已安装版本",
+      "priority": 2,
+      "passes": true,
+      "blocked": false,
+      "dependencies": [],
+      "notes": "已按 C-19 产品偏差关闭（5/6 AC 满足；AC-3 取数热路径仍由内存 Provider 供数）。收窄条件：运行时直读 dataset.db，需单独立项。"
+    },
+    {
+      "id": "AKA-105",
+      "storyId": "ST-DF-05-01",
+      "title": "工作台所需 IPC 命令集稳定可用",
+      "priority": 3,
+      "passes": true,
+      "blocked": false,
+      "dependencies": [],
+      "notes": "已按 C-19 同源偏差（AC-5）关闭，与 AKA-101 同批处置；命令面仍是 debug 47 / release 42 差 5。"
+    }
+  ]
+}

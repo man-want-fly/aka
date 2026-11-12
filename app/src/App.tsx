@@ -8,6 +8,12 @@ import { DatasourcePage } from "./pages/datasource/DatasourcePage";
 import { InstallPage } from "./pages/install/InstallPage";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { ipc, isTauriRuntime } from "./lib/ipc";
+import {
+  MENU_ACTION_EVENT,
+  setPendingMenuAction,
+  subscribeMenuAction,
+  type MenuAction,
+} from "./lib/menu";
 import { loadDisplaySettings } from "./lib/settings";
 import {
   applyTheme,
@@ -78,6 +84,24 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  // AKA-33：原生菜单不另开入口 —— 关于与导出诊断包都落在设置页的既有实现上。
+  // 已在设置页时走窗口事件（不重挂载），否则先导航再由目标页消费 pending。
+  const routeRef = useRef(location.route);
+  routeRef.current = location.route;
+  useEffect(
+    () =>
+      subscribeMenuAction((action: MenuAction) => {
+        if (routeRef.current === "settings") {
+          window.dispatchEvent(new CustomEvent<MenuAction>(MENU_ACTION_EVENT, { detail: action }));
+          return;
+        }
+        setPendingMenuAction(action);
+        window.location.hash = "#/settings";
+        setLocation({ route: "settings", code: null });
+      }),
+    [],
+  );
+
   // 取证落地页：release 性能线（P 线）必须直接进工作台，
   // 否则行情页会把 S2 套件锁掉（sessionStorage `aka.s2.diag.once`）。
   // `market` 是反向：上一次取证把 hash 停在 #/workbench 时，行情页的 E-01 套件不会启动。
@@ -107,6 +131,16 @@ export default function App() {
           window.sessionStorage.setItem(key, "A");
           window.localStorage.setItem(key, "L");
           window.localStorage.setItem("aka.ss.probe.boot", String(boot + 1));
+          return;
+        }
+        // FEAT-DF-06 工作台渲染与交互取证：直接进工作台；占住 S2 的 once 位，避免 S2 套件抢跑。
+        if (target === "s206" || target === "s206-meta" || target === "s206-readonly") {
+          sessionStorage.setItem("aka.s2.diag.once", "1");
+          sessionStorage.setItem("aka.drawer.diag.done", "1");
+          sessionStorage.removeItem("aka.s206.diag.done");
+          if (window.location.hash.startsWith("#/workbench")) return;
+          window.location.hash = "#/workbench";
+          setLocation({ route: "workbench", code: null });
           return;
         }
         // S-02.04-01 抽屉取证：直接进工作台；先占住 S2 的 once 位，避免 S2 套件抢跑。
@@ -273,11 +307,14 @@ export default function App() {
   };
 
   const openTimer = useRef<number | null>(null);
+  /** 工作台返回目标：从指数页点行进入时回到指数页（S-04.01-02）。 */
+  const [workbenchFrom, setWorkbenchFrom] = useState<Route>("market");
 
   /** S-01.01-03：行情行点击 → 工作台，单窗口，代码进路由。
    * 50ms 合并窗口：连续快速点击多行时只打开最后一只（AC-01.01-04（补1）），
    * 避免工作台报价头闪烁或出现双份。 */
-  const openSecurity = (code: string) => {
+  const openSecurity = (code: string, from: Route = "market") => {
+    setWorkbenchFrom(from);
     if (openTimer.current !== null) window.clearTimeout(openTimer.current);
     openTimer.current = window.setTimeout(() => {
       openTimer.current = null;
@@ -309,7 +346,7 @@ export default function App() {
     }
 
     if (location.route === "indices") {
-      return <IndexPage onNavigate={navigate} />;
+      return <IndexPage onNavigate={navigate} onOpenSecurity={openSecurity} />;
     }
 
     if (location.route === "market") {
@@ -321,6 +358,7 @@ export default function App() {
     return (
       <WorkbenchPage
         initialCode={location.code}
+        backRoute={workbenchFrom}
         themeMode={themeMode}
         onThemeMode={setThemeMode}
         colorMode={colorMode}

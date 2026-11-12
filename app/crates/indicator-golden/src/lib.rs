@@ -317,7 +317,9 @@ mod tests {
                     "V02" | "V04" | "V05" | "V07" | "V08" => "absolute:1e-4",
                     "M01" | "M02" | "M04" | "M05" | "M08" | "M09" | "M19" | "M20" | "M21"
                     | "M25" => "absolute:1e-4",
+                    "M07" | "M11" | "M17" => "absolute:1e-4",
                     "M26" => "count",
+                    "D03" | "D04" | "D05" | "D10" | "D12" => "absolute:1e-4",
                     _ => "relative:1e-6",
                 };
                 if case.tolerance == "absolute:1e-9" {

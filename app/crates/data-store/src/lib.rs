@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub mod dataset_db;
+pub mod parquet_store;
 pub mod state_db;
 
 #[derive(Debug, Clone, PartialEq)]

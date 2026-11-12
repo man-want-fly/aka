@@ -19,9 +19,12 @@ pub const M01_ID: &str = "M01";
 pub const M02_ID: &str = "M02";
 pub const M04_ID: &str = "M04";
 pub const M05_ID: &str = "M05";
+pub const M07_ID: &str = "M07";
 pub const M08_ID: &str = "M08";
 pub const M09_ID: &str = "M09";
 pub const M10_ID: &str = "M10";
+pub const M11_ID: &str = "M11";
+pub const M17_ID: &str = "M17";
 pub const M19_ID: &str = "M19";
 pub const M20_ID: &str = "M20";
 pub const M21_ID: &str = "M21";
@@ -54,7 +57,10 @@ fn cmo_warmup(params: &Params) -> usize {
 pub static M02: Kdj = Kdj;
 pub static M04: WilliamsR = WilliamsR;
 pub static M05: Cci = Cci;
+pub static M07: MacdV = MacdV;
 pub static M08: Ppo = Ppo;
+pub static M11: Trix = Trix;
+pub static M17: Tsi = Tsi;
 pub static M09: Roc = Roc;
 pub static M10: Momentum = Momentum;
 pub static M19: Aroon = Aroon;
@@ -611,6 +617,175 @@ impl Indicator for Nr7 {
     }
 }
 
+/// M07 MACD-V（波动率归一化 MACD）。
+///
+/// `MACD = EMA(C, fast) − EMA(C, slow)`；`MACD-V = MACD / ATR(atr) × 100`；
+/// 信号线为 `EMA(MACD-V, signal)`。ATR 为 0（全平盘）或缺失时该根无定义，记 `NaN`。
+pub struct MacdV;
+
+impl Indicator for MacdV {
+    fn meta(&self) -> &'static Meta {
+        crate::manifest::meta_for(M07_ID, macd_v_warmup)
+    }
+
+    fn calc(
+        &self,
+        view: &OhlcvView<'_>,
+        params: &Params,
+        out: &mut [Vec<f64>],
+    ) -> Result<(), CalcError> {
+        ensure_shape(view, out, 2, M07_ID)?;
+        let fast = period_of_key(params, "fast", 12);
+        let slow = period_of_key(params, "slow", 26);
+        let signal = period_of_key(params, "signal", 9);
+        let atr_period = period_of_key(params, "atr", 14);
+        if fast >= slow {
+            return Err(CalcError::ParamOrder("fast 必须小于 slow".to_string()));
+        }
+        for column in out.iter_mut() {
+            column.fill(f64::NAN);
+        }
+        if view.len() < slow {
+            return Ok(());
+        }
+
+        let fast_ema = ema(view.close, fast);
+        let slow_ema = ema(view.close, slow);
+        let atr = wilder_of_valid(&true_range(view.high, view.low, view.close), atr_period);
+        let mut value = vec![f64::NAN; view.len()];
+        for i in 0..view.len() {
+            if fast_ema[i].is_finite()
+                && slow_ema[i].is_finite()
+                && atr[i].is_finite()
+                && atr[i] > 0.0
+            {
+                value[i] = (fast_ema[i] - slow_ema[i]) / atr[i] * 100.0;
+            }
+        }
+        out[0].copy_from_slice(&value);
+        out[1].copy_from_slice(&ema_of_valid(&value, signal));
+        Ok(())
+    }
+}
+
+/// M11 三重指数平滑平均线（TRIX）。
+///
+/// `E1 = EMA(C, N)`、`E2 = EMA(E1, N)`、`E3 = EMA(E2, N)`；
+/// `TRIX = (E3 − 前一根 E3) / 前一根 E3 × 100`，信号线为 `EMA(TRIX, signal)`。
+pub struct Trix;
+
+impl Indicator for Trix {
+    fn meta(&self) -> &'static Meta {
+        crate::manifest::meta_for(M11_ID, trix_warmup)
+    }
+
+    fn calc(
+        &self,
+        view: &OhlcvView<'_>,
+        params: &Params,
+        out: &mut [Vec<f64>],
+    ) -> Result<(), CalcError> {
+        ensure_shape(view, out, 2, M11_ID)?;
+        let period = period_of_key(params, "period", 12);
+        let signal = period_of_key(params, "signal", 9);
+        for column in out.iter_mut() {
+            column.fill(f64::NAN);
+        }
+        if period < 2 || signal < 2 || view.len() < period * 3 - 1 {
+            return Ok(());
+        }
+
+        let first = ema(view.close, period);
+        let second = ema_of_valid(&first, period);
+        let third = ema_of_valid(&second, period);
+        let mut value = vec![f64::NAN; view.len()];
+        for i in (period * 3 - 2)..view.len() {
+            let previous = third[i - 1];
+            if third[i].is_finite() && previous.is_finite() && previous != 0.0 {
+                value[i] = (third[i] - previous) / previous * 100.0;
+            }
+        }
+        out[0].copy_from_slice(&value);
+        out[1].copy_from_slice(&ema_of_valid(&value, signal));
+        Ok(())
+    }
+}
+
+/// M17 真实强度指数（TSI）。
+///
+/// `ΔC(t) = C(t) − C(t−1)`；分子为 `EMA(EMA(ΔC, long), short)`，
+/// 分母为 `EMA(EMA(|ΔC|, long), short)`，`TSI = 100 × 分子 / 分母`；
+/// 信号线为 `EMA(TSI, signal)`。分母为 0（全平盘）时 TSI 记 0，不产生无穷值。
+pub struct Tsi;
+
+impl Indicator for Tsi {
+    fn meta(&self) -> &'static Meta {
+        crate::manifest::meta_for(M17_ID, tsi_warmup)
+    }
+
+    fn calc(
+        &self,
+        view: &OhlcvView<'_>,
+        params: &Params,
+        out: &mut [Vec<f64>],
+    ) -> Result<(), CalcError> {
+        ensure_shape(view, out, 2, M17_ID)?;
+        let long = period_of_key(params, "long", 25);
+        let short = period_of_key(params, "short", 13);
+        let signal = period_of_key(params, "signal", 7);
+        for column in out.iter_mut() {
+            column.fill(f64::NAN);
+        }
+        if long < 2 || short < 2 || signal < 2 || view.len() <= long + short - 1 {
+            return Ok(());
+        }
+
+        let mut change = vec![f64::NAN; view.len()];
+        let mut magnitude = vec![f64::NAN; view.len()];
+        for i in 1..view.len() {
+            if view.close[i].is_finite() && view.close[i - 1].is_finite() {
+                change[i] = view.close[i] - view.close[i - 1];
+                magnitude[i] = change[i].abs();
+            }
+        }
+        let smoothed = ema_of_valid(&ema_of_valid(&change, long), short);
+        let scale = ema_of_valid(&ema_of_valid(&magnitude, long), short);
+        let mut value = vec![f64::NAN; view.len()];
+        for i in 0..view.len() {
+            if smoothed[i].is_finite() && scale[i].is_finite() {
+                value[i] = if scale[i] == 0.0 {
+                    0.0
+                } else {
+                    smoothed[i] / scale[i] * 100.0
+                };
+            }
+        }
+        out[0].copy_from_slice(&value);
+        out[1].copy_from_slice(&ema_of_valid(&value, signal));
+        Ok(())
+    }
+}
+
+fn macd_v_warmup(params: &Params) -> usize {
+    let slow = period_of_key(params, "slow", 26);
+    let signal = period_of_key(params, "signal", 9);
+    let atr = period_of_key(params, "atr", 14);
+    (slow - 1).max(atr) + signal - 1
+}
+
+fn trix_warmup(params: &Params) -> usize {
+    let period = period_of_key(params, "period", 12);
+    let signal = period_of_key(params, "signal", 9);
+    period * 3 - 3 + signal
+}
+
+fn tsi_warmup(params: &Params) -> usize {
+    let long = period_of_key(params, "long", 25);
+    let short = period_of_key(params, "short", 13);
+    let signal = period_of_key(params, "signal", 7);
+    long + short - 2 + signal
+}
+
 fn warmup_period_minus_one(params: &Params) -> usize {
     period_of(params, 20).saturating_sub(1)
 }
@@ -663,15 +838,53 @@ mod tests {
     }
 
     #[test]
+    fn m07_trix_tsi_are_bounded_and_degenerate_cases_are_stable() {
+        let tsi = run(M17_ID, 200);
+        assert!(
+            tsi[0]
+                .iter()
+                .filter(|value| value.is_finite())
+                .all(|value| value.abs() <= 100.0 + 1e-9),
+            "TSI 必须落在 −100~100"
+        );
+
+        // 平盘：TRIX 与 TSI 恒为 0；MACD-V 因 ATR=0 无定义。
+        let flat = vec![10.0; 200];
+        for (id, expected) in [(M11_ID, Some(0.0)), (M17_ID, Some(0.0)), (M07_ID, None)] {
+            let indicator = crate::lookup(id).unwrap();
+            let params = merge_defaults(indicator.meta().params, &Params::new());
+            let view = OhlcvView::new(&flat, &flat, &flat, &flat, &flat, &flat);
+            let mut out = vec![vec![0.0; flat.len()]; indicator.meta().outputs.len()];
+            indicator.calc(&view, &params, &mut out).unwrap();
+            match expected {
+                Some(value) => {
+                    let last = *out[0].last().unwrap();
+                    assert!(
+                        last.is_finite() && (last - value).abs() < 1e-12,
+                        "{id} 平盘应记 0，实际 {last}"
+                    );
+                }
+                None => assert!(
+                    out.iter().all(|column| column.iter().all(|value| value.is_nan())),
+                    "{id} ATR 为 0 时必须返回 NaN"
+                ),
+            }
+        }
+    }
+
+    #[test]
     fn warmup_matches_first_valid_index() {
         for (id, expected) in [
             (M01_ID, 14usize),
             (M02_ID, 8),
             (M04_ID, 13),
             (M05_ID, 19),
+            (M07_ID, 33),
             (M08_ID, 33),
             (M09_ID, 12),
             (M10_ID, 10),
+            (M11_ID, 42),
+            (M17_ID, 43),
             (M19_ID, 24),
             (M20_ID, 14),
             (M21_ID, 14),

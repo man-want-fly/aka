@@ -7,10 +7,15 @@ import type { DatasetErrorCode, DatasetIntegrityDto } from "../../lib/types";
 /** 各错误分类的用户可读说明（标题由后端随 DTO 返回，避免两处口径漂移）。 */
 const DESCRIPTIONS: Record<DatasetErrorCode, string> = {
   MISSING_DIR: "应用找不到样本数据目录。可重建样本包恢复；重建需要写入磁盘。",
+  MANIFEST_MISSING: "安装目录缺少 manifest.json，无法确认数据版本。请重新安装样本包。",
   MANIFEST_INVALID: "数据集描述文件（manifest）缺失或格式不合法，无法确认数据版本。",
+  DATASET_DB_MISSING: "安装目录缺少 dataset.db，数据不可读取。请重新安装样本包。",
   REQUIRED_TABLE_MISSING: "主数据 / 日线 / 复权 / 日历至少一张必需表不可用。",
+  ROW_COUNT_MISMATCH: "落盘行数与 manifest 声明不一致，可能被改动或复制不完整。可只读浏览现有数据。",
+  COVERAGE_MISMATCH: "落盘覆盖区间与 manifest 声明不一致，可能被改动或复制不完整。可只读浏览现有数据。",
   SHA256_MISMATCH: "数据内容与 manifest 摘要不一致，可能被改动或复制不完整。可只读浏览现有数据。",
   DB_CORRUPT: "数据文件部分损坏，仅可只读浏览可读部分，建议重建样本包。",
+  VERSION_MISMATCH: "缓存版本与落盘数据集不一致，已阻断加载以避免混用两个版本。请重建数据集。",
 };
 
 interface Props {

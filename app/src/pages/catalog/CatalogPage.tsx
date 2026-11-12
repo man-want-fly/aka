@@ -11,6 +11,12 @@ import {
   writeDiagnosticFailure,
 } from "../../features/qa/batchDiag";
 import { Highlight, PANEL_LABEL, searchIndicators } from "../../features/indicators/search";
+import {
+  IndicatorSpecSections,
+  dataRequirement,
+  defaultParamsText,
+  sourceLabel,
+} from "../../features/catalog/IndicatorSpecSections";
 import { describeError, ipc, isTauriRuntime } from "../../lib/ipc";
 import type { AppError, Category, ManifestIndicatorDto, ManifestResponse } from "../../lib/types";
 
@@ -73,30 +79,6 @@ const CATEGORIES: Array<{ key: Category; label: string }> = [
 const categoryLabel = (key: Category) =>
   CATEGORIES.find((entry) => entry.key === key)?.label ?? key;
 
-const sourceLabel = (item: ManifestIndicatorDto) => {
-  if (item.status === "planned") {
-    if (item.specStatus === "manualComplete") return "《技术指标全能手册》· 完整覆盖";
-    if (item.specStatus === "partial") return "《技术指标全能手册》· 部分覆盖，口径由 BA 定";
-    return "手册未覆盖 · 本产品定义，待 BA 拍板";
-  }
-  if (item.isCompletion) return "本产品补全口径 · PRD 附录 A";
-  if (item.completeness === "beta") return "PRD beta 口径 · 待裁定";
-  return `PRD 附录 A · 引擎 v${item.version}`;
-};
-
-/** 默认参数只有两个来源：已实现项从 manifest `params.default` 派生，规划项用 PRD 文本兜底。 */
-const defaultParamsText = (item: ManifestIndicatorDto) => {
-  if (item.params.length > 0) {
-    return item.params.map((param) => String(param.default)).join(" / ");
-  }
-  return item.defaultParamsText || "—";
-};
-
-const dataRequirement = (item: ManifestIndicatorDto) => {
-  if (!item.warmupBars) return "—";
-  return `至少 ${item.warmupBars} 根 K 线（首个有效值下标 ${item.warmupBars - 1}，0 基）`;
-};
-
 /**
  * P3 指标目录（S-03.01-01 / S-03.01-03）。
  *
@@ -123,7 +105,7 @@ export function CatalogPage({ onNavigate, onOpenWorkbench }: Props) {
 
   useEffect(() => {
     if (!isTauriRuntime()) {
-      setError({ code: "NO_TAURI", message: "指标目录需要桌面应用运行时", retryable: false });
+      setError({ code: "NO_TAURI", message: "指标目录需要桌面应用运行时", retryable: false, details: null });
       return;
     }
     ipc
@@ -478,7 +460,7 @@ export function CatalogPage({ onNavigate, onOpenWorkbench }: Props) {
             type="button"
             className="catalog-row__select"
             aria-pressed={activeId === item.id}
-            onClick={() => setActiveId(item.id)}
+            onClick={() => openDetail(item)}
           >
             <span className="mono catalog-row__id">{item.id}</span>
             <span className="catalog-row__name">
@@ -802,7 +784,7 @@ export function CatalogPage({ onNavigate, onOpenWorkbench }: Props) {
                 </div>
                 <h2 style={{ margin: "4px 0" }}>{active.nameZh}</h2>
                 <div className="caption">
-                  {active.nameEn} · 单位 {active.unit} · 引擎 v{active.version} ·{" "}
+                  {active.nameEn} · 单位 {active.unit} · 注册表 v{active.version} ·{" "}
                   {active.specStatus === "manualComplete" ? "已人工校对" : "口径待裁定"}
                 </div>
                 <button
@@ -827,75 +809,7 @@ export function CatalogPage({ onNavigate, onOpenWorkbench }: Props) {
                 )}
               </header>
 
-              <section data-catalog-section="formula" style={{ marginBottom: 18 }}>
-                <h3 style={{ fontSize: 14, marginBottom: 6 }}>一、公式</h3>
-                <p style={{ margin: 0 }}>{active.formulaSummary}</p>
-                <div className="caption" style={{ marginTop: 4 }}>
-                  公式引用：{active.formulaRef || "—"}
-                </div>
-              </section>
-
-              <section data-catalog-section="params" style={{ marginBottom: 18 }}>
-                <h3 style={{ fontSize: 14, marginBottom: 6 }}>二、参数</h3>
-                {active.params.length === 0 ? (
-                  <div className="caption">
-                    {active.status === "planned"
-                      ? `默认参数 ${defaultParamsText(active)}；参数定义待《技术指标全能手册》核定。`
-                      : "无参数。"}
-                  </div>
-                ) : (
-                  <table style={{ borderCollapse: "collapse", minWidth: 520 }}>
-                    <thead>
-                      <tr>
-                        {["参数", "类型", "默认", "范围"].map((head) => (
-                          <th
-                            key={head}
-                            style={{ textAlign: "left", padding: "6px 10px", borderBottom: "1px solid var(--line)" }}
-                          >
-                            {head}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {active.params.map((param) => (
-                        <tr key={param.key}>
-                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--line)" }}>
-                            {param.label} <span className="mono caption">{param.key}</span>
-                          </td>
-                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--line)" }}>
-                            {param.kind}
-                          </td>
-                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--line)" }} className="mono">
-                            {"default" in param ? String(param.default) : "—"}
-                          </td>
-                          <td style={{ padding: "6px 10px", borderBottom: "1px solid var(--line)" }} className="mono">
-                            {"min" in param ? `${param.min} ~ ${param.max}` : "variants" in param ? param.variants.join(" | ") : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </section>
-
-              <section data-catalog-section="warmup" style={{ marginBottom: 18 }}>
-                <h3 style={{ fontSize: 14, marginBottom: 6 }}>三、预热</h3>
-                <p style={{ margin: 0 }}>{dataRequirement(active)}</p>
-                {active.outputs.length > 0 && (
-                  <div className="caption" style={{ marginTop: 4 }}>
-                    输出：{active.outputs.map((output) => `${output.labelZh}(${output.key})`).join("、")}
-                  </div>
-                )}
-              </section>
-
-              <section data-catalog-section="boundary">
-                <h3 style={{ fontSize: 14, marginBottom: 6 }}>四、边界</h3>
-                <p style={{ margin: 0 }}>{active.notes}</p>
-                <div className="caption" style={{ marginTop: 4 }}>
-                  口径来源：{sourceLabel(active)}
-                </div>
-              </section>
+              <IndicatorSpecSections item={active} engineVersion={manifest?.engineVersion ?? ""} />
             </>
           )}
         </main>

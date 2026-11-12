@@ -1,5 +1,6 @@
 mod commands;
 mod diagnostics;
+mod menu;
 mod state;
 
 use tauri::Manager;
@@ -15,6 +16,14 @@ fn state_db_path(app: &tauri::App) -> Option<std::path::PathBuf> {
         .home_dir()
         .ok()
         .map(|home| home.join("Library/Application Support/aka/state.db"))
+}
+
+/// 数据集根目录：`~/Library/Application Support/aka`（与命令层 `sim_data_dir` 同口径）。
+fn data_dir(app: &tauri::App) -> Option<std::path::PathBuf> {
+    app.path()
+        .home_dir()
+        .ok()
+        .map(|home| home.join("Library/Application Support/aka"))
 }
 
 /// 埋点日志：`~/Library/Application Support/aka/logs/telemetry.jsonl`（JSONL，可机读）。
@@ -115,6 +124,18 @@ fn cleanup_stale_diag_temp() {
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
     let builder = tauri::Builder::default()
+        // AKA-33：原生菜单 + 关窗/退出收尾。菜单只转发动作，业务仍在前端唯一实现里。
+        .menu(|handle| menu::build(handle))
+        .on_menu_event(|handle, event| {
+            if let Some(action) = menu::action_for(event.id().as_ref()) {
+                menu::emit(handle, action);
+            }
+        })
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                window.state::<AppState>().shutdown();
+            }
+        })
         .setup(move |app| {
             #[cfg(debug_assertions)]
             cleanup_stale_diag_temp();
@@ -176,7 +197,17 @@ pub fn run() {
                 Some(path) => core.with_telemetry(Telemetry::with_log_path(path)),
                 None => core,
             };
-            app.manage(AppState::with_diag(core, db_path, faults));
+            // ST-DF-03-03：启动读取落盘 manifest 并接管 dataset_id/data_version；
+            // 未安装时保持「未安装」呈现（取数仍走内存 Provider），身份不一致则阻断加载。
+            // ST-DF-03-05：只读开关从 state.db 恢复，重启后与关闭前一致。
+            let state = AppState::with_diag(core, db_path, faults);
+            let read_only = state.restore_read_only();
+            if let Some(dir) = data_dir(app) {
+                state
+                    .core
+                    .apply_dataset_startup(&dir, commands::SIM_SEED, read_only);
+            }
+            app.manage(state);
             // S-06.03-02：真实启动日志（诊断包 `app.log` 的来源），不伪造、不上传。
             diagnostics::append_app_log(&format!(
                 "[startup] version={} build={}",
@@ -217,6 +248,7 @@ pub fn run() {
         commands::calc_indicators,
         commands::telemetry_dump,
         commands::market_snapshot,
+        commands::index_snapshot,
         commands::watchlist_read,
         commands::watch_toggle,
         commands::watch_group_create,
@@ -266,6 +298,7 @@ pub fn run() {
         commands::calc_indicators,
         commands::telemetry_dump,
         commands::market_snapshot,
+        commands::index_snapshot,
         commands::watchlist_read,
         commands::watch_toggle,
         commands::watch_group_create,
@@ -289,7 +322,13 @@ pub fn run() {
         commands::sim_install_rebuild,
         commands::sim_install_report,
     ]);
-    builder
-        .run(tauri::generate_context!())
+    let app = builder
+        .build(tauri::generate_context!())
         .expect("AKA 启动失败");
+    app.run(|handle, event| {
+        // 菜单退出（⌘Q）不一定经过窗口 CloseRequested，退出前再兜一次；shutdown 幂等。
+        if matches!(event, tauri::RunEvent::Exit) {
+            handle.state::<AppState>().shutdown();
+        }
+    });
 }

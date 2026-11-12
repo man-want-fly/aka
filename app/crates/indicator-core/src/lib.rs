@@ -12,7 +12,7 @@ pub mod param;
 pub mod view;
 
 pub use indicators::{
-    all, implemented_count, lookup, MACD_ID, MA_ID, PLANNED_INDICATOR_COUNT,
+    all, implemented_count, lookup, warmup_exact, MACD_ID, MA_ID, PLANNED_INDICATOR_COUNT,
 };
 pub use manifest::{
     manifest, Manifest, ManifestIndicator, ManifestInputs, ManifestOutput, ManifestParam,

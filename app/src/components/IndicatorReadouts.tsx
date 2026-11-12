@@ -13,6 +13,8 @@ interface Props {
   subCount: number;
   /** manifest 单位表 */
   units: Record<string, string>;
+  /** 指标卡深链：跳到目录页同一份口径（S-03.03-02） */
+  onOpenDetail?: (indicatorId: string) => void;
 }
 
 const E13_LABELS: Record<string, string> = {
@@ -55,7 +57,15 @@ function Sparkline({
 }
 
 /** TD-B1-02 渲染层证据：R² 与 BIAS 三线以最新值 + 迷你走势呈现；B2 追加叠加/副图读数同步。 */
-export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCount, units }: Props) {
+export function IndicatorReadouts({
+  series,
+  barCount,
+  overlayIds,
+  subIds,
+  subCount,
+  units,
+  onOpenDetail,
+}: Props) {
   const r2 = series.find((item) => item.indicatorId === "T21");
   const bias = series.find((item) => item.indicatorId === "E13");
   const b2Overlays = [...new Set(overlayIds)]
@@ -117,6 +127,16 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCou
               values={r2.outputs[0]?.values ?? []}
               color={r2.outputs[0]?.color ?? "var(--accent)"}
             />
+            {onOpenDetail && (
+              <button
+                type="button"
+                className="fav-chip__detail caption"
+                data-readout-spec="T21"
+                onClick={() => onOpenDetail("T21")}
+              >
+                口径
+              </button>
+            )}
           </div>
         )}
         {bias?.outputs.map((output) => {
@@ -140,6 +160,16 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCou
             </div>
           );
         })}
+        {bias && onOpenDetail && (
+          <button
+            type="button"
+            className="fav-chip__detail caption"
+            data-readout-spec="E13"
+            onClick={() => onOpenDetail("E13")}
+          >
+            口径
+          </button>
+        )}
       </div>
       {barCount < 60 && (
         <div className="caption" data-readout="warmup-hint" style={{ marginTop: 4 }}>
@@ -192,6 +222,18 @@ export function IndicatorReadouts({ series, barCount, overlayIds, subIds, subCou
                 );
               }),
             )}
+            {onOpenDetail &&
+              [...new Set([...b2Overlays, ...b2Subs].map((item) => item.indicatorId))].map((id) => (
+                <button
+                  key={`b2-spec-${id}`}
+                  type="button"
+                  className="fav-chip__detail caption"
+                  data-readout-spec={id}
+                  onClick={() => onOpenDetail(id)}
+                >
+                  {id} 口径
+                </button>
+              ))}
           </div>
         </div>
       )}

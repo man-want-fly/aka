@@ -28,6 +28,11 @@ const PINYIN_INITIALS: Record<string, string> = {
   "600900.SH": "cjdl",
 };
 
+/** 行情页内联搜索复用同一份拼音表：缺失返回 null（该条不参与拼音匹配）。 */
+export function pinyinOf(code: string): string | null {
+  return PINYIN_INITIALS[code] ?? null;
+}
+
 export interface SearchItem {
   code: string;
   bareCode: string;
