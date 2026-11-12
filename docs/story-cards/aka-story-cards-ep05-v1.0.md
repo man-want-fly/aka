@@ -4,13 +4,14 @@
 |---|---|
 | Epic | **EP-05 编排、缓存与 DTO**（按需批量计算、请求去重与取消、缓存键与世代丢弃、计算元信息、DTO 组装） |
 | 不在本 Epic | 不做 IPC 命令注册与序列化边界（EP-06）、不做页面状态与渲染（EP-07）、不改指标公式（EP-03） |
-| 卡数 / 点数 | **9 张，全部 P0；25 故事点** |
+| 卡数 / 点数 | **9 张，全部 P0；25 故事点**（脚本产出：「复算：`grep -c '^## S-EP05-' 本文件`（=9）；`grep -o '故事点：[0-9]*' 本文件 \| awk -F'：' '{s+=$2} END{print s}'`（=25）」） |
 | 编写规则 | 《Story 卡编写规则》，逐条执行：标题动宾 / 产品三句话 / Given-When-Then / 优先级·故事点 / 依赖备注 / DoD |
 | 卡面结构 | 规则六项必含字段在前；**技术决定（TL，开发期不再讨论）**、**可致红反例（QA）**、**Task 拆解（Dev）** 在后，是规则的「TL 补技术约束、Dev 拆 Task」两段落地 |
 | 编号规则 | `S-EP{两位 Epic}-{两位序号}`。**不复用**旧 E-05（搜索）、E-06（设置与主题）、E-07（数据源与模拟环境）的号段，避免与 `aka-story-index-v0.1.csv` 撞号 |
 | 落点基准 | `main@3192b76`，行号可直接跳转核对 |
-| 代码状态 | 已实现 8 张 / 未实现 1 张（`S-EP05-05`） |
-| blocked | 2 项（`B-05-01` 数据集重建后的缓存失效口径、`B-05-02` 质量标记字符串大小写），登记见 `aka-story-cards-blocked-v1.0.md`；两项均不阻塞本 Epic 开工 |
+| 代码状态 | 逐卡「实现状态」行计数：`grep -c '实现状态：未实现' 本文件`（=1，`S-EP05-05`）；`grep -c '实现状态：已实现' 本文件`（=8） |
+| blocked | **2 项，均 Blocked**：`B-05-01` 数据集重建后的缓存失效口径（卡 `S-EP05-05`、`S-EP05-06`）、`B-05-02` 质量标记字符串大小写（卡 `S-EP05-07`）。登记与裁定人见 `aka-story-cards-blocked-v1.0.md`；上述 3 张卡**不在可开工集合内** |
+| 可开工集合 | 本 Epic 9 张卡中 5 张可开工：`01 / 02 / 04 / 08 / 09`；Blocked 4 张：`03`（依赖 `05`）、`05`（`B-05-01`）、`06`（`B-05-01`）、`07`（`B-05-02`）。复算：`grep -c '^- 状态：Blocked' 本文件`（=4）、`grep -c '^- 状态：可开工' 本文件`（=5） |
 
 ---
 
@@ -22,10 +23,11 @@
 | 缓存键 | `calc_key()`：`v2\|ENGINE_VERSION\|dataset_id\|security\|timeframe\|adj\|indicator_id\|params_json\|from~to`，**7 维 + 日期区间** | `core.rs:2273-2292` |
 | **不存在** `CalcCacheKey` 结构体 | 键是 `String`，值是 `Arc<Vec<Vec<f64>>>` | `core.rs:317`、`2273` |
 | `SeriesKey` | **三字段** `security` / `timeframe` / `adj`，不含 `dataset_id` | `app/crates/data-store/src/lib.rs:66-71` |
-| `QualityFlag` | **8 个变体**：`Simulated / LimitUp / LimitDown / SplitDay / Suspended / ExRights / ZeroVolume / PriceAnomaly` | `app/crates/data-provider/src/types.rs:127-160` |
+| `QualityFlag` | **8 个变体**：`Simulated / LimitUp / LimitDown / SplitDay / Suspended / ExRights / ZeroVolume / PriceAnomaly` | `app/crates/data-provider/src/types.rs:127-140`（`as_str` 在 `:143-153`） |
 | `BarFlag` | **全仓零定义**，不得在卡、代码、测试里引用该类型；K 线标记一律 `Vec<String>` | `rg "BarFlag" app/` → 0 |
 | `indicator-core` 目录 | `src/` 下只有 `kernels.rs` + `indicators/`，**无 `kernels/` 子目录** | `app/crates/indicator-core/src/` |
-| 落点复算 | 全量 154 条落点 / **66 条文件不存在**（旧卡口径 48/151 作废） | 本文件每张卡的落点均已在 worktree 内逐条 `test -f` 过 |
+| 落点复算 | 本文件所有落点均在 worktree 内逐条 `test -f` 校验；文件清单可复算：`grep -o 'app/[A-Za-z0-9_/.-]*\.\(rs\|ts\|tsx\|json\|yml\|md\)' docs/story-cards/aka-story-cards-ep05-v1.0.md \| sort -u` | 脚本产出（`test -f` 逐条校验），非人工计数 |
+| 数字口径 | 卡数 `grep -c '^## S-EP05-' 本文件`（=9）；故事点 `grep -o '故事点：[0-9]*' 本文件 \| awk -F'：' '{s+=$2} END{print s}'`（=25）；`toFixed` 处数 `grep -rn 'toFixed(' app/src \| wc -l`（=54） | 脚本产出，命令即为复算方式 |
 
 ---
 
@@ -34,6 +36,7 @@
 - 优先级：P0 ｜ 故事点：3 ｜ 依赖：无（本 Epic 首卡）；上游 `EP-03` 的 `lookup / merge_defaults / validate`
 - 负责人：待 Sprint 规划指派 ｜ 备注：本卡只做「一次请求算 N 个实例并原样返回」，缓存与去重在下两张卡
 - 模块编号：E-02 个股工作台 ｜ 原卡号：`S-02.06-01`（拆分）
+- 状态：可开工 ｜ 实现状态：已实现（`core.rs:1694`）
 
 **用户故事（产品）**
 作为盯盘用户，我希望主图和副图上的所有指标在一次请求里一起算完，
@@ -48,6 +51,8 @@
 - 给定 `timeframe="M"` 且该标的只有 24 根月线、实例为 `T02(12/26/9)`，当 调用，则 返回成功（HTTP-like 不报错）、`warmup=26`、该实例全部 `values` 为 `null`，不得因预热不足让整请求失败
 
 **技术决定（TL · 开发期不再讨论）**
+- **决定**：在 `core.rs:1694` `calc_indicators` 的既有单请求循环内**串行**处理 `req.instances`，每实例固定走 `lookup → merge_defaults → validate → calc_key → 命中取缓存或现算 → 按 window.start..window.end 切 values（非有限值记 null）`，逐实例产出 `SeriesDto` 并严格按请求顺序回填，任一实例失败即整请求返回 `Err`，不返回部分结果。
+- **被否方案**：① 并行计算（rayon/多线程）—— 收益不抵线程池、错误聚合与取消语义的复杂度，且无实测耗时基线支撑；② 后端中途取消 —— 取消统一由前端 `generation` 比对丢弃（`S-EP05-03`）；③ 部分结果（跳过失败实例）—— `AC3` 要求整请求失败，部分结果会让副图静默缺失。
 - 落点：`app/crates/app-core/src/core.rs:1694` `pub async fn calc_indicators(&self, req: &CalcRequest) -> Result<CalcResponse, AppError>`
 - 主循环：`core.rs:1713-1844`；每实例依次 `lookup → meta → merge_defaults → validate → calc_key → 取缓存/计算 → 按 window 切片 → 组装 SeriesDto`
 - 切片：`core.rs:1799-1835`，`values[window.start..window.end]`，`is_finite()` 为真取 `Some(v)`，否则 `None`
@@ -81,12 +86,11 @@ pub struct OutputSeriesDto { pub key: &'static str, pub label_zh: &'static str, 
 
 - 命令入口（不在本卡改，签名冻结给 EP-06）：`app/src-tauri/src/commands.rs:231` `#[tauri::command] pub async fn calc_indicators(state: State<'_, AppState>, req: CalcRequest) -> Result<CalcResponse, AppError>`；超时 `CALC_TIMEOUT_MS = 8_000`（`commands.rs:218`）由命令层负责，本卡不重复实现
 - 数据来源：`core.rs:1698` `series_for(security, timeframe, adj)`；`dataset_id` / `dataset_generation` 取自 `CandleSeries`（源头是 `BarBatch`）
-- 不做：不做并行计算（每实例串行，44 实例实测 ≤ 300ms 基线）、不做取消（取消由前端 generation 比对丢弃，见 `S-EP05-03`）
 
 **可致红反例（QA）**
 1. 把 `core.rs:1806` 的 `&values[window.start..window.end]` 改成 `&values[..]` → AC2 红：`values.length != barCount`
 2. 把 `core.rs:1714` 的 `lookup(...).ok_or_else(...)?` 改成 `if let Some` + 跳过该实例 → AC3 红：请求变成功且 `series.length = 0`
-3. 把 `core.rs:1867` 的 `generation: req.generation` 改成 `generation: 0` → AC5 红
+3. 把 `core.rs:1868` 的 `generation: req.generation` 改成 `generation: 0` → AC5 红
 4. 把 `core.rs:1722` 的注释对应的「预热不足不失败」改成 `if window.end - window.start < warmup { return Err(...) }` → AC6 红（24 根月线时返回 `E_INSUFFICIENT_DATA`）
 
 **Task 拆解（Dev）**
@@ -94,7 +98,7 @@ pub struct OutputSeriesDto { pub key: &'static str, pub label_zh: &'static str, 
 2. 新增测试 `calc_values_length_equals_bar_count`：同一响应内逐实例断言 `values.len() == bar_count`
 3. 新增测试 `calc_unknown_indicator_fails_whole_request`：混入 `NOPE`，断言 `Err` 且 `details.indicatorId`
 4. 新增测试 `calc_monthly_short_series_t02_all_null`：`M` + 24 根 + `T02`，断言 `warmup == 26` 且全 `None`
-5. `app/scripts/` 无新增脚本；本卡不接 CI（仓库无 `npm test`，见阻塞清单 `B-05-03`）
+5. 门禁：新增测试由仓库既有 `cargo test --workspace --exclude aka-desktop` 自动覆盖（`.github/workflows/ci.yml:102`），本卡不新增 npm script
 
 **完成定义 DoD**
 单测通过 · 联调通过 · 产品验收 · 文档更新
@@ -106,6 +110,7 @@ pub struct OutputSeriesDto { pub key: &'static str, pub label_zh: &'static str, 
 - 优先级：P0 ｜ 故事点：2 ｜ 依赖：`S-EP05-01`（同一循环）、`S-EP05-04`（去重键即缓存键）
 - 负责人：待 Sprint 规划指派 ｜ 备注：只做**请求内**去重，跨请求复用是 `S-EP05-03`，两者不得合并
 - 模块编号：E-02 个股工作台 ｜ 原卡号：`S-02.06-02`（拆分）
+- 状态：可开工 ｜ 实现状态：已实现（`core.rs:1710` 请求内 `request_cache`）
 
 **用户故事（产品）**
 作为同时挂多个同参数均线的用户，我希望重复的指标只计算一次，
@@ -119,12 +124,13 @@ pub struct OutputSeriesDto { pub key: &'static str, pub label_zh: &'static str, 
 - 给定 去重命中，当 读埋点，则 `compute.skip` 事件 `reason = "duplicateKey"`、`cacheKey` 非空、`instanceId` 为被跳过实例的 id
 
 **技术决定（TL · 开发期不再讨论）**
-- 落点：`core.rs:1710` `let mut request_cache: HashMap<String, Arc<Vec<Vec<f64>>>> = HashMap::new();`（请求内，函数局部变量，随请求结束销毁）
+- **决定**：在 `core.rs:1710` 的请求内 `request_cache: HashMap<String, Arc<Vec<Vec<f64>>>>` 上去重，键直接复用 `calc_key` 全串；命中则 `skipped += 1`、发 `compute.skip`（`reason="duplicateKey"`、`cacheKey` 非空）并复用已有 `Arc`，未命中则计算并在 `core.rs:1797` 统一 `insert`；去重范围严格限于单次请求，`calc_cache` 不在本卡改动。
+- **被否方案**：① 跨请求去重 —— 由 `calc_cache` 承担（`S-EP05-03`），两套去重并存会让 `compute.skip` 与 `cache.hit` 计数语义互相污染；② 另设「指标 id + 参数」短键 —— 会漏掉 `dataset_id / timeframe / adj`，跨数据集误命中；③ 在入口做一次参数归一化 —— `merge_defaults` 已补齐缺省且 `Params` 是 `BTreeMap`，归一化是重复劳动。
+- 落点：`core.rs:1710` `let mut request_cache: HashMap<String, Arc<Vec<Vec<f64>>>> = HashMap::new();`（函数局部变量，随请求结束销毁）
 - 命中分支：`core.rs:1735-1746`，`request_cache.get(&key)` → `skipped += 1` + `EVENT_COMPUTE_SKIP`（`telemetry.rs:26`）
 - 回填：`core.rs:1797` `request_cache.insert(key, raw.clone())`，**在缓存读写之后**统一插入，保证「本请求算过的键」一定进表
 - 去重键 = `calc_key(...)` 全串，**不**另设「指标 id + 参数」短键
 - 埋点常量：`EVENT_COMPUTE_SKIP = "compute.skip"`、`EVENT_COMPUTE_COUNT = "compute.count"`（`app/crates/app-core/src/telemetry.rs:26-27`）
-- 不做：不做跨请求去重（那是 `calc_cache`）、不做参数归一化（`merge_defaults` 已把缺省参数补齐，参数表是 `BTreeMap` 键序稳定）
 
 **可致红反例（QA）**
 1. 删掉 `core.rs:1735` 的 `if let Some(values) = request_cache.get(&key)` 分支 → AC1 红（`compute.count` 变 3、`skip` 变 0）
@@ -147,6 +153,7 @@ pub struct OutputSeriesDto { pub key: &'static str, pub label_zh: &'static str, 
 - 优先级：P0 ｜ 故事点：3 ｜ 依赖：`S-EP05-04`（键）、`S-EP05-05`（容量）
 - 负责人：待 Sprint 规划指派 ｜ 备注：`cacheHit` 是**全命中**语义，不是「任一命中」，前端与 QA 都按此判定
 - 模块编号：E-02 个股工作台 ｜ 原卡号：`S-02.06-02`（拆分）
+- 状态：Blocked（`B-05-01` 未裁定；本卡依赖 `S-EP05-05`，该卡因 `B-05-01` Blocked）｜ 实现状态：已实现（`core.rs:1748-1793`）
 
 **用户故事（产品）**
 作为反复调参的用户，我希望参数没变时不再重算，
@@ -160,13 +167,15 @@ pub struct OutputSeriesDto { pub key: &'static str, pub label_zh: &'static str, 
 - 给定 请求区间从 `无` 改为 `from=2024-01-01`，当 返回，则 `cacheHit=false`（区间进键，见 `S-EP05-04`）
 
 **技术决定（TL · 开发期不再讨论）**
+- **决定**：在 `core.rs:1748-1793` 按 `calc_key` 全串对 `calc_cache` 做读/写——命中直接取 `Arc` 且不计入 `computed_ms`，未命中现算后 `insert`，请求级 `cache_hit` 初值 `true`（`core.rs:1706`）遇任一 miss 置 `false`（`core.rs:1761`），统计按**请求**累计（`core.rs:1850-1854`），`Err` 路径不写缓存。
+- **待裁定（阻塞项 `B-05-01`）**：`calc_cache` 在数据集重建后是否需要主动清空，取决于 `S-EP05-05` 的容量与失效方案，缺 **TL（架构 owner）** 与 **数据源 owner** 裁定。
+- **被否方案**：① TTL 过期 —— 无产品需求，且会让同一区间的重复请求重新计算，命中率不可预测；② 数据集重建时主动清空 `calc_cache` —— 键含 `dataset_id`，重建后自然 miss，主动清空属二次失效（失效入口归 `S-EP05-05`，本卡不实现）；③ 响应级部分命中标记 —— 响应只有布尔 `cacheHit`，加部分命中会改 DTO 形状并推翻 EP-06 的冻结口径。
 - 落点：`core.rs:1748-1793` 缓存读/写；`core.rs:1706` `let mut cache_hit = true;`；任一 miss 时 `core.rs:1761` 置 `false`；`core.rs:1846-1855` 累计 `CacheStats`
 - 存储：`calc_cache: Mutex<HashMap<String, Arc<Vec<Vec<f64>>>>>`（`core.rs:317`、初始化 `core.rs:391`）；`calc_stats: Mutex<CacheStats>`（`core.rs:318`）
 - `CacheStats` 定义：`app/crates/data-store/src/lib.rs:103-106`（`hits: u64`、`misses: u64`）
 - 统计口径：**按请求**累计，不是按实例 —— 一次请求只要有一个 miss 就 `misses += 1`
 - 写入时机：计算完成、`Arc::new` 之后立即 `insert`（`core.rs:1787-1792`），先写缓存再切片，切片不改缓存
 - 错误不写缓存：`indicator.calc` 返回 `Err` 时直接 `?` 上抛，缓存里不落半成品
-- 不做：不做 TTL、不做按数据集主动清空（后者 blocked，见 `B-05-01`）
 
 **可致红反例（QA）**
 1. 把 `core.rs:1850` 的 `if cache_hit { stats.hits += 1 } else { stats.misses += 1 }` 改成两边都 `hits += 1` → AC1/AC2 红（第二次 `cacheHit` 恒 true 或统计错位）
@@ -189,6 +198,7 @@ pub struct OutputSeriesDto { pub key: &'static str, pub label_zh: &'static str, 
 - 优先级：P0 ｜ 故事点：3 ｜ 依赖：`S-EP05-01`（请求字段）、`S-EP05-08`（区间归一化）
 - 负责人：待 Sprint 规划指派 ｜ 备注：**没有** `CalcCacheKey` 结构体；键就是 `String`，任何「加个结构体更清晰」的提议本期不做
 - 模块编号：E-02 个股工作台 ｜ 原卡号：`S-02.06-02`（拆分）
+- 状态：可开工 ｜ 实现状态：已实现（`core.rs:2273` `calc_key`）
 
 **用户故事（产品）**
 作为改完区间又切回复权方式的用户，我希望拿到的永远是当前口径下的结果，
@@ -204,6 +214,8 @@ pub struct OutputSeriesDto { pub key: &'static str, pub label_zh: &'static str, 
 - 给定 任意参数，当 计算 `params_hash`，则 输出固定 16 位小写十六进制（FNV-1a），仅用于埋点排查，不参与键
 
 **技术决定（TL · 开发期不再讨论）**
+- **决定**：`calc_key` 固定输出 `v2|ENGINE_VERSION|dataset_id|security|timeframe|adj|indicator_id|params_json|returned_from~returned_to` 九段（7 维 + 区间），区间取吸附后的 `returned_*`、缺省记 `*`，`params_json` 由 `serde_json::to_string(&BTreeMap)` 生成，`params_hash` 只进埋点、不进键。
+- **被否方案**：① 新增 `CalcCacheKey` 结构体 —— 键就是 `String`，结构体只多一层转换且不改变缓存语义；② 参数用 `HashMap` 序列化 —— 键序不稳定，同参数会生成不同键；③ 用 `requested_*` 而不是吸附后的 `returned_*` —— 请求区间与返回区间不一致时同一结果会生成两把键；④ 把复权因子加进键 —— `adj` 已表达复权口径，因子是派生量，加进去只会让键随数据变化。
 - 落点：`core.rs:2273-2292` `fn calc_key(series: &CandleSeries, meta: &'static indicator_core::Meta, params: &Params, range: &RangeDto) -> String`
 - 格式（写死，逐段不可增减）：
 
@@ -213,7 +225,6 @@ v2|{ENGINE_VERSION}|{series.dataset_id}|{series.security}|{series.timeframe}|{se
 
 - 区间取 `range.returned_*`（吸附后的实际首末交易日），不取 `requested_*`；未指定时记 `*`
 - `params_hash`：`core.rs:2240-2249`，FNV-1a 64 位，`format!("{hash:016x}")`；只进 `telemetry_context`（`core.rs:2250-2271`），**不进键**
-- 不改：不新增结构体、不改成 `Hash`、不加 `security` 之外的行情维度（复权因子不进键，已由 `adj` 表达）
 - 参数 JSON 由 `serde_json::to_string(&Params)` 产生，`Params = BTreeMap<String, ParamValue>`，故键序稳定；若未来改 `HashMap` 会破坏本 AC
 
 **可致红反例（QA）**
@@ -240,6 +251,7 @@ v2|{ENGINE_VERSION}|{series.dataset_id}|{series.security}|{series.timeframe}|{se
 - 优先级：P0 ｜ 故事点：3 ｜ 依赖：`S-EP05-03`（写入路径）；**本卡是 EP-05 唯一未实现项**
 - 负责人：待 Sprint 规划指派 ｜ 备注：现状 `calc_cache` 无上限、无淘汰、无清空（`core.rs:317`），长会话切标的会单调增长
 - 模块编号：E-02 个股工作台 ｜ 原卡号：**新补**（无旧卡）
+- 状态：Blocked（`B-05-01`：数据集重建后 `calc_cache` 是否必须主动清空未裁定，裁定人见阻塞清单）｜ 实现状态：未实现
 
 **用户故事（产品）**
 作为一整天开着客户端切几十只股票的用户，我希望客户端内存不会越用越多，
@@ -253,7 +265,9 @@ v2|{ENGINE_VERSION}|{series.dataset_id}|{series.security}|{series.timeframe}|{se
 - 给定 缓存已达 512，当 插入第 513 个，则 淘汰**最早插入**的键（FIFO），不是随机、不是按值大小
 
 **技术决定（TL · 开发期不再讨论）**
-- 常量：`core.rs` 顶部新增 `const CALC_CACHE_MAX: usize = 512;`（与 `MAX_RANGE_DAYS` 同区，`core.rs:2059` 附近）
+- **决定**：把 `calc_cache` 的值类型换成 `CalcCache { map, order }`，容量写死 `const CALC_CACHE_MAX: usize = 512`，插入新键 `push_back`、超限时 `pop_front` 淘汰最早插入键，重复 `insert` 同键不重排，`get` 只读不改序。
+- **待裁定（阻塞项 `B-05-01`）**：数据集重建后 `calc_cache` 是否必须主动失效，决定容量上限与 FIFO 淘汰是否同批落地，缺 **TL（架构 owner）** 与 **数据源 owner** 裁定「重建一定产出新 `dataset_id`」这一前提。
+- **被否方案**：① 真 LRU（在 `get` 里改序）—— 每次命中都变成写操作，长会话下放大热路径持锁时间；② 按字节预算淘汰 —— 无 `size_of_val` 统计需求，收益不可度量；③ TTL 过期 —— 无产品需求，且会让重复请求重新计算；④ 引第三方 `lru` crate —— 项目当前无该依赖，为一个 512 槽 FIFO 引入依赖不划算。
 - 结构：`calc_cache: Mutex<CalcCache>`，新增
 
 ```rust
@@ -274,7 +288,7 @@ impl CalcCache {
 
 - 改点：`core.rs:317` 字段类型；`core.rs:391` 初始化；`core.rs:1748-1753` 读（`get`）；`core.rs:1787-1792` 写（`insert`）；`core.rs:3634/3647/3657` 微基准里的 `calc_cache.lock().unwrap().get(...)` / `.keys()` 同步换成 `CalcCache` API（`keys()` → 提供 `fn keys(&self) -> Vec<String>` 或改用 `len()`）
 - 淘汰顺序按「首次插入」计，重复 `insert` 同键不改变顺序（不做真 LRU；理由：命中路径持锁时间要短，真 LRU 需在 `get` 里改序，会把每次读变成写）
-- 不做：不按字节预算淘汰（无 `size_of_val` 统计需求）、不做 TTL、不做数据集重建清空（blocked `B-05-01`）
+- 不做：不按字节预算淘汰（无 `size_of_val` 统计需求）、不做 TTL；数据集重建时的清空口径属 `B-05-01`，本卡 Blocked，裁定后按结论追加（复算 `calc_cache` 全部触点：`grep -n 'calc_cache' app/crates/app-core/src/core.rs`，当前 7 处）
 
 **可致红反例（QA）**
 1. 不实现淘汰（保留现状）→ AC1 红（`len == 513`）
@@ -299,6 +313,7 @@ impl CalcCache {
 - 优先级：P0 ｜ 故事点：3 ｜ 依赖：`EP-04`（provider 返回 `BarBatch`）；本卡为 `S-EP05-01` 的取数前置
 - 负责人：待 Sprint 规划指派 ｜ 备注：`SeriesKey` 只有三字段；周/月必须从日线批次派生，不允许直接向 provider 要周/月
 - 模块编号：E-02 个股工作台 / E-01 行情与自选 ｜ 原卡号：`S-02.06-01`（拆分）
+- 状态：Blocked（`B-05-01`：数据集重建后 `daily_batches` 是否必须失效未裁定；裁定前 `CandleSeries` 可能拿到旧 `dataset_id` 的序列）｜ 实现状态：已实现（`core.rs:1880`）
 
 **用户故事（产品）**
 作为在主图切周期的用户，我希望日线只取一次、周月线在本地聚合，
@@ -313,7 +328,9 @@ impl CalcCache {
 - 给定 任意合法请求，当 返回序列，则 `CandleSeries.dataset_id / dataset_generation / simulated / generated_at` 均来自 `BarBatch`，不得由 `AppCore` 自行编造
 
 **技术决定（TL · 开发期不再讨论）**
-- 落点：`core.rs:1880-1992` `async fn series_for(&self, security: &str, timeframe: Timeframe, adj: Adjust) -> Result<Arc<CandleSeries>, AppError>`
+- **决定**：**本卡 `Blocked`，`B-05-01` 裁定前不实现**；裁定后 `series_for` 固定按「`CandleStore` 命中即返回 → 未命中查 `daily_batches`（键形态即待裁定项）→ 周/月用 `aggregate_bars` 从日线批次派生 → 组装 `CandleSeries` 后写回 `CandleStore`」执行，`dataset_id / dataset_generation / simulated / generated_at` 一律取自 `BarBatch`。
+- **待裁定（阻塞项 `B-05-01`）**：`daily_batches` 的键是否改为 `dataset_id|code|adj`（现键 `code|adj` 在重建后会命中旧批次），缺 **TL（架构 owner）** 与 **数据源 owner** 裁定。
+- **被否方案**：① 向 provider 直接要周/月 —— provider 只提供日线批次，直连会产生第二套聚合口径；② 把 `dataset_id` 加进 `SeriesKey` —— 会破坏 `CandleStore` 公开契约与现有测试构造（`app/crates/data-store/src/lib.rs:66-71`）；③ 不做 `daily_batches` 直接每次全量重取 —— 切周期会重复拉数（`AC2` 明确禁止）。
 - 二级缓存：
   - `CandleStore`（`app/crates/data-store/src/lib.rs:74-95`），键 `SeriesKey{security,timeframe,adj}`（`lib.rs:66-71`），值 `Arc<CandleSeries>`
   - `daily_batches: Mutex<HashMap<String, Arc<BarBatch>>>`（`core.rs:314`），键 `format!("{}|{}", code, adj.as_str())`（`core.rs:1996`）
@@ -321,7 +338,7 @@ impl CalcCache {
 - 空序列：`core.rs:1962-1975` 返回 `DatasetMissing` + `details`
 - 未知标的：`core.rs:1886-1888` 在 `self.securities` 里查，未命中即 `E_UNKNOWN_SECURITY`
 - 锁：`store_lock()`（`core.rs:2026-2030`）统一取 `CandleStore`，锁中毒映射 `E_INTERNAL`
-- 不改：不加 `dataset_id` 到 `SeriesKey`（会破坏 `CandleStore` 公开契约与现有测试构造），数据集重建后的陈旧序列问题记 blocked `B-05-01`
+- 阻塞项：`B-05-01`——现状 `core.rs` 全文件无 `.clear()`（复算：`grep -c '\.clear()' app/crates/app-core/src/core.rs` = 0），数据集重建后 `daily_batches` 与 `CandleStore` 不会失效；是否「重建即清空」未裁定，故本卡 Blocked，裁定后在本卡追加失效实现
 
 **可致红反例（QA）**
 1. 把 `core.rs:1904` 改成 `Timeframe::Week => batch.rows.clone()`（不聚合）→ AC2 红（周线根数 = 日线根数）
@@ -346,6 +363,7 @@ impl CalcCache {
 - 优先级：P0 ｜ 故事点：3 ｜ 依赖：`S-EP05-06`（序列装配点）；上游 `EP-04` 的 `QualityFlag`
 - 负责人：待 Sprint 规划指派 ｜ 备注：只派生 3 类（`ZERO_VOLUME` / `EX_RIGHTS` / `PRICE_ANOMALY`），其余 5 类由 provider 透传
 - 模块编号：E-02 个股工作台 / E-07 数据源健康 ｜ 原卡号：**新补**（无旧卡）
+- 状态：Blocked（`B-05-02`：`QualityFlag` 线上字符串大小写契约未裁定，`AC6` 的「8 个值」在裁定前无法冻结）｜ 实现状态：已实现（`core.rs:1913`）
 
 **用户故事（产品）**
 作为看单根 K 线详情的用户，我希望异常那根有明确标记，
@@ -360,7 +378,9 @@ impl CalcCache {
 - 给定 任意行，当 读线上字符串，则 只可能出现这 8 个值之一：`simulated`、`limitUp`、`limitDown`、`splitDay`、`SUSPENDED`、`EX_RIGHTS`、`ZERO_VOLUME`、`PRICE_ANOMALY`（大小写敏感）
 
 **技术决定（TL · 开发期不再讨论）**
-- 落点：`core.rs:1913-1942`（在 `series_for` 的 `Candle` 构造闭包内）
+- **决定**：在 `core.rs:1913-1942` 的 `Candle` 构造闭包内先按 `row.quality.iter().map(|q| q.as_str().to_string())` 透传，再用 `push_flag` 按「停牌 → 除权 → 异常」的互斥优先序派生 `ZERO_VOLUME` / `EX_RIGHTS` / `PRICE_ANOMALY` 三类，字符串字面量一律来自 `QualityFlag::as_str()`，代码里不写裸字面量。
+- **待裁定（阻塞项 `B-05-02`）**：`QualityFlag` 8 个线上字符串是否统一大小写（现状前 4 个 camelCase、后 4 个全大写），决定 `AC6` 能否冻结，缺 **TL** 与 **前端 owner** 裁定。
+- **被否方案**：① 统一 8 个值为同一大小写 —— 会改动已上线的前端契约，需契约 owner 裁定，本卡因此 Blocked（`B-05-02`）；② 前端自行按位掩码推导标记 —— 前端只有 `quality: string[]`，推导逻辑重复且版本不同步；③ 只透传 provider 标记、不做派生 —— `ZERO_VOLUME` / `PRICE_ANOMALY` 属展示口径，provider 不负责。
 - 透传：`row.quality.iter().map(|q| q.as_str().to_string())`（`core.rs:1913-1914`）
 - 派生规则（写死）：
   - `ZERO_VOLUME`：`!suspended && row.volume == 0.0`
@@ -368,8 +388,8 @@ impl CalcCache {
   - `PRICE_ANOMALY`：`index == 0` 时 `close <= 0.0`；`index > 0` 时 `!suspended && !ex_rights && prev.close > 0.0 && (close <= 0.0 || |close/prev.close - 1|*100 > cap + 1.0)`
 - 板块上限：`quality::board_limit_pct(board)`（`app/crates/app-core/src/quality.rs`），主板 10 / 创业板·科创板 20 / 北交所 30；容差 `PRICE_LIMIT_TOLERANCE_PCT = 1.0`（`quality.rs:11`）
 - 去重：`push_flag`（`core.rs:136-140`）只在不存在时 push
-- 字符串来源唯一：`QualityFlag::as_str()`（`app/crates/data-provider/src/types.rs:145-160`），代码里不得出现裸字面量
-- 大小写分裂（`simulated/limitUp/limitDown/splitDay` vs `SUSPENDED/EX_RIGHTS/ZERO_VOLUME/PRICE_ANOMALY`）**冻结现值**，不统一；统一需契约 owner 裁定，记 blocked `B-05-02`
+- 字符串来源唯一：`QualityFlag::as_str()`（`app/crates/data-provider/src/types.rs:143-153`），代码里不得出现裸字面量
+- 大小写分裂（`simulated/limitUp/limitDown/splitDay` vs `SUSPENDED/EX_RIGHTS/ZERO_VOLUME/PRICE_ANOMALY`）现状并存；本卡**不承诺**任何统一口径，`AC6` 待 `B-05-02` 裁定后重写（裁定人见阻塞清单）
 
 **可致红反例（QA）**
 1. 删掉 `core.rs:1921` 的 `!suspended &&` → AC1 红（停牌行同时带 `ZERO_VOLUME`）
@@ -394,6 +414,7 @@ impl CalcCache {
 - 优先级：P0 ｜ 故事点：3 ｜ 依赖：`S-EP05-06`（拿到完整序列才谈区间）
 - 负责人：待 Sprint 规划指派 ｜ 备注：区间是缓存键的第 8 维，本卡决定 `RangeDto` 的每一个字段
 - 模块编号：E-02 个股工作台 / E-01 行情与自选 ｜ 原卡号：`S-02.06-01`（拆分）
+- 状态：可开工 ｜ 实现状态：已实现（`core.rs:2078` `resolve_window`）
 
 **用户故事（产品）**
 作为随手输入一段日期的用户，我希望输到周末或未来日期也能出图，
@@ -410,19 +431,19 @@ impl CalcCache {
 - 给定 `from`/`to` 都不传，当 调用，则 `range.requestedFrom=null`、`requestedTo=null`、`clamped=false`、`barCount` = 序列全部根数
 
 **技术决定（TL · 开发期不再讨论）**
-- 落点：`core.rs:2078-2178` `fn resolve_window(series, from, to) -> Result<ResolvedWindow, AppError>`；`core.rs:2179-2199` `fn parse_bound`；常量 `core.rs:2059-2060`
+- **决定**：`resolve_window` 把日期闭区间映射为下标半开区间 `[start, end)`（`start` = 首个 `date >= from`，`end` = 最后一个 `date <= to` 的下一位），`clamped` 只在 `returned_*` 与 `requested_*` 不等时为真，日历跨度上限 `MAX_RANGE_DAYS = 3_660`、根数上限 `MAX_RANGE_BARS = 2_500`，超限与格式非法一律返回 `E_INVALID_ARGUMENT` 并带 `details`。
+- **被否方案**：① 分钟级区间 —— 数据源只有日线批次，无分钟序列可切；② 「区间内全是停牌日」单独错误码 —— 前端只需区分「无数据」与「参数非法」，多一个码要多一条前端文案分支；③ 把 `clamped` 做成三态（未吸附 / 起点吸附 / 终点吸附）—— `RangeDto` 已用 `requested_*` 与 `returned_*` 同时下发表达差异，三态是冗余字段。
 - 映射：日期闭区间 → 下标半开区间 `[start, end)`；`start = position(c.date >= from)`、`end = rposition(c.date <= to) + 1`；`start >= end` 即空区间报 `InsufficientData`
 - `clamped` 判定：`requested_from != returned_from` 或 `requested_to != returned_to`
 - `RangeDto` 字段（`dto.rs:139-152`）：`requestedFrom` / `requestedTo` / `returnedFrom` / `returnedTo` / `barCount` / `clamped`，六个字段全发，`Option` 为 `null` 不省略
 - 错误细节统一带 `requestedFrom/requestedTo/availableFrom/availableTo/totalBars`
-- 不做：不做分钟级区间、不做「区间内全是停牌日」的特殊码（统一 `InsufficientData`）
 
 **可致红反例（QA）**
 1. 把 `core.rs:2126` 的 `>=` 改成 `>` → AC1 红（`from` 恰为交易日时跳到下一根，`barCount` 少 1）
 2. 把 `clamped` 恒置 `false` → AC1/AC2 红
 3. 删掉 `core.rs:2153-2160` 的 `MAX_RANGE_BARS` 检查 → AC6 红（返回成功而不是 `E_INVALID_ARGUMENT`）
 4. 把 `MAX_RANGE_DAYS` 改成 `30_000` → AC5 红（`details.maxDays` 断言 + 超长区间不再报错）
-5. 把 `core.rs:2144` 的空区间分支（`if start >= end`）改成返回全序列 → AC3 红
+5. 把 `core.rs:2145` 的空区间分支（`if start >= end`）改成返回全序列 → AC3 红
 
 **Task 拆解（Dev）**
 1. 复用 `snaps_to_trading_day_and_clamps`（`core.rs:3021`）、`to_beyond_last_is_clamped_not_error`（`3032`）、`from_after_last_is_insufficient_data`（`3041`）、`inverted_and_too_long_are_invalid`（`3049`）、`bad_date_format_is_invalid`（`3060`）、`default_window_covers_all_bars`（`3068`）
@@ -439,6 +460,7 @@ impl CalcCache {
 - 优先级：P0 ｜ 故事点：2 ｜ 依赖：`S-EP05-01`；被 `EP-06` 的 DTO 冻结清单引用
 - 负责人：待 Sprint 规划指派 ｜ 备注：本卡只锁**形状**，不锁命令注册；命令面在 `EP-06`
 - 模块编号：E-02 个股工作台（跨 E-01/E-07/E-08）｜ 原卡号：**新补**（无旧卡）
+- 状态：可开工 ｜ 实现状态：已实现（`dto.rs` 全文）
 
 **用户故事（产品）**
 作为前端开发者，我希望后端返回的字段名与空值方式始终一致，
@@ -453,11 +475,13 @@ impl CalcCache {
 - 给定 同一响应，当 对比 `engineVersion` 与 `series[0].engineVersion`，则 前者是字符串（如 `"1.0.0"`）、后者是数字（如 `1`）；前端不得混用，二者类型差异为已冻结事实
 
 **技术决定（TL · 开发期不再讨论）**
+- **决定**：`dto.rs` 全部 DTO 加 `#[serde(rename_all = "camelCase")]`、`Option<T>` 一律不写 `skip_serializing_if`（缺省即 `null`），非有限值在编排层 `core.rs:1806-1814` 转 `null` 并由 `OutputSeriesDto.values: Vec<Option<f64>>` 承载，`CalcResponse.engine_version: &'static str` 与 `SeriesDto.engine_version: u16` 的类型差异按现状冻结。
+- **被否方案**：① `#[serde(flatten)]` —— 会把嵌套结构摊平，前端类型无法静态表达；② 指标值用 `Vec<f64>` 裸数组 —— NaN 无法表达为 `null`，`values.length` 与 `barCount` 的对齐会失守；③ 统一两处 `engine_version` 类型 —— 会同时改动前端 `types.ts:436`（`number`）与 `types.ts:444`（`string`）以及渲染分支，收益只是类型洁癖。
 - 落点：`app/crates/app-core/src/dto.rs` 全文；关键结构 `CalcResponse`（`dto.rs:417-430`）、`SeriesDto`（`407-415`）、`OutputSeriesDto`（`396-405`）、`RangeDto`（`139-152`）、`BarDto`（`54-73`）
 - 规则一：所有 DTO 加 `#[serde(rename_all = "camelCase")]`，**无例外**；`Deserialize` 侧（`CalcRequest` / `InstanceRequest` / `GetBarsRequest`）同规则
 - 规则二：`Option<T>` 不写 `skip_serializing_if`，缺省即 `null`
 - 规则三：NaN → `null` 在编排层完成（`core.rs:1806-1814`），不依赖 serde；`OutputSeriesDto.values: Vec<Option<f64>>` 是唯一载体
-- 规则四：`CalcResponse.engine_version: &'static str` 与 `SeriesDto.engine_version: u16` 类型不一致，**冻结不改**（改动会牵动前端 `types.ts:419/440` 两处类型与渲染）
+- 规则四：`CalcResponse.engine_version: &'static str` 与 `SeriesDto.engine_version: u16` 类型不一致，按现状冻结（改动会牵动前端 `types.ts:436` 与 `types.ts:444` 两处类型与渲染）
 - 规则五：不新增 `#[serde(flatten)]`、不新增 `Vec<f64>` 裸数组承载指标值
 - 命令绑定（冻结给 EP-06）：`commands.rs:231` + `app/src/lib/ipc.ts:143-144` `calcIndicators: (req: CalcRequest) => invoke<CalcResponse>("calc_indicators", { req })`
 
@@ -466,32 +490,32 @@ impl CalcCache {
 2. 把 `core.rs:1808` 的 `Some(*value)` 改成 `Some(0.0)`（非有限也当 0）→ AC2 红（`null` 变 `0`）
 3. 给 `RangeDto.requested_from` 加 `skip_serializing_if = "Option::is_none"` → AC4 红（键消失）
 4. 把 `computed_ms` 改成 `Option<f64>` 并在 0 时置 `None` → AC3 红（输出 `null`）
-5. 把 `CalcResponse.engine_version` 改成 `u16` → AC6 红（两处类型断言一致后失去「类型分裂」事实，前端 `types.ts:419` 的 `string` 断言失败）
+5. 把 `CalcResponse.engine_version` 改成 `u16` → AC6 红（两处类型断言一致后失去「类型分裂」事实，前端 `types.ts:444` 的 `string` 断言失败）
 
 **Task 拆解（Dev）**
 1. 新增序列化快照测试 `calc_response_wire_shape`：`serde_json::to_value` 后断言顶层键集合（排序后逐个比对）
 2. 新增 `nan_maps_to_null_keeps_length`
 3. 新增 `range_option_keys_present_as_null`
 4. 新增 `engine_version_type_is_str_outer_u16_inner`
-5. 同步 `docs/reference` 里的 DTO 说明（若有），不改前端类型
+5. 不改前端类型：`types.ts:436` / `types.ts:444` 两处 `engineVersion` 类型断言保持现状，由 `S-EP06-02` 的零漂移检查覆盖
 
 **完成定义 DoD**
 单测通过 · 联调通过 · 产品验收 · 文档更新
 
 ---
 
-## 附：本 Epic 卡间依赖与建议开工顺序
+## 附：本 Epic 卡间依赖与开工顺序
 
-```
-S-EP05-01 批量计算（首卡，可独立开工）
-   ├─ S-EP05-02 请求内去重
-   ├─ S-EP05-03 跨请求缓存 ── S-EP05-05 容量上限（唯一未实现）
-   ├─ S-EP05-04 缓存键 ────────┘
-   ├─ S-EP05-06 序列与批次缓存 ── S-EP05-07 质量标记
-   ├─ S-EP05-08 区间解析
-   └─ S-EP05-09 DTO 形状（被 EP-06 引用，须在 EP-06 冻结前完成）
+```text
+S-EP05-01 批量计算（可开工，首卡）
+   ├─ S-EP05-02 请求内去重（可开工）
+   ├─ S-EP05-04 缓存键（可开工）
+   ├─ S-EP05-05 容量上限（Blocked：B-05-01）── S-EP05-03 跨请求缓存（Blocked：依赖 05）
+   ├─ S-EP05-06 序列与批次缓存（Blocked：B-05-01）── S-EP05-07 质量标记（Blocked：B-05-02）
+   ├─ S-EP05-08 区间解析（可开工）
+   └─ S-EP05-09 DTO 形状（可开工，须在 EP-06 冻结前完成）
 ```
 
-- 建议并行度：开发者 1 做 `01→02→03→05`（缓存主线），开发者 2 做 `06→07→08→09`（数据与形状主线）；两条线在 `04` 汇合
+- 并行度：缓存主线 `01→02→04`、数据主线 `08→09` 可同时开工；`05` / `06` / `07` 在阻塞清单给出裁定前不进入排期，`03` 随 `05` 解锁
 - 前置外部依赖：`EP-03`（指标注册表 `lookup / merge_defaults / validate`）、`EP-04`（`MockProvider::daily_bars` 返回的 `BarBatch` 含 `dataset_id / dataset_generation / rows[].quality`）
-- 本 Epic 完成后解锁：`EP-06` 的 DTO 冻结清单（`S-IPC-02` 等价卡）可直接引用 `S-EP05-09` 的六条 AC
+- 本 Epic 解锁：`EP-06` 的 DTO 冻结清单（`S-EP06-02`）可直接引用 `S-EP05-09` 的六条 AC
