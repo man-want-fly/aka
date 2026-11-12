@@ -59,8 +59,36 @@ export function DatasetErrorPage({ integrity, onRecheck, onEnterReadonly }: Prop
     setActionError(null);
     setHint(null);
     try {
+      // 先清掉调试注入的故障并刷新内存快照；数据目录完好时这一步即可恢复。
       await ipc.datasetRegenerate();
-      const next = await onRecheck();
+      let next = await onRecheck();
+      if (next.state === "ok") return;
+
+      // 磁盘数据集确实缺失或损坏：按安装状态执行真正的重建。
+      const current = await ipc.simInstallStatus();
+      if (current.state === "installed") {
+        await ipc.simInstallRebuild();
+      } else {
+        await ipc.simInstallStart();
+      }
+
+      // 安装线程在后台执行，轮询到终态（最长 60s）后再校验。
+      let latest = await ipc.simInstallStatus();
+      const deadline = Date.now() + 60_000;
+      while (latest.state === "installing" && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        latest = await ipc.simInstallStatus();
+      }
+      if (latest.state === "failed" && latest.error) {
+        setActionError(`${latest.error.code}：${latest.error.message}`);
+        return;
+      }
+      if (latest.state !== "installed") {
+        setActionError("重建未完成，请稍后重试");
+        return;
+      }
+
+      next = await onRecheck();
       if (next.state !== "ok") {
         setTraces((prev) => [next.traceId, ...prev].slice(0, 3));
         setActionError(next.detail ?? "重建后校验仍未通过");
